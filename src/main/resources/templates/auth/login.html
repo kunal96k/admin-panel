@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - TechnoKraft SMS</title>
+
+    <!-- Favicon -->
+    <link rel="icon" th:href="@{/assets/images/tts-logo-ev.png}" href="/assets/images/tts-logo-ev.png">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Michroma&display=swap" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" th:href="@{/assets/css/login.css}">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Michroma&display=swap');
+    </style>
+
+</head>
+<body>
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+</div>
+
+<div class="login-container">
+    <div class="login-card">
+        <!-- Header -->
+        <div class="login-header">
+            <div class="logo-container">
+                <img src="/assets/images/tts-logo-ev.png"
+                     th:src="@{/assets/images/tts-logo-ev.png}"
+                     alt="TechnoKraft Logo"
+                     class="logo-img">
+            </div>
+            <!-- brand-text and app-subtitle removed as requested -->
+        </div>
+
+        <!-- Body -->
+        <div class="login-body">
+            <div class="welcome-text">
+                <h2>Welcome Back!</h2>
+                <p>Please login to access your dashboard</p>
+            </div>
+
+            <!-- Error Message -->
+            <div th:if="${error}" class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span th:text="${error}">Invalid credentials</span>
+            </div>
+
+            <!-- Success (Logout) Message -->
+            <div th:if="${logoutMessage}" class="alert alert-success">
+                <i class="bi bi-check-circle-fill"></i>
+                <span th:text="${logoutMessage}">You have been logged out successfully</span>
+            </div>
+
+            <!-- Login Form -->
+            <form th:action="@{/login}" method="post" id="loginForm">
+                <!-- Role Selection -->
+                <div class="form-group">
+                    <label for="role" class="form-label">
+                        <i class="bi bi-person-badge"></i>
+                        Select Role
+                    </label>
+                    <select class="form-control form-select"
+                            id="role"
+                            name="role"
+                            required>
+                        <option value="">-- Select Role --</option>
+                        <option value="ADMIN">Administrator</option>
+                        <option value="COUNSELOR">Counselor</option>
+                        <option value="ACCOUNTANT">Accountant</option>
+                        <option value="RECEPTIONIST">Receptionist</option>
+                        <option value="FACULTY">Faculty</option>
+                        <option value="MANAGER">Manager</option>
+                    </select>
+                </div>
+
+                <!-- Username -->
+                <div class="form-group">
+                    <label for="username" class="form-label">
+                        <i class="bi bi-person"></i>
+                        Username
+                    </label>
+                    <input type="text"
+                           class="form-control"
+                           id="username"
+                           name="username"
+                           placeholder="Enter your username"
+                           required
+                           autocomplete="username"
+                           autofocus>
+                </div>
+
+                <!-- Password -->
+                <div class="form-group">
+                    <label for="password" class="form-label">
+                        <i class="bi bi-lock"></i>
+                        Password
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="password"
+                               class="form-control has-icon"
+                               id="password"
+                               name="password"
+                               placeholder="Enter your password"
+                               required
+                               autocomplete="current-password">
+                        <button type="button"
+                                class="password-toggle"
+                                id="togglePassword"
+                                aria-label="Toggle password visibility">
+                            <i class="bi bi-eye" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Remember Me -->
+                <div class="form-check">
+                    <input type="checkbox"
+                           id="rememberMe"
+                           name="remember-me">
+                    <label for="rememberMe">Remember me</label>
+                </div>
+
+                <!-- CSRF Token -->
+                <input type="hidden"
+                       th:if="${_csrf != null}"
+                       th:name="${_csrf.parameterName}"
+                       th:value="${_csrf.token}"/>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn-primary" id="loginBtn">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    <span>Sign In</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="login-footer">
+            <p>&copy; 2025 <a href="https://tts.net.in/" target="_blank">TechnoKraft Training & Solution</a>. All rights reserved.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Custom JavaScript -->
+<script th:src="@{/assets/js/login.js}" src="/assets/js/login.js"></script>
+
+</body>
+</html>

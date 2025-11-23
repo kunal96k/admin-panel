@@ -1,2 +1,82 @@
+# ============================================
+# application-prod.yml (Production)
+# ============================================
+
 server:
-    port: 443
+  port: ${SERVER_PORT:443}
+  ssl:
+    enabled: ${SSL_ENABLED:true}
+    key-store: classpath:certificate/SSL/team.ttsnashik.com.pfx
+    key-store-password: ${SSL_PASSWORD:kunal11}
+    key-store-type: PKCS12
+    # key-alias: ${SSL_KEY_ALIAS:tomcat}
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+
+spring:
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:tts_database}?createDatabaseIfNotExist=true&useSSL=true&requireSSL=true&serverTimezone=Asia/Kolkata&useLegacyDatetimeCode=false
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      auto-commit: false                # same fix for prod
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-test-query: SELECT 1
+      connection-timeout: 60000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: Asia/Kolkata
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  thymeleaf:
+    cache: true                        # usually want cache in prod
+    enabled: true
+    prefix: classpath:/templates/
+    suffix: .html
+
+  web:
+    resources:
+      static-locations: classpath:/static/
+
+  mvc:
+    static-path-pattern: /assets/**
+
+  security:
+    require-ssl: true
+    filter:
+      dispatcher-types: REQUEST,FORWARD,ERROR
+
+logging:
+  level:
+    root: WARN
+    com.tts.sms: INFO
+    org.springframework: INFO
+  file:
+    name: /var/log/sms/application.log
