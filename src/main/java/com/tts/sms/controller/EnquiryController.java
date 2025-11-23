@@ -213,4 +213,33 @@ public class EnquiryController {
                 "timestamp", java.time.LocalDateTime.now().toString()
         ));
     }
+
+    // ================= FOLLOW-UP APIs =================
+//
+//    /**
+//     * Get follow-up history for an enquiry
+//     * GET /api/enquiries/{enquiryId}/followups
+//     */
+//    @GetMapping("/{enquiryId}/followups")
+//    public ResponseEntity<List<FollowUpDTO>> getFollowUpHistory(@PathVariable Long enquiryId) {
+//        log.info("GET /api/enquiries/{}/followups", enquiryId);
+//        List<FollowUpDTO> history = enquiryService.getFollowUpHistory(enquiryId);
+//        return ResponseEntity.ok(history);
+//    }
+//
+//    /**
+//     * Add a follow-up for an enquiry
+//     * POST /api/enquiries/{enquiryId}/followups
+//     */
+//    @PostMapping("/{enquiryId}/followups")
+//    public ResponseEntity<FollowUpDTO> addFollowUp(
+//            @PathVariable Long enquiryId,
+//            @Valid @RequestBody FollowUpDTO followUp) {
+//
+//        log.info("POST /api/enquiries/{}/followups - mode: {}", enquiryId, followUp.getMode());
+//        FollowUpDTO created = enquiryService.addFollowUp(enquiryId, followUp);
+//        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+//    }
+
+
 }

@@ -3,6 +3,7 @@
 
     let importedData = [];
     let currentEnquiryId = null;
+    let currentFollowUpEnquiry = null;
 
     document.addEventListener('DOMContentLoaded', function() {
         initializeEventListeners();
@@ -72,6 +73,9 @@
         });
 
         document.getElementById('importBtn')?.addEventListener('click', importCSV);
+
+        // Follow-Up Modal
+        document.getElementById('btnSaveFollowUp')?.addEventListener('click', saveFollowUp);
 
         // Drag and drop
         const importArea = document.getElementById('importArea');
@@ -201,7 +205,6 @@
     }
 
     // Import CSV
-    // Import CSV
     async function importCSV() {
         if (importedData.length === 0) {
             showError('No data to import');
@@ -216,16 +219,14 @@
             const dto = {
                 mobile: record.mobilePrimary,
                 courses: [record.course].filter(Boolean),
-                source: record.leadSource || 'Unknown',  // Provide default
+                source: record.leadSource || 'Unknown',
                 enquiryDate: record.enquiryDate || new Date().toISOString().split('T')[0],
                 status: record.status || 'New'
             };
 
             if (importType === 'old') {
-                // Old format - use 'name' field
                 dto.name = `${record.firstName} ${record.middleName} ${record.lastName}`.trim();
             } else {
-                // New format - use separate fields
                 dto.firstName = record.firstName;
                 dto.middleName = record.middleName;
                 dto.lastName = record.lastName;
@@ -371,6 +372,9 @@
                             <button class="action-menu-item" data-action="update" data-id="${enq.id}">
                                 <i class="bi bi-pencil-square"></i><span>Update</span>
                             </button>
+                            <button class="action-menu-item" data-action="followup" data-id="${enq.id}">
+                                <i class="bi bi-telephone"></i><span>Follow Up</span>
+                            </button>
                             <button class="action-menu-item" data-action="view" data-id="${enq.id}">
                                 <i class="bi bi-eye"></i><span>View Details</span>
                             </button>
@@ -417,6 +421,9 @@
                 break;
             case 'view':
                 await loadEnquiryForView(enquiryId);
+                break;
+            case 'followup':
+                await openFollowUpModal(enquiryId);
                 break;
             case 'remove':
                 await deleteEnquiry(enquiryId);
@@ -498,6 +505,139 @@
                 showError('Failed to delete enquiry');
             }
         }
+    }
+
+    // Open Follow-Up Modal
+    async function openFollowUpModal(id) {
+        try {
+            const response = await fetch(`/api/enquiries/${id}`);
+            if (!response.ok) throw new Error('Failed to load enquiry');
+
+            const enquiry = await response.json();
+            currentFollowUpEnquiry = enquiry;
+
+            // Fill modal fields
+            setValue('followUpStudentName', enquiry.name || `${enquiry.firstName || ''} ${enquiry.lastName || ''}`.trim());
+            setValue('followUpMobile', enquiry.mobile);
+
+            // Set minimum date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('nextFollowUpDate').setAttribute('min', today);
+
+            // Clear form
+            document.getElementById('followUpForm').reset();
+            setValue('followUpStudentName', enquiry.name || `${enquiry.firstName || ''} ${enquiry.lastName || ''}`.trim());
+            setValue('followUpMobile', enquiry.mobile);
+
+            // Load follow-up history
+            await loadFollowUpHistory(id);
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('followUpModal'));
+            modal.show();
+
+        } catch (error) {
+            console.error('Error opening follow-up modal:', error);
+            showError('Failed to load enquiry details');
+        }
+    }
+
+    // Load Follow-Up History
+    async function loadFollowUpHistory(enquiryId) {
+        const tbody = document.getElementById('followUpHistoryBody');
+
+        // For now, show placeholder - you can implement API endpoint later
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-muted">
+                    <small>Follow-up history will be displayed here</small>
+                </td>
+            </tr>
+        `;
+
+        // TODO: Implement API call to fetch follow-up history
+        // Example:
+        // const response = await fetch(`/api/enquiries/${enquiryId}/followups`);
+        // const history = await response.json();
+        // renderFollowUpHistory(history);
+    }
+
+    // Save Follow-Up
+    async function saveFollowUp() {
+        const form = document.getElementById('followUpForm');
+
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const followUpData = {
+            enquiryId: currentFollowUpEnquiry.id,
+            mode: getValue('followUpMode'),
+            nextFollowUpDate: getValue('nextFollowUpDate'),
+            note: getValue('followUpNote'),
+            followUpDate: new Date().toISOString().split('T')[0]
+        };
+
+        try {
+            // Update enquiry with new follow-up date
+            const updateResponse = await fetch(`/api/enquiries/${currentFollowUpEnquiry.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ...currentFollowUpEnquiry,
+                    followupDate: followUpData.nextFollowUpDate,
+                    note: followUpData.note,
+                    status: 'Follow-up Scheduled'
+                })
+            });
+
+            if (!updateResponse.ok) throw new Error('Failed to save follow-up');
+
+            // TODO: Save follow-up history to separate table if you have that endpoint
+            // await fetch('/api/followups', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify(followUpData)
+            // });
+
+            showSuccess('Follow-up saved successfully!');
+            closeModal('followUpModal');
+            loadEnquiries();
+
+            // Ask if user wants to send SMS
+            const sendSMS = await Swal.fire({
+                title: 'Send SMS?',
+                text: 'Do you want to send follow-up SMS to the student?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Send SMS',
+                cancelButtonText: 'No',
+                confirmButtonColor: '#667eea'
+            });
+
+            if (sendSMS.isConfirmed) {
+                sendFollowUpSMS(currentFollowUpEnquiry.mobile, followUpData);
+            }
+
+        } catch (error) {
+            console.error('Error saving follow-up:', error);
+            showError(error.message || 'Failed to save follow-up');
+        }
+    }
+
+    // Send Follow-Up SMS
+    function sendFollowUpSMS(mobile, followUpData) {
+        // Implement SMS sending logic here
+        // This is a placeholder
+        Swal.fire({
+            title: 'SMS Sent!',
+            text: `Follow-up reminder sent to ${mobile}`,
+            icon: 'success',
+            confirmButtonColor: '#667eea'
+        });
     }
 
     // Helper Functions

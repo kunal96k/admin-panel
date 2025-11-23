@@ -316,4 +316,6 @@ public class EnquiryService {
         log.info("Generated statistics: {}", stats);
         return stats;
     }
+
+
 }

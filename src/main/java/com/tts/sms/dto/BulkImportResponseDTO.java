@@ -1,6 +1,5 @@
 package com.tts.sms.dto;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

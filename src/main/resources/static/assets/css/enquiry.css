@@ -228,3 +228,48 @@
             border-color: #667eea;
             background-color: #eef2ff;
         }
+
+        /* Follow-Up Modal Styles */
+        #followUpModal .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        #followUpModal .required {
+            color: #ef4444;
+        }
+
+        #followUpHistoryBody tr {
+            font-size: 0.875rem;
+        }
+
+        #followUpHistoryBody td {
+            padding: 0.5rem;
+            vertical-align: middle;
+        }
+
+        #followUpModal .table-responsive {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+
+        #followUpModal .table thead {
+            position: sticky;
+            top: 0;
+            background: #f9fafb;
+            z-index: 1;
+        }
+
+        /* Follow-up button styling in action menu */
+        .action-menu-item[data-action="followup"] {
+            color: #059669;
+        }
+
+        .action-menu-item[data-action="followup"]:hover {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .action-menu-item[data-action="followup"] i {
+            color: #10b981;
+        }
