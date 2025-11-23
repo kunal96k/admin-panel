@@ -60,9 +60,17 @@ spring:
   web:
     resources:
       static-locations: classpath:/static/
+      cache:
+        period: 0  # No cache in dev
 
   mvc:
-    static-path-pattern: /assets/**
+    static-path-pattern: /**  # CHANGED from /assets/**
+    contentnegotiation:
+      favor-path-extension: false
+      favor-parameter: false
+      media-types:
+        js: application/javascript
+        css: text/css
 
   security:
     user:

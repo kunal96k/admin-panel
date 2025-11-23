@@ -42,6 +42,16 @@ spring:
     suffix: .html
     mode: HTML
 
+  # MIME type configuration - ADDED
+  mvc:
+    contentnegotiation:
+      favor-path-extension: false
+      favor-parameter: false
+      media-types:
+        js: application/javascript
+        css: text/css
+        json: application/json
+
 # Logging Configuration
 logging:
   level:

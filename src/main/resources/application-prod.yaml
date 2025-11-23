@@ -9,7 +9,6 @@ server:
     key-store: classpath:certificate/SSL/team.ttsnashik.com.pfx
     key-store-password: ${SSL_PASSWORD:kunal11}
     key-store-type: PKCS12
-    # key-alias: ${SSL_KEY_ALIAS:tomcat}
   error:
     include-message: never
     include-binding-errors: never
@@ -17,7 +16,8 @@ server:
     include-exception: false
   compression:
     enabled: true
-    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
+    min-response-size: 1024  # ADDED
 
 spring:
   datasource:
@@ -26,7 +26,7 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      auto-commit: false                # same fix for prod
+      auto-commit: false
       maximum-pool-size: 20
       minimum-idle: 10
       connection-test-query: SELECT 1
@@ -56,7 +56,7 @@ spring:
       max-request-size: 10MB
 
   thymeleaf:
-    cache: true                        # usually want cache in prod
+    cache: true
     enabled: true
     prefix: classpath:/templates/
     suffix: .html
@@ -64,9 +64,21 @@ spring:
   web:
     resources:
       static-locations: classpath:/static/
+      cache:
+        period: 31536000  # ADDED - 1 year
+        cachecontrol:
+          max-age: 31536000
+          cache-public: true
 
   mvc:
-    static-path-pattern: /assets/**
+    static-path-pattern: /**  # CHANGED from /assets/**
+    contentnegotiation:
+      favor-path-extension: false
+      favor-parameter: false
+      media-types:
+        js: application/javascript
+        css: text/css
+        json: application/json
 
   security:
     require-ssl: true

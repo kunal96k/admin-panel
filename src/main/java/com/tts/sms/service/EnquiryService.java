@@ -149,6 +149,29 @@ public class EnquiryService {
     }
 
     /**
+     * Update enquiry status
+     */
+    @Transactional
+    public EnquiryResponseDTO updateEnquiryStatus(Long id, String status) {
+        log.debug("Updating status for enquiry with id: {} to {}", id, status);
+
+        Enquiry enquiry = enquiryRepository.findById(id)
+                .filter(e -> !e.getIsDeleted())
+                .orElseThrow(() -> {
+                    log.error("Enquiry not found with id: {}", id);
+                    return new ResourceNotFoundException("Enquiry not found with id: " + id);
+                });
+
+        enquiry.setStatus(status);
+        enquiry.setUpdatedBy("SYSTEM"); // TODO: Get from security context
+
+        Enquiry updated = enquiryRepository.save(enquiry);
+        log.info("Updated status for enquiry with id: {} to {}", id, status);
+
+        return enquiryMapper.toResponseDTO(updated);
+    }
+
+    /**
      * Delete enquiry (soft delete)
      */
     @Transactional
@@ -316,6 +339,4 @@ public class EnquiryService {
         log.info("Generated statistics: {}", stats);
         return stats;
     }
-
-
 }

@@ -34,16 +34,6 @@
             });
         });
 
-        // Action menu items
-        document.querySelectorAll('.action-menu-item').forEach(item => {
-            item.addEventListener('click', function() {
-                const action = this.getAttribute('data-action');
-                const row = this.closest('tr');
-                const enquiryId = row?.querySelector('td strong')?.textContent;
-                handleAction(action, enquiryId);
-            });
-        });
-
         // Buttons
         document.getElementById('btnAddEnquiry')?.addEventListener('click', openAddModal);
         document.getElementById('btnImportCSV')?.addEventListener('click', openImportModal);
@@ -99,7 +89,7 @@
             });
         }
 
-        // Search
+        // Search with debounce
         document.getElementById('searchInput')?.addEventListener('input', debounce(searchEnquiries, 500));
     }
 
@@ -149,8 +139,6 @@
                 const error = await response.json();
                 throw new Error(error.message || 'Failed to save enquiry');
             }
-
-            const result = await response.json();
 
             showSuccess(currentEnquiryId ? 'Enquiry updated successfully!' : 'Enquiry created successfully!');
             closeModal('enquiryModal');
@@ -214,7 +202,6 @@
         const importType = document.querySelector('input[name="importType"]:checked').value;
         const typeEnum = importType === 'old' ? 'OLD_FORMAT' : 'NEW_FORMAT';
 
-        // Convert to EnquiryRequestDTO format
         const dtoList = importedData.map(record => {
             const dto = {
                 mobile: record.mobilePrimary,
@@ -378,6 +365,12 @@
                             <button class="action-menu-item" data-action="view" data-id="${enq.id}">
                                 <i class="bi bi-eye"></i><span>View Details</span>
                             </button>
+                            <button class="action-menu-item" data-action="changestatus" data-id="${enq.id}">
+                                <i class="bi bi-pencil"></i><span>Change Enquiry Status</span>
+                            </button>
+                            <button class="action-menu-item" data-action="admission" data-id="${enq.id}">
+                                <i class="bi bi-plus"></i><span>New Admission</span>
+                            </button>
                             <button class="action-menu-item" data-action="remove" data-id="${enq.id}">
                                 <i class="bi bi-trash"></i><span>Remove</span>
                             </button>
@@ -387,11 +380,10 @@
             </tr>
         `).join('');
 
-        // Re-attach event listeners
         attachTableEventListeners(tbody);
     }
 
-    // Helper function to attach table event listeners
+    // Attach table event listeners
     function attachTableEventListeners(tbody) {
         tbody.querySelectorAll('.action-menu-trigger').forEach(trigger => {
             trigger.addEventListener('click', function(e) {
@@ -424,6 +416,12 @@
                 break;
             case 'followup':
                 await openFollowUpModal(enquiryId);
+                break;
+            case 'changestatus':
+                await openChangeStatusModal(enquiryId);
+                break;
+            case 'admission':
+                await openAdmissionPage(enquiryId);
                 break;
             case 'remove':
                 await deleteEnquiry(enquiryId);
@@ -478,6 +476,51 @@
         }
     }
 
+    // Load Enquiry for View
+    async function loadEnquiryForView(id) {
+        try {
+            const response = await fetch(`/api/enquiries/${id}`);
+            if (!response.ok) throw new Error('Failed to load enquiry');
+
+            const enquiry = await response.json();
+
+            // Fill view modal
+            setValue('viewStudentName', enquiry.name || `${enquiry.firstName || ''} ${enquiry.lastName || ''}`.trim());
+            setValue('viewFirstName', enquiry.firstName);
+            setValue('viewMiddleName', enquiry.middleName);
+            setValue('viewLastName', enquiry.lastName);
+            setValue('viewMobilePrimary', enquiry.mobile);
+            setValue('viewMobileSecondary', enquiry.secondaryMobile);
+            setValue('viewEmailPrimary', enquiry.email);
+            setValue('viewEmailSecondary', enquiry.secondaryEmail);
+            setValue('viewCurrentAddress', enquiry.currentAddress);
+            setValue('viewPermanentAddress', enquiry.permanentAddress);
+            setValue('viewPinCodeCurrent', enquiry.pinCurrent);
+            setValue('viewPinCodePermanent', enquiry.pinPermanent);
+            setValue('viewCollege', enquiry.college);
+            setValue('viewQualification', enquiry.qualification);
+            setValue('viewAadhaar', enquiry.aadhaar);
+            setValue('viewDob', enquiry.birthDate);
+            setValue('viewGender', enquiry.gender);
+            setValue('viewCourse', enquiry.courses);
+            setValue('viewPackage', enquiry.packageName);
+            setValue('viewDemoLecture', enquiry.demoLectureRequired ? 'Yes' : 'No');
+            setValue('viewInterestLevel', enquiry.interestLevel);
+            setValue('viewLeadSource', enquiry.source);
+            setValue('viewReferenceName', enquiry.referenceName);
+            setValue('viewAssignTo', enquiry.assign);
+            setValue('viewEnquiryDate', enquiry.date);
+            setValue('viewNote', enquiry.note);
+
+            const modal = new bootstrap.Modal(document.getElementById('viewModal'));
+            modal.show();
+
+        } catch (error) {
+            console.error('Error loading enquiry:', error);
+            showError('Failed to load enquiry details');
+        }
+    }
+
     // Delete Enquiry
     async function deleteEnquiry(id) {
         const result = await Swal.fire({
@@ -507,6 +550,69 @@
         }
     }
 
+    // Open Change Status Modal
+    async function openChangeStatusModal(id) {
+        try {
+            const response = await fetch(`/api/enquiries/${id}`);
+            if (!response.ok) throw new Error('Failed to load enquiry');
+
+            const enquiry = await response.json();
+
+            const { value: status } = await Swal.fire({
+                title: 'Change Enquiry Status',
+                html: `
+                    <select id="statusSelect" class="form-select">
+                        <option value="New" ${enquiry.status === 'New' ? 'selected' : ''}>New</option>
+                        <option value="In Process" ${enquiry.status === 'In Process' ? 'selected' : ''}>In Process</option>
+                        <option value="Closed" ${enquiry.status === 'Closed' ? 'selected' : ''}>Closed</option>
+                        <option value="Lost" ${enquiry.status === 'Lost' ? 'selected' : ''}>Lost</option>
+                    </select>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Ok',
+                cancelButtonText: 'Cancel',
+                preConfirm: () => {
+                    return document.getElementById('statusSelect').value;
+                }
+            });
+
+            if (status) {
+                await updateEnquiryStatus(id, status);
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            showError('Failed to change status');
+        }
+    }
+
+    // Update Enquiry Status
+    async function updateEnquiryStatus(id, status) {
+        try {
+            const response = await fetch(`/api/enquiries/${id}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: status })
+            });
+
+            if (!response.ok) throw new Error('Failed to update status');
+
+            showSuccess('Status updated successfully');
+            loadEnquiries();
+        } catch (error) {
+            console.error('Error updating status:', error);
+            showError('Failed to update status');
+        }
+    }
+
+    // Open Admission Page
+    function openAdmissionPage(id) {
+        showSuccess('Admission feature will be implemented later');
+        // window.location.href = `/admissions/new?enquiryId=${id}`;
+    }
+
     // Open Follow-Up Modal
     async function openFollowUpModal(id) {
         try {
@@ -516,23 +622,18 @@
             const enquiry = await response.json();
             currentFollowUpEnquiry = enquiry;
 
-            // Fill modal fields
             setValue('followUpStudentName', enquiry.name || `${enquiry.firstName || ''} ${enquiry.lastName || ''}`.trim());
             setValue('followUpMobile', enquiry.mobile);
 
-            // Set minimum date to today
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('nextFollowUpDate').setAttribute('min', today);
 
-            // Clear form
             document.getElementById('followUpForm').reset();
             setValue('followUpStudentName', enquiry.name || `${enquiry.firstName || ''} ${enquiry.lastName || ''}`.trim());
             setValue('followUpMobile', enquiry.mobile);
 
-            // Load follow-up history
             await loadFollowUpHistory(id);
 
-            // Show modal
             const modal = new bootstrap.Modal(document.getElementById('followUpModal'));
             modal.show();
 
@@ -546,20 +647,87 @@
     async function loadFollowUpHistory(enquiryId) {
         const tbody = document.getElementById('followUpHistoryBody');
 
-        // For now, show placeholder - you can implement API endpoint later
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="4" class="text-center text-muted">
-                    <small>Follow-up history will be displayed here</small>
-                </td>
-            </tr>
-        `;
+        try {
+            const response = await fetch(`/api/enquiries/${enquiryId}/followups`);
 
-        // TODO: Implement API call to fetch follow-up history
-        // Example:
-        // const response = await fetch(`/api/enquiries/${enquiryId}/followups`);
-        // const history = await response.json();
-        // renderFollowUpHistory(history);
+            if (!response.ok) {
+                throw new Error('Failed to load follow-ups');
+            }
+
+            const history = await response.json();
+
+            if (history && history.length > 0) {
+                tbody.innerHTML = history.map(f => `
+                    <tr data-followup-id="${f.id}">
+                        <td>${f.followUpDate || '-'}</td>
+                        <td>${f.nextFollowUpDate || '-'}</td>
+                        <td><span class="badge bg-info">${f.mode || '-'}</span></td>
+                        <td>${f.note || '-'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger delete-followup"
+                                    data-followup-id="${f.id}"
+                                    title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Attach delete event listeners
+                tbody.querySelectorAll('.delete-followup').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const followUpId = this.getAttribute('data-followup-id');
+                        await deleteFollowUp(followUpId, enquiryId);
+                    });
+                });
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            <small>No follow-up history available</small>
+                        </td>
+                    </tr>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading follow-up history:', error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted">
+                        <small>No follow-up history available</small>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    // Delete Follow-Up
+    async function deleteFollowUp(followUpId, enquiryId) {
+        const result = await Swal.fire({
+            title: 'Delete Follow-up?',
+            text: 'Are you sure you want to delete this follow-up record?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Delete',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#ef4444'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`/api/enquiries/followups/${followUpId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete follow-up');
+
+                showSuccess('Follow-up deleted successfully');
+                await loadFollowUpHistory(enquiryId); // Reload history
+            } catch (error) {
+                console.error('Error deleting follow-up:', error);
+                showError('Failed to delete follow-up');
+            }
+        }
     }
 
     // Save Follow-Up
@@ -573,41 +741,42 @@
 
         const followUpData = {
             enquiryId: currentFollowUpEnquiry.id,
+            followUpDate: new Date().toISOString().split('T')[0],
+            nextFollowUpDate: getValue('nextFollowUpDate') || null,
             mode: getValue('followUpMode'),
-            nextFollowUpDate: getValue('nextFollowUpDate'),
-            note: getValue('followUpNote'),
-            followUpDate: new Date().toISOString().split('T')[0]
+            note: getValue('followUpNote')
         };
 
         try {
-            // Update enquiry with new follow-up date
-            const updateResponse = await fetch(`/api/enquiries/${currentFollowUpEnquiry.id}`, {
-                method: 'PUT',
+            const response = await fetch(`/api/enquiries/${currentFollowUpEnquiry.id}/followups`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    ...currentFollowUpEnquiry,
-                    followupDate: followUpData.nextFollowUpDate,
-                    note: followUpData.note,
-                    status: 'Follow-up Scheduled'
-                })
+                body: JSON.stringify(followUpData)
             });
 
-            if (!updateResponse.ok) throw new Error('Failed to save follow-up');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Failed to save follow-up');
+            }
 
-            // TODO: Save follow-up history to separate table if you have that endpoint
-            // await fetch('/api/followups', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify(followUpData)
-            // });
+            const result = await response.json();
 
             showSuccess('Follow-up saved successfully!');
-            closeModal('followUpModal');
+
+            // Reload follow-up history
+            await loadFollowUpHistory(currentFollowUpEnquiry.id);
+
+            // Reset form but keep student info
+            form.reset();
+            setValue('followUpStudentName', currentFollowUpEnquiry.name ||
+                `${currentFollowUpEnquiry.firstName || ''} ${currentFollowUpEnquiry.lastName || ''}`.trim());
+            setValue('followUpMobile', currentFollowUpEnquiry.mobile);
+
+            // Reload enquiries table
             loadEnquiries();
 
-            // Ask if user wants to send SMS
             const sendSMS = await Swal.fire({
                 title: 'Send SMS?',
                 text: 'Do you want to send follow-up SMS to the student?',
@@ -630,8 +799,6 @@
 
     // Send Follow-Up SMS
     function sendFollowUpSMS(mobile, followUpData) {
-        // Implement SMS sending logic here
-        // This is a placeholder
         Swal.fire({
             title: 'SMS Sent!',
             text: `Follow-up reminder sent to ${mobile}`,
@@ -660,11 +827,11 @@
         updateProgress(25);
     }
 
-    function clearForm() {
-        ['personalForm', 'communicationForm', 'followupForm', 'sourceForm'].forEach(id => {
-            document.getElementById(id)?.reset();
-        });
-    }
+   function clearForm() {
+       ['personalForm', 'communicationForm', 'courseForm', 'sourceForm'].forEach(id => {
+           document.getElementById(id)?.reset();
+       });
+   }
 
     function closeModal(modalId) {
         const modalEl = document.getElementById(modalId);

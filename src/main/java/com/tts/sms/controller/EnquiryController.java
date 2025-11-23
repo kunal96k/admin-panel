@@ -2,6 +2,7 @@ package com.tts.sms.controller;
 
 import com.tts.sms.dto.*;
 import com.tts.sms.service.EnquiryService;
+import com.tts.sms.service.FollowUpService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,22 +14,16 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
-/**
- * REST Controller for Enquiry management
- * Handles CRUD operations, bulk import, export, and search functionality
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/enquiries")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class EnquiryController {
 
     private final EnquiryService enquiryService;
+    private final FollowUpService followUpService;
 
-    /**
-     * Get all enquiries with pagination
-     * GET /api/enquiries?page=0&size=25
-     */
     @GetMapping
     public ResponseEntity<Page<EnquiryResponseDTO>> getAllEnquiries(
             @RequestParam(defaultValue = "0") int page,
@@ -39,10 +34,6 @@ public class EnquiryController {
         return ResponseEntity.ok(enquiries);
     }
 
-    /**
-     * Search enquiries with filters
-     * POST /api/enquiries/search
-     */
     @PostMapping("/search")
     public ResponseEntity<Page<EnquiryResponseDTO>> searchEnquiries(
             @Valid @RequestBody EnquirySearchDTO searchDTO) {
@@ -52,10 +43,6 @@ public class EnquiryController {
         return ResponseEntity.ok(results);
     }
 
-    /**
-     * Get enquiry by ID
-     * GET /api/enquiries/{id}
-     */
     @GetMapping("/{id}")
     public ResponseEntity<EnquiryResponseDTO> getEnquiryById(@PathVariable Long id) {
         log.info("GET /api/enquiries/{}", id);
@@ -63,10 +50,6 @@ public class EnquiryController {
         return ResponseEntity.ok(enquiry);
     }
 
-    /**
-     * Create new enquiry
-     * POST /api/enquiries
-     */
     @PostMapping
     public ResponseEntity<EnquiryResponseDTO> createEnquiry(
             @Valid @RequestBody EnquiryRequestDTO requestDTO) {
@@ -76,10 +59,6 @@ public class EnquiryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    /**
-     * Update existing enquiry
-     * PUT /api/enquiries/{id}
-     */
     @PutMapping("/{id}")
     public ResponseEntity<EnquiryResponseDTO> updateEnquiry(
             @PathVariable Long id,
@@ -91,9 +70,35 @@ public class EnquiryController {
     }
 
     /**
-     * Delete enquiry (soft delete)
-     * DELETE /api/enquiries/{id}
+     * Update enquiry status - FIXED
      */
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Map<String, Object>> updateEnquiryStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+
+        log.info("PATCH /api/enquiries/{}/status - status: {}", id, request.get("status"));
+
+        try {
+            String status = request.get("status");
+            if (status == null || status.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Status is required"));
+            }
+
+            EnquiryResponseDTO updated = enquiryService.updateEnquiryStatus(id, status);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Status updated successfully",
+                    "data", updated
+            ));
+        } catch (Exception e) {
+            log.error("Error updating status", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, Object>> deleteEnquiry(@PathVariable Long id) {
         log.info("DELETE /api/enquiries/{}", id);
@@ -104,10 +109,6 @@ public class EnquiryController {
         ));
     }
 
-    /**
-     * Bulk import enquiries from CSV
-     * POST /api/enquiries/bulk-import?importType=OLD_FORMAT|NEW_FORMAT
-     */
     @PostMapping("/bulk-import")
     public ResponseEntity<BulkImportResponseDTO> bulkImportFromCSV(
             @RequestParam("file") MultipartFile file,
@@ -138,10 +139,6 @@ public class EnquiryController {
         return ResponseEntity.status(status).body(result);
     }
 
-    /**
-     * Bulk import from JSON body
-     * POST /api/enquiries/bulk-import-json
-     */
     @PostMapping("/bulk-import-json")
     public ResponseEntity<BulkImportResponseDTO> bulkImportFromJSON(
             @RequestBody List<EnquiryRequestDTO> enquiries,
@@ -149,7 +146,6 @@ public class EnquiryController {
 
         log.info("POST /api/enquiries/bulk-import-json - {} records", enquiries.size());
 
-        // Manual validation for better error handling
         if (enquiries == null || enquiries.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(BulkImportResponseDTO.builder()
@@ -167,10 +163,6 @@ public class EnquiryController {
         return ResponseEntity.status(status).body(result);
     }
 
-    /**
-     * Export enquiries to CSV
-     * GET /api/enquiries/export/csv
-     */
     @GetMapping("/export/csv")
     public ResponseEntity<byte[]> exportToCSV() {
         log.info("GET /api/enquiries/export/csv");
@@ -190,10 +182,6 @@ public class EnquiryController {
                 .body(csvData);
     }
 
-    /**
-     * Get enquiry statistics
-     * GET /api/enquiries/statistics
-     */
     @GetMapping("/statistics")
     public ResponseEntity<Map<String, Object>> getStatistics() {
         log.info("GET /api/enquiries/statistics");
@@ -201,10 +189,6 @@ public class EnquiryController {
         return ResponseEntity.ok(stats);
     }
 
-    /**
-     * Health check endpoint
-     * GET /api/enquiries/health
-     */
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
         return ResponseEntity.ok(Map.of(
@@ -214,32 +198,67 @@ public class EnquiryController {
         ));
     }
 
-    // ================= FOLLOW-UP APIs =================
-//
-//    /**
-//     * Get follow-up history for an enquiry
-//     * GET /api/enquiries/{enquiryId}/followups
-//     */
-//    @GetMapping("/{enquiryId}/followups")
-//    public ResponseEntity<List<FollowUpDTO>> getFollowUpHistory(@PathVariable Long enquiryId) {
-//        log.info("GET /api/enquiries/{}/followups", enquiryId);
-//        List<FollowUpDTO> history = enquiryService.getFollowUpHistory(enquiryId);
-//        return ResponseEntity.ok(history);
-//    }
-//
-//    /**
-//     * Add a follow-up for an enquiry
-//     * POST /api/enquiries/{enquiryId}/followups
-//     */
-//    @PostMapping("/{enquiryId}/followups")
-//    public ResponseEntity<FollowUpDTO> addFollowUp(
-//            @PathVariable Long enquiryId,
-//            @Valid @RequestBody FollowUpDTO followUp) {
-//
-//        log.info("POST /api/enquiries/{}/followups - mode: {}", enquiryId, followUp.getMode());
-//        FollowUpDTO created = enquiryService.addFollowUp(enquiryId, followUp);
-//        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-//    }
+    // ================= FOLLOW-UP APIs - FIXED =================
 
+    /**
+     * Get follow-up history for an enquiry
+     */
+    @GetMapping("/{enquiryId}/followups")
+    public ResponseEntity<?> getFollowUpHistory(@PathVariable Long enquiryId) {
+        log.info("GET /api/enquiries/{}/followups", enquiryId);
+        try {
+            List<FollowUpDTO> history = followUpService.getFollowUpHistory(enquiryId);
+            return ResponseEntity.ok(history);
+        } catch (Exception e) {
+            log.error("Error fetching follow-up history", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
 
+    /**
+     * Add a follow-up for an enquiry - FIXED
+     */
+    @PostMapping("/{enquiryId}/followups")
+    public ResponseEntity<?> addFollowUp(
+            @PathVariable Long enquiryId,
+            @RequestBody FollowUpDTO followUp) {
+
+        log.info("POST /api/enquiries/{}/followups - mode: {}", enquiryId, followUp.getMode());
+
+        try {
+            // Set enquiry ID from path
+            followUp.setEnquiryId(enquiryId);
+
+            FollowUpDTO created = followUpService.addFollowUp(enquiryId, followUp);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                    "success", true,
+                    "message", "Follow-up saved successfully",
+                    "data", created
+            ));
+        } catch (Exception e) {
+            log.error("Error adding follow-up", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete a follow-up
+     */
+    @DeleteMapping("/followups/{followUpId}")
+    public ResponseEntity<Map<String, Object>> deleteFollowUp(@PathVariable Long followUpId) {
+        log.info("DELETE /api/enquiries/followups/{}", followUpId);
+        try {
+            followUpService.deleteFollowUp(followUpId);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Follow-up deleted successfully"
+            ));
+        } catch (Exception e) {
+            log.error("Error deleting follow-up", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
 }
