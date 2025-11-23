@@ -1,0 +1,22 @@
+
+
+src/main/resources/templates/
+│
+├── layout/
+│   └── layout.html              → Main layout (sidebar, topbar, footer, CSS, JS)
+│
+├── dashboard/
+│   └── dashboard.html           → Default dashboard page
+│
+├── student/
+│   ├── enquiry.html             → Student enquiry page
+│   └── admission.html           → Student admission page
+│
+├── accounts/
+│   └── fees-manager.html        → Fees management module
+│
+├── printing/
+│   └── certificate.html         → Certificate printing page
+│
+└── master/
+    └── course.html              → Course master management page

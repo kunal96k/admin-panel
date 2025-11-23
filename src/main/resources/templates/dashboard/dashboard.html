@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}"
+      lang="en">
+
+<head>
+    <title>Dashboard - TechnoKraft Admin</title>
+</head>
+
+<body>
+
+<!-- Dashboard Content Fragment -->
+<main layout:fragment="content">
+
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+        <h2>Welcome to TechnoKraft Admin Console</h2>
+        <p>Comprehensive student management system by TechnoKraft Training &amp; Solution</p>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="quick-stats">
+        <div class="stat-card">
+            <div class="stat-icon bg-primary">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="stat-info">
+                <h3>1,234</h3>
+                <p>Total Students</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon bg-success">
+                <i class="bi bi-cash-stack"></i>
+            </div>
+            <div class="stat-info">
+                <h3>₹45.6L</h3>
+                <p>Fees Collected</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon bg-warning">
+                <i class="bi bi-file-earmark-text"></i>
+            </div>
+            <div class="stat-info">
+                <h3>89</h3>
+                <p>Pending Enquiries</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon bg-info">
+                <i class="bi bi-award-fill"></i>
+            </div>
+            <div class="stat-info">
+                <h3>567</h3>
+                <p>Certificates Issued</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-section">
+        <div class="chart-card">
+            <h3><i class="bi bi-graph-up me-2"></i>Monthly Revenue Trend</h3>
+            <div class="chart-container">
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3><i class="bi bi-pie-chart me-2"></i>Course Distribution</h3>
+            <div class="chart-container">
+                <canvas id="pieChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+</body>
+</html>
