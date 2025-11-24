@@ -32,13 +32,6 @@
                 DateTimeFormatter.ofPattern("d-M-yyyy")
         };
 
-        /**
-         * Parse OLD FORMAT CSV - FIXED for multiple courses
-         * CSV Format: Enquiry No., Student Name, Mobile No., Course(s), Enquiry Source,
-         *             Enquiry Date, Assign To, Enquiry Status
-         *
-         * ⚠️ CRITICAL: Enquiry No. from CSV is IGNORED (database auto-generates ID)
-         */
         public List<EnquiryRequestDTO> parseOldFormatCSV(MultipartFile file) throws IOException {
             log.info("Parsing OLD format CSV: {}", file.getOriginalFilename());
 
@@ -55,7 +48,6 @@
 
                 log.debug("CSV Header: {}", Arrays.toString(records.get(0)));
 
-                // Skip header row (index 0)
                 for (int i = 1; i < records.size(); i++) {
                     String[] row = records.get(i);
 
@@ -65,8 +57,8 @@
                     }
 
                     try {
-                        //  Column 0: Enquiry No. - IGNORED (database auto-generates)
-                        // String enquiryNo = getValueOrNull(row, 0); // NOT USED
+                        //  Column 0: Enquiry No. - NOW CAPTURED
+                        String enquiryNo = getValueOrNull(row, 0);
 
                         // Column 1: Student Name
                         String fullName = getValueOrNull(row, 1);
@@ -75,7 +67,7 @@
                         // Column 2: Mobile No.
                         String mobile = cleanMobileNumber(getValueOrNull(row, 2));
 
-                        // ✅ Column 3: Multiple Courses - CRITICAL FIX
+                        // Column 3: Multiple Courses
                         String coursesStr = getValueOrNull(row, 3);
                         List<String> coursesList = parseMultipleCourses(coursesStr);
 
@@ -85,8 +77,8 @@
                             continue;
                         }
 
-                        log.info("Row {}: name={}, mobile={}, courses={} (count: {})",
-                                i + 1, fullName, mobile, coursesList, coursesList.size());
+                        log.info("Row {}: enquiryNo={}, name={}, mobile={}, courses={} (count: {})",
+                                i + 1, enquiryNo, fullName, mobile, coursesList, coursesList.size());
 
                         // Column 4: Enquiry Source
                         String source = getValueOrDefault(row, 4, "Unknown");
@@ -94,7 +86,7 @@
                         // Column 5: Enquiry Date
                         LocalDate enquiryDate = parseDate(getValueOrNull(row, 5));
                         if (enquiryDate == null) {
-                            enquiryDate = LocalDate.now(); // Default to today
+                            enquiryDate = LocalDate.now();
                         }
 
                         // Column 6: Assign To
@@ -104,13 +96,13 @@
                         String status = getValueOrDefault(row, 7, "New");
 
                         EnquiryRequestDTO dto = EnquiryRequestDTO.builder()
-                                // ⚠️ DO NOT set enquiryNo - database auto-generates ID
+                                .enquiryNo(enquiryNo)  //  Set enquiry number from CSV
                                 .name(fullName)
                                 .firstName(nameParts[0])
                                 .middleName(nameParts[1])
                                 .lastName(nameParts[2])
                                 .mobile(mobile)
-                                .courses(coursesList)  // ✅ ALL courses preserved
+                                .courses(coursesList)
                                 .source(source)
                                 .enquiryDate(enquiryDate)
                                 .assignTo(assignTo)
@@ -124,7 +116,7 @@
                     }
                 }
 
-                log.info("✅ Successfully parsed {} records from OLD format CSV", dtos.size());
+                log.info(" Successfully parsed {} records from OLD format CSV", dtos.size());
                 return dtos;
 
             } catch (CsvException e) {
@@ -134,7 +126,7 @@
         }
 
         /**
-         * 🔥 CRITICAL FIX: Parse MULTIPLE courses from CSV cell
+         * CRITICAL FIX: Parse MULTIPLE courses from CSV cell
          *
          * Handles formats:
          * 1. Single course: "PYTHON"
@@ -167,7 +159,7 @@
                     continue;
                 }
 
-                // ✅ Add if not already in list (avoid duplicates)
+                //  Add if not already in list (avoid duplicates)
                 if (!courses.contains(course)) {
                     courses.add(course);
                     log.debug("  Added course: {}", course);
@@ -222,7 +214,7 @@
                         LocalDate followupDate = parseDate(getValueOrNull(row, 11));
                         String note = getValueOrNull(row, 12);
 
-                        // ✅ Column 13: Multiple Courses
+                        //  Column 13: Multiple Courses
                         String coursesStr = getValueOrNull(row, 13);
                         List<String> coursesList = parseMultipleCourses(coursesStr);
 
@@ -258,7 +250,7 @@
                     }
                 }
 
-                log.info("✅ Successfully parsed {} records from NEW format CSV", dtos.size());
+                log.info(" Successfully parsed {} records from NEW format CSV", dtos.size());
                 return dtos;
 
             } catch (CsvException e) {

@@ -32071,3 +32071,1958 @@ Access URLs:
 2025-11-24 19:03:50 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
 2025-11-24 19:03:50 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
 2025-11-24 19:03:50 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2025-11-24 19:05:20 [restartedMain] INFO  com.tts.sms.SmsApplication - Starting SmsApplication using Java 22.0.2 with PID 8292 (D:\tts-sms\sms\target\classes started by KUNAL in D:\tts-sms\sms)
+2025-11-24 19:05:20 [restartedMain] DEBUG com.tts.sms.SmsApplication - Running with Spring Boot v3.2.0, Spring v6.1.1
+2025-11-24 19:05:20 [restartedMain] INFO  com.tts.sms.SmsApplication - The following 1 profile is active: "dev"
+2025-11-24 19:05:21 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-11-24 19:05:21 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-11-24 19:05:24 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-24 19:05:24 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 350 ms. Found 4 JPA repository interfaces.
+2025-11-24 19:05:30 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8081 (http)
+2025-11-24 19:05:30 [restartedMain] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-11-24 19:05:30 [restartedMain] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.16]
+2025-11-24 19:05:30 [restartedMain] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-11-24 19:05:30 [restartedMain] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 9312 ms
+2025-11-24 19:05:31 [restartedMain] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-24 19:05:31 [restartedMain] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.3.1.Final
+2025-11-24 19:05:31 [restartedMain] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2025-11-24 19:05:32 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-11-24 19:05:33 [restartedMain] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@12e81cc8
+2025-11-24 19:05:33 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-11-24 19:05:33 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000025: MariaDB103Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-24 19:05:33 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000026: MariaDB103Dialect has been deprecated; use org.hibernate.dialect.MariaDBDialect instead
+2025-11-24 19:05:33 [restartedMain] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-24 19:05:36 [restartedMain] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-24 19:05:36 [restartedMain] INFO  o.hibernate.orm.connections.access - HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@2bbf9327] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
+2025-11-24 19:05:36 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table admissions 
+       modify column batches json
+2025-11-24 19:05:36 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table admissions 
+       modify column courses json
+2025-11-24 19:05:36 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table admissions 
+       modify column subjects json
+2025-11-24 19:05:36 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table enquiries 
+       modify column courses json
+2025-11-24 19:05:37 [restartedMain] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-24 19:05:37 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - ===========================================
+2025-11-24 19:05:37 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Database Configuration:
+2025-11-24 19:05:37 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - Auto-create enabled: createDatabaseIfNotExist=true
+2025-11-24 19:05:37 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - Timezone: Asia/Kolkata (IST)
+2025-11-24 19:05:37 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - DDL Auto: update (will create tables automatically)
+2025-11-24 19:05:37 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - ===========================================
+2025-11-24 19:05:37 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Application timezone set to: Asia/Kolkata (India Standard Time)
+2025-11-24 19:05:37 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Current time in IST: 2025-11-24T19:05:37.177107600+05:30[Asia/Kolkata]
+2025-11-24 19:05:38 [restartedMain] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-11-24 19:05:44 [restartedMain] INFO  com.tts.sms.config.SecurityConfig - Configuring security for profile: dev
+2025-11-24 19:05:44 [restartedMain] INFO  com.tts.sms.config.SecurityConfig - Configuring CORS with allowed origins: *
+2025-11-24 19:05:44 [restartedMain] WARN  com.tts.sms.config.SecurityConfig - CSRF protection DISABLED for development
+2025-11-24 19:05:44 [restartedMain] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - 44 mappings in 'requestMappingHandlerMapping'
+2025-11-24 19:05:44 [restartedMain] DEBUG com.tts.sms.config.WebConfig - Configuring view controllers
+2025-11-24 19:05:44 [restartedMain] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Patterns [/login] in 'viewControllerHandlerMapping'
+2025-11-24 19:05:45 [restartedMain] DEBUG com.tts.sms.config.WebConfig - Configuring resource handlers with proper MIME types
+2025-11-24 19:05:45 [restartedMain] INFO  com.tts.sms.config.WebConfig - Resource handlers configured successfully with proper caching
+2025-11-24 19:05:45 [restartedMain] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**, /assets/**, /css/**, /js/**, /images/**, /uploads/**] in 'resourceHandlerMapping'
+2025-11-24 19:05:45 [restartedMain] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@701e80c9, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@6c843be2, org.springframework.security.web.context.SecurityContextHolderFilter@5b28b3b7, org.springframework.security.web.header.HeaderWriterFilter@1d517938, org.springframework.web.filter.CorsFilter@69c1f329, org.springframework.security.web.authentication.logout.LogoutFilter@59c3c932, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@526af55e, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@6f5e6952, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@46fb5eb, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@45106c67, org.springframework.security.web.session.SessionManagementFilter@2633dec4, org.springframework.security.web.access.ExceptionTranslationFilter@2b437815, org.springframework.security.web.access.intercept.AuthorizationFilter@4bdafb8b]
+2025-11-24 19:05:46 [restartedMain] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerAdapter - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+2025-11-24 19:05:46 [restartedMain] DEBUG o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - ControllerAdvice beans: 1 @ExceptionHandler, 1 ResponseBodyAdvice
+2025-11-24 19:05:46 [restartedMain] INFO  o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2025-11-24 19:05:47 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8081 (http) with context path ''
+2025-11-24 19:05:47 [restartedMain] INFO  com.tts.sms.SmsApplication - Started SmsApplication in 28.8 seconds (process running for 30.52)
+2025-11-24 19:05:47 [restartedMain] INFO  com.tts.sms.SmsApplication - 
+----------------------------------------------------------
+Application 'tts-sms' is running!
+Profile(s): dev
+Access URLs:
+  Local:      http://localhost:8081/
+  External:   http://172.28.240.1:8081/
+----------------------------------------------------------
+2025-11-24 19:06:03 [http-nio-8081-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-24 19:06:03 [http-nio-8081-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2025-11-24 19:06:03 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected StandardServletMultipartResolver
+2025-11-24 19:06:03 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected AcceptHeaderLocaleResolver
+2025-11-24 19:06:03 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected FixedThemeResolver
+2025-11-24 19:06:03 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator@7fb38335
+2025-11-24 19:06:03 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected org.springframework.web.servlet.support.SessionFlashMapManager@202f88f3
+2025-11-24 19:06:03 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - enableLoggingRequestDetails='false': request parameters and headers will be masked to prevent unsafe logging of potentially sensitive data
+2025-11-24 19:06:03 [http-nio-8081-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 4 ms
+2025-11-24 19:06:03 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Securing GET /students/enquiry
+2025-11-24 19:06:03 [http-nio-8081-exec-1] WARN  o.s.w.s.h.HandlerMappingIntrospector - Cache miss for REQUEST dispatch to '/students/enquiry' (previous null). Performing MatchableHandlerMapping lookup. This is logged once only at WARN level, and every time at TRACE.
+2025-11-24 19:06:03 [http-nio-8081-exec-1] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:03 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Secured GET /students/enquiry
+2025-11-24 19:06:03 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - GET "/students/enquiry", parameters={}
+2025-11-24 19:06:03 [http-nio-8081-exec-1] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.LayoutController#enquiry(Model)
+2025-11-24 19:06:03 [http-nio-8081-exec-1] DEBUG o.s.w.s.v.ContentNegotiatingViewResolver - Selected 'text/html' given [text/html, application/xhtml+xml, image/avif, image/webp, image/apng, application/xml;q=0.9, */*;q=0.8, application/signed-exchange;v=b3;q=0.7]
+2025-11-24 19:06:07 [http-nio-8081-exec-2] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/styles.css
+2025-11-24 19:06:07 [http-nio-8081-exec-3] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/enquiry.css
+2025-11-24 19:06:07 [http-nio-8081-exec-3] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/enquiry.css
+2025-11-24 19:06:07 [http-nio-8081-exec-3] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/enquiry.css", parameters={}
+2025-11-24 19:06:07 [http-nio-8081-exec-3] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:06:07 [http-nio-8081-exec-4] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/images/tts-logo-ev.png
+2025-11-24 19:06:07 [http-nio-8081-exec-4] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/images/tts-logo-ev.png
+2025-11-24 19:06:07 [http-nio-8081-exec-4] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/images/tts-logo-ev.png", parameters={}
+2025-11-24 19:06:07 [http-nio-8081-exec-4] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:06:07 [http-nio-8081-exec-3] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:07 [http-nio-8081-exec-4] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:07 [http-nio-8081-exec-3] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:07 [http-nio-8081-exec-4] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:07 [http-nio-8081-exec-2] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/styles.css
+2025-11-24 19:06:07 [http-nio-8081-exec-2] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/styles.css", parameters={}
+2025-11-24 19:06:07 [http-nio-8081-exec-2] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:06:07 [http-nio-8081-exec-2] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:07 [http-nio-8081-exec-2] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:07 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:08 [http-nio-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/enquiry.js
+2025-11-24 19:06:08 [http-nio-8081-exec-6] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/script.js
+2025-11-24 19:06:08 [http-nio-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/enquiry.js
+2025-11-24 19:06:08 [http-nio-8081-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/enquiry.js", parameters={}
+2025-11-24 19:06:08 [http-nio-8081-exec-6] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/script.js
+2025-11-24 19:06:08 [http-nio-8081-exec-6] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/script.js", parameters={}
+2025-11-24 19:06:08 [http-nio-8081-exec-5] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:06:08 [http-nio-8081-exec-6] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:06:08 [http-nio-8081-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:08 [http-nio-8081-exec-5] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:08 [http-nio-8081-exec-6] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:08 [http-nio-8081-exec-6] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:08 [http-nio-8081-exec-7] DEBUG o.s.security.web.FilterChainProxy - Securing GET /api/enquiries?page=0&size=25
+2025-11-24 19:06:08 [http-nio-8081-exec-7] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:08 [http-nio-8081-exec-7] DEBUG o.s.security.web.FilterChainProxy - Secured GET /api/enquiries?page=0&size=25
+2025-11-24 19:06:08 [http-nio-8081-exec-7] DEBUG o.s.web.servlet.DispatcherServlet - GET "/api/enquiries?page=0&size=25", parameters={masked}
+2025-11-24 19:06:08 [http-nio-8081-exec-7] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.EnquiryController#getAllEnquiries(int, int)
+2025-11-24 19:06:08 [http-nio-8081-exec-7] INFO  c.t.sms.controller.EnquiryController - GET /api/enquiries - page: 0, size: 25
+2025-11-24 19:06:09 [http-nio-8081-exec-7] DEBUG com.tts.sms.service.EnquiryService - Fetching enquiries - page: 0, size: 25
+2025-11-24 19:06:09 [http-nio-8081-exec-8] DEBUG o.s.security.web.FilterChainProxy - Securing GET /students/enquiry
+2025-11-24 19:06:09 [http-nio-8081-exec-8] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:09 [http-nio-8081-exec-8] DEBUG o.s.security.web.FilterChainProxy - Secured GET /students/enquiry
+2025-11-24 19:06:09 [http-nio-8081-exec-8] DEBUG o.s.web.servlet.DispatcherServlet - GET "/students/enquiry", parameters={}
+2025-11-24 19:06:09 [http-nio-8081-exec-8] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.LayoutController#enquiry(Model)
+2025-11-24 19:06:09 [http-nio-8081-exec-8] DEBUG o.s.w.s.v.ContentNegotiatingViewResolver - Selected 'text/html' given [text/html, application/xhtml+xml, image/avif, image/webp, image/apng, application/xml;q=0.9, */*;q=0.8, application/signed-exchange;v=b3;q=0.7]
+2025-11-24 19:06:09 [http-nio-8081-exec-7] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id,
+        e1_0.aadhaar,
+        e1_0.assign_to,
+        e1_0.birth_date,
+        e1_0.college,
+        e1_0.courses,
+        e1_0.created_at,
+        e1_0.created_by,
+        e1_0.current_address,
+        e1_0.demo_lecture_required,
+        e1_0.email,
+        e1_0.enquiry_date,
+        e1_0.enquiry_no,
+        e1_0.first_name,
+        e1_0.followup_date,
+        e1_0.full_name,
+        e1_0.gender,
+        e1_0.import_source,
+        e1_0.interest_level,
+        e1_0.is_deleted,
+        e1_0.last_name,
+        e1_0.middle_name,
+        e1_0.mobile,
+        e1_0.note,
+        e1_0.package_name,
+        e1_0.permanent_address,
+        e1_0.pin_current,
+        e1_0.pin_permanent,
+        e1_0.qualification,
+        e1_0.reference_name,
+        e1_0.secondary_email,
+        e1_0.secondary_mobile,
+        e1_0.source,
+        e1_0.status,
+        e1_0.updated_at,
+        e1_0.updated_by 
+    from
+        enquiries e1_0 
+    where
+        not(e1_0.is_deleted) 
+    order by
+        e1_0.enquiry_date desc 
+    limit
+        ?, ?
+2025-11-24 19:06:09 [http-nio-8081-exec-7] DEBUG org.hibernate.SQL - 
+    select
+        count(e1_0.id) 
+    from
+        enquiries e1_0 
+    where
+        not(e1_0.is_deleted)
+2025-11-24 19:06:09 [http-nio-8081-exec-7] INFO  com.tts.sms.service.EnquiryService - Retrieved 25 enquiries out of 25 total
+2025-11-24 19:06:09 [http-nio-8081-exec-7] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+2025-11-24 19:06:09 [http-nio-8081-exec-7] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Writing [Page 1 of 1 containing com.tts.sms.dto.EnquiryResponseDTO instances]
+2025-11-24 19:06:10 [http-nio-8081-exec-7] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:10 [http-nio-8081-exec-8] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:10 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/styles.css
+2025-11-24 19:06:10 [http-nio-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/enquiry.css
+2025-11-24 19:06:10 [http-nio-8081-exec-3] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/images/tts-logo-ev.png
+2025-11-24 19:06:10 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/styles.css
+2025-11-24 19:06:10 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/styles.css", parameters={}
+2025-11-24 19:06:10 [http-nio-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/enquiry.css
+2025-11-24 19:06:10 [http-nio-8081-exec-10] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/enquiry.css", parameters={}
+2025-11-24 19:06:10 [http-nio-8081-exec-10] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:06:10 [http-nio-8081-exec-10] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:10 [http-nio-8081-exec-10] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:10 [http-nio-8081-exec-9] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:06:10 [http-nio-8081-exec-3] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/images/tts-logo-ev.png
+2025-11-24 19:06:10 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:10 [http-nio-8081-exec-3] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/images/tts-logo-ev.png", parameters={}
+2025-11-24 19:06:10 [http-nio-8081-exec-9] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:10 [http-nio-8081-exec-3] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:06:10 [http-nio-8081-exec-3] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:10 [http-nio-8081-exec-3] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:10 [http-nio-8081-exec-4] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/enquiry.js
+2025-11-24 19:06:10 [http-nio-8081-exec-2] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/script.js
+2025-11-24 19:06:10 [http-nio-8081-exec-4] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/enquiry.js
+2025-11-24 19:06:10 [http-nio-8081-exec-4] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/enquiry.js", parameters={}
+2025-11-24 19:06:10 [http-nio-8081-exec-4] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:06:10 [http-nio-8081-exec-4] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:10 [http-nio-8081-exec-4] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:10 [http-nio-8081-exec-2] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/script.js
+2025-11-24 19:06:10 [http-nio-8081-exec-2] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/script.js", parameters={}
+2025-11-24 19:06:10 [http-nio-8081-exec-2] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:06:10 [http-nio-8081-exec-2] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:06:10 [http-nio-8081-exec-2] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:11 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Securing GET /api/enquiries?page=0&size=25
+2025-11-24 19:06:11 [http-nio-8081-exec-1] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:06:11 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Secured GET /api/enquiries?page=0&size=25
+2025-11-24 19:06:11 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - GET "/api/enquiries?page=0&size=25", parameters={masked}
+2025-11-24 19:06:11 [http-nio-8081-exec-1] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.EnquiryController#getAllEnquiries(int, int)
+2025-11-24 19:06:11 [http-nio-8081-exec-1] INFO  c.t.sms.controller.EnquiryController - GET /api/enquiries - page: 0, size: 25
+2025-11-24 19:06:11 [http-nio-8081-exec-1] DEBUG com.tts.sms.service.EnquiryService - Fetching enquiries - page: 0, size: 25
+2025-11-24 19:06:11 [http-nio-8081-exec-1] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id,
+        e1_0.aadhaar,
+        e1_0.assign_to,
+        e1_0.birth_date,
+        e1_0.college,
+        e1_0.courses,
+        e1_0.created_at,
+        e1_0.created_by,
+        e1_0.current_address,
+        e1_0.demo_lecture_required,
+        e1_0.email,
+        e1_0.enquiry_date,
+        e1_0.enquiry_no,
+        e1_0.first_name,
+        e1_0.followup_date,
+        e1_0.full_name,
+        e1_0.gender,
+        e1_0.import_source,
+        e1_0.interest_level,
+        e1_0.is_deleted,
+        e1_0.last_name,
+        e1_0.middle_name,
+        e1_0.mobile,
+        e1_0.note,
+        e1_0.package_name,
+        e1_0.permanent_address,
+        e1_0.pin_current,
+        e1_0.pin_permanent,
+        e1_0.qualification,
+        e1_0.reference_name,
+        e1_0.secondary_email,
+        e1_0.secondary_mobile,
+        e1_0.source,
+        e1_0.status,
+        e1_0.updated_at,
+        e1_0.updated_by 
+    from
+        enquiries e1_0 
+    where
+        not(e1_0.is_deleted) 
+    order by
+        e1_0.enquiry_date desc 
+    limit
+        ?, ?
+2025-11-24 19:06:11 [http-nio-8081-exec-1] DEBUG org.hibernate.SQL - 
+    select
+        count(e1_0.id) 
+    from
+        enquiries e1_0 
+    where
+        not(e1_0.is_deleted)
+2025-11-24 19:06:11 [http-nio-8081-exec-1] INFO  com.tts.sms.service.EnquiryService - Retrieved 25 enquiries out of 25 total
+2025-11-24 19:06:11 [http-nio-8081-exec-1] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+2025-11-24 19:06:11 [http-nio-8081-exec-1] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Writing [Page 1 of 1 containing com.tts.sms.dto.EnquiryResponseDTO instances]
+2025-11-24 19:06:11 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:07:27 [http-nio-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Securing GET /students/enquiry
+2025-11-24 19:07:27 [http-nio-8081-exec-10] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:07:27 [http-nio-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Secured GET /students/enquiry
+2025-11-24 19:07:27 [http-nio-8081-exec-10] DEBUG o.s.web.servlet.DispatcherServlet - GET "/students/enquiry", parameters={}
+2025-11-24 19:07:27 [http-nio-8081-exec-10] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.LayoutController#enquiry(Model)
+2025-11-24 19:07:27 [http-nio-8081-exec-10] DEBUG o.s.w.s.v.ContentNegotiatingViewResolver - Selected 'text/html' given [text/html, application/xhtml+xml, image/avif, image/webp, image/apng, application/xml;q=0.9, */*;q=0.8, application/signed-exchange;v=b3;q=0.7]
+2025-11-24 19:07:27 [http-nio-8081-exec-10] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:07:27 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/styles.css
+2025-11-24 19:07:27 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/styles.css
+2025-11-24 19:07:27 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/styles.css", parameters={}
+2025-11-24 19:07:27 [http-nio-8081-exec-9] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:07:27 [http-nio-8081-exec-3] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/enquiry.css
+2025-11-24 19:07:27 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:07:27 [http-nio-8081-exec-9] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:07:27 [http-nio-8081-exec-4] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/images/tts-logo-ev.png
+2025-11-24 19:07:27 [http-nio-8081-exec-4] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/images/tts-logo-ev.png
+2025-11-24 19:07:27 [http-nio-8081-exec-4] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/images/tts-logo-ev.png", parameters={}
+2025-11-24 19:07:27 [http-nio-8081-exec-4] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:07:27 [http-nio-8081-exec-4] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:07:27 [http-nio-8081-exec-4] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:07:27 [http-nio-8081-exec-3] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/enquiry.css
+2025-11-24 19:07:27 [http-nio-8081-exec-3] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/enquiry.css", parameters={}
+2025-11-24 19:07:27 [http-nio-8081-exec-3] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:07:27 [http-nio-8081-exec-3] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:07:27 [http-nio-8081-exec-3] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:07:28 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/script.js
+2025-11-24 19:07:28 [http-nio-8081-exec-2] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/enquiry.js
+2025-11-24 19:07:28 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/script.js
+2025-11-24 19:07:28 [http-nio-8081-exec-2] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/enquiry.js
+2025-11-24 19:07:28 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/script.js", parameters={}
+2025-11-24 19:07:28 [http-nio-8081-exec-2] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/enquiry.js", parameters={}
+2025-11-24 19:07:28 [http-nio-8081-exec-2] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:07:28 [http-nio-8081-exec-1] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:07:28 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:07:28 [http-nio-8081-exec-1] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:07:28 [http-nio-8081-exec-2] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:07:28 [http-nio-8081-exec-2] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:07:28 [http-nio-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Securing GET /api/enquiries?page=0&size=25
+2025-11-24 19:07:28 [http-nio-8081-exec-5] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:07:28 [http-nio-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Secured GET /api/enquiries?page=0&size=25
+2025-11-24 19:07:28 [http-nio-8081-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - GET "/api/enquiries?page=0&size=25", parameters={masked}
+2025-11-24 19:07:28 [http-nio-8081-exec-5] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.EnquiryController#getAllEnquiries(int, int)
+2025-11-24 19:07:28 [http-nio-8081-exec-5] INFO  c.t.sms.controller.EnquiryController - GET /api/enquiries - page: 0, size: 25
+2025-11-24 19:07:28 [http-nio-8081-exec-5] DEBUG com.tts.sms.service.EnquiryService - Fetching enquiries - page: 0, size: 25
+2025-11-24 19:07:28 [http-nio-8081-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id,
+        e1_0.aadhaar,
+        e1_0.assign_to,
+        e1_0.birth_date,
+        e1_0.college,
+        e1_0.courses,
+        e1_0.created_at,
+        e1_0.created_by,
+        e1_0.current_address,
+        e1_0.demo_lecture_required,
+        e1_0.email,
+        e1_0.enquiry_date,
+        e1_0.enquiry_no,
+        e1_0.first_name,
+        e1_0.followup_date,
+        e1_0.full_name,
+        e1_0.gender,
+        e1_0.import_source,
+        e1_0.interest_level,
+        e1_0.is_deleted,
+        e1_0.last_name,
+        e1_0.middle_name,
+        e1_0.mobile,
+        e1_0.note,
+        e1_0.package_name,
+        e1_0.permanent_address,
+        e1_0.pin_current,
+        e1_0.pin_permanent,
+        e1_0.qualification,
+        e1_0.reference_name,
+        e1_0.secondary_email,
+        e1_0.secondary_mobile,
+        e1_0.source,
+        e1_0.status,
+        e1_0.updated_at,
+        e1_0.updated_by 
+    from
+        enquiries e1_0 
+    where
+        not(e1_0.is_deleted) 
+    order by
+        e1_0.enquiry_date desc 
+    limit
+        ?, ?
+2025-11-24 19:07:28 [http-nio-8081-exec-5] INFO  com.tts.sms.service.EnquiryService - Retrieved 0 enquiries out of 0 total
+2025-11-24 19:07:28 [http-nio-8081-exec-5] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+2025-11-24 19:07:28 [http-nio-8081-exec-5] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Writing [Page 1 of 0 containing UNKNOWN instances]
+2025-11-24 19:07:28 [http-nio-8081-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:07:42 [http-nio-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Securing POST /api/enquiries/bulk-import-json?importSource=OLD_FORMAT
+2025-11-24 19:07:42 [http-nio-8081-exec-10] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:07:42 [http-nio-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Secured POST /api/enquiries/bulk-import-json?importSource=OLD_FORMAT
+2025-11-24 19:07:42 [http-nio-8081-exec-10] DEBUG o.s.web.servlet.DispatcherServlet - POST "/api/enquiries/bulk-import-json?importSource=OLD_FORMAT", parameters={masked}
+2025-11-24 19:07:42 [http-nio-8081-exec-10] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.EnquiryController#bulkImportFromJSON(List, String)
+2025-11-24 19:07:42 [http-nio-8081-exec-10] DEBUG o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Read "application/json;charset=UTF-8" to [[EnquiryRequestDTO(enquiryNo=null, name=Geetanjali  Patil, firstName=null, middleName=null, lastName (truncated)...]
+2025-11-24 19:07:42 [http-nio-8081-exec-10] INFO  c.t.sms.controller.EnquiryController - POST /api/enquiries/bulk-import-json - 25 records
+2025-11-24 19:07:42 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - Processing bulk import of 25 records
+2025-11-24 19:07:42 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:42 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9112244023, Courses: [SAP FICO]
+2025-11-24 19:07:42 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 2 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7058243103, Courses: [MEDICAL CODING]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 3 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9209462181, Courses: [JAVA CORE AND ADVANCE]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 4 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7821876267, Courses: [REDHAT (RHCSA & RHCE)  CISCO CERTIFIED NETWORK ASSOCIATE  AMAZON WEB SERVICES]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 5 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9730203479, Courses: [ARTIFICIAL INTELLIGENCE]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 6 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9156366240, Courses: [DATA ANALYTICS]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 7 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9730469253, Courses: [DATA ANALYTICS]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 8 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7385890600, Courses: [REDHAT (RHCSA & RHCE)  CISCO CERTIFIED NETWORK ASSOCIATE  AMAZON WEB SERVICES]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 9 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9284047028, Courses: [FULL STACK]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 10 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9921410055, Courses: [ARTIFICIAL INTELLIGENCE]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 11 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9307805797, Courses: [DATA ANALYTICS]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 12 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7796183682, Courses: [REDHAT (RHCSA & RHCE)  CISCO CERTIFIED NETWORK ASSOCIATE  AMAZON WEB SERVICES]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 13 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9049794403, Courses: [FULL STACK PYTHON DEVELOPMENT]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 14 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 8883481212, Courses: [REDHAT (RHCSA & RHCE)  CISCO CERTIFIED NETWORK ASSOCIATE  AMAZON WEB SERVICES]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 15 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 8007051505, Courses: [DATA ANALYTICS]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 16 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7028287118, Courses: [ARTIFICIAL INTELLIGENCE]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 17 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7028587621, Courses: [FULL STACK]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 18 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7276898018, Courses: [DATA ANALYTICS  SAP FICO]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 19 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 8380818143, Courses: [MEDICAL CODING  ARTIFICIAL INTELLIGENCE]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 20 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9022486193, Courses: [MEDICAL CODING  ARTIFICIAL INTELLIGENCE]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 21 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9322828551, Courses: [REDHAT (RHCSA & RHCE)  CISCO CERTIFIED NETWORK ASSOCIATE  CYBER SECURITY]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 22 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 8261047450, Courses: [REDHAT (RHCSA & RHCE)  CISCO CERTIFIED NETWORK ASSOCIATE  CYBER SECURITY]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 23 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9665926572, Courses: [ARTIFICIAL INTELLIGENCE   .NET]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 24 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7066999977, Courses: [ARTIFICIAL INTELLIGENCE   .NET]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 25 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7278551111, Courses: [ARTIFICIAL INTELLIGENCE   .NET]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - ✓ Row 26 imported successfully
+2025-11-24 19:07:43 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - Import completed - Success: 25, Failed: 0
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Using 'application/json', given [application/json] and supported [application/json, application/*+json]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Writing [BulkImportResponseDTO(success=true, totalRecords=25, successfulImports=25, failedImports=0, message= (truncated)...]
+2025-11-24 19:07:43 [http-nio-8081-exec-10] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:07:43 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Securing GET /api/enquiries?page=0&size=25
+2025-11-24 19:07:43 [http-nio-8081-exec-9] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:07:43 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Secured GET /api/enquiries?page=0&size=25
+2025-11-24 19:07:43 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - GET "/api/enquiries?page=0&size=25", parameters={masked}
+2025-11-24 19:07:43 [http-nio-8081-exec-9] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.EnquiryController#getAllEnquiries(int, int)
+2025-11-24 19:07:43 [http-nio-8081-exec-9] INFO  c.t.sms.controller.EnquiryController - GET /api/enquiries - page: 0, size: 25
+2025-11-24 19:07:43 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryService - Fetching enquiries - page: 0, size: 25
+2025-11-24 19:07:43 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id,
+        e1_0.aadhaar,
+        e1_0.assign_to,
+        e1_0.birth_date,
+        e1_0.college,
+        e1_0.courses,
+        e1_0.created_at,
+        e1_0.created_by,
+        e1_0.current_address,
+        e1_0.demo_lecture_required,
+        e1_0.email,
+        e1_0.enquiry_date,
+        e1_0.enquiry_no,
+        e1_0.first_name,
+        e1_0.followup_date,
+        e1_0.full_name,
+        e1_0.gender,
+        e1_0.import_source,
+        e1_0.interest_level,
+        e1_0.is_deleted,
+        e1_0.last_name,
+        e1_0.middle_name,
+        e1_0.mobile,
+        e1_0.note,
+        e1_0.package_name,
+        e1_0.permanent_address,
+        e1_0.pin_current,
+        e1_0.pin_permanent,
+        e1_0.qualification,
+        e1_0.reference_name,
+        e1_0.secondary_email,
+        e1_0.secondary_mobile,
+        e1_0.source,
+        e1_0.status,
+        e1_0.updated_at,
+        e1_0.updated_by 
+    from
+        enquiries e1_0 
+    where
+        not(e1_0.is_deleted) 
+    order by
+        e1_0.enquiry_date desc 
+    limit
+        ?, ?
+2025-11-24 19:07:43 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        count(e1_0.id) 
+    from
+        enquiries e1_0 
+    where
+        not(e1_0.is_deleted)
+2025-11-24 19:07:43 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - Retrieved 25 enquiries out of 25 total
+2025-11-24 19:07:43 [http-nio-8081-exec-9] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+2025-11-24 19:07:43 [http-nio-8081-exec-9] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Writing [Page 1 of 1 containing com.tts.sms.dto.EnquiryResponseDTO instances]
+2025-11-24 19:07:43 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG o.s.security.web.FilterChainProxy - Securing POST /api/enquiries
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG o.s.security.web.FilterChainProxy - Secured POST /api/enquiries
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG o.s.web.servlet.DispatcherServlet - POST "/api/enquiries", parameters={}
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.EnquiryController#createEnquiry(EnquiryRequestDTO)
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Read "application/json;charset=UTF-8" to [EnquiryRequestDTO(enquiryNo=null, name=null, firstName=Kunal, middleName=, lastName=Patil, mobile=70 (truncated)...]
+2025-11-24 19:09:12 [http-nio-8081-exec-3] INFO  c.t.sms.controller.EnquiryController - POST /api/enquiries - mobile: 7020268464
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG com.tts.sms.service.EnquiryService - Creating new enquiry for mobile: 7020268464
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7020268464, Courses: [JAVA CORE AND ADVANCE, PYTHON, PYTHON - DATA ANALYTICS, DATA SCIENCE]
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:09:12 [http-nio-8081-exec-3] INFO  com.tts.sms.service.EnquiryService - Created enquiry with id: 101 for Kunal Patil
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Writing [EnquiryResponseDTO(id=101, enquiryNo=null, name=Kunal Patil, firstName=Kunal, middleName=, lastName= (truncated)...]
+2025-11-24 19:09:12 [http-nio-8081-exec-3] DEBUG o.s.web.servlet.DispatcherServlet - Completed 201 CREATED
+2025-11-24 19:09:12 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Securing GET /api/enquiries?page=0&size=25
+2025-11-24 19:09:12 [http-nio-8081-exec-1] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:09:12 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Secured GET /api/enquiries?page=0&size=25
+2025-11-24 19:09:12 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - GET "/api/enquiries?page=0&size=25", parameters={masked}
+2025-11-24 19:09:12 [http-nio-8081-exec-1] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.EnquiryController#getAllEnquiries(int, int)
+2025-11-24 19:09:12 [http-nio-8081-exec-1] INFO  c.t.sms.controller.EnquiryController - GET /api/enquiries - page: 0, size: 25
+2025-11-24 19:09:12 [http-nio-8081-exec-1] DEBUG com.tts.sms.service.EnquiryService - Fetching enquiries - page: 0, size: 25
+2025-11-24 19:09:12 [http-nio-8081-exec-1] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id,
+        e1_0.aadhaar,
+        e1_0.assign_to,
+        e1_0.birth_date,
+        e1_0.college,
+        e1_0.courses,
+        e1_0.created_at,
+        e1_0.created_by,
+        e1_0.current_address,
+        e1_0.demo_lecture_required,
+        e1_0.email,
+        e1_0.enquiry_date,
+        e1_0.enquiry_no,
+        e1_0.first_name,
+        e1_0.followup_date,
+        e1_0.full_name,
+        e1_0.gender,
+        e1_0.import_source,
+        e1_0.interest_level,
+        e1_0.is_deleted,
+        e1_0.last_name,
+        e1_0.middle_name,
+        e1_0.mobile,
+        e1_0.note,
+        e1_0.package_name,
+        e1_0.permanent_address,
+        e1_0.pin_current,
+        e1_0.pin_permanent,
+        e1_0.qualification,
+        e1_0.reference_name,
+        e1_0.secondary_email,
+        e1_0.secondary_mobile,
+        e1_0.source,
+        e1_0.status,
+        e1_0.updated_at,
+        e1_0.updated_by 
+    from
+        enquiries e1_0 
+    where
+        not(e1_0.is_deleted) 
+    order by
+        e1_0.enquiry_date desc 
+    limit
+        ?, ?
+2025-11-24 19:09:12 [http-nio-8081-exec-1] DEBUG org.hibernate.SQL - 
+    select
+        count(e1_0.id) 
+    from
+        enquiries e1_0 
+    where
+        not(e1_0.is_deleted)
+2025-11-24 19:09:12 [http-nio-8081-exec-1] INFO  com.tts.sms.service.EnquiryService - Retrieved 25 enquiries out of 26 total
+2025-11-24 19:09:12 [http-nio-8081-exec-1] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+2025-11-24 19:09:12 [http-nio-8081-exec-1] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Writing [Page 1 of 2 containing com.tts.sms.dto.EnquiryResponseDTO instances]
+2025-11-24 19:09:12 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:09:31 [http-nio-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Securing GET /api/enquiries/79
+2025-11-24 19:09:31 [http-nio-8081-exec-5] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:09:31 [http-nio-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Secured GET /api/enquiries/79
+2025-11-24 19:09:31 [http-nio-8081-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - GET "/api/enquiries/79", parameters={}
+2025-11-24 19:09:31 [http-nio-8081-exec-5] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.EnquiryController#getEnquiryById(Long)
+2025-11-24 19:09:31 [http-nio-8081-exec-5] INFO  c.t.sms.controller.EnquiryController - GET /api/enquiries/79
+2025-11-24 19:09:31 [http-nio-8081-exec-5] DEBUG com.tts.sms.service.EnquiryService - Fetching enquiry with id: 79
+2025-11-24 19:09:31 [http-nio-8081-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id,
+        e1_0.aadhaar,
+        e1_0.assign_to,
+        e1_0.birth_date,
+        e1_0.college,
+        e1_0.courses,
+        e1_0.created_at,
+        e1_0.created_by,
+        e1_0.current_address,
+        e1_0.demo_lecture_required,
+        e1_0.email,
+        e1_0.enquiry_date,
+        e1_0.enquiry_no,
+        e1_0.first_name,
+        e1_0.followup_date,
+        e1_0.full_name,
+        e1_0.gender,
+        e1_0.import_source,
+        e1_0.interest_level,
+        e1_0.is_deleted,
+        e1_0.last_name,
+        e1_0.middle_name,
+        e1_0.mobile,
+        e1_0.note,
+        e1_0.package_name,
+        e1_0.permanent_address,
+        e1_0.pin_current,
+        e1_0.pin_permanent,
+        e1_0.qualification,
+        e1_0.reference_name,
+        e1_0.secondary_email,
+        e1_0.secondary_mobile,
+        e1_0.source,
+        e1_0.status,
+        e1_0.updated_at,
+        e1_0.updated_by 
+    from
+        enquiries e1_0 
+    where
+        e1_0.id=?
+2025-11-24 19:09:31 [http-nio-8081-exec-5] INFO  com.tts.sms.service.EnquiryService - Retrieved enquiry: DILIP  JADHAV
+2025-11-24 19:09:31 [http-nio-8081-exec-5] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+2025-11-24 19:09:31 [http-nio-8081-exec-5] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Writing [EnquiryResponseDTO(id=79, enquiryNo=null, name=DILIP  JADHAV, firstName=DILIP, middleName=null, last (truncated)...]
+2025-11-24 19:09:31 [http-nio-8081-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:09:31 [http-nio-8081-exec-7] DEBUG o.s.security.web.FilterChainProxy - Securing GET /api/admissions/can-create/7821876267
+2025-11-24 19:09:31 [http-nio-8081-exec-7] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:09:31 [http-nio-8081-exec-7] DEBUG o.s.security.web.FilterChainProxy - Secured GET /api/admissions/can-create/7821876267
+2025-11-24 19:09:31 [http-nio-8081-exec-7] DEBUG o.s.web.servlet.DispatcherServlet - GET "/api/admissions/can-create/7821876267", parameters={}
+2025-11-24 19:09:31 [http-nio-8081-exec-7] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.AdmissionController#canCreateAdmission(String)
+2025-11-24 19:09:31 [http-nio-8081-exec-7] INFO  c.t.s.controller.AdmissionController - GET /api/admissions/can-create/7821876267
+2025-11-24 19:09:31 [http-nio-8081-exec-7] DEBUG c.tts.sms.service.AdmissionService - Checking if admission can be created for mobile: 7821876267
+2025-11-24 19:09:31 [http-nio-8081-exec-7] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:09:31 [http-nio-8081-exec-7] DEBUG org.hibernate.SQL - 
+    select
+        a1_0.id 
+    from
+        admissions a1_0 
+    where
+        a1_0.mobile_primary=? 
+        and not(a1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:09:31 [http-nio-8081-exec-7] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+2025-11-24 19:09:31 [http-nio-8081-exec-7] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Writing [{message=Admission can be created, canCreate=true}]
+2025-11-24 19:09:31 [http-nio-8081-exec-7] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:09:41 [http-nio-8081-exec-6] DEBUG o.s.security.web.FilterChainProxy - Securing GET /students/admission?enquiryId=79&mobile=7821876267
+2025-11-24 19:09:41 [http-nio-8081-exec-6] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:09:41 [http-nio-8081-exec-6] DEBUG o.s.security.web.FilterChainProxy - Secured GET /students/admission?enquiryId=79&mobile=7821876267
+2025-11-24 19:09:41 [http-nio-8081-exec-6] DEBUG o.s.web.servlet.DispatcherServlet - GET "/students/admission?enquiryId=79&mobile=7821876267", parameters={masked}
+2025-11-24 19:09:41 [http-nio-8081-exec-6] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.LayoutController#admission(Model)
+2025-11-24 19:09:41 [http-nio-8081-exec-6] DEBUG o.s.w.s.v.ContentNegotiatingViewResolver - Selected 'text/html' given [text/html, application/xhtml+xml, image/avif, image/webp, image/apng, application/xml;q=0.9, */*;q=0.8, application/signed-exchange;v=b3;q=0.7]
+2025-11-24 19:09:41 [http-nio-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/admission.css
+2025-11-24 19:09:41 [http-nio-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/admission.css
+2025-11-24 19:09:41 [http-nio-8081-exec-10] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/admission.css", parameters={}
+2025-11-24 19:09:41 [http-nio-8081-exec-10] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:09:41 [http-nio-8081-exec-10] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:09:41 [http-nio-8081-exec-10] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:09:42 [http-nio-8081-exec-6] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:09:42 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/admission.js
+2025-11-24 19:09:42 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/admission.js
+2025-11-24 19:09:42 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/admission.js", parameters={}
+2025-11-24 19:09:42 [http-nio-8081-exec-9] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:09:42 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:09:42 [http-nio-8081-exec-9] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:10:10 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Securing GET /students/admission?enquiryId=79&mobile=7821876267
+2025-11-24 19:10:10 [http-nio-8081-exec-1] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:10:10 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Secured GET /students/admission?enquiryId=79&mobile=7821876267
+2025-11-24 19:10:10 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - GET "/students/admission?enquiryId=79&mobile=7821876267", parameters={masked}
+2025-11-24 19:10:10 [http-nio-8081-exec-1] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.LayoutController#admission(Model)
+2025-11-24 19:10:10 [http-nio-8081-exec-1] DEBUG o.s.w.s.v.ContentNegotiatingViewResolver - Selected 'text/html' given [text/html, application/xhtml+xml, image/avif, image/webp, image/apng, application/xml;q=0.9, */*;q=0.8, application/signed-exchange;v=b3;q=0.7]
+2025-11-24 19:10:10 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:10:10 [http-nio-8081-exec-2] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/styles.css
+2025-11-24 19:10:10 [http-nio-8081-exec-2] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/styles.css
+2025-11-24 19:10:10 [http-nio-8081-exec-2] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/styles.css", parameters={}
+2025-11-24 19:10:10 [http-nio-8081-exec-2] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:10:10 [http-nio-8081-exec-2] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:10:10 [http-nio-8081-exec-2] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:10:10 [http-nio-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/admission.css
+2025-11-24 19:10:10 [http-nio-8081-exec-7] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/images/tts-logo-ev.png
+2025-11-24 19:10:10 [http-nio-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/admission.css
+2025-11-24 19:10:10 [http-nio-8081-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/admission.css", parameters={}
+2025-11-24 19:10:10 [http-nio-8081-exec-5] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:10:10 [http-nio-8081-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:10:10 [http-nio-8081-exec-5] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:10:10 [http-nio-8081-exec-7] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/images/tts-logo-ev.png
+2025-11-24 19:10:10 [http-nio-8081-exec-7] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/images/tts-logo-ev.png", parameters={}
+2025-11-24 19:10:10 [http-nio-8081-exec-7] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:10:10 [http-nio-8081-exec-7] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:10:10 [http-nio-8081-exec-7] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:10:11 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/admission.js
+2025-11-24 19:10:11 [http-nio-8081-exec-4] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/script.js
+2025-11-24 19:10:11 [http-nio-8081-exec-4] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/script.js
+2025-11-24 19:10:11 [http-nio-8081-exec-4] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/script.js", parameters={}
+2025-11-24 19:10:11 [http-nio-8081-exec-4] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:10:11 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/admission.js
+2025-11-24 19:10:11 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/admission.js", parameters={}
+2025-11-24 19:10:11 [http-nio-8081-exec-9] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:10:11 [http-nio-8081-exec-4] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:10:11 [http-nio-8081-exec-4] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:10:11 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:10:11 [http-nio-8081-exec-9] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=FA3E57A4FE23C1F340F821266006ECE2], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:30:58 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-24 19:30:58 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2025-11-24 19:30:58 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2025-11-24 19:31:33 [restartedMain] INFO  com.tts.sms.SmsApplication - Starting SmsApplication using Java 22.0.2 with PID 2308 (D:\tts-sms\sms\target\classes started by KUNAL in D:\tts-sms\sms)
+2025-11-24 19:31:33 [restartedMain] DEBUG com.tts.sms.SmsApplication - Running with Spring Boot v3.2.0, Spring v6.1.1
+2025-11-24 19:31:33 [restartedMain] INFO  com.tts.sms.SmsApplication - The following 1 profile is active: "dev"
+2025-11-24 19:31:40 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-11-24 19:31:40 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-11-24 19:31:49 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-24 19:31:49 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 475 ms. Found 4 JPA repository interfaces.
+2025-11-24 19:31:58 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8081 (http)
+2025-11-24 19:31:58 [restartedMain] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-11-24 19:31:58 [restartedMain] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.16]
+2025-11-24 19:31:59 [restartedMain] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-11-24 19:31:59 [restartedMain] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 18961 ms
+2025-11-24 19:32:04 [restartedMain] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-24 19:32:05 [restartedMain] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.3.1.Final
+2025-11-24 19:32:05 [restartedMain] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2025-11-24 19:32:06 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-11-24 19:32:08 [restartedMain] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@189bfeb7
+2025-11-24 19:32:08 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-11-24 19:32:08 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000025: MariaDB103Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-24 19:32:08 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000026: MariaDB103Dialect has been deprecated; use org.hibernate.dialect.MariaDBDialect instead
+2025-11-24 19:32:10 [restartedMain] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-24 19:32:18 [restartedMain] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-24 19:32:18 [restartedMain] INFO  o.hibernate.orm.connections.access - HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@934e21e] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
+2025-11-24 19:32:18 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table admissions 
+       modify column batches json
+2025-11-24 19:32:18 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table admissions 
+       modify column courses json
+2025-11-24 19:32:18 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table admissions 
+       modify column subjects json
+2025-11-24 19:32:18 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table enquiries 
+       modify column courses json
+2025-11-24 19:32:18 [restartedMain] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-24 19:32:18 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Application timezone set to: Asia/Kolkata (India Standard Time)
+2025-11-24 19:32:18 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Current time in IST: 2025-11-24T19:32:18.938855400+05:30[Asia/Kolkata]
+2025-11-24 19:32:18 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - ===========================================
+2025-11-24 19:32:18 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Database Configuration:
+2025-11-24 19:32:18 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - Auto-create enabled: createDatabaseIfNotExist=true
+2025-11-24 19:32:18 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - Timezone: Asia/Kolkata (IST)
+2025-11-24 19:32:18 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - DDL Auto: update (will create tables automatically)
+2025-11-24 19:32:18 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - ===========================================
+2025-11-24 19:32:21 [restartedMain] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-11-24 19:32:34 [restartedMain] INFO  com.tts.sms.config.SecurityConfig - Configuring security for profile: dev
+2025-11-24 19:32:34 [restartedMain] INFO  com.tts.sms.config.SecurityConfig - Configuring CORS with allowed origins: *
+2025-11-24 19:32:34 [restartedMain] WARN  com.tts.sms.config.SecurityConfig - CSRF protection DISABLED for development
+2025-11-24 19:32:35 [restartedMain] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - 44 mappings in 'requestMappingHandlerMapping'
+2025-11-24 19:32:36 [restartedMain] DEBUG com.tts.sms.config.WebConfig - Configuring view controllers
+2025-11-24 19:32:36 [restartedMain] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Patterns [/login] in 'viewControllerHandlerMapping'
+2025-11-24 19:32:37 [restartedMain] DEBUG com.tts.sms.config.WebConfig - Configuring resource handlers with proper MIME types
+2025-11-24 19:32:37 [restartedMain] INFO  com.tts.sms.config.WebConfig - Resource handlers configured successfully with proper caching
+2025-11-24 19:32:37 [restartedMain] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**, /assets/**, /css/**, /js/**, /images/**, /uploads/**] in 'resourceHandlerMapping'
+2025-11-24 19:32:37 [restartedMain] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@705d2e80, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@1879f03a, org.springframework.security.web.context.SecurityContextHolderFilter@3c18a300, org.springframework.security.web.header.HeaderWriterFilter@21316f22, org.springframework.web.filter.CorsFilter@59259171, org.springframework.security.web.authentication.logout.LogoutFilter@71887044, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@40a027bb, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@16008fc1, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@2633dec4, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@4bdafb8b, org.springframework.security.web.session.SessionManagementFilter@3c4458e, org.springframework.security.web.access.ExceptionTranslationFilter@73230270, org.springframework.security.web.access.intercept.AuthorizationFilter@7edf42d]
+2025-11-24 19:32:38 [restartedMain] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerAdapter - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+2025-11-24 19:32:39 [restartedMain] DEBUG o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - ControllerAdvice beans: 1 @ExceptionHandler, 1 ResponseBodyAdvice
+2025-11-24 19:32:40 [restartedMain] INFO  o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2025-11-24 19:32:41 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8081 (http) with context path ''
+2025-11-24 19:32:41 [restartedMain] INFO  com.tts.sms.SmsApplication - Started SmsApplication in 73.251 seconds (process running for 80.75)
+2025-11-24 19:32:41 [restartedMain] INFO  com.tts.sms.SmsApplication - 
+----------------------------------------------------------
+Application 'tts-sms' is running!
+Profile(s): dev
+Access URLs:
+  Local:      http://localhost:8081/
+  External:   http://172.28.240.1:8081/
+----------------------------------------------------------
+2025-11-24 19:32:43 [http-nio-8081-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-24 19:32:43 [http-nio-8081-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2025-11-24 19:32:43 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected StandardServletMultipartResolver
+2025-11-24 19:32:43 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected AcceptHeaderLocaleResolver
+2025-11-24 19:32:43 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected FixedThemeResolver
+2025-11-24 19:32:43 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator@59d71418
+2025-11-24 19:32:43 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected org.springframework.web.servlet.support.SessionFlashMapManager@2799b2c2
+2025-11-24 19:32:43 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - enableLoggingRequestDetails='false': request parameters and headers will be masked to prevent unsafe logging of potentially sensitive data
+2025-11-24 19:32:43 [http-nio-8081-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 5 ms
+2025-11-24 19:32:43 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Securing GET /students/enquiry
+2025-11-24 19:32:43 [http-nio-8081-exec-1] DEBUG o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+2025-11-24 19:32:43 [http-nio-8081-exec-1] WARN  o.s.w.s.h.HandlerMappingIntrospector - Cache miss for REQUEST dispatch to '/students/enquiry' (previous null). Performing MatchableHandlerMapping lookup. This is logged once only at WARN level, and every time at TRACE.
+2025-11-24 19:32:43 [http-nio-8081-exec-1] DEBUG o.s.s.w.s.HttpSessionRequestCache - Saved request http://localhost:8081/students/enquiry?continue to session
+2025-11-24 19:32:43 [http-nio-8081-exec-1] DEBUG o.s.s.web.DefaultRedirectStrategy - Redirecting to http://localhost:8081/login
+2025-11-24 19:32:43 [http-nio-8081-exec-2] DEBUG o.s.security.web.FilterChainProxy - Securing GET /login
+2025-11-24 19:32:43 [http-nio-8081-exec-2] DEBUG o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+2025-11-24 19:32:43 [http-nio-8081-exec-2] DEBUG o.s.security.web.FilterChainProxy - Secured GET /login
+2025-11-24 19:32:43 [http-nio-8081-exec-2] DEBUG o.s.web.servlet.DispatcherServlet - GET "/login", parameters={}
+2025-11-24 19:32:43 [http-nio-8081-exec-3] DEBUG o.s.security.web.FilterChainProxy - Securing GET /students/enquiry
+2025-11-24 19:32:43 [http-nio-8081-exec-3] DEBUG o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+2025-11-24 19:32:43 [http-nio-8081-exec-2] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.LoginController#loginPage(String, String, Model)
+2025-11-24 19:32:43 [http-nio-8081-exec-3] DEBUG o.s.s.w.s.HttpSessionRequestCache - Saved request http://localhost:8081/students/enquiry?continue to session
+2025-11-24 19:32:43 [http-nio-8081-exec-3] DEBUG o.s.s.web.DefaultRedirectStrategy - Redirecting to http://localhost:8081/login
+2025-11-24 19:32:43 [http-nio-8081-exec-4] DEBUG o.s.security.web.FilterChainProxy - Securing GET /login
+2025-11-24 19:32:43 [http-nio-8081-exec-4] DEBUG o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+2025-11-24 19:32:43 [http-nio-8081-exec-4] DEBUG o.s.security.web.FilterChainProxy - Secured GET /login
+2025-11-24 19:32:43 [http-nio-8081-exec-4] DEBUG o.s.web.servlet.DispatcherServlet - GET "/login", parameters={}
+2025-11-24 19:32:43 [http-nio-8081-exec-4] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.LoginController#loginPage(String, String, Model)
+2025-11-24 19:32:43 [http-nio-8081-exec-4] DEBUG o.s.w.s.v.ContentNegotiatingViewResolver - Selected 'text/html' given [text/html, application/xhtml+xml, image/avif, image/webp, image/apng, application/xml;q=0.9, */*;q=0.8, application/signed-exchange;v=b3;q=0.7]
+2025-11-24 19:32:43 [http-nio-8081-exec-2] DEBUG o.s.w.s.v.ContentNegotiatingViewResolver - Selected 'text/html' given [text/html, application/xhtml+xml, image/avif, image/webp, image/apng, application/xml;q=0.9, */*;q=0.8, application/signed-exchange;v=b3;q=0.7]
+2025-11-24 19:32:46 [http-nio-8081-exec-4] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:32:46 [http-nio-8081-exec-2] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:32:46 [http-nio-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/login.css
+2025-11-24 19:32:46 [http-nio-8081-exec-5] DEBUG o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+2025-11-24 19:32:46 [http-nio-8081-exec-6] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/images/tts-logo-ev.png
+2025-11-24 19:32:46 [http-nio-8081-exec-6] DEBUG o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+2025-11-24 19:32:46 [http-nio-8081-exec-7] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/login.js
+2025-11-24 19:32:46 [http-nio-8081-exec-7] DEBUG o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+2025-11-24 19:32:46 [http-nio-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/login.css
+2025-11-24 19:32:46 [http-nio-8081-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/login.css", parameters={}
+2025-11-24 19:32:46 [http-nio-8081-exec-7] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/login.js
+2025-11-24 19:32:46 [http-nio-8081-exec-7] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/login.js", parameters={}
+2025-11-24 19:32:46 [http-nio-8081-exec-5] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:32:46 [http-nio-8081-exec-7] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:32:46 [http-nio-8081-exec-6] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/images/tts-logo-ev.png
+2025-11-24 19:32:46 [http-nio-8081-exec-6] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/images/tts-logo-ev.png", parameters={}
+2025-11-24 19:32:46 [http-nio-8081-exec-6] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:32:46 [http-nio-8081-exec-7] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:32:46 [http-nio-8081-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:32:46 [http-nio-8081-exec-6] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:32:55 [http-nio-8081-exec-8] DEBUG o.s.security.web.FilterChainProxy - Securing POST /login
+2025-11-24 19:32:56 [http-nio-8081-exec-8] DEBUG o.s.s.a.d.DaoAuthenticationProvider - Authenticated user
+2025-11-24 19:32:56 [http-nio-8081-exec-8] DEBUG o.s.s.w.a.s.ChangeSessionIdAuthenticationStrategy - Changed session id from 0AECE457240EF713DD65ED18D069D32D
+2025-11-24 19:32:56 [http-nio-8081-exec-8] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Stored SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]] to HttpSession [org.apache.catalina.session.StandardSessionFacade@25549d94]
+2025-11-24 19:32:56 [http-nio-8081-exec-8] DEBUG o.s.s.w.a.UsernamePasswordAuthenticationFilter - Set SecurityContextHolder to UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]
+2025-11-24 19:32:56 [http-nio-8081-exec-8] DEBUG o.s.s.web.DefaultRedirectStrategy - Redirecting to /dashboard
+2025-11-24 19:32:56 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Securing GET /dashboard
+2025-11-24 19:32:56 [http-nio-8081-exec-9] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:32:56 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Secured GET /dashboard
+2025-11-24 19:32:56 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - GET "/dashboard", parameters={}
+2025-11-24 19:32:56 [http-nio-8081-exec-9] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.LayoutController#dashboard(Model)
+2025-11-24 19:32:56 [http-nio-8081-exec-9] DEBUG o.s.w.s.v.ContentNegotiatingViewResolver - Selected 'text/html' given [text/html, application/xhtml+xml, image/avif, image/webp, image/apng, application/xml;q=0.9, */*;q=0.8, application/signed-exchange;v=b3;q=0.7]
+2025-11-24 19:33:00 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:33:01 [http-nio-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/styles.css
+2025-11-24 19:33:01 [http-nio-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/styles.css
+2025-11-24 19:33:01 [http-nio-8081-exec-10] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/styles.css", parameters={}
+2025-11-24 19:33:01 [http-nio-8081-exec-10] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:33:01 [http-nio-8081-exec-10] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:33:01 [http-nio-8081-exec-10] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:33:02 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/script.js
+2025-11-24 19:33:02 [http-nio-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/script.js
+2025-11-24 19:33:02 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/script.js", parameters={}
+2025-11-24 19:33:02 [http-nio-8081-exec-1] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:33:02 [http-nio-8081-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:33:02 [http-nio-8081-exec-1] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:33:06 [http-nio-8081-exec-3] DEBUG o.s.security.web.FilterChainProxy - Securing GET /students/admission
+2025-11-24 19:33:06 [http-nio-8081-exec-3] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:33:06 [http-nio-8081-exec-3] DEBUG o.s.security.web.FilterChainProxy - Secured GET /students/admission
+2025-11-24 19:33:06 [http-nio-8081-exec-3] DEBUG o.s.web.servlet.DispatcherServlet - GET "/students/admission", parameters={}
+2025-11-24 19:33:06 [http-nio-8081-exec-3] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.LayoutController#admission(Model)
+2025-11-24 19:33:06 [http-nio-8081-exec-3] DEBUG o.s.w.s.v.ContentNegotiatingViewResolver - Selected 'text/html' given [text/html, application/xhtml+xml, image/avif, image/webp, image/apng, application/xml;q=0.9, */*;q=0.8, application/signed-exchange;v=b3;q=0.7]
+2025-11-24 19:33:07 [http-nio-8081-exec-4] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/admission.css
+2025-11-24 19:33:07 [http-nio-8081-exec-4] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/admission.css
+2025-11-24 19:33:07 [http-nio-8081-exec-4] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/admission.css", parameters={}
+2025-11-24 19:33:07 [http-nio-8081-exec-4] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:33:07 [http-nio-8081-exec-4] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:33:08 [http-nio-8081-exec-4] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:33:08 [http-nio-8081-exec-3] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:33:08 [http-nio-8081-exec-2] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/admission.js
+2025-11-24 19:33:08 [http-nio-8081-exec-2] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/admission.js
+2025-11-24 19:33:08 [http-nio-8081-exec-2] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/admission.js", parameters={}
+2025-11-24 19:33:08 [http-nio-8081-exec-2] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:33:08 [http-nio-8081-exec-2] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:33:08 [http-nio-8081-exec-2] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:33:14 [http-nio-8081-exec-7] DEBUG o.s.security.web.FilterChainProxy - Securing GET /students/enquiry
+2025-11-24 19:33:14 [http-nio-8081-exec-7] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:33:14 [http-nio-8081-exec-7] DEBUG o.s.security.web.FilterChainProxy - Secured GET /students/enquiry
+2025-11-24 19:33:14 [http-nio-8081-exec-7] DEBUG o.s.web.servlet.DispatcherServlet - GET "/students/enquiry", parameters={}
+2025-11-24 19:33:14 [http-nio-8081-exec-7] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.LayoutController#enquiry(Model)
+2025-11-24 19:33:14 [http-nio-8081-exec-7] DEBUG o.s.w.s.v.ContentNegotiatingViewResolver - Selected 'text/html' given [text/html, application/xhtml+xml, image/avif, image/webp, image/apng, application/xml;q=0.9, */*;q=0.8, application/signed-exchange;v=b3;q=0.7]
+2025-11-24 19:33:15 [http-nio-8081-exec-7] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:33:15 [http-nio-8081-exec-6] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/css/enquiry.css
+2025-11-24 19:33:15 [http-nio-8081-exec-6] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/css/enquiry.css
+2025-11-24 19:33:15 [http-nio-8081-exec-6] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/css/enquiry.css", parameters={}
+2025-11-24 19:33:15 [http-nio-8081-exec-6] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:33:15 [http-nio-8081-exec-6] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:33:15 [http-nio-8081-exec-6] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:33:15 [http-nio-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Securing GET /assets/js/enquiry.js
+2025-11-24 19:33:15 [http-nio-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Secured GET /assets/js/enquiry.js
+2025-11-24 19:33:15 [http-nio-8081-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - GET "/assets/js/enquiry.js", parameters={}
+2025-11-24 19:33:15 [http-nio-8081-exec-5] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Mapped to ResourceHttpRequestHandler [classpath [static/assets/]]
+2025-11-24 19:33:15 [http-nio-8081-exec-5] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:33:15 [http-nio-8081-exec-5] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:33:15 [http-nio-8081-exec-8] DEBUG o.s.security.web.FilterChainProxy - Securing GET /api/enquiries?page=0&size=25
+2025-11-24 19:33:15 [http-nio-8081-exec-8] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:33:15 [http-nio-8081-exec-8] DEBUG o.s.security.web.FilterChainProxy - Secured GET /api/enquiries?page=0&size=25
+2025-11-24 19:33:15 [http-nio-8081-exec-8] DEBUG o.s.web.servlet.DispatcherServlet - GET "/api/enquiries?page=0&size=25", parameters={masked}
+2025-11-24 19:33:15 [http-nio-8081-exec-8] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.EnquiryController#getAllEnquiries(int, int)
+2025-11-24 19:33:15 [http-nio-8081-exec-8] INFO  c.t.sms.controller.EnquiryController - GET /api/enquiries - page: 0, size: 25
+2025-11-24 19:33:15 [http-nio-8081-exec-8] DEBUG com.tts.sms.service.EnquiryService - Fetching enquiries - page: 0, size: 25
+2025-11-24 19:33:16 [http-nio-8081-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id,
+        e1_0.aadhaar,
+        e1_0.assign_to,
+        e1_0.birth_date,
+        e1_0.college,
+        e1_0.courses,
+        e1_0.created_at,
+        e1_0.created_by,
+        e1_0.current_address,
+        e1_0.demo_lecture_required,
+        e1_0.email,
+        e1_0.enquiry_date,
+        e1_0.enquiry_no,
+        e1_0.first_name,
+        e1_0.followup_date,
+        e1_0.full_name,
+        e1_0.gender,
+        e1_0.import_source,
+        e1_0.interest_level,
+        e1_0.is_deleted,
+        e1_0.last_name,
+        e1_0.middle_name,
+        e1_0.mobile,
+        e1_0.note,
+        e1_0.package_name,
+        e1_0.permanent_address,
+        e1_0.pin_current,
+        e1_0.pin_permanent,
+        e1_0.qualification,
+        e1_0.reference_name,
+        e1_0.secondary_email,
+        e1_0.secondary_mobile,
+        e1_0.source,
+        e1_0.status,
+        e1_0.updated_at,
+        e1_0.updated_by 
+    from
+        enquiries e1_0 
+    where
+        not(e1_0.is_deleted) 
+    order by
+        e1_0.enquiry_date desc 
+    limit
+        ?, ?
+2025-11-24 19:33:16 [http-nio-8081-exec-8] INFO  com.tts.sms.service.EnquiryService - Retrieved 1 enquiries out of 1 total
+2025-11-24 19:33:16 [http-nio-8081-exec-8] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+2025-11-24 19:33:16 [http-nio-8081-exec-8] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Writing [Page 1 of 1 containing com.tts.sms.dto.EnquiryResponseDTO instances]
+2025-11-24 19:33:16 [http-nio-8081-exec-8] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:33:29 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Securing POST /api/enquiries/bulk-import-json?importSource=OLD_FORMAT
+2025-11-24 19:33:29 [http-nio-8081-exec-9] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:33:29 [http-nio-8081-exec-9] DEBUG o.s.security.web.FilterChainProxy - Secured POST /api/enquiries/bulk-import-json?importSource=OLD_FORMAT
+2025-11-24 19:33:29 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - POST "/api/enquiries/bulk-import-json?importSource=OLD_FORMAT", parameters={masked}
+2025-11-24 19:33:29 [http-nio-8081-exec-9] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.EnquiryController#bulkImportFromJSON(List, String)
+2025-11-24 19:33:29 [http-nio-8081-exec-9] DEBUG o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Read "application/json;charset=UTF-8" to [[EnquiryRequestDTO(enquiryNo=null, name=Geetanjali  Patil, firstName=null, middleName=null, lastName (truncated)...]
+2025-11-24 19:33:29 [http-nio-8081-exec-9] INFO  c.t.sms.controller.EnquiryController - POST /api/enquiries/bulk-import-json - 25 records
+2025-11-24 19:33:29 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - Processing bulk import of 25 records
+2025-11-24 19:33:29 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:29 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9112244023, Courses: [SAP FICO]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 2 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7058243103, Courses: [MEDICAL CODING]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 3 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9209462181, Courses: [JAVA CORE AND ADVANCE]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 4 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7821876267, Courses: [REDHAT (RHCSA & RHCE)  CISCO CERTIFIED NETWORK ASSOCIATE  AMAZON WEB SERVICES]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 5 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9730203479, Courses: [ARTIFICIAL INTELLIGENCE]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 6 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9156366240, Courses: [DATA ANALYTICS]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 7 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9730469253, Courses: [DATA ANALYTICS]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 8 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7385890600, Courses: [REDHAT (RHCSA & RHCE)  CISCO CERTIFIED NETWORK ASSOCIATE  AMAZON WEB SERVICES]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 9 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9284047028, Courses: [FULL STACK]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 10 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9921410055, Courses: [ARTIFICIAL INTELLIGENCE]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 11 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9307805797, Courses: [DATA ANALYTICS]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 12 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7796183682, Courses: [REDHAT (RHCSA & RHCE)  CISCO CERTIFIED NETWORK ASSOCIATE  AMAZON WEB SERVICES]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 13 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9049794403, Courses: [FULL STACK PYTHON DEVELOPMENT]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 14 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 8883481212, Courses: [REDHAT (RHCSA & RHCE)  CISCO CERTIFIED NETWORK ASSOCIATE  AMAZON WEB SERVICES]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 15 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 8007051505, Courses: [DATA ANALYTICS]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 16 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7028287118, Courses: [ARTIFICIAL INTELLIGENCE]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 17 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7028587621, Courses: [FULL STACK]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 18 imported successfully
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7276898018, Courses: [DATA ANALYTICS  SAP FICO]
+2025-11-24 19:33:30 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:30 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 19 imported successfully
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 8380818143, Courses: [MEDICAL CODING  ARTIFICIAL INTELLIGENCE]
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:31 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 20 imported successfully
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9022486193, Courses: [MEDICAL CODING  ARTIFICIAL INTELLIGENCE]
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:31 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 21 imported successfully
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9322828551, Courses: [REDHAT (RHCSA & RHCE)  CISCO CERTIFIED NETWORK ASSOCIATE  CYBER SECURITY]
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:31 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 22 imported successfully
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 8261047450, Courses: [REDHAT (RHCSA & RHCE)  CISCO CERTIFIED NETWORK ASSOCIATE  CYBER SECURITY]
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:31 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 23 imported successfully
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 9665926572, Courses: [ARTIFICIAL INTELLIGENCE   .NET]
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:31 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 24 imported successfully
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7066999977, Courses: [ARTIFICIAL INTELLIGENCE   .NET]
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:31 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 25 imported successfully
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id 
+    from
+        enquiries e1_0 
+    where
+        e1_0.mobile=? 
+        and not(e1_0.is_deleted) 
+    limit
+        ?
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG com.tts.sms.service.EnquiryMapper - Converting DTO to Entity - EnquiryNo: null, Mobile: 7278551111, Courses: [ARTIFICIAL INTELLIGENCE   .NET]
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        enquiries
+        (aadhaar, assign_to, birth_date, college, courses, created_at, created_by, current_address, demo_lecture_required, email, enquiry_date, enquiry_no, first_name, followup_date, full_name, gender, import_source, interest_level, is_deleted, last_name, middle_name, mobile, note, package_name, permanent_address, pin_current, pin_permanent, qualification, reference_name, secondary_email, secondary_mobile, source, status, updated_at, updated_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-11-24 19:33:31 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - ✓ Row 26 imported successfully
+2025-11-24 19:33:31 [http-nio-8081-exec-9] INFO  com.tts.sms.service.EnquiryService - Import completed - Success: 25, Failed: 0
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Using 'application/json', given [application/json] and supported [application/json, application/*+json]
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Writing [BulkImportResponseDTO(success=true, totalRecords=25, successfulImports=25, failedImports=0, message= (truncated)...]
+2025-11-24 19:33:31 [http-nio-8081-exec-9] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 19:33:31 [http-nio-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Securing GET /api/enquiries?page=0&size=25
+2025-11-24 19:33:31 [http-nio-8081-exec-10] DEBUG o.s.s.w.c.HttpSessionSecurityContextRepository - Retrieved SecurityContextImpl [Authentication=UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User [Username=admin, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, CredentialsNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=0AECE457240EF713DD65ED18D069D32D], Granted Authorities=[ROLE_ADMIN]]]
+2025-11-24 19:33:31 [http-nio-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Secured GET /api/enquiries?page=0&size=25
+2025-11-24 19:33:31 [http-nio-8081-exec-10] DEBUG o.s.web.servlet.DispatcherServlet - GET "/api/enquiries?page=0&size=25", parameters={masked}
+2025-11-24 19:33:31 [http-nio-8081-exec-10] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.tts.sms.controller.EnquiryController#getAllEnquiries(int, int)
+2025-11-24 19:33:31 [http-nio-8081-exec-10] INFO  c.t.sms.controller.EnquiryController - GET /api/enquiries - page: 0, size: 25
+2025-11-24 19:33:31 [http-nio-8081-exec-10] DEBUG com.tts.sms.service.EnquiryService - Fetching enquiries - page: 0, size: 25
+2025-11-24 19:33:31 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        e1_0.id,
+        e1_0.aadhaar,
+        e1_0.assign_to,
+        e1_0.birth_date,
+        e1_0.college,
+        e1_0.courses,
+        e1_0.created_at,
+        e1_0.created_by,
+        e1_0.current_address,
+        e1_0.demo_lecture_required,
+        e1_0.email,
+        e1_0.enquiry_date,
+        e1_0.enquiry_no,
+        e1_0.first_name,
+        e1_0.followup_date,
+        e1_0.full_name,
+        e1_0.gender,
+        e1_0.import_source,
+        e1_0.interest_level,
+        e1_0.is_deleted,
+        e1_0.last_name,
+        e1_0.middle_name,
+        e1_0.mobile,
+        e1_0.note,
+        e1_0.package_name,
+        e1_0.permanent_address,
+        e1_0.pin_current,
+        e1_0.pin_permanent,
+        e1_0.qualification,
+        e1_0.reference_name,
+        e1_0.secondary_email,
+        e1_0.secondary_mobile,
+        e1_0.source,
+        e1_0.status,
+        e1_0.updated_at,
+        e1_0.updated_by 
+    from
+        enquiries e1_0 
+    where
+        not(e1_0.is_deleted) 
+    order by
+        e1_0.enquiry_date desc 
+    limit
+        ?, ?
+2025-11-24 19:33:31 [http-nio-8081-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        count(e1_0.id) 
+    from
+        enquiries e1_0 
+    where
+        not(e1_0.is_deleted)
+2025-11-24 19:33:31 [http-nio-8081-exec-10] INFO  com.tts.sms.service.EnquiryService - Retrieved 25 enquiries out of 26 total
+2025-11-24 19:33:31 [http-nio-8081-exec-10] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+2025-11-24 19:33:31 [http-nio-8081-exec-10] DEBUG o.s.w.s.m.m.a.HttpEntityMethodProcessor - Writing [Page 1 of 2 containing com.tts.sms.dto.EnquiryResponseDTO instances]
+2025-11-24 19:33:31 [http-nio-8081-exec-10] DEBUG o.s.web.servlet.DispatcherServlet - Completed 200 OK
+2025-11-24 20:50:15 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1h12m42s805ms579µs900ns).
+2025-11-24 21:27:03 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=5m17s496ms878µs).
+2025-11-24 21:27:28 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-24 21:27:28 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2025-11-24 21:27:28 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.

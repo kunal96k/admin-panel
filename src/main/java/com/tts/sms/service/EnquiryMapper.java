@@ -26,7 +26,7 @@ public class EnquiryMapper {
 
         return EnquiryResponseDTO.builder()
                 .id(enquiry.getId())
-                .enquiryNo(enquiry.getEnquiryNo())  // **FIXED: Map enquiry number**
+                .enquiryNo(enquiry.getEnquiryNo())
                 .name(enquiry.getDisplayName())
                 .firstName(enquiry.getFirstName())
                 .middleName(enquiry.getMiddleName())

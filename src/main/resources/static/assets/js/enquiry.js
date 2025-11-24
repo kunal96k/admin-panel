@@ -362,6 +362,7 @@
             }
 
             const dto = {
+                enquiryNo: record.enquiryNo,
                 mobile: record.mobilePrimary,
                 courses: coursesArray,
                 source: record.leadSource || 'Unknown',
@@ -395,7 +396,7 @@
             });
 
             return dto;
-        }).filter(dto => dto !== null);  // Remove null entries (records without courses)
+        }).filter(dto => dto !== null);
 
         if (dtoList.length === 0) {
             showError('No valid records to import. All records are missing required fields (courses).');
@@ -510,97 +511,95 @@
         }
     }
 
-    // Replace the renderEnquiriesTable function in your enquiry.js
+   function renderEnquiriesTable(enquiries) {
+       const tbody = document.querySelector('#enquiryTable tbody');
+       if (!tbody) return;
 
-    function renderEnquiriesTable(enquiries) {
-        const tbody = document.querySelector('#enquiryTable tbody');
-        if (!tbody) return;
+       if (!enquiries || enquiries.length === 0) {
+           tbody.innerHTML = `
+               <tr>
+                   <td colspan="9" class="text-center py-5">
+                       <i class="bi bi-inbox" style="font-size: 3rem; color: #94a3b8;"></i>
+                       <p class="mt-3 mb-0 text-muted">No enquiries found</p>
+                       <button class="btn btn-sm btn-primary mt-2" onclick="document.getElementById('btnAddEnquiry').click()">
+                           <i class="bi bi-plus-circle me-1"></i>Add First Enquiry
+                       </button>
+                   </td>
+               </tr>
+           `;
+           return;
+       }
 
-        if (!enquiries || enquiries.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="9" class="text-center py-5">
-                        <i class="bi bi-inbox" style="font-size: 3rem; color: #94a3b8;"></i>
-                        <p class="mt-3 mb-0 text-muted">No enquiries found</p>
-                        <button class="btn btn-sm btn-primary mt-2" onclick="document.getElementById('btnAddEnquiry').click()">
-                            <i class="bi bi-plus-circle me-1"></i>Add First Enquiry
-                        </button>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
+       tbody.innerHTML = enquiries.map(enq => {
 
-        tbody.innerHTML = enquiries.map(enq => {
-            // **NEW: Display enquiry number**
-            const enquiryNumber = enq.enquiryNo || `ENQ${String(enq.id).padStart(6, '0')}`;
+           const enquiryNumber = enq.enquiryNo || `ENQ${String(enq.id).padStart(6, '0')}`;
 
-            // Parse courses - FIXED to handle multiple courses
-            let coursesList = [];
+           // Parse courses
+           let coursesList = [];
 
-            if (Array.isArray(enq.coursesList) && enq.coursesList.length > 0) {
-                coursesList = enq.coursesList;
-            } else if (Array.isArray(enq.courses)) {
-                coursesList = enq.courses;
-            } else if (typeof enq.courses === 'string' && enq.courses) {
-                coursesList = enq.courses.split(',').map(c => c.trim()).filter(Boolean);
-            }
+           if (Array.isArray(enq.coursesList) && enq.coursesList.length > 0) {
+               coursesList = enq.coursesList;
+           } else if (Array.isArray(enq.courses)) {
+               coursesList = enq.courses;
+           } else if (typeof enq.courses === 'string' && enq.courses) {
+               coursesList = enq.courses.split(',').map(c => c.trim()).filter(Boolean);
+           }
 
-            // Create course badges - Each on new line
-            const coursesHtml = coursesList.length > 0
-                ? coursesList.map(course =>
-                    `<span class="badge bg-primary d-block mb-1" style="white-space: normal; text-align: left; padding: 0.4rem 0.6rem;">${course}</span>`
-                  ).join('')
-                : '<span class="badge bg-secondary">N/A</span>';
+           const coursesHtml = coursesList.length > 0
+               ? coursesList.map(course =>
+                   `<span class="badge bg-primary d-block mb-1" style="white-space: normal; text-align: left; padding: 0.4rem 0.6rem;">${course}</span>`
+                 ).join('')
+               : '<span class="badge bg-secondary">N/A</span>';
 
-            return `
-                <tr data-id="${enq.id}">
-                    <td><strong>${enquiryNumber}</strong></td>
-                    <td>${enq.name || `${enq.firstName || ''} ${enq.lastName || ''}`.trim() || 'N/A'}</td>
-                    <td>${enq.mobile || 'N/A'}</td>
-                    <td style="max-width: 250px; min-width: 180px;">
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            ${coursesHtml}
-                        </div>
-                    </td>
-                    <td>${enq.source || 'N/A'}</td>
-                    <td>${enq.date || 'N/A'}</td>
-                    <td>${enq.assign || 'Unassigned'}</td>
-                    <td><span class="badge bg-success">${enq.status || 'New'}</span></td>
-                    <td>
-                        <div class="action-dropdown">
-                            <button class="btn btn-light action-menu-trigger" style="padding: 0.25rem 0.5rem;">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <div class="action-menu">
-                                <button class="action-menu-item" data-action="update" data-id="${enq.id}">
-                                    <i class="bi bi-pencil-square"></i><span>Update</span>
-                                </button>
-                                <button class="action-menu-item" data-action="followup" data-id="${enq.id}">
-                                    <i class="bi bi-telephone"></i><span>Follow Up</span>
-                                </button>
-                                <button class="action-menu-item" data-action="view" data-id="${enq.id}">
-                                    <i class="bi bi-eye"></i><span>View Details</span>
-                                </button>
-                                <button class="action-menu-item" data-action="changestatus" data-id="${enq.id}">
-                                    <i class="bi bi-pencil"></i><span>Change Enquiry Status</span>
-                                </button>
-                                <button class="action-menu-item" data-action="admission"
-                                          data-id="${enq.id}" data-mobile="${enq.mobile}">
-                                      <i class="bi bi-plus"></i><span>New Admission</span>
-                                </button>
-                                <button class="action-menu-item" data-action="remove" data-id="${enq.id}">
-                                    <i class="bi bi-trash"></i><span>Remove</span>
-                                </button>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+           return `
+               <tr data-id="${enq.id}">
+                   <td><strong>${enquiryNumber}</strong></td>
+                   <td>${enq.name || `${enq.firstName || ''} ${enq.lastName || ''}`.trim() || 'N/A'}</td>
+                   <td>${enq.mobile || 'N/A'}</td>
+                   <td style="max-width: 250px; min-width: 180px;">
+                       <div style="display: flex; flex-direction: column; gap: 4px;">
+                           ${coursesHtml}
+                       </div>
+                   </td>
+                   <td>${enq.source || 'N/A'}</td>
+                   <td>${enq.date || 'N/A'}</td>
+                   <td>${enq.assign || 'Unassigned'}</td>
+                   <td><span class="badge bg-success">${enq.status || 'New'}</span></td>
+                   <td>
+                       <!-- Actions menu -->
+                       <div class="action-dropdown">
+                           <button class="btn btn-light action-menu-trigger" style="padding: 0.25rem 0.5rem;">
+                               <i class="bi bi-three-dots-vertical"></i>
+                           </button>
+                           <div class="action-menu">
+                               <button class="action-menu-item" data-action="update" data-id="${enq.id}">
+                                   <i class="bi bi-pencil-square"></i><span>Update</span>
+                               </button>
+                               <button class="action-menu-item" data-action="followup" data-id="${enq.id}">
+                                   <i class="bi bi-telephone"></i><span>Follow Up</span>
+                               </button>
+                               <button class="action-menu-item" data-action="view" data-id="${enq.id}">
+                                   <i class="bi bi-eye"></i><span>View Details</span>
+                               </button>
+                               <button class="action-menu-item" data-action="changestatus" data-id="${enq.id}">
+                                   <i class="bi bi-pencil"></i><span>Change Enquiry Status</span>
+                               </button>
+                               <button class="action-menu-item" data-action="admission"
+                                         data-id="${enq.id}" data-mobile="${enq.mobile}">
+                                     <i class="bi bi-plus"></i><span>New Admission</span>
+                               </button>
+                               <button class="action-menu-item" data-action="remove" data-id="${enq.id}">
+                                   <i class="bi bi-trash"></i><span>Remove</span>
+                               </button>
+                           </div>
+                       </div>
+                   </td>
+               </tr>
+           `;
+       }).join('');
 
-        attachTableEventListeners(tbody);
-    }
+       attachTableEventListeners(tbody);
+   }
 
     // Handle Actions
     async function handleAction(action, enquiryId) {
@@ -1040,8 +1039,6 @@
         });
     }
 
-   // Replace the parseCSV function in enquiry.js
-
    function parseCSV(text) {
        const lines = text.split('\n').filter(line => line.trim());
        const importType = document.querySelector('input[name="importType"]:checked').value;
@@ -1057,19 +1054,15 @@
                let record;
 
                if (importType === 'old') {
-                   // 🔴 IGNORE column 0 (Enquiry No from CSV)
-                   // const csvEnquiryNo = row[0]; // NOT USED
-
                    const nameParts = (row[1] || '').split(' ').filter(Boolean);
 
-                   // ✅ Parse MULTIPLE courses from column 3
+                   // Parse multiple courses
                    const coursesStr = row[3] || '';
                    const rawCourses = coursesStr
-                       .split(/[,\n]/)  // Split by comma OR newline
+                       .split(/[,\n]/)
                        .map(c => c.trim())
                        .filter(Boolean);
 
-                   // Validate courses exist
                    if (rawCourses.length === 0) {
                        console.warn(`Row ${i}: No courses found, skipping`);
                        continue;
@@ -1078,19 +1071,19 @@
                    console.log(`Row ${i}: Found ${rawCourses.length} courses:`, rawCourses);
 
                    record = {
-                       // ⚠️ NO enquiryNo field - backend will auto-generate
+                       enquiryNo: row[0] && row[0].trim() ? row[0].trim() : null,  // ✅ Capture enquiry no
                        firstName: nameParts[0] || '',
                        middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '',
                        lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : '',
                        mobilePrimary: row[2],
-                       courses: rawCourses,  // ✅ ALL courses preserved
+                       courses: rawCourses,
                        leadSource: row[4] || 'Unknown',
                        enquiryDate: row[5] && row[5].trim() ? row[5].trim() : null,
                        assignTo: row[6] || null,
                        status: row[7] || 'New'
                    };
                } else {
-                   // New format parsing (similar fix)
+                   // New format
                    const coursesStr = row[13] || '';
                    const rawCourses = coursesStr
                        .split(/[,\n]/)
@@ -1098,6 +1091,7 @@
                        .filter(Boolean);
 
                    record = {
+                       enquiryNo: row[0] && row[0].trim() ? row[0].trim() : null,  // ✅ Capture enquiry no
                        firstName: row[1],
                        middleName: row[2],
                        lastName: row[3],
