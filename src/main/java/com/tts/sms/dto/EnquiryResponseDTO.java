@@ -17,6 +17,9 @@ public class EnquiryResponseDTO {
 
     private Long id;
 
+    // **NEW: Enquiry Number for display**
+    private String enquiryNo;
+
     // Name fields
     private String name;
     private String firstName;
@@ -42,18 +45,20 @@ public class EnquiryResponseDTO {
     private LocalDate birthDate;
     private String gender;
 
-    private String courses;
-    private List<String> coursesList;
+    // Course - Both string and list format for flexibility
+    private String courses;  // Comma-separated string
+    private List<String> coursesList;  // List format
 
     private String packageName;
     private Boolean demoLectureRequired;
     private String interestLevel;
 
+    // Enquiry details
     private String source;
     private String referenceName;
-    private LocalDate date;
+    private LocalDate date;  // enquiryDate
     private LocalDate followupDate;
-    private String assign;
+    private String assign;  // assignTo
     private String status;
     private String note;
 

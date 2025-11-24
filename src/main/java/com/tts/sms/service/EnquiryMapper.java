@@ -26,6 +26,7 @@ public class EnquiryMapper {
 
         return EnquiryResponseDTO.builder()
                 .id(enquiry.getId())
+                .enquiryNo(enquiry.getEnquiryNo())  // **FIXED: Map enquiry number**
                 .name(enquiry.getDisplayName())
                 .firstName(enquiry.getFirstName())
                 .middleName(enquiry.getMiddleName())
@@ -65,11 +66,11 @@ public class EnquiryMapper {
         if (dto == null) return null;
 
         List<String> coursesList = new ArrayList<>();
-
         if (dto.getCourses() != null && !dto.getCourses().isEmpty()) {
             coursesList = dto.getCourses().stream()
                     .filter(course -> course != null && !course.trim().isEmpty())
                     .map(String::trim)
+                    .distinct()
                     .collect(Collectors.toList());
         }
 
@@ -78,11 +79,14 @@ public class EnquiryMapper {
             throw new IllegalArgumentException("At least one course is required");
         }
 
-        log.debug("Converting DTO to Entity - Mobile: {}, Courses: {}", dto.getMobile(), coursesList);
+        log.debug("Converting DTO to Entity - EnquiryNo: {}, Mobile: {}, Courses: {}",
+                dto.getEnquiryNo(), dto.getMobile(), coursesList);
 
         Enquiry.EnquiryBuilder builder = Enquiry.builder()
-                .enquiryNo(dto.getEnquiryNo()) // **NEW: Map enquiryNo**
+                .enquiryNo(dto.getEnquiryNo())
                 .mobile(dto.getMobile())
+                .courses(coursesList)
+                .source(dto.getSource() != null ? dto.getSource() : "Unknown")
                 .secondaryMobile(dto.getSecondaryMobile())
                 .email(dto.getEmail())
                 .secondaryEmail(dto.getSecondaryEmail())
@@ -99,7 +103,6 @@ public class EnquiryMapper {
                 .packageName(dto.getPackageName())
                 .demoLectureRequired(dto.getDemoLectureRequired())
                 .interestLevel(dto.getInterestLevel())
-                .source(dto.getSource() != null ? dto.getSource() : "Unknown")
                 .referenceName(dto.getReferenceName())
                 .enquiryDate(dto.getEnquiryDate() != null ? dto.getEnquiryDate() : LocalDate.now())
                 .followupDate(dto.getFollowupDate())
@@ -144,7 +147,7 @@ public class EnquiryMapper {
     public void updateEntityFromDTO(EnquiryRequestDTO dto, Enquiry enquiry) {
         if (dto == null || enquiry == null) return;
 
-        // Update enquiryNo if provided
+        // **FIXED: Update enquiryNo if provided**
         if (dto.getEnquiryNo() != null) {
             enquiry.setEnquiryNo(dto.getEnquiryNo());
         }
@@ -192,8 +195,14 @@ public class EnquiryMapper {
         enquiry.setBirthDate(dto.getBirthDate());
         enquiry.setGender(dto.getGender());
 
+        // **FIXED: Update all courses**
         if (dto.getCourses() != null && !dto.getCourses().isEmpty()) {
-            enquiry.setCourses(new ArrayList<>(dto.getCourses()));
+            List<String> cleanedCourses = dto.getCourses().stream()
+                    .filter(c -> c != null && !c.trim().isEmpty())
+                    .map(String::trim)
+                    .distinct()
+                    .collect(Collectors.toList());
+            enquiry.setCourses(cleanedCourses);
         }
 
         enquiry.setPackageName(dto.getPackageName());

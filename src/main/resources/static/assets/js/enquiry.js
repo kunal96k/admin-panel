@@ -510,7 +510,8 @@
         }
     }
 
-    // Render Enquiries Table - Each course on new line
+    // Replace the renderEnquiriesTable function in your enquiry.js
+
     function renderEnquiriesTable(enquiries) {
         const tbody = document.querySelector('#enquiryTable tbody');
         if (!tbody) return;
@@ -531,7 +532,10 @@
         }
 
         tbody.innerHTML = enquiries.map(enq => {
-            // Parse courses - handle different formats
+            // **NEW: Display enquiry number**
+            const enquiryNumber = enq.enquiryNo || `ENQ${String(enq.id).padStart(6, '0')}`;
+
+            // Parse courses - FIXED to handle multiple courses
             let coursesList = [];
 
             if (Array.isArray(enq.coursesList) && enq.coursesList.length > 0) {
@@ -542,7 +546,7 @@
                 coursesList = enq.courses.split(',').map(c => c.trim()).filter(Boolean);
             }
 
-            // Create course badges - EACH ON NEW LINE
+            // Create course badges - Each on new line
             const coursesHtml = coursesList.length > 0
                 ? coursesList.map(course =>
                     `<span class="badge bg-primary d-block mb-1" style="white-space: normal; text-align: left; padding: 0.4rem 0.6rem;">${course}</span>`
@@ -551,7 +555,7 @@
 
             return `
                 <tr data-id="${enq.id}">
-                    <td><strong>${enq.id}</strong></td>
+                    <td><strong>${enquiryNumber}</strong></td>
                     <td>${enq.name || `${enq.firstName || ''} ${enq.lastName || ''}`.trim() || 'N/A'}</td>
                     <td>${enq.mobile || 'N/A'}</td>
                     <td style="max-width: 250px; min-width: 180px;">
@@ -1036,7 +1040,8 @@
         });
     }
 
-   // Parse CSV - SIMPLIFIED
+   // Replace the parseCSV function in enquiry.js
+
    function parseCSV(text) {
        const lines = text.split('\n').filter(line => line.trim());
        const importType = document.querySelector('input[name="importType"]:checked').value;
@@ -1052,49 +1057,45 @@
                let record;
 
                if (importType === 'old') {
+                   // 🔴 IGNORE column 0 (Enquiry No from CSV)
+                   // const csvEnquiryNo = row[0]; // NOT USED
+
                    const nameParts = (row[1] || '').split(' ').filter(Boolean);
 
+                   // ✅ Parse MULTIPLE courses from column 3
                    const coursesStr = row[3] || '';
-                   let rawCourses = [];
-
-                   // Check if courses contain newlines (multi-line in CSV)
-                   if (coursesStr.includes('\n')) {
-                       rawCourses = coursesStr.split('\n')
-                           .map(c => c.trim())
-                           .filter(Boolean);
-                   } else {
-                       // Single course or comma-separated
-                       rawCourses = coursesStr.split(',')
-                           .map(c => c.trim())
-                           .filter(Boolean);
-                   }
-
-                   const matchedCourses = rawCourses
-                       .map(c => matchCourseName(c))
+                   const rawCourses = coursesStr
+                       .split(/[,\n]/)  // Split by comma OR newline
+                       .map(c => c.trim())
                        .filter(Boolean);
 
-                   console.log(`Row ${i}: Found ${matchedCourses.length} courses:`, matchedCourses);
+                   // Validate courses exist
+                   if (rawCourses.length === 0) {
+                       console.warn(`Row ${i}: No courses found, skipping`);
+                       continue;
+                   }
+
+                   console.log(`Row ${i}: Found ${rawCourses.length} courses:`, rawCourses);
 
                    record = {
+                       // ⚠️ NO enquiryNo field - backend will auto-generate
                        firstName: nameParts[0] || '',
                        middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '',
                        lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : '',
                        mobilePrimary: row[2],
-                       courses: matchedCourses,  // ALL courses preserved
+                       courses: rawCourses,  // ✅ ALL courses preserved
                        leadSource: row[4] || 'Unknown',
                        enquiryDate: row[5] && row[5].trim() ? row[5].trim() : null,
                        assignTo: row[6] || null,
                        status: row[7] || 'New'
                    };
                } else {
-                   // New format
-                   const rawCourses = row[13] ? row[13].split(',').map(c => c.trim()).filter(Boolean) : [];
-                   const matchedCourses = rawCourses.map(c => matchCourseName(c)).filter(Boolean);
-
-                   const parseDate = (dateStr) => {
-                       if (!dateStr || dateStr.trim() === '') return null;
-                       return dateStr.trim();
-                   };
+                   // New format parsing (similar fix)
+                   const coursesStr = row[13] || '';
+                   const rawCourses = coursesStr
+                       .split(/[,\n]/)
+                       .map(c => c.trim())
+                       .filter(Boolean);
 
                    record = {
                        firstName: row[1],
@@ -1106,18 +1107,20 @@
                        currentAddress: row[7],
                        permanentAddress: row[8],
                        college: row[9],
-                       enquiryDate: parseDate(row[10]),
-                       followupDate: parseDate(row[11]),
+                       enquiryDate: row[10] || null,
+                       followupDate: row[11] || null,
                        note: row[12],
-                       courses: matchedCourses,
+                       courses: rawCourses,
                        leadSource: row[14] || 'Unknown'
                    };
                }
 
-               // Only add if has mobile and courses
+               // Validate required fields
                if (record.mobilePrimary && record.courses.length > 0) {
                    importedData.push(record);
                    if (previewData.length < 5) previewData.push(record);
+               } else {
+                   console.warn(`Row ${i}: Missing mobile or courses, skipping`);
                }
            }
        }

@@ -2,6 +2,113 @@
 // README.md Content
 // ============================================
 
+
+
+## 📊 **Import Flow Diagram (Old Format CSV)**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    OLD FORMAT CSV FILE                          │
+│                                                                 │
+│  Enquiry No., Student Name, Mobile, Course(s), Source, ...     │
+│  ───────────────────────────────────────────────────────────   │
+│  (ignored)    Geetanjali    9112244  SAP FICO    Walk-in  ...  │
+│               Patil         023                                 │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                  1. FRONTEND (enquiry.js)                       │
+│                                                                 │
+│  User clicks "Import CSV" → Selects "Old Format"               │
+│  ↓                                                              │
+│  handleCSVFile(file) → parseCSV(csvText)                       │
+│  ↓                                                              │
+│  For each row:                                                  │
+│    - IGNORE column 0 (CSV enquiry number)                      │
+│    - Parse name from column 1 → firstName/lastName             │
+│    - Clean mobile from column 2                                │
+│    - 🔥 Parse MULTIPLE courses from column 3:                  │
+│        "REDHAT (RHCSA & RHCE), CISCO, AWS"                     │
+│        → Split by comma → ["REDHAT (...)", "CISCO", "AWS"]     │
+│    - Parse source, date, assignTo, status                      │
+│  ↓                                                              │
+│  Create EnquiryRequestDTO[] with:                              │
+│    - NO enquiryNo field                                        │
+│    - courses: ["REDHAT (RHCSA & RHCE)", "CISCO", "AWS"]        │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓ POST /api/enquiries/bulk-import-json
+┌─────────────────────────────────────────────────────────────────┐
+│              2. BACKEND (EnquiryController)                     │
+│                                                                 │
+│  @PostMapping("/bulk-import-json")                             │
+│  bulkImportFromJSON(List<EnquiryRequestDTO> dtos, source)      │
+│  ↓                                                              │
+│  Validates: dtos not empty                                      │
+│  ↓                                                              │
+│  Calls: enquiryService.processBulkImport(dtos, "OLD_FORMAT")   │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│               3. SERVICE (EnquiryService)                       │
+│                                                                 │
+│  processBulkImport(dtos, importSource):                        │
+│  ↓                                                              │
+│  For each DTO:                                                  │
+│    ✓ Validate: mobile exists + courses not empty               │
+│    ✓ Check duplicate: existsByMobileAndIsDeletedFalse()        │
+│    ↓                                                            │
+│    Map DTO → Entity (EnquiryMapper)                            │
+│    ↓                                                            │
+│    Save to database                                            │
+│  ↓                                                              │
+│  Return BulkImportResponseDTO:                                  │
+│    - totalRecords, successfulImports, failedImports            │
+│    - errors[] with row numbers                                 │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                4. MAPPER (EnquiryMapper)                        │
+│                                                                 │
+│  toEntity(EnquiryRequestDTO dto):                              │
+│  ↓                                                              │
+│  Create Enquiry entity:                                        │
+│    - id: NULL (database auto-generates @GeneratedValue)        │
+│    - mobile: dto.mobile                                        │
+│    - courses: dto.courses (List<String>)  ✅ ALL PRESERVED     │
+│    - source: dto.source                                        │
+│    - importSource: "OLD_FORMAT"                                │
+│  ↓                                                              │
+│  Return entity for save                                        │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│              5. DATABASE (Enquiry Table)                        │
+│                                                                 │
+│  INSERT INTO enquiries (                                        │
+│    id,              ← AUTO-GENERATED (PRIMARY KEY)             │
+│    first_name,                                                 │
+│    last_name,                                                  │
+│    mobile,                                                     │
+│    courses,         ← JSON: ["REDHAT...", "CISCO", "AWS"]      │
+│    source,                                                     │
+│    enquiry_date,                                               │
+│    import_source    ← "OLD_FORMAT"                             │
+│  ) VALUES (...)                                                 │
+│  ↓                                                              │
+│  Returns generated ID (e.g., 51, 52, 53...)                    │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                 6. FRONTEND DISPLAY                             │
+│                                                                 │
+│  renderEnquiriesTable(enquiries):                              │
+│  ↓                                                              │
+│  For each enquiry:                                              │
+│    Show enquiryNo: "ENQ000051" (formatted from database ID)    │
+│    Show courses:   ["REDHAT...", "CISCO", "AWS"] as badges     │
+│  ↓                                                              │
+│  Display success message: "Imported 25/25 enquiries"           │
+└─────────────────────────────────────────────────────────────────┘
+
 /*
 # TechnoKraft Student Management System - Enquiry Module
 
