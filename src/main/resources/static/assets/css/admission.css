@@ -1,6 +1,7 @@
+
         :root {
-            --primary-color: #3b82f6;
-            --secondary-color: #64748b;
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
             --success-color: #10b981;
             --danger-color: #ef4444;
             --warning-color: #f59e0b;
@@ -8,15 +9,16 @@
 
         body {
             background-color: #f8fafc;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
 
         .page-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
             padding: 2rem;
             border-radius: 1rem;
             margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         .page-header h2 {
@@ -46,18 +48,6 @@
             border-radius: 0.75rem;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
             overflow: hidden;
-        }
-
-        .table-responsive {
-                overflow-wrap: break-word !important;
-        }
-
-
-        .table-card,
-        .table {
-            position: relative !important;
-            overflow: visible;
-            z-index: 1;
         }
 
         .table thead th {
@@ -92,27 +82,22 @@
         }
 
         .action-menu {
-            background-color: #e2e8f0;
+                            background-color: #e2e8f0;
             position: absolute;
             top: 100%;
             right: 0;
             margin-top: 0.5rem;
             display: none;
-            min-width: 200px;
+            min-width: 220px;
             z-index: 3000;
-            pointer-events: auto;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
         }
 
-        /* visible state */
         .action-menu.show {
             display: block;
         }
-
-        tr:nth-child(-n+2) .action-menu {
-            bottom: auto;
-            top: auto;
-        }
-
 
         .action-menu-item {
             padding: 0.75rem 1rem;
@@ -138,7 +123,7 @@
         }
 
         .modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
             border-radius: 0.5rem 0.5rem 0 0;
         }
@@ -156,7 +141,7 @@
         }
 
         .nav-pills .nav-link.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
         }
 
@@ -174,16 +159,12 @@
         }
 
         .form-control:focus, .form-select:focus {
-            border-color: #667eea;
+            border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .required {
-            color: #ef4444;
-        }
-
-        .tab-content {
-            padding: 1.5rem 0;
+            color: var(--danger-color);
         }
 
         .progress-wizard {
@@ -195,14 +176,14 @@
         }
 
         .progress-wizard-bar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             height: 100%;
             border-radius: 2px;
             transition: width 0.3s ease;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             border: none;
         }
 
@@ -220,83 +201,64 @@
         }
 
         .import-area:hover {
-            border-color: #667eea;
+            border-color: var(--primary-color);
             background-color: #f8fafc;
         }
 
         .import-area.dragover {
-            border-color: #667eea;
+            border-color: var(--primary-color);
             background-color: #eef2ff;
         }
 
-        /* Follow-Up Modal Styles */
-        #followUpModal .modal-body {
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-
-        #followUpModal .required {
-            color: #ef4444;
-        }
-
-        #followUpHistoryBody tr {
+        .installment-table {
             font-size: 0.875rem;
         }
 
-        #followUpHistoryBody td {
-            padding: 0.5rem;
-            vertical-align: middle;
+        .installment-table th {
+            background-color: #f8fafc;
+            font-weight: 600;
         }
 
-        #followUpModal .table-responsive {
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
+        .video-preview {
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+            overflow: hidden;
         }
 
-        #followUpModal .table thead {
-            position: sticky;
+        .canvas-preview {
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+        }
+
+        .upload-btn-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .upload-btn-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
             top: 0;
-            background: #f9fafb;
-            z-index: 1;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
         }
 
-        /* Follow-up button styling in action menu */
-        .action-menu-item[data-action="followup"] {
-            color: #059669;
+        /* Transfer Admission Modal Styles */
+        #transferAdmissionModal .form-control:read-only,
+        #transferAdmissionModal .form-control[readonly] {
+            background-color: #f8fafc;
+            cursor: not-allowed;
         }
 
-        .action-menu-item[data-action="followup"]:hover {
-            background: #d1fae5;
-            color: #065f46;
+        #transferAdmissionModal .alert-warning {
+            background-color: #fef3c7;
+            border-color: #fde68a;
+            color: #92400e;
         }
 
-        .action-menu-item[data-action="followup"] i {
-            color: #10b981;
-        }
-
-        /* Course badges styling */
-        .badge.d-block {
-            margin-bottom: 4px;
-            text-align: left;
-            padding: 6px 10px;
-            font-weight: 500;
-            line-height: 1.4;
-        }
-
-        /* Table course column */
-        #enquiryTable tbody td:nth-child(4) {
-            min-width: 200px;
-            max-width: 250px;
-            vertical-align: top;
-            padding-top: 1rem;
-        }
-
-        /* Multi-select styling */
-        select[multiple] {
-            min-height: 150px;
-        }
-
-        select[multiple]:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        #transferTab5 .alert {
+            margin-top: 1rem;
         }

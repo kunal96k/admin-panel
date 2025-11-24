@@ -5,10 +5,194 @@
     let currentEnquiryId = null;
     let currentFollowUpEnquiry = null;
 
+    const COURSE_NAMES = [
+      "SPRING BOOT",
+      "MongoDB",
+      "AI CRASH COURSE",
+      "ENGLISH AND MARATHI TYPING",
+      "CCNA Switching",
+      "PYTHON - DATA ANALYTICS",
+      "Professional English Communication",
+      "SQL - Data Analytics",
+      "GRAPHICS DESIGN",
+      "MEDICAL CODING",
+      "ARTIFICIAL INTELLIGENCE",
+      "FULL STACK JavaScript  DEVELOPMENT",
+      "FULL STACK PYTHON DEVELOPMENT",
+      "FULL STACK JAVA DEVELOPMENT",
+      "FULL STACK PHP DEVELOPMENT",
+      "MEAN STACK",
+      "FULL STACK BACKEND JavaScript",
+      "FULL STACK BACKEND PYTHON",
+      "FULL STACK BACKEND PHP",
+      "FULL STACK BACKEND JAVA CORE & ADVANCE",
+      "EXPRESS JS",
+      "DATA ENGINEERING",
+      "FULL STACK",
+      "FULL STACK BACKEND",
+      "FULL STACK FRONTEND",
+      "SAP - ABAP",
+      "TABLEAU",
+      "MERN STACK",
+      "ASP.NET",
+      "AUTO CAD",
+      "SAP-MM",
+      "ANIMATION",
+      "SAP PP",
+      "SAP SD",
+      "SAP FICO",
+      "UGNX",
+      "CATIA",
+      "SOLID-WORKS",
+      "CREO",
+      "DATA ANALYTICS",
+      "BUSINESS ANALYTICS",
+      "C PANEL AND WHM",
+      "LARAVEL",
+      "AUTOMATION TESTING",
+      "MANUAL TESTING",
+      "KUBERNETES",
+      "DJANGO",
+      "WEB DEVELOPMENT",
+      "CSS",
+      "POWER BI",
+      "HARDWARE",
+      "Data Structures Using C++",
+      "HTML",
+      "ANSIBLE",
+      "CYBER SECURITY",
+      "PALOALTO",
+      "REACT JS",
+      "HACKING",
+      "DATA SCIENCE",
+      "PENETRATION TESTING",
+      "PYTHON + MACHINE LEARNING",
+      "JAVA CORE & ADV + JAVA MVC",
+      "MYSQL",
+      "SOFTWARE TESTING",
+      "WEB DESIGNING AND DEVELOPMENT",
+      "C & C++ PROGRAMMING",
+      ".NET",
+      "JAVA FRAMEWORK",
+      "CISCO CERTIFIED NETWORK PROFESSIONAL",
+      "JAVASCRIPT",
+      "JAVA CORE AND ADVANCE",
+      "WEBSITE DESIGNING",
+      "MACHINE LEARNING",
+      "RDBMS",
+      "MCSA",
+      "ADVANCE EXCEL",
+      "DATA STRUCTURE USING C",
+      "DBMS",
+      "MCSE",
+      "NODE JS",
+      "Angular JS",
+      ".NET MVC",
+      "JAVA MVC",
+      "DEVOPS",
+      "ORACLE DBA",
+      "DIGITAL MARKETING",
+      "ANDROID",
+      "SHELL SCRIPTING",
+      "PHP",
+      "REDHAT (RHCVA)",
+      "REDHAT (OpenStack)",
+      "REDHAT (RHCSA)",
+      "REDHAT (RHCE)",
+      "REDHAT (RHCSA & RHCE)",
+      "PYTHON",
+      "VMWARE",
+      "MCSA & MCSE",
+      "BIG DATA HADOOP",
+      "AMAZON WEB SERVICES",
+      "Azure",
+      "JAVA ADVANCE",
+      "JAVA CORE",
+      "C++ PROGRAMMING",
+      "C PROGRAMMING",
+      "CISCO CERTIFIED NETWORK ASSOCIATE",
+      "NETWORKING (N+)"
+    ];
+
+
     document.addEventListener('DOMContentLoaded', function() {
         initializeEventListeners();
         loadEnquiries();
+        initializeCourseSelector();
     });
+
+    function initializeCourseSelector() {
+        const courseSelect = document.getElementById('course');
+        if (courseSelect) {
+            courseSelect.addEventListener('change', updateSelectedCoursesDisplay);
+        }
+    }
+
+    function updateSelectedCoursesDisplay() {
+        const courseSelect = document.getElementById('course');
+        const selectedCourses = Array.from(courseSelect.selectedOptions).map(opt => opt.value);
+
+        // Optional: Add visual feedback below select
+        let displayArea = document.getElementById('selectedCoursesDisplay');
+        if (!displayArea) {
+            displayArea = document.createElement('div');
+            displayArea.id = 'selectedCoursesDisplay';
+            displayArea.className = 'mt-2';
+            courseSelect.parentElement.appendChild(displayArea);
+        }
+
+        if (selectedCourses.length > 0) {
+            displayArea.innerHTML = `
+                <div class="d-flex flex-wrap gap-1">
+                    ${selectedCourses.map(course => `
+                        <span class="badge bg-primary" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                            ${course}
+                            <i class="bi bi-x-circle ms-1" style="cursor: pointer;" onclick="window.removeCourseTag('${course.replace(/'/g, "\\'")}')"></i>
+                        </span>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            displayArea.innerHTML = '';
+        }
+    }
+
+    window.removeCourseTag = function(courseName) {
+        const courseSelect = document.getElementById('course');
+        Array.from(courseSelect.options).forEach(option => {
+            if (option.value === courseName) {
+                option.selected = false;
+            }
+        });
+        updateSelectedCoursesDisplay();
+    };
+
+   // Match and normalize course names from CSV - IMPROVED VERSION
+   function matchCourseName(csvCourseName) {
+       if (!csvCourseName) return null;
+
+       const normalized = csvCourseName.trim().toUpperCase();
+
+       // Exact match
+       for (let course of COURSE_NAMES) {
+           if (course.toUpperCase() === normalized) {
+               return course;
+           }
+       }
+
+       // Partial match
+       for (let course of COURSE_NAMES) {
+           if (course.toUpperCase().includes(normalized) ||
+               normalized.includes(course.toUpperCase())) {
+               return course;
+           }
+       }
+
+       // **NEW: If no match found, return the original course name**
+       // This allows importing courses not in the predefined list
+       console.warn(`Course not in predefined list, using as-is: ${csvCourseName}`);
+       return csvCourseName.trim();
+   }
 
     function initializeEventListeners() {
         // Action menu triggers
@@ -63,8 +247,6 @@
         });
 
         document.getElementById('importBtn')?.addEventListener('click', importCSV);
-
-        // Follow-Up Modal
         document.getElementById('btnSaveFollowUp')?.addEventListener('click', saveFollowUp);
 
         // Drag and drop
@@ -151,48 +333,7 @@
         }
     }
 
-    // Collect Form Data
-    function collectFormData() {
-        return {
-            firstName: getValue('firstName'),
-            middleName: getValue('middleName'),
-            lastName: getValue('lastName'),
-            mobile: getValue('mobilePrimary'),
-            secondaryMobile: getValue('mobileSecondary'),
-            email: getValue('emailPrimary'),
-            secondaryEmail: getValue('emailSecondary'),
-            currentAddress: getValue('currentAddress'),
-            permanentAddress: getValue('permanentAddress'),
-            pinCurrent: getValue('pinCodeCurrent'),
-            pinPermanent: getValue('pinCodePermanent'),
-            college: getValue('college'),
-            qualification: getValue('qualification'),
-            aadhaar: getValue('aadhaar'),
-            birthDate: getValue('dob') || null,
-            gender: getValue('gender'),
-            courses: [getValue('course')].filter(Boolean),
-            packageName: getValue('package'),
-            demoLectureRequired: getValue('demoLecture') === 'true',
-            interestLevel: getValue('interestLevel'),
-            source: getValue('leadSource'),
-            referenceName: getValue('referenceName'),
-            enquiryDate: getValue('enquiryDate') || new Date().toISOString().split('T')[0],
-            followupDate: getValue('followupDate') || null,
-            assignTo: getValue('assignTo'),
-            note: getValue('note')
-        };
-    }
-
-    // Validate Form Data
-    function validateFormData(data) {
-        if (!data.firstName || !data.lastName) return false;
-        if (!data.mobile || !/^[6-9]\d{9}$/.test(data.mobile)) return false;
-        if (!data.courses || data.courses.length === 0) return false;
-        if (!data.source) return false;
-        return true;
-    }
-
-    // Import CSV
+    // Import CSV with course matching
     async function importCSV() {
         if (importedData.length === 0) {
             showError('No data to import');
@@ -203,16 +344,33 @@
         const typeEnum = importType === 'old' ? 'OLD_FORMAT' : 'NEW_FORMAT';
 
         const dtoList = importedData.map(record => {
+            // CRITICAL FIX: Ensure courses is ALWAYS a valid array
+            let coursesArray = [];
+
+            if (Array.isArray(record.courses)) {
+                coursesArray = record.courses.filter(c => c && c.trim());
+            } else if (typeof record.courses === 'string' && record.courses.trim()) {
+                coursesArray = record.courses.split(',')
+                    .map(c => c.trim())
+                    .filter(Boolean);
+            }
+
+            // Ensure at least one course exists
+            if (coursesArray.length === 0) {
+                console.warn(`Skipping record - no valid courses for mobile: ${record.mobilePrimary}`);
+                return null;
+            }
+
             const dto = {
                 mobile: record.mobilePrimary,
-                courses: [record.course].filter(Boolean),
+                courses: coursesArray,
                 source: record.leadSource || 'Unknown',
-                enquiryDate: record.enquiryDate || new Date().toISOString().split('T')[0],
+                enquiryDate: record.enquiryDate || null,
                 status: record.status || 'New'
             };
 
             if (importType === 'old') {
-                dto.name = `${record.firstName} ${record.middleName} ${record.lastName}`.trim();
+                dto.name = `${record.firstName || ''} ${record.middleName || ''} ${record.lastName || ''}`.trim();
             } else {
                 dto.firstName = record.firstName;
                 dto.middleName = record.middleName;
@@ -228,37 +386,69 @@
 
             if (record.assignTo) dto.assignTo = record.assignTo;
 
+            // Debug log
+            console.log('Prepared DTO:', {
+                mobile: dto.mobile,
+                courses: dto.courses,
+                coursesType: Array.isArray(dto.courses) ? 'array' : typeof dto.courses,
+                coursesLength: dto.courses.length
+            });
+
             return dto;
-        });
+        }).filter(dto => dto !== null);  // Remove null entries (records without courses)
+
+        if (dtoList.length === 0) {
+            showError('No valid records to import. All records are missing required fields (courses).');
+            return;
+        }
 
         try {
-            showLoading('Importing data...');
+            showLoading(`Importing ${dtoList.length} records...`);
 
             const response = await fetch(`/api/enquiries/bulk-import-json?importSource=${typeEnum}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify(dtoList)
             });
 
+            const contentType = response.headers.get('content-type');
+
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Import failed');
+                let errorMessage = 'Import failed';
+
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+
+                    // Log detailed error for debugging
+                    console.error('Import error details:', errorData);
+                } else {
+                    const errorText = await response.text();
+                    console.error('Server error:', errorText);
+                    errorMessage = 'Server error occurred. Check console for details.';
+                }
+
+                throw new Error(errorMessage);
             }
 
             const result = await response.json();
-
             Swal.close();
             closeModal('importModal');
 
             let message = `Successfully imported ${result.successfulImports} out of ${result.totalRecords} records`;
             if (result.failedImports > 0) {
                 message += `\n${result.failedImports} records failed`;
+
+                // Show detailed errors if available
+                if (result.errors && result.errors.length > 0) {
+                    console.warn('Import errors:', result.errors);
+                }
             }
 
             showSuccess(message);
-
             loadEnquiries();
             resetImport();
 
@@ -320,7 +510,7 @@
         }
     }
 
-    // Render Enquiries Table
+    // Render Enquiries Table - Each course on new line
     function renderEnquiriesTable(enquiries) {
         const tbody = document.querySelector('#enquiryTable tbody');
         if (!tbody) return;
@@ -340,69 +530,72 @@
             return;
         }
 
-        tbody.innerHTML = enquiries.map(enq => `
-            <tr data-id="${enq.id}">
-                <td><strong>${enq.id}</strong></td>
-                <td>${enq.name || `${enq.firstName || ''} ${enq.lastName || ''}`.trim() || 'N/A'}</td>
-                <td>${enq.mobile || 'N/A'}</td>
-                <td><span class="badge bg-primary">${enq.courses || 'N/A'}</span></td>
-                <td>${enq.source || 'N/A'}</td>
-                <td>${enq.date || 'N/A'}</td>
-                <td>${enq.assign || 'Unassigned'}</td>
-                <td><span class="badge bg-success">${enq.status || 'New'}</span></td>
-                <td>
-                    <div class="action-dropdown">
-                        <button class="btn btn-light action-menu-trigger" style="padding: 0.25rem 0.5rem;">
-                            <i class="bi bi-three-dots-vertical"></i>
-                        </button>
-                        <div class="action-menu">
-                            <button class="action-menu-item" data-action="update" data-id="${enq.id}">
-                                <i class="bi bi-pencil-square"></i><span>Update</span>
-                            </button>
-                            <button class="action-menu-item" data-action="followup" data-id="${enq.id}">
-                                <i class="bi bi-telephone"></i><span>Follow Up</span>
-                            </button>
-                            <button class="action-menu-item" data-action="view" data-id="${enq.id}">
-                                <i class="bi bi-eye"></i><span>View Details</span>
-                            </button>
-                            <button class="action-menu-item" data-action="changestatus" data-id="${enq.id}">
-                                <i class="bi bi-pencil"></i><span>Change Enquiry Status</span>
-                            </button>
-                            <button class="action-menu-item" data-action="admission" data-id="${enq.id}">
-                                <i class="bi bi-plus"></i><span>New Admission</span>
-                            </button>
-                            <button class="action-menu-item" data-action="remove" data-id="${enq.id}">
-                                <i class="bi bi-trash"></i><span>Remove</span>
-                            </button>
+        tbody.innerHTML = enquiries.map(enq => {
+            // Parse courses - handle different formats
+            let coursesList = [];
+
+            if (Array.isArray(enq.coursesList) && enq.coursesList.length > 0) {
+                coursesList = enq.coursesList;
+            } else if (Array.isArray(enq.courses)) {
+                coursesList = enq.courses;
+            } else if (typeof enq.courses === 'string' && enq.courses) {
+                coursesList = enq.courses.split(',').map(c => c.trim()).filter(Boolean);
+            }
+
+            // Create course badges - EACH ON NEW LINE
+            const coursesHtml = coursesList.length > 0
+                ? coursesList.map(course =>
+                    `<span class="badge bg-primary d-block mb-1" style="white-space: normal; text-align: left; padding: 0.4rem 0.6rem;">${course}</span>`
+                  ).join('')
+                : '<span class="badge bg-secondary">N/A</span>';
+
+            return `
+                <tr data-id="${enq.id}">
+                    <td><strong>${enq.id}</strong></td>
+                    <td>${enq.name || `${enq.firstName || ''} ${enq.lastName || ''}`.trim() || 'N/A'}</td>
+                    <td>${enq.mobile || 'N/A'}</td>
+                    <td style="max-width: 250px; min-width: 180px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            ${coursesHtml}
                         </div>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+                    </td>
+                    <td>${enq.source || 'N/A'}</td>
+                    <td>${enq.date || 'N/A'}</td>
+                    <td>${enq.assign || 'Unassigned'}</td>
+                    <td><span class="badge bg-success">${enq.status || 'New'}</span></td>
+                    <td>
+                        <div class="action-dropdown">
+                            <button class="btn btn-light action-menu-trigger" style="padding: 0.25rem 0.5rem;">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <div class="action-menu">
+                                <button class="action-menu-item" data-action="update" data-id="${enq.id}">
+                                    <i class="bi bi-pencil-square"></i><span>Update</span>
+                                </button>
+                                <button class="action-menu-item" data-action="followup" data-id="${enq.id}">
+                                    <i class="bi bi-telephone"></i><span>Follow Up</span>
+                                </button>
+                                <button class="action-menu-item" data-action="view" data-id="${enq.id}">
+                                    <i class="bi bi-eye"></i><span>View Details</span>
+                                </button>
+                                <button class="action-menu-item" data-action="changestatus" data-id="${enq.id}">
+                                    <i class="bi bi-pencil"></i><span>Change Enquiry Status</span>
+                                </button>
+                                <button class="action-menu-item" data-action="admission"
+                                          data-id="${enq.id}" data-mobile="${enq.mobile}">
+                                      <i class="bi bi-plus"></i><span>New Admission</span>
+                                </button>
+                                <button class="action-menu-item" data-action="remove" data-id="${enq.id}">
+                                    <i class="bi bi-trash"></i><span>Remove</span>
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
 
         attachTableEventListeners(tbody);
-    }
-
-    // Attach table event listeners
-    function attachTableEventListeners(tbody) {
-        tbody.querySelectorAll('.action-menu-trigger').forEach(trigger => {
-            trigger.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const menu = this.nextElementSibling;
-                document.querySelectorAll('.action-menu').forEach(m => {
-                    if (m !== menu) m.classList.remove('show');
-                });
-                menu.classList.toggle('show');
-            });
-        });
-
-        tbody.querySelectorAll('.action-menu-item').forEach(item => {
-            item.addEventListener('click', function() {
-                const action = this.getAttribute('data-action');
-                const id = this.getAttribute('data-id');
-                handleAction(action, id);
-            });
-        });
     }
 
     // Handle Actions
@@ -421,30 +614,34 @@
                 await openChangeStatusModal(enquiryId);
                 break;
             case 'admission':
-                await openAdmissionPage(enquiryId);
-                break;
+                   const mobile = this.getAttribute('data-mobile');
+                   await openAdmissionFromEnquiry(enquiryId, mobile);
+                   break;
             case 'remove':
                 await deleteEnquiry(enquiryId);
                 break;
         }
     }
 
-    // Load Enquiry for Edit
+    // Load Enquiry for Edit - Handle multiple courses
     async function loadEnquiryForEdit(id) {
         try {
             const response = await fetch(`/api/enquiries/${id}`);
-            if (!response.ok) throw new Error('Failed to load enquiry');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Failed to load enquiry');
+            }
 
             const enquiry = await response.json();
             currentEnquiryId = id;
 
-            // Fill form
+            // Personal info
             setValue('firstName', enquiry.firstName);
             setValue('middleName', enquiry.middleName);
             setValue('lastName', enquiry.lastName);
             setValue('mobilePrimary', enquiry.mobile);
             setValue('mobileSecondary', enquiry.secondaryMobile);
-            setValue('emailPrimary', enquiry.email);
+            setValue('emailPrimary', enquiry.email || enquiry.emailPrimary);
             setValue('emailSecondary', enquiry.secondaryEmail);
             setValue('currentAddress', enquiry.currentAddress);
             setValue('permanentAddress', enquiry.permanentAddress);
@@ -455,24 +652,46 @@
             setValue('aadhaar', enquiry.aadhaar);
             setValue('dob', enquiry.birthDate);
             setValue('gender', enquiry.gender);
-            setValue('course', enquiry.coursesList?.[0] || '');
+
+            // Handle multiple courses
+            const courseSelect = document.getElementById('course');
+            const courses =
+                (Array.isArray(enquiry.coursesList) && enquiry.coursesList.length > 0)
+                    ? enquiry.coursesList
+                    : Array.isArray(enquiry.courses)
+                        ? enquiry.courses
+                        : (typeof enquiry.courses === 'string'
+                            ? enquiry.courses.split(',').map(c => c.trim()).filter(Boolean)
+                            : []);
+
+            if (courseSelect) {
+                Array.from(courseSelect.options).forEach(option => {
+                    option.selected = courses.includes(option.value);
+                });
+                updateSelectedCoursesDisplay();
+            }
+
+            // Other enquiry details
             setValue('package', enquiry.packageName);
             setValue('demoLecture', enquiry.demoLectureRequired ? 'true' : 'false');
             setValue('interestLevel', enquiry.interestLevel);
             setValue('leadSource', enquiry.source);
             setValue('referenceName', enquiry.referenceName);
-            setValue('assignTo', enquiry.assign);
-            setValue('enquiryDate', enquiry.date);
+            setValue('assignTo', enquiry.assign || enquiry.assignTo);
+            setValue('enquiryDate', enquiry.date || enquiry.enquiryDate);
             setValue('followupDate', enquiry.followupDate);
             setValue('note', enquiry.note);
 
-            document.getElementById('modalTitle').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Update Enquiry';
+            document.getElementById('modalTitle').innerHTML =
+                '<i class="bi bi-pencil-square me-2"></i>Update Enquiry';
+
             const modal = new bootstrap.Modal(document.getElementById('enquiryModal'));
             modal.show();
+            updateProgress(25);
 
         } catch (error) {
             console.error('Error loading enquiry:', error);
-            showError('Failed to load enquiry details');
+            showError(error.message || 'Failed to load enquiry details');
         }
     }
 
@@ -484,7 +703,6 @@
 
             const enquiry = await response.json();
 
-            // Fill view modal
             setValue('viewStudentName', enquiry.name || `${enquiry.firstName || ''} ${enquiry.lastName || ''}`.trim());
             setValue('viewFirstName', enquiry.firstName);
             setValue('viewMiddleName', enquiry.middleName);
@@ -607,10 +825,27 @@
         }
     }
 
-    // Open Admission Page
-    function openAdmissionPage(id) {
-        showSuccess('Admission feature will be implemented later');
-        // window.location.href = `/admissions/new?enquiryId=${id}`;
+    // Open Admission Page - Check enquiry exists
+    async function openAdmissionPage(enquiryId) {
+        try {
+            // Check if enquiry exists
+            const response = await fetch(`/api/enquiries/${enquiryId}`);
+            if (!response.ok) {
+                throw new Error('Enquiry not found');
+            }
+
+            const enquiry = await response.json();
+
+            // Store enquiry data in sessionStorage for admission form
+            sessionStorage.setItem('admissionEnquiry', JSON.stringify(enquiry));
+
+            // Redirect to admission page
+            window.location.href = `/admission?enquiryId=${enquiryId}`;
+
+        } catch (error) {
+            console.error('Admission error:', error);
+            showError('Please create an enquiry first before proceeding with admission');
+        }
     }
 
     // Open Follow-Up Modal
@@ -673,7 +908,6 @@
                     </tr>
                 `).join('');
 
-                // Attach delete event listeners
                 tbody.querySelectorAll('.delete-followup').forEach(btn => {
                     btn.addEventListener('click', async function() {
                         const followUpId = this.getAttribute('data-followup-id');
@@ -722,7 +956,7 @@
                 if (!response.ok) throw new Error('Failed to delete follow-up');
 
                 showSuccess('Follow-up deleted successfully');
-                await loadFollowUpHistory(enquiryId); // Reload history
+                await loadFollowUpHistory(enquiryId);
             } catch (error) {
                 console.error('Error deleting follow-up:', error);
                 showError('Failed to delete follow-up');
@@ -761,20 +995,15 @@
                 throw new Error(errorData.message || 'Failed to save follow-up');
             }
 
-            const result = await response.json();
-
             showSuccess('Follow-up saved successfully!');
 
-            // Reload follow-up history
             await loadFollowUpHistory(currentFollowUpEnquiry.id);
 
-            // Reset form but keep student info
             form.reset();
             setValue('followUpStudentName', currentFollowUpEnquiry.name ||
                 `${currentFollowUpEnquiry.firstName || ''} ${currentFollowUpEnquiry.lastName || ''}`.trim());
             setValue('followUpMobile', currentFollowUpEnquiry.mobile);
 
-            // Reload enquiries table
             loadEnquiries();
 
             const sendSMS = await Swal.fire({
@@ -807,56 +1036,122 @@
         });
     }
 
-    // Helper Functions
-    function getValue(id) {
-        const el = document.getElementById(id);
-        return el ? el.value : '';
-    }
+   // Parse CSV - SIMPLIFIED
+   function parseCSV(text) {
+       const lines = text.split('\n').filter(line => line.trim());
+       const importType = document.querySelector('input[name="importType"]:checked').value;
 
-    function setValue(id, value) {
-        const el = document.getElementById(id);
-        if (el) el.value = value || '';
-    }
+       importedData = [];
+       const previewData = [];
 
-    function openAddModal() {
-        currentEnquiryId = null;
-        clearForm();
-        document.getElementById('modalTitle').innerHTML = '<i class="bi bi-person-plus me-2"></i>Add New Enquiry';
-        const modal = new bootstrap.Modal(document.getElementById('enquiryModal'));
-        modal.show();
-        updateProgress(25);
-    }
+       for (let i = 1; i < lines.length; i++) {
+           const values = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
+           const row = values.map(v => v.trim().replace(/^"|"$/g, ''));
 
-   function clearForm() {
-       ['personalForm', 'communicationForm', 'courseForm', 'sourceForm'].forEach(id => {
-           document.getElementById(id)?.reset();
-       });
+           if (row.length > 0) {
+               let record;
+
+               if (importType === 'old') {
+                   const nameParts = (row[1] || '').split(' ').filter(Boolean);
+
+                   const coursesStr = row[3] || '';
+                   let rawCourses = [];
+
+                   // Check if courses contain newlines (multi-line in CSV)
+                   if (coursesStr.includes('\n')) {
+                       rawCourses = coursesStr.split('\n')
+                           .map(c => c.trim())
+                           .filter(Boolean);
+                   } else {
+                       // Single course or comma-separated
+                       rawCourses = coursesStr.split(',')
+                           .map(c => c.trim())
+                           .filter(Boolean);
+                   }
+
+                   const matchedCourses = rawCourses
+                       .map(c => matchCourseName(c))
+                       .filter(Boolean);
+
+                   console.log(`Row ${i}: Found ${matchedCourses.length} courses:`, matchedCourses);
+
+                   record = {
+                       firstName: nameParts[0] || '',
+                       middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '',
+                       lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : '',
+                       mobilePrimary: row[2],
+                       courses: matchedCourses,  // ALL courses preserved
+                       leadSource: row[4] || 'Unknown',
+                       enquiryDate: row[5] && row[5].trim() ? row[5].trim() : null,
+                       assignTo: row[6] || null,
+                       status: row[7] || 'New'
+                   };
+               } else {
+                   // New format
+                   const rawCourses = row[13] ? row[13].split(',').map(c => c.trim()).filter(Boolean) : [];
+                   const matchedCourses = rawCourses.map(c => matchCourseName(c)).filter(Boolean);
+
+                   const parseDate = (dateStr) => {
+                       if (!dateStr || dateStr.trim() === '') return null;
+                       return dateStr.trim();
+                   };
+
+                   record = {
+                       firstName: row[1],
+                       middleName: row[2],
+                       lastName: row[3],
+                       mobilePrimary: row[4],
+                       mobileSecondary: row[5],
+                       emailPrimary: row[6],
+                       currentAddress: row[7],
+                       permanentAddress: row[8],
+                       college: row[9],
+                       enquiryDate: parseDate(row[10]),
+                       followupDate: parseDate(row[11]),
+                       note: row[12],
+                       courses: matchedCourses,
+                       leadSource: row[14] || 'Unknown'
+                   };
+               }
+
+               // Only add if has mobile and courses
+               if (record.mobilePrimary && record.courses.length > 0) {
+                   importedData.push(record);
+                   if (previewData.length < 5) previewData.push(record);
+               }
+           }
+       }
+
+       displayPreview(previewData);
+       document.getElementById('recordCount').textContent = importedData.length;
+       document.getElementById('importBtn').disabled = false;
    }
 
-    function closeModal(modalId) {
-        const modalEl = document.getElementById(modalId);
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
-    }
+    function displayPreview(data) {
+        const thead = document.getElementById('previewTableHead');
+        const tbody = document.getElementById('previewTableBody');
 
-    function updateProgress(width) {
-        const bar = document.getElementById('progressBar');
-        if (bar) bar.style.width = width + '%';
-    }
+        thead.innerHTML = '<tr><th>First Name</th><th>Last Name</th><th>Mobile</th><th>Courses</th></tr>';
+        tbody.innerHTML = data.map(row => `
+            <tr>
+                <td>${row.firstName || '-'}</td>
+                <td>${row.lastName || '-'}</td>
+                <td>${row.mobilePrimary || '-'}</td>
+                <td>${Array.isArray(row.courses) ? row.courses.join(', ') : (row.courses || '-')}</td>
+            </tr>
+        `).join('');
 
-    function updateViewProgress(width) {
-        const bar = document.getElementById('viewProgressBar');
-        if (bar) bar.style.width = width + '%';
+        document.getElementById('importPreview').style.display = 'block';
     }
 
     function handleImportTypeChange() {
         const oldFormatInfo = document.getElementById('oldFormatInfo');
         const newFormatInfo = document.getElementById('newFormatInfo');
         const isOld = this.value === 'old';
-        
+
         oldFormatInfo.style.display = isOld ? 'block' : 'none';
         newFormatInfo.style.display = isOld ? 'none' : 'block';
-        
+
         resetImport();
     }
 
@@ -874,116 +1169,318 @@
         reader.readAsText(file);
     }
 
-    function parseCSV(text) {
-        const lines = text.split('\n').filter(line => line.trim());
-        const importType = document.querySelector('input[name="importType"]:checked').value;
-        
-        importedData = [];
-        const previewData = [];
-
-        for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
-            const row = values.map(v => v.trim().replace(/^"|"$/g, ''));
-
-            if (row.length > 0) {
-                let record;
-                
-                if (importType === 'old') {
-                    const nameParts = (row[1] || '').split(' ');
-                    record = {
-                        firstName: nameParts[0] || '',
-                        middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '',
-                        lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : '',
-                        mobilePrimary: row[2],
-                        course: row[3],
-                        leadSource: row[4],
-                        enquiryDate: row[5],
-                        assignTo: row[6],
-                        status: row[7] || 'New'
-                    };
-                } else {
-                    record = {
-                        firstName: row[1],
-                        middleName: row[2],
-                        lastName: row[3],
-                        mobilePrimary: row[4],
-                        mobileSecondary: row[5],
-                        emailPrimary: row[6],
-                        currentAddress: row[7],
-                        permanentAddress: row[8],
-                        college: row[9],
-                        enquiryDate: row[10],
-                        followupDate: row[11],
-                        note: row[12],
-                        course: row[13],
-                        leadSource: row[14]
-                    };
-                }
-
-                importedData.push(record);
-                if (previewData.length < 5) previewData.push(record);
-            }
-        }
-
-        displayPreview(previewData);
-        document.getElementById('recordCount').textContent = importedData.length;
-        document.getElementById('importBtn').disabled = false;
-    }
-
-    function displayPreview(data) {
-        const thead = document.getElementById('previewTableHead');
-        const tbody = document.getElementById('previewTableBody');
-
-        thead.innerHTML = '<tr><th>First Name</th><th>Last Name</th><th>Mobile</th><th>Course</th></tr>';
-        tbody.innerHTML = data.map(row => `
-            <tr>
-                <td>${row.firstName || '-'}</td>
-                <td>${row.lastName || '-'}</td>
-                <td>${row.mobilePrimary || '-'}</td>
-                <td>${row.course || '-'}</td>
-            </tr>
-        `).join('');
-
-        document.getElementById('importPreview').style.display = 'block';
-    }
-
-    function debounce(func, wait) {
-        let timeout;
-        return function(...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
-        };
-    }
-
-    function showSuccess(message) {
-        Swal.fire({
-            title: 'Success!',
-            text: message,
-            icon: 'success',
-            confirmButtonColor: '#667eea'
-        });
-    }
-
-    function showError(message) {
-        Swal.fire({
-            title: 'Error!',
-            text: message,
-            icon: 'error',
-            confirmButtonColor: '#ef4444'
-        });
-    }
-
-    function showLoading(message) {
-        Swal.fire({
-            title: message,
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-    }
-
     function openImportModal() {
         const modal = new bootstrap.Modal(document.getElementById('importModal'));
         modal.show();
     }
+
+    // ========== NEW ADMISSION FROM ENQUIRY ==========
+
+    async function openAdmissionFromEnquiry(enquiryId, mobileNumber) {
+        try {
+            showLoading('Checking eligibility...');
+
+            // Step 1: Validate enquiry exists
+            const enquiryResponse = await fetch(`/api/enquiries/${enquiryId}`);
+            if (!enquiryResponse.ok) {
+                throw new Error('Enquiry not found');
+            }
+            const enquiry = await enquiryResponse.json();
+
+            // Step 2: Check if admission can be created
+            const canCreateResponse = await fetch(`/api/admissions/can-create/${mobileNumber}`);
+            const canCreateData = await canCreateResponse.json();
+
+            Swal.close();
+
+            if (!canCreateData.canCreate) {
+                await Swal.fire({
+                    title: 'Cannot Create Admission',
+                    html: `
+                        <div class="text-start">
+                            <p class="mb-3">An admission cannot be created for this student.</p>
+                            <div class="alert alert-warning mb-0">
+                                <strong>Possible reasons:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Admission already exists for mobile: <strong>${mobileNumber}</strong></li>
+                                    <li>Student has been marked as inactive</li>
+                                </ul>
+                            </div>
+                            <p class="mt-3 mb-0 text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Please check existing admissions or contact administrator.
+                            </p>
+                        </div>
+                    `,
+                    icon: 'warning',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#667eea',
+                    width: '500px'
+                });
+                return;
+            }
+
+            // Step 3: Display confirmation with enquiry details
+            const coursesDisplay = Array.isArray(enquiry.coursesList) && enquiry.coursesList.length > 0
+                ? enquiry.coursesList.map(c => `<li>${c}</li>`).join('')
+                : enquiry.courses || 'N/A';
+
+            const result = await Swal.fire({
+                title: 'Create New Admission',
+                html: `
+                    <div class="text-start">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td class="text-muted" style="width: 100px;"><strong>Name:</strong></td>
+                                <td>${enquiry.name || `${enquiry.firstName} ${enquiry.lastName}`}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted"><strong>Mobile:</strong></td>
+                                <td>${enquiry.mobile}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted"><strong>Course(s):</strong></td>
+                                <td><ul class="mb-0 ps-3">${coursesDisplay}</ul></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted"><strong>College:</strong></td>
+                                <td>${enquiry.college || 'N/A'}</td>
+                            </tr>
+                        </table>
+                        <div class="alert alert-info mb-0 mt-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            All enquiry details will be pre-filled in the admission form.
+                        </div>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '<i class="bi bi-check-circle me-2"></i>Yes, Create Admission',
+                cancelButtonText: '<i class="bi bi-x-circle me-2"></i>Cancel',
+                confirmButtonColor: '#667eea',
+                cancelButtonColor: '#6c757d',
+                width: '600px'
+            });
+
+            if (result.isConfirmed) {
+                // Step 4: Store enquiry data for pre-fill
+                sessionStorage.setItem('admissionEnquiry', JSON.stringify(enquiry));
+                sessionStorage.setItem('admissionFromEnquiry', 'true');
+
+                // Step 5: Redirect to admission page
+                showLoading('Redirecting to admission form...');
+                setTimeout(() => {
+                    window.location.href = `/students/admission?enquiryId=${enquiryId}&mobile=${mobileNumber}`;
+                }, 500);
+            }
+
+        } catch (error) {
+            Swal.close();
+            console.error('Error opening admission:', error);
+
+            await Swal.fire({
+                title: 'Error',
+                text: error.message || 'Failed to open admission form. Please try again.',
+                icon: 'error',
+                confirmButtonColor: '#ef4444'
+            });
+        }
+    }
+
+    // Attach event listeners properly
+    function attachTableEventListeners(tbody) {
+        tbody.querySelectorAll('.action-menu-trigger').forEach(trigger => {
+            trigger.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const menu = this.nextElementSibling;
+                document.querySelectorAll('.action-menu').forEach(m => {
+                    if (m !== menu) m.classList.remove('show');
+                });
+                menu.classList.toggle('show');
+            });
+        });
+
+        tbody.querySelectorAll('.action-menu-item[data-action="admission"]').forEach(item => {
+            item.addEventListener('click', async function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const enquiryId = this.getAttribute('data-id');
+                const mobile = this.getAttribute('data-mobile');
+
+                console.log('Opening admission for:', { enquiryId, mobile });
+
+                // Close menu
+                document.querySelectorAll('.action-menu').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+
+                await openAdmissionFromEnquiry(enquiryId, mobile);
+            });
+        });
+
+        // Attach other action listeners
+        tbody.querySelectorAll('.action-menu-item:not([data-action="admission"])').forEach(item => {
+            item.addEventListener('click', function() {
+                const action = this.getAttribute('data-action');
+                const id = this.getAttribute('data-id');
+                handleAction(action, id);
+            });
+        });
+    }
+
+        async function prefillAdmissionForm(enquiry) {
+            // Store enquiry data in sessionStorage for admission page
+            sessionStorage.setItem('admissionEnquiry', JSON.stringify(enquiry));
+
+            // Redirect to admission page
+            window.location.href = `/admission?enquiryId=${enquiry.id}`;
+        }
+
+        function collectFormData() {
+            const courseSelect = document.getElementById('course');
+            const selectedCourses = Array.from(courseSelect.selectedOptions).map(option => option.value);
+
+            return {
+                firstName: getValue('firstName'),
+                middleName: getValue('middleName'),
+                lastName: getValue('lastName'),
+                mobile: getValue('mobilePrimary'),
+                secondaryMobile: getValue('mobileSecondary'),
+                email: getValue('emailPrimary'),
+                secondaryEmail: getValue('emailSecondary'),
+                currentAddress: getValue('currentAddress'),
+                permanentAddress: getValue('permanentAddress'),
+                pinCurrent: getValue('pinCodeCurrent'),
+                pinPermanent: getValue('pinCodePermanent'),
+                college: getValue('college'),
+                qualification: getValue('qualification'),
+                aadhaar: getValue('aadhaar'),
+                birthDate: getValue('dob') || null,
+                gender: getValue('gender'),
+                courses: selectedCourses,
+                packageName: getValue('package'),
+                demoLectureRequired: getValue('demoLecture') === 'true',
+                interestLevel: getValue('interestLevel'),
+                source: getValue('leadSource'),
+                referenceName: getValue('referenceName'),
+                enquiryDate: getValue('enquiryDate') || new Date().toISOString().split('T')[0],
+                followupDate: getValue('followupDate') || null,
+                assignTo: getValue('assignTo'),
+                note: getValue('note')
+            };
+        }
+
+       function validateFormData(data) {
+           // Check required fields
+           if (!data.firstName || !data.lastName) {
+               console.error('Validation failed: Name required');
+               return false;
+           }
+
+           if (!data.mobile || !/^[6-9]\d{9}$/.test(data.mobile)) {
+               console.error('Validation failed: Invalid mobile number');
+               return false;
+           }
+
+           if (!data.courses || data.courses.length === 0) {
+               console.error('Validation failed: At least one course required');
+               return false;
+           }
+
+           if (!data.source) {
+               console.error('Validation failed: Source required');
+               return false;
+           }
+
+           console.log('Validation passed:', {
+               name: `${data.firstName} ${data.lastName}`,
+               mobile: data.mobile,
+               courses: data.courses,
+               source: data.source
+           });
+
+           return true;
+       }
+
+        function getValue(id) {
+            const el = document.getElementById(id);
+            return el ? el.value : '';
+        }
+
+        function setValue(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.value = value || '';
+        }
+
+        function showLoading(message) {
+            Swal.fire({
+                title: message,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
+        function showSuccess(message) {
+            Swal.fire({
+                title: 'Success!',
+                text: message,
+                icon: 'success',
+                confirmButtonColor: '#667eea'
+            });
+        }
+
+        function showError(message) {
+            Swal.fire({
+                title: 'Error!',
+                text: message,
+                icon: 'error',
+                confirmButtonColor: '#ef4444'
+            });
+        }
+
+        function openAddModal() {
+            currentEnquiryId = null;
+            clearForm();
+            document.getElementById('modalTitle').innerHTML = '<i class="bi bi-person-plus me-2"></i>Add New Enquiry';
+            const modal = new bootstrap.Modal(document.getElementById('enquiryModal'));
+            modal.show();
+            updateProgress(25);
+        }
+
+        function clearForm() {
+            ['personalForm', 'communicationForm', 'courseForm', 'sourceForm'].forEach(id => {
+                document.getElementById(id)?.reset();
+            });
+
+            const displayArea = document.getElementById('selectedCoursesDisplay');
+            if (displayArea) {
+                displayArea.innerHTML = '';
+            }
+        }
+
+        function closeModal(modalId) {
+            const modalEl = document.getElementById(modalId);
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+
+        function updateProgress(width) {
+            const bar = document.getElementById('progressBar');
+            if (bar) bar.style.width = width + '%';
+        }
+
+        function updateViewProgress(width) {
+            const bar = document.getElementById('viewProgressBar');
+            if (bar) bar.style.width = width + '%';
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
 
 })();

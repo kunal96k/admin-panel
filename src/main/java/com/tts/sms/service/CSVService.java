@@ -17,6 +17,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -26,11 +27,12 @@ public class CSVService {
             DateTimeFormatter.ofPattern("yyyy-MM-dd"),
             DateTimeFormatter.ofPattern("dd/MM/yyyy"),
             DateTimeFormatter.ofPattern("MM/dd/yyyy"),
-            DateTimeFormatter.ofPattern("dd-MM-yyyy")
+            DateTimeFormatter.ofPattern("dd-MM-yyyy"),
+            DateTimeFormatter.ofPattern("d/M/yyyy")
     };
 
     /**
-     * Parse OLD FORMAT CSV
+     * Parse OLD FORMAT CSV - FIXED for multiple courses
      * Format: Enquiry No., Student Name, Mobile No., Course, Enquiry Source,
      *         Enquiry Date, Assign To, Enquiry Status
      */
@@ -58,22 +60,37 @@ public class CSVService {
                 }
 
                 try {
-                    EnquiryRequestDTO dto = EnquiryRequestDTO.builder()
-                            .name(getValueOrNull(row, 1))  // Student Name
-                            .mobile(cleanMobileNumber(getValueOrNull(row, 2)))  // Mobile No.
-                            .courses(Arrays.asList(getValueOrNull(row, 3)))  // Course
-                            .source(getValueOrNull(row, 4))  // Enquiry Source
-                            .enquiryDate(parseDate(getValueOrNull(row, 5)))  // Enquiry Date
-                            .assignTo(getValueOrNull(row, 6))  // Assign To
-                            .status(getValueOrDefault(row, 7, "New"))  // Enquiry Status
-                            .build();
+                    String enquiryNo = getValueOrNull(row, 0); // Column 0: Enquiry No
+                    String fullName = getValueOrNull(row, 1);  // Column 1: Student Name
+                    String mobile = getValueOrNull(row, 2);     // Column 2: Mobile No
+                    String coursesStr = getValueOrNull(row, 3); // Column 3: Course (multiple)
 
-                    // Validate required fields
-                    if (dto.getName() == null || dto.getMobile() == null ||
-                            dto.getCourses() == null || dto.getSource() == null) {
-                        log.warn("Skipping row {} due to missing required fields", i + 1);
+                    String[] nameParts = splitName(fullName);
+
+                    // **FIXED: Parse MULTIPLE courses separated by comma**
+                    List<String> coursesList = parseMultipleCourses(coursesStr);
+
+                    if (coursesList.isEmpty() || mobile == null) {
+                        log.warn("Skipping row {} - missing required fields", i + 1);
                         continue;
                     }
+
+                    log.debug("Row {}: enquiryNo={}, name={}, mobile={}, courses={}",
+                            i + 1, enquiryNo, fullName, mobile, coursesList);
+
+                    EnquiryRequestDTO dto = EnquiryRequestDTO.builder()
+                            .enquiryNo(enquiryNo)
+                            .name(fullName)
+                            .firstName(nameParts[0])
+                            .middleName(nameParts[1])
+                            .lastName(nameParts[2])
+                            .mobile(cleanMobileNumber(mobile))
+                            .courses(coursesList)  // Multiple courses
+                            .source(getValueOrDefault(row, 4, "Unknown"))
+                            .enquiryDate(parseDate(getValueOrNull(row, 5)))
+                            .assignTo(getValueOrNull(row, 6))
+                            .status(getValueOrDefault(row, 7, "New"))
+                            .build();
 
                     dtos.add(dto);
 
@@ -92,7 +109,7 @@ public class CSVService {
     }
 
     /**
-     * Parse NEW FORMAT CSV
+     * Parse NEW FORMAT CSV - FIXED for multiple courses
      * Format: Enquiry No., First Name, Middle Name, Last Name, Mobile Primary,
      *         Mobile Secondary, Email Primary, Current Address, Permanent Address,
      *         College, Enquiry Date, Followup Date, Note, Course, Lead Source
@@ -121,32 +138,41 @@ public class CSVService {
                 }
 
                 try {
+                    String coursesStr = getValueOrNull(row, 13); // Column 13: Course (multiple)
+                    List<String> coursesList = parseMultipleCourses(coursesStr);
+
+                    if (coursesList.isEmpty()) {
+                        log.warn("Skipping row {} - no valid courses found", i + 1);
+                        continue;
+                    }
+
                     EnquiryRequestDTO dto = EnquiryRequestDTO.builder()
-                            .firstName(getValueOrNull(row, 1))  // First Name
-                            .middleName(getValueOrNull(row, 2))  // Middle Name
-                            .lastName(getValueOrNull(row, 3))  // Last Name
-                            .mobile(cleanMobileNumber(getValueOrNull(row, 4)))  // Mobile Primary
-                            .secondaryMobile(cleanMobileNumber(getValueOrNull(row, 5)))  // Mobile Secondary
-                            .email(getValueOrNull(row, 6))  // Email Primary
-                            .currentAddress(getValueOrNull(row, 7))  // Current Address
-                            .permanentAddress(getValueOrNull(row, 8))  // Permanent Address
-                            .college(getValueOrNull(row, 9))  // College
-                            .enquiryDate(parseDate(getValueOrNull(row, 10)))  // Enquiry Date
-                            .followupDate(parseDate(getValueOrNull(row, 11)))  // Followup Date
-                            .note(getValueOrNull(row, 12))  // Note
-                            .courses(Arrays.asList(getValueOrNull(row, 13)))  // Course
-                            .source(getValueOrNull(row, 14))  // Lead Source
-                            .status("Imported")  // Default status for imports
+                            .enquiryNo(getValueOrNull(row, 0))  // Import enquiry number
+                            .firstName(getValueOrNull(row, 1))
+                            .middleName(getValueOrNull(row, 2))
+                            .lastName(getValueOrNull(row, 3))
+                            .mobile(cleanMobileNumber(getValueOrNull(row, 4)))
+                            .secondaryMobile(cleanMobileNumber(getValueOrNull(row, 5)))
+                            .email(getValueOrNull(row, 6))
+                            .currentAddress(getValueOrNull(row, 7))
+                            .permanentAddress(getValueOrNull(row, 8))
+                            .college(getValueOrNull(row, 9))
+                            .enquiryDate(parseDate(getValueOrNull(row, 10)))
+                            .followupDate(parseDate(getValueOrNull(row, 11)))
+                            .note(getValueOrNull(row, 12))
+                            .courses(coursesList)  // Multiple courses
+                            .source(getValueOrDefault(row, 14, "Unknown"))
+                            .status("New")
                             .build();
 
-                    // Validate required fields
-                    if (dto.getFirstName() == null || dto.getMobile() == null ||
-                            dto.getCourses() == null || dto.getSource() == null) {
-                        log.warn("Skipping row {} due to missing required fields", i + 1);
+                    if (dto.getMobile() == null) {
+                        log.warn("Skipping row {} due to missing mobile", i + 1);
                         continue;
                     }
 
                     dtos.add(dto);
+                    log.debug("Parsed row {}: {} {} - courses: {}",
+                            i + 1, dto.getFirstName(), dto.getLastName(), coursesList);
 
                 } catch (Exception e) {
                     log.error("Error parsing row {}: {}", i + 1, e.getMessage());
@@ -163,6 +189,65 @@ public class CSVService {
     }
 
     /**
+     * **FIXED: Parse MULTIPLE courses separated by comma**
+     * Supports formats like: "PYTHON, JAVA, C++" or "PYTHON,JAVA" or "PYTHON"
+     */
+    private List<String> parseMultipleCourses(String coursesStr) {
+        List<String> courses = new ArrayList<>();
+
+        if (coursesStr == null || coursesStr.trim().isEmpty()) {
+            return courses;
+        }
+
+        // Split by comma and clean each course
+        String[] courseParts = coursesStr.split(",");
+
+        for (String course : courseParts) {
+            String cleanedCourse = course.trim()
+                    .replaceAll("\\s+", " ")
+                    .replaceAll("[\\r\\n]+", " ");
+
+            if (!cleanedCourse.isEmpty()) {
+                courses.add(cleanedCourse);
+            }
+        }
+
+        return courses;
+    }
+
+    /**
+     * Split full name into first, middle, last
+     */
+    private String[] splitName(String fullName) {
+        String[] result = new String[3]; // [first, middle, last]
+
+        if (fullName == null || fullName.trim().isEmpty()) {
+            result[0] = "";
+            result[1] = "";
+            result[2] = "";
+            return result;
+        }
+
+        String[] parts = fullName.trim().split("\\s+");
+
+        if (parts.length == 1) {
+            result[0] = parts[0];
+            result[1] = "";
+            result[2] = "";
+        } else if (parts.length == 2) {
+            result[0] = parts[0];
+            result[1] = "";
+            result[2] = parts[1];
+        } else {
+            result[0] = parts[0];
+            result[1] = String.join(" ", Arrays.copyOfRange(parts, 1, parts.length - 1));
+            result[2] = parts[parts.length - 1];
+        }
+
+        return result;
+    }
+
+    /**
      * Generate CSV export from enquiry data
      */
     public byte[] generateCSV(List<EnquiryResponseDTO> enquiries) {
@@ -174,7 +259,7 @@ public class CSVService {
 
             // Write header
             String[] header = {
-                    "Reg No", "First Name", "Middle Name", "Last Name", "Mobile Primary",
+                    "Enquiry No", "First Name", "Middle Name", "Last Name", "Mobile Primary",
                     "Mobile Secondary", "Email Primary", "Current Address", "Permanent Address",
                     "College", "Qualification", "Aadhaar", "Birth Date", "Gender",
                     "Course", "Package", "Demo Lecture", "Interest Level",
@@ -216,9 +301,7 @@ public class CSVService {
             }
 
             csvWriter.flush();
-            byte[] bytes = baos.toByteArray();
-            log.info("Generated CSV with {} bytes", bytes.length);
-            return bytes;
+            return baos.toByteArray();
 
         } catch (IOException e) {
             log.error("Error generating CSV", e);
@@ -241,13 +324,11 @@ public class CSVService {
 
     private String cleanMobileNumber(String mobile) {
         if (mobile == null) return null;
-        // Remove all non-digit characters
         String cleaned = mobile.replaceAll("[^0-9]", "");
-        // Remove country code if present (91 for India)
         if (cleaned.startsWith("91") && cleaned.length() == 12) {
             cleaned = cleaned.substring(2);
         }
-        return cleaned.length() == 10 ? cleaned : mobile;
+        return cleaned.length() == 10 ? cleaned : null;
     }
 
     private LocalDate parseDate(String dateStr) {
@@ -259,11 +340,10 @@ public class CSVService {
             try {
                 return LocalDate.parse(dateStr.trim(), formatter);
             } catch (DateTimeParseException ignored) {
-                // Try next formatter
             }
         }
 
-        log.warn("Unable to parse date: {}", dateStr);
+        log.warn("Unable to parse date: {}, returning null", dateStr);
         return null;
     }
 }

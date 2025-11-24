@@ -34,20 +34,28 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
 
+  # JSON serialization (from properties)
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: Asia/Kolkata
+
   jpa:
-    show-sql: false
+    show-sql: false     # keep SQL logs OFF in PROD
     hibernate:
       ddl-auto: update
     open-in-view: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
+        dialect: org.hibernate.dialect.MySQL8Dialect   # updated to MySQL8Dialect
         format_sql: true
         jdbc:
           time_zone: Asia/Kolkata
           batch_size: 20
         order_inserts: true
         order_updates: true
+        type:
+          json_format_mapper: jackson
 
   servlet:
     multipart:

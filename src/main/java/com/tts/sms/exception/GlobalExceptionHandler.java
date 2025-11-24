@@ -3,12 +3,14 @@ package com.tts.sms.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -90,6 +92,26 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle transaction rollback exceptions - ADDED FOR BULK IMPORT
+     */
+    @ExceptionHandler(UnexpectedRollbackException.class)
+    public ResponseEntity<ErrorResponse> handleTransactionRollback(
+            UnexpectedRollbackException ex, WebRequest request) {
+
+        log.error("Transaction rolled back unexpectedly", ex);
+
+        ErrorResponse response = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Transaction Error")
+                .message("Data validation failed. Please check your data format and ensure all required fields are present.")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+
+    /**
      * Handle file upload size exceeded
      */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
@@ -107,6 +129,27 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
+    }
+
+    /**
+     * Handle NoResourceFoundException (e.g., Chrome DevTools requests)
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(
+            NoResourceFoundException ex, WebRequest request) {
+
+        // Log at debug level to reduce noise
+        log.debug("Resource not found: {}", ex.getResourcePath());
+
+        ErrorResponse response = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("Not Found")
+                .message("The requested resource was not found")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
     /**

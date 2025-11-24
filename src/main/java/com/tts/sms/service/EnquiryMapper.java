@@ -3,26 +3,26 @@ package com.tts.sms.service;
 import com.tts.sms.dto.EnquiryRequestDTO;
 import com.tts.sms.dto.EnquiryResponseDTO;
 import com.tts.sms.model.Enquiry;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 public class EnquiryMapper {
 
-    /**
-     * Convert Entity to Response DTO
-     */
     public EnquiryResponseDTO toResponseDTO(Enquiry enquiry) {
         if (enquiry == null) return null;
 
-        String coursesStr = enquiry.getCourse() != null ? enquiry.getCourse() : "";
-        List<String> coursesList = Arrays.stream(coursesStr.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
+        List<String> coursesList = enquiry.getCourses() != null
+                ? new ArrayList<>(enquiry.getCourses())
+                : new ArrayList<>();
+
+        String coursesStr = coursesList.isEmpty() ? "" : String.join(", ", coursesList);
 
         return EnquiryResponseDTO.builder()
                 .id(enquiry.getId())
@@ -61,17 +61,27 @@ public class EnquiryMapper {
                 .build();
     }
 
-    /**
-     * Convert Request DTO to Entity
-     */
     public Enquiry toEntity(EnquiryRequestDTO dto) {
         if (dto == null) return null;
 
-        String coursesStr = dto.getCourses() != null && !dto.getCourses().isEmpty()
-                ? String.join(", ", dto.getCourses())
-                : "";
+        List<String> coursesList = new ArrayList<>();
+
+        if (dto.getCourses() != null && !dto.getCourses().isEmpty()) {
+            coursesList = dto.getCourses().stream()
+                    .filter(course -> course != null && !course.trim().isEmpty())
+                    .map(String::trim)
+                    .collect(Collectors.toList());
+        }
+
+        if (coursesList.isEmpty()) {
+            log.error("No valid courses found - DTO courses: {}", dto.getCourses());
+            throw new IllegalArgumentException("At least one course is required");
+        }
+
+        log.debug("Converting DTO to Entity - Mobile: {}, Courses: {}", dto.getMobile(), coursesList);
 
         Enquiry.EnquiryBuilder builder = Enquiry.builder()
+                .enquiryNo(dto.getEnquiryNo()) // **NEW: Map enquiryNo**
                 .mobile(dto.getMobile())
                 .secondaryMobile(dto.getSecondaryMobile())
                 .email(dto.getEmail())
@@ -85,38 +95,34 @@ public class EnquiryMapper {
                 .aadhaar(dto.getAadhaar())
                 .birthDate(dto.getBirthDate())
                 .gender(dto.getGender())
-                .course(coursesStr)
+                .courses(coursesList)
                 .packageName(dto.getPackageName())
                 .demoLectureRequired(dto.getDemoLectureRequired())
                 .interestLevel(dto.getInterestLevel())
                 .source(dto.getSource() != null ? dto.getSource() : "Unknown")
                 .referenceName(dto.getReferenceName())
-                .enquiryDate(dto.getEnquiryDate())
+                .enquiryDate(dto.getEnquiryDate() != null ? dto.getEnquiryDate() : LocalDate.now())
                 .followupDate(dto.getFollowupDate())
                 .assignTo(dto.getAssignTo())
                 .status(dto.getStatus() != null ? dto.getStatus() : "New")
                 .note(dto.getNote());
 
-        // Handle name fields - support both old and new format
+        // Handle name fields
         if (dto.getName() != null && !dto.getName().isBlank()) {
-            // Old format - single name field
             builder.fullName(dto.getName());
-            // Try to split into components
             String[] parts = dto.getName().trim().split("\\s+");
             if (parts.length > 0) builder.firstName(parts[0]);
             if (parts.length > 2) {
-                builder.middleName(String.join(" ", Arrays.copyOfRange(parts, 1, parts.length - 1)));
+                builder.middleName(String.join(" ", java.util.Arrays.copyOfRange(parts, 1, parts.length - 1)));
                 builder.lastName(parts[parts.length - 1]);
             } else if (parts.length == 2) {
                 builder.lastName(parts[1]);
             }
         } else if (dto.getFirstName() != null || dto.getLastName() != null) {
-            // New format - separate name fields
             builder.firstName(dto.getFirstName())
                     .middleName(dto.getMiddleName())
                     .lastName(dto.getLastName());
 
-            // Build full name from components
             StringBuilder fullName = new StringBuilder();
             if (dto.getFirstName() != null) fullName.append(dto.getFirstName());
             if (dto.getMiddleName() != null && !dto.getMiddleName().isEmpty()) {
@@ -135,11 +141,13 @@ public class EnquiryMapper {
         return builder.build();
     }
 
-    /**
-     * Update existing entity from DTO
-     */
     public void updateEntityFromDTO(EnquiryRequestDTO dto, Enquiry enquiry) {
         if (dto == null || enquiry == null) return;
+
+        // Update enquiryNo if provided
+        if (dto.getEnquiryNo() != null) {
+            enquiry.setEnquiryNo(dto.getEnquiryNo());
+        }
 
         // Update name fields
         if (dto.getName() != null && !dto.getName().isBlank()) {
@@ -147,7 +155,7 @@ public class EnquiryMapper {
             String[] parts = dto.getName().trim().split("\\s+");
             if (parts.length > 0) enquiry.setFirstName(parts[0]);
             if (parts.length > 2) {
-                enquiry.setMiddleName(String.join(" ", Arrays.copyOfRange(parts, 1, parts.length - 1)));
+                enquiry.setMiddleName(String.join(" ", java.util.Arrays.copyOfRange(parts, 1, parts.length - 1)));
                 enquiry.setLastName(parts[parts.length - 1]);
             } else if (parts.length == 2) {
                 enquiry.setLastName(parts[1]);
@@ -157,7 +165,6 @@ public class EnquiryMapper {
             enquiry.setMiddleName(dto.getMiddleName());
             enquiry.setLastName(dto.getLastName());
 
-            // Build full name
             StringBuilder fullName = new StringBuilder();
             if (dto.getFirstName() != null) fullName.append(dto.getFirstName());
             if (dto.getMiddleName() != null && !dto.getMiddleName().isEmpty()) {
@@ -171,7 +178,6 @@ public class EnquiryMapper {
             enquiry.setFullName(fullName.length() > 0 ? fullName.toString() : null);
         }
 
-        // Update other fields
         enquiry.setMobile(dto.getMobile());
         enquiry.setSecondaryMobile(dto.getSecondaryMobile());
         enquiry.setEmail(dto.getEmail());
@@ -187,7 +193,7 @@ public class EnquiryMapper {
         enquiry.setGender(dto.getGender());
 
         if (dto.getCourses() != null && !dto.getCourses().isEmpty()) {
-            enquiry.setCourse(String.join(", ", dto.getCourses()));
+            enquiry.setCourses(new ArrayList<>(dto.getCourses()));
         }
 
         enquiry.setPackageName(dto.getPackageName());

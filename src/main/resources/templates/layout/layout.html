@@ -84,10 +84,10 @@
             </div>
             <div class="submenu">
                 <a th:href="@{/students/enquiry}"
-                   href="/students/enquiry"
                    class="submenu-link"
                    th:classappend="${activePage == 'enquiry'} ? 'active' : ''"
                    data-page="enquiry">Enquiry</a>
+
                 <a th:href="@{/students/admission}"
                    class="submenu-link"
                    th:classappend="${activePage == 'admission'} ? 'active' : ''"
@@ -99,7 +99,7 @@
         <div class="menu-item">
             <div class="menu-link" data-toggle="submenu">
                 <i class="bi bi-cash-coin"></i>
-                <span class="menu-text">Acc</span>
+                <span class="menu-text">Account</span>
                 <i class="bi bi-chevron-down dropdown-icon"></i>
             </div>
             <div class="submenu">
@@ -134,19 +134,32 @@
             </div>
             <div class="submenu">
                 <a th:href="@{/master/course}" class="submenu-link"
-                   th:classappend="${activePage == 'course'} ? 'active' : ''">Course</a>
+                   th:classappend="${activePage == 'course'} ? 'active' : ''"
+                   data-page="course">Course</a> 
+
                 <a th:href="@{/master/employee}" class="submenu-link"
-                   th:classappend="${activePage == 'employee'} ? 'active' : ''">Employee</a>
+                   th:classappend="${activePage == 'employee'} ? 'active' : ''"
+                   data-page="employee">Employee</a> 
+
                 <a th:href="@{/master/role}" class="submenu-link"
-                   th:classappend="${activePage == 'role'} ? 'active' : ''">Role</a>
+                   th:classappend="${activePage == 'role'} ? 'active' : ''"
+                   data-page="role">Role</a> 
+
                 <a th:href="@{/master/bank}" class="submenu-link"
-                   th:classappend="${activePage == 'bank'} ? 'active' : ''">Bank</a>
+                   th:classappend="${activePage == 'bank'} ? 'active' : ''"
+                   data-page="bank">Bank</a> 
+
                 <a th:href="@{/master/lead-source}" class="submenu-link"
-                   th:classappend="${activePage == 'lead-source'} ? 'active' : ''">Lead Source</a>
+                   th:classappend="${activePage == 'lead-source'} ? 'active' : ''"
+                   data-page="lead-source">Lead Source</a> 
+
                 <a th:href="@{/master/package}" class="submenu-link"
-                   th:classappend="${activePage == 'create-package'} ? 'active' : ''">Create Package</a>
+                   th:classappend="${activePage == 'create-package'} ? 'active' : ''"
+                   data-page="create-package">Create Package</a> 
+
                 <a th:href="@{/master/online-payment}" class="submenu-link"
-                   th:classappend="${activePage == 'online-payment'} ? 'active' : ''">Online Payment Mode</a>
+                   th:classappend="${activePage == 'online-payment'} ? 'active' : ''"
+                   data-page="online-payment">Online Payment Mode</a> 
             </div>
         </div>
 
@@ -162,6 +175,7 @@
                    class="submenu-link"
                    th:classappend="${activePage == 'course-wise-sales'} ? 'active' : ''"
                    data-page="course-wise-sales">Course-wise Sales</a>
+
                 <a th:href="@{/reports/fees-collection}"
                    class="submenu-link"
                    th:classappend="${activePage == 'fees-collection'} ? 'active' : ''"
@@ -257,11 +271,9 @@
 
 <!-- SweetAlert2 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.all.min.js"></script>
-<script th:src="@{/assets/vendor/chartjs/chart.umd.min.js}"></script>
 
 <!-- Custom JS -->
 <script th:src="@{/assets/js/script.js}" src="/assets/js/script.js" defer></script>
-
 
 </body>
 </html>

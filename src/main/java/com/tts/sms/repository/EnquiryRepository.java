@@ -18,34 +18,54 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Long>,
         JpaSpecificationExecutor<Enquiry> {
 
     /**
-     * Find enquiries by mobile number
+     * Basic finders
      */
     List<Enquiry> findByMobile(String mobile);
 
-    /**
-     * Find enquiries by email
-     */
     List<Enquiry> findByEmailIgnoreCase(String email);
 
-    /**
-     * Find enquiries by status
-     */
     List<Enquiry> findByStatusIgnoreCase(String status);
 
     /**
-     * Find active (non-deleted) enquiries
+     * Active (non-deleted) enquiries with pagination
      */
     Page<Enquiry> findByIsDeletedFalse(Pageable pageable);
+
+    /**
+     * Find by mobile/email + not deleted
+     */
+    Optional<Enquiry> findByMobileAndIsDeletedFalse(String mobile);
+
+    Optional<Enquiry> findByEmailAndIsDeletedFalse(String email);
+
+    boolean existsByMobileAndIsDeletedFalse(String mobile);
+
+    /**
+     * Find by status/source with non-deleted constraint
+     */
+    List<Enquiry> findByStatusAndIsDeletedFalse(String status);
+
+    List<Enquiry> findBySourceAndIsDeletedFalse(String source);
+
+    /**
+     * Find by course - FIXED using native query with JSON function
+     */
+    @Query(value = "SELECT * FROM enquiries e WHERE e.is_deleted = false " +
+            "AND JSON_CONTAINS(e.courses, JSON_QUOTE(:course))",
+            nativeQuery = true)
+    List<Enquiry> findByCourse(@Param("course") String course);
 
     /**
      * Search enquiries by name, mobile, or email
      */
     @Query("SELECT e FROM Enquiry e WHERE e.isDeleted = false AND " +
-            "(LOWER(e.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "LOWER(e.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "LOWER(e.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "e.mobile LIKE CONCAT('%', :search, '%') OR " +
-            "LOWER(e.email) LIKE LOWER(CONCAT('%', :search, '%')))")
+            "(" +
+            "LOWER(e.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(e.lastName)  LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(e.fullName)  LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "e.mobile           LIKE CONCAT('%', :search, '%') OR " +
+            "LOWER(e.email)     LIKE LOWER(CONCAT('%', :search, '%'))" +
+            ")")
     Page<Enquiry> searchEnquiries(@Param("search") String search, Pageable pageable);
 
     /**
@@ -73,6 +93,12 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Long>,
     long countBySource(@Param("source") String source);
 
     /**
+     * Count total non-deleted enquiries
+     */
+    @Query("SELECT COUNT(e) FROM Enquiry e WHERE e.isDeleted = false")
+    Long countTotalEnquiries();
+
+    /**
      * Find enquiries assigned to a specific person
      */
     @Query("SELECT e FROM Enquiry e WHERE e.isDeleted = false AND " +
@@ -80,26 +106,41 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Long>,
     Page<Enquiry> findByAssignTo(@Param("assignTo") String assignTo, Pageable pageable);
 
     /**
-     * Find enquiries with pending follow-up
+     * Pending follow-ups
      */
-    @Query("SELECT e FROM Enquiry e WHERE e.isDeleted = false AND " +
-            "e.followupDate IS NOT NULL AND e.followupDate <= :date AND " +
-            "LOWER(e.status) NOT IN ('converted', 'closed')")
+    @Query("SELECT e FROM Enquiry e WHERE e.isDeleted = false " +
+            "AND e.followupDate IS NOT NULL " +
+            "AND e.followupDate <= :date " +
+            "AND e.status NOT IN ('Closed', 'Admitted')")
     List<Enquiry> findPendingFollowups(@Param("date") LocalDate date);
 
     /**
-     * Advanced search with multiple filters
+     * Advanced search with multiple filters - FIXED using native query for JSON
      */
-    @Query("SELECT e FROM Enquiry e WHERE e.isDeleted = false " +
+    @Query(value = "SELECT e.* FROM enquiries e WHERE e.is_deleted = false " +
             "AND (:status IS NULL OR LOWER(e.status) = LOWER(:status)) " +
             "AND (:source IS NULL OR LOWER(e.source) = LOWER(:source)) " +
-            "AND (:course IS NULL OR LOWER(e.course) LIKE LOWER(CONCAT('%', :course, '%'))) " +
-            "AND (:assignTo IS NULL OR LOWER(e.assignTo) = LOWER(:assignTo)) " +
+            "AND (:course IS NULL OR JSON_CONTAINS(e.courses, JSON_QUOTE(:course))) " +
+            "AND (:assignTo IS NULL OR LOWER(e.assign_to) = LOWER(:assignTo)) " +
             "AND (:search IS NULL OR " +
-            "    LOWER(e.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "    LOWER(e.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "    LOWER(e.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "    e.mobile LIKE CONCAT('%', :search, '%'))")
+            "    LOWER(e.first_name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "    LOWER(e.last_name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "    LOWER(e.full_name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "    e.mobile LIKE CONCAT('%', :search, '%') OR " +
+            "    LOWER(e.email) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "ORDER BY e.enquiry_date DESC",
+            countQuery = "SELECT COUNT(*) FROM enquiries e WHERE e.is_deleted = false " +
+                    "AND (:status IS NULL OR LOWER(e.status) = LOWER(:status)) " +
+                    "AND (:source IS NULL OR LOWER(e.source) = LOWER(:source)) " +
+                    "AND (:course IS NULL OR JSON_CONTAINS(e.courses, JSON_QUOTE(:course))) " +
+                    "AND (:assignTo IS NULL OR LOWER(e.assign_to) = LOWER(:assignTo)) " +
+                    "AND (:search IS NULL OR " +
+                    "    LOWER(e.first_name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+                    "    LOWER(e.last_name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+                    "    LOWER(e.full_name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+                    "    e.mobile LIKE CONCAT('%', :search, '%') OR " +
+                    "    LOWER(e.email) LIKE LOWER(CONCAT('%', :search, '%')))",
+            nativeQuery = true)
     Page<Enquiry> advancedSearch(
             @Param("search") String search,
             @Param("status") String status,
@@ -110,12 +151,7 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Long>,
     );
 
     /**
-     * Check if mobile number exists
-     */
-    boolean existsByMobileAndIsDeletedFalse(String mobile);
-
-    /**
-     * Get statistics for dashboard
+     * Dashboard statistics
      */
     @Query("SELECT e.status, COUNT(e) FROM Enquiry e " +
             "WHERE e.isDeleted = false GROUP BY e.status")
@@ -124,4 +160,11 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Long>,
     @Query("SELECT e.source, COUNT(e) FROM Enquiry e " +
             "WHERE e.isDeleted = false GROUP BY e.source")
     List<Object[]> getEnquiryStatsBySource();
+
+    /**
+     * Recent enquiries
+     */
+    @Query("SELECT e FROM Enquiry e WHERE e.isDeleted = false " +
+            "ORDER BY e.enquiryDate DESC")
+    List<Enquiry> findRecentEnquiries(Pageable pageable);
 }

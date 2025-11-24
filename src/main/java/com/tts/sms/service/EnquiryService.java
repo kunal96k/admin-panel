@@ -4,10 +4,13 @@ import com.tts.sms.dto.*;
 import com.tts.sms.model.Enquiry;
 import com.tts.sms.exception.ResourceNotFoundException;
 import com.tts.sms.repository.EnquiryRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,6 +26,9 @@ public class EnquiryService {
     private final EnquiryRepository enquiryRepository;
     private final EnquiryMapper enquiryMapper;
     private final CSVService csvService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     /**
      * Get all enquiries with pagination
@@ -224,64 +230,6 @@ public class EnquiryService {
     }
 
     /**
-     * Process bulk import from DTO list
-     */
-    @Transactional
-    public BulkImportResponseDTO processBulkImport(List<EnquiryRequestDTO> dtos, String importSource) {
-        log.info("Processing bulk import of {} records", dtos.size());
-
-        int successCount = 0;
-        int failCount = 0;
-        List<BulkImportResponseDTO.ImportError> errors = new ArrayList<>();
-
-        for (int i = 0; i < dtos.size(); i++) {
-            try {
-                EnquiryRequestDTO dto = dtos.get(i);
-
-                // Skip if mobile number already exists
-                if (enquiryRepository.existsByMobileAndIsDeletedFalse(dto.getMobile())) {
-                    log.warn("Skipping duplicate mobile: {}", dto.getMobile());
-                    errors.add(BulkImportResponseDTO.ImportError.builder()
-                            .rowNumber(i + 2) // +2 for header and 0-index
-                            .fieldName("mobile")
-                            .errorMessage("Duplicate mobile number")
-                            .rejectedValue(dto.getMobile())
-                            .build());
-                    failCount++;
-                    continue;
-                }
-
-                Enquiry enquiry = enquiryMapper.toEntity(dto);
-                enquiry.setImportSource(importSource);
-                enquiry.setCreatedBy("BULK_IMPORT");
-
-                enquiryRepository.save(enquiry);
-                successCount++;
-
-            } catch (Exception e) {
-                log.error("Error importing row {}: {}", i + 2, e.getMessage());
-                errors.add(BulkImportResponseDTO.ImportError.builder()
-                        .rowNumber(i + 2)
-                        .errorMessage(e.getMessage())
-                        .build());
-                failCount++;
-            }
-        }
-
-        log.info("Bulk import completed - Success: {}, Failed: {}", successCount, failCount);
-
-        return BulkImportResponseDTO.builder()
-                .success(successCount > 0)
-                .totalRecords(dtos.size())
-                .successfulImports(successCount)
-                .failedImports(failCount)
-                .errors(errors)
-                .message(String.format("Imported %d/%d enquiries successfully",
-                        successCount, dtos.size()))
-                .build();
-    }
-
-    /**
      * Export enquiries to CSV
      */
     @Transactional(readOnly = true)
@@ -338,5 +286,95 @@ public class EnquiryService {
 
         log.info("Generated statistics: {}", stats);
         return stats;
+    }
+
+    /**
+     * Simple bulk import - one transaction, skip failures
+     */
+    @Transactional
+    public BulkImportResponseDTO processBulkImport(List<EnquiryRequestDTO> dtos, String importSource) {
+        log.info("Processing bulk import of {} records", dtos.size());
+
+        int successCount = 0;
+        List<BulkImportResponseDTO.ImportError> errors = new ArrayList<>();
+
+        for (int i = 0; i < dtos.size(); i++) {
+            final int rowNumber = i + 2;
+            EnquiryRequestDTO dto = dtos.get(i);
+
+            try {
+                // Skip if no mobile or courses
+                if (dto.getMobile() == null || dto.getMobile().trim().isEmpty() ||
+                        dto.getCourses() == null || dto.getCourses().isEmpty()) {
+                    log.warn("Row {} - Missing required fields", rowNumber);
+                    continue;
+                }
+
+                // Skip duplicates
+                if (enquiryRepository.existsByMobileAndIsDeletedFalse(dto.getMobile())) {
+                    log.warn("Row {} - Duplicate mobile: {}", rowNumber, dto.getMobile());
+                    errors.add(BulkImportResponseDTO.ImportError.builder()
+                            .rowNumber(rowNumber)
+                            .fieldName("mobile")
+                            .errorMessage("Duplicate mobile number")
+                            .rejectedValue(dto.getMobile())
+                            .build());
+                    continue;
+                }
+
+                // Map and save
+                Enquiry enquiry = enquiryMapper.toEntity(dto);
+                enquiry.setImportSource(importSource);
+                enquiry.setCreatedBy("BULK_IMPORT");
+
+                enquiryRepository.save(enquiry);
+                successCount++;
+
+                log.info("✓ Row {} imported successfully", rowNumber);
+
+            } catch (Exception e) {
+                log.error("Row {} failed: {}", rowNumber, e.getMessage());
+                errors.add(BulkImportResponseDTO.ImportError.builder()
+                        .rowNumber(rowNumber)
+                        .errorMessage(e.getMessage())
+                        .rejectedValue(dto != null ? dto.getMobile() : "unknown")
+                        .build());
+            }
+        }
+
+        log.info("Import completed - Success: {}, Failed: {}", successCount, errors.size());
+
+        return BulkImportResponseDTO.builder()
+                .success(successCount > 0)
+                .totalRecords(dtos.size())
+                .successfulImports(successCount)
+                .failedImports(errors.size())
+                .errors(errors)
+                .message(String.format("Imported %d/%d enquiries", successCount, dtos.size()))
+                .build();
+    }
+
+    /**
+     * Save enquiry in a new transaction to isolate failures
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void saveEnquiryInNewTransaction(EnquiryRequestDTO dto, String importSource) {
+        // Convert DTO to entity
+        Enquiry enquiry = enquiryMapper.toEntity(dto);
+
+        // Ensure courses list is properly set
+        if (enquiry.getCourses() == null || enquiry.getCourses().isEmpty()) {
+            enquiry.setCourses(new ArrayList<>(dto.getCourses()));
+        }
+
+        enquiry.setImportSource(importSource);
+        enquiry.setCreatedBy("BULK_IMPORT");
+
+        // Log before save
+        log.debug("Saving enquiry - Mobile: {}, Courses: {}",
+                enquiry.getMobile(), enquiry.getCourses());
+
+        // Save entity
+        enquiryRepository.save(enquiry);
     }
 }

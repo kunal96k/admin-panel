@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}"
+      lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admission Management System</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" th:href="@{/assets/css/admission.css}" href="/assets/css/admission.css">
+
+</head>
+<body>
+
+<!-- Dashboard Content Fragment -->
+<main layout:fragment="content">
+
+    <div class="container-fluid mt-4">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h2><i class="bi bi-person-check me-2"></i>Admission Management</h2>
+            <p class="mb-0 opacity-90">Manage student admissions, courses, batches, and fee installments</p>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-card">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-3 mb-lg-0">
+                    <button class="btn btn-primary btn-action me-2" id="btnNewAdmission">
+                        <i class="bi bi-plus-circle me-2"></i>New Admission
+                    </button>
+                    <button class="btn btn-success btn-action me-2" id="btnImportAdmissions">
+                        <i class="bi bi-upload me-2"></i>Import CSV
+                    </button>
+                    <button class="btn btn-info btn-action" id="btnExportAdmissions">
+                        <i class="bi bi-download me-2"></i>Export CSV
+                    </button>
+                </div>
+                <div class="col-lg-6">
+                    <div class="input-group">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-search"></i>
+                            </span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search by name, mobile, reg no...">
+                        <select class="form-select" style="max-width: 150px;">
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admissions Table -->
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="table table-hover" id="admissionsTable">
+                    <thead>
+                    <tr>
+                        <th>REG NO.</th>
+                        <th>STUDENT NAME</th>
+                        <th>MOBILE NO.</th>
+                        <th>COURSE</th>
+                        <th>ADMISSION DATE</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <i class="bi bi-inbox" style="font-size: 3rem; color: #94a3b8;"></i>
+                            <p class="mt-3 mb-0 text-muted">No admissions found</p>
+                            <button class="btn btn-sm btn-primary mt-2" onclick="document.getElementById('btnNewAdmission').click()">
+                                <i class="bi bi-plus-circle me-1"></i>Add First Admission
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Admission Modal -->
+    <div class="modal fade" id="admissionModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="admissionModalTitle">
+                        <i class="bi bi-person-plus me-2"></i>New Admission
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Progress Bar -->
+                    <div class="progress-wizard">
+                        <div class="progress-wizard-bar" id="admissionProgressBar" style="width: 16.66%"></div>
+                    </div>
+
+                    <!-- Tabs -->
+                    <ul class="nav nav-pills nav-justified mb-4" id="admissionTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="pill" href="#admTab1" data-progress="16.66">
+                                <small>1.</small> Personal Info
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="pill" href="#admTab2" data-progress="33.33">
+                                <small>2.</small> Other Details
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="pill" href="#admTab3" data-progress="50">
+                                <small>3.</small> Course Details
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="pill" href="#admTab4" data-progress="66.66">
+                                <small>4.</small> Batch Details
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="pill" href="#admTab5" data-progress="83.33">
+                                <small>5.</small> Installments
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="pill" href="#admTab6" data-progress="100">
+                                <small>6.</small> Image Upload
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content">
+                        <!-- Tab 1: Personal Information -->
+                        <div class="tab-pane fade show active" id="admTab1">
+                            <form id="personalInfoForm">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">First Name <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="admFirstName" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Middle Name</label>
+                                        <input type="text" class="form-control" id="admMiddleName">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Last Name <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="admLastName" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">College/School</label>
+                                        <input type="text" class="form-control" id="admCollege">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Qualification</label>
+                                        <input type="text" class="form-control" id="admQualification">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Aadhaar No.</label>
+                                        <input type="text" class="form-control" id="admAadhaar" maxlength="12">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Birth Date</label>
+                                        <input type="date" class="form-control" id="admDob">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Gender</label>
+                                        <select class="form-select" id="admGender">
+                                            <option value="">-- Select --</option>
+                                            <option value="M">Male</option>
+                                            <option value="F">Female</option>
+                                            <option value="O">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Cast</label>
+                                        <input type="text" class="form-control" id="admCast">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Category</label>
+                                        <input type="text" class="form-control" id="admCategory">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Physically Handicapped</label>
+                                        <select class="form-select" id="admPhysicallyHandicapped">
+                                            <option value="">-- Select --</option>
+                                            <option value="Yes">Yes</option>
+                                            <option value="No">No</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Blood Group</label>
+                                        <select class="form-select" id="admBloodGroup">
+                                            <option value="">-- Select --</option>
+                                            <option value="A+">A+</option>
+                                            <option value="A-">A-</option>
+                                            <option value="B+">B+</option>
+                                            <option value="B-">B-</option>
+                                            <option value="AB+">AB+</option>
+                                            <option value="AB-">AB-</option>
+                                            <option value="O+">O+</option>
+                                            <option value="O-">O-</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Tab 2: Other Details -->
+                        <div class="tab-pane fade" id="admTab2">
+                            <form id="otherDetailsForm">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Primary Mobile No. <span class="required">*</span></label>
+                                        <input type="tel" class="form-control" id="admMobilePrimary" maxlength="10" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Secondary Mobile No.</label>
+                                        <input type="tel" class="form-control" id="admMobileSecondary" maxlength="10">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Primary Email</label>
+                                        <input type="email" class="form-control" id="admEmailPrimary">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Secondary Email</label>
+                                        <input type="email" class="form-control" id="admEmailSecondary">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Current Address</label>
+                                        <textarea class="form-control" id="admCurrentAddress" rows="3"></textarea>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Permanent Address</label>
+                                        <textarea class="form-control" id="admPermanentAddress" rows="3"></textarea>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Pin Code (Current)</label>
+                                        <input type="text" class="form-control" id="admPinCodeCurrent" maxlength="6">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Pin Code (Permanent)</label>
+                                        <input type="text" class="form-control" id="admPinCodePermanent" maxlength="6">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Document <span class="required">*</span></label>
+                                        <select class="form-select" id="admDocument" required>
+                                            <option value="">-- Select Document --</option>
+                                            <option value="Aadhaar Card">Aadhaar Card</option>
+                                            <option value="PAN Card">PAN Card</option>
+                                            <option value="Driving License">Driving License</option>
+                                            <option value="Passport">Passport</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Admission Date</label>
+                                        <input type="date" class="form-control" id="admAdmissionDate">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Lead Source <span class="required">*</span></label>
+                                        <select class="form-select" id="admLeadSource" required>
+                                            <option value="">-- Select Source --</option>
+                                            <option value="Walk-in">Walk-in</option>
+                                            <option value="Website">Website</option>
+                                            <option value="Social Media">Social Media</option>
+                                            <option value="Referral">Referral</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Roll No.</label>
+                                        <input type="text" class="form-control" id="admRollNo">
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label">Notes</label>
+                                        <textarea class="form-control" id="admNotes" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Tab 3: Course Details -->
+                        <div class="tab-pane fade" id="admTab3">
+                            <form id="courseDetailsForm">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Package</label>
+                                        <select class="form-select" id="admPackage">
+                                            <option value="">-- Select Package --</option>
+                                            <option value="Basic">Basic</option>
+                                            <option value="Standard">Standard</option>
+                                            <option value="Premium">Premium</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Course</label>
+                                        <select class="form-select" id="admCourse">
+                                            <option value="">-- Select Course --</option>
+                                            <option value="JAVA">JAVA CORE AND ADVANCE</option>
+                                            <option value="PYTHON">PYTHON</option>
+                                            <option value="WEB DEV">WEB DEVELOPMENT</option>
+                                            <option value="DATA SCIENCE">DATA SCIENCE</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Total Payable Fees <span class="required">*</span></label>
+                                        <input type="number" class="form-control" id="admTotalFees" readonly required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Total Receivable Fees <span class="required">*</span></label>
+                                        <input type="number" class="form-control" id="admReceivableFees" readonly required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Discount % <span class="required">*</span></label>
+                                        <input type="number" class="form-control" id="admDiscountPercent" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Discount Amount <span class="required">*</span></label>
+                                        <input type="number" class="form-control" id="admDiscountAmount" required>
+                                    </div>
+                                    <div class="col-12">
+                                        <h6 class="mb-3">Selected Courses</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-sm">
+                                                <thead>
+                                                <tr>
+                                                    <th>Course</th>
+                                                    <th>Amount</th>
+                                                    <th>Remove</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody id="selectedCoursesBody">
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted">No courses added</td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Tab 4: Batch Details -->
+                        <div class="tab-pane fade" id="admTab4">
+                            <form id="batchDetailsForm">
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label">Select Batch</label>
+                                        <select class="form-select" id="admBatch" multiple size="5">
+                                            <option value="Batch 1">Morning Batch (9 AM - 11 AM)</option>
+                                            <option value="Batch 2">Afternoon Batch (2 PM - 4 PM)</option>
+                                            <option value="Batch 3">Evening Batch (6 PM - 8 PM)</option>
+                                            <option value="Batch 4">Weekend Batch (Sat-Sun)</option>
+                                        </select>
+                                        <small class="text-muted">Hold Ctrl/Cmd to select multiple batches</small>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label">Select Subject</label>
+                                        <select class="form-select" id="admSubject" multiple size="5">
+                                            <option value="Subject 1">Java Fundamentals</option>
+                                            <option value="Subject 2">Advanced Java</option>
+                                            <option value="Subject 3">Database Management</option>
+                                            <option value="Subject 4">Web Technologies</option>
+                                        </select>
+                                        <small class="text-muted">Hold Ctrl/Cmd to select multiple subjects</small>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Tab 5: Fee Installments -->
+                        <div class="tab-pane fade" id="admTab5">
+                            <form id="installmentsForm">
+                                <div class="row mb-3">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Total Amount</label>
+                                        <input type="text" class="form-control" id="instTotalAmount" readonly>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Total Installment Amount</label>
+                                        <input type="text" class="form-control" id="instTotalInstAmount" readonly>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Installment Start Date <span class="required">*</span></label>
+                                        <input type="date" class="form-control" id="instStartDate" required>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">No. of Installments</label>
+                                        <input type="number" class="form-control" id="instNoOfInstallments" min="1">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Days Between Installments</label>
+                                        <input type="number" class="form-control" id="instDays" min="1">
+                                    </div>
+                                    <div class="col-md-4 mb-3 d-flex align-items-end">
+                                        <button type="button" class="btn btn-primary w-100" id="btnGenerateInstallments">
+                                            <i class="bi bi-calculator me-2"></i>Generate
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered installment-table">
+                                        <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Remove</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody id="installmentsBody">
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">No installments generated</td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Tab 6: Image Upload -->
+                        <div class="tab-pane fade" id="admTab6">
+                            <form id="imageUploadForm">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <h6 class="mb-3">Live Camera</h6>
+                                        <div class="video-preview">
+                                            <video id="admVideo" width="100%" height="300" autoplay></video>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary mt-2 w-100" id="btnCapturePhoto">
+                                            <i class="bi bi-camera me-2"></i>Capture Photo
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <h6 class="mb-3">Preview</h6>
+                                        <div class="canvas-preview">
+                                            <canvas id="admCanvas" width="300" height="300"></canvas>
+                                        </div>
+                                        <div class="upload-btn-wrapper mt-2">
+                                            <button class="btn btn-outline-secondary w-100">
+                                                <i class="bi bi-upload me-2"></i>Upload Image
+                                            </button>
+                                            <input type="file" name="admPhoto" id="admPhotoUpload" accept="image/*">
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnPrevious" style="display: none;">
+                        <i class="bi bi-arrow-left me-2"></i>Previous
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnNext">
+                        Next <i class="bi bi-arrow-right ms-2"></i>
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnFinish" style="display: none;">
+                        <i class="bi bi-check-circle me-2"></i>Finish
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Admissions Modal -->
+    <div class="modal fade" id="importAdmissionsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-upload me-2"></i>Import Admissions from CSV
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Import Type Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Select Import Format:</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="admImportType" id="admImportOld" value="old" checked>
+                            <label class="btn btn-outline-primary" for="admImportOld">
+                                <i class="bi bi-file-earmark-spreadsheet me-2"></i>Old Format
+                            </label>
+                            <input type="radio" class="btn-check" name="admImportType" id="admImportNew" value="new">
+                            <label class="btn btn-outline-primary" for="admImportNew">
+                                <i class="bi bi-file-earmark-plus me-2"></i>New Format
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Old Format Info -->
+                    <div class="alert alert-info" id="admOldFormatInfo">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Old CSV Format:</strong> Your CSV file should contain:
+                        <br>
+                        <small>Reg No., Student Name, Mobile No., Course, Admission Date</small>
+                    </div>
+
+                    <!-- New Format Info -->
+                    <div class="alert alert-info" id="admNewFormatInfo" style="display: none;">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>New CSV Format:</strong> Your CSV file should contain:
+                        <br>
+                        <small>First Name, Middle Name, Last Name, Mobile Primary, Mobile Secondary, Email Primary, Current Address, College, Fee Amount, Paid Amount, Due Date, Courses, Lead Source</small>
+                    </div>
+
+                    <div class="import-area" id="admImportArea">
+                        <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #667eea;"></i>
+                        <h5 class="mt-3">Drop your CSV file here or click to browse</h5>
+                        <p class="text-muted mb-3">Maximum file size: 5MB</p>
+                        <input type="file" id="admCsvFileInput" accept=".csv" style="display: none;">
+                        <button class="btn btn-outline-primary" id="btnBrowseAdmFile">
+                            <i class="bi bi-folder2-open me-2"></i>Browse Files
+                        </button>
+                    </div>
+
+                    <div id="admImportPreview" class="mt-4" style="display: none;">
+                        <h6 class="mb-3">Preview Data:</h6>
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered">
+                                <thead id="admPreviewTableHead"></thead>
+                                <tbody id="admPreviewTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="alert alert-success mt-3">
+                            <i class="bi bi-check-circle me-2"></i>
+                            <strong id="admRecordCount">0</strong> records found and ready to import.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="btnImportAdmData" disabled>
+                        <i class="bi bi-check-circle me-2"></i>Import Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Admission Details Modal -->
+    <div class="modal fade" id="viewAdmissionModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-eye me-2"></i>Admission Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center mb-3">
+                            <img src="https://via.placeholder.com/150" alt="Student Photo" class="img-thumbnail" id="viewStudentPhoto">
+                        </div>
+                        <div class="col-md-9">
+                            <h4 id="viewAdmStudentName">Student Name</h4>
+                            <p><strong>Reg No.:</strong> <span id="viewAdmRegNo">-</span></p>
+                            <p><strong>Admission Date:</strong> <span id="viewAdmDate">-</span></p>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3"><u>Personal Details</u></h6>
+                            <p><strong>Birth Date:</strong> <span id="viewAdmBirthDate">-</span></p>
+                            <p><strong>Gender:</strong> <span id="viewAdmGender">-</span></p>
+                            <p><strong>Aadhaar No.:</strong> <span id="viewAdmAadhaarNo">-</span></p>
+                            <p><strong>Blood Group:</strong> <span id="viewAdmBloodGroup">-</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3"><u>Communication Details</u></h6>
+                            <p><strong>Primary Mobile:</strong> <span id="viewAdmMobile1">-</span></p>
+                            <p><strong>Secondary Mobile:</strong> <span id="viewAdmMobile2">-</span></p>
+                            <p><strong>Email:</strong> <span id="viewAdmEmail">-</span></p>
+                            <p><strong>Address:</strong> <span id="viewAdmAddress">-</span></p>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3"><u>Course Details</u></h6>
+                            <p><strong>Courses:</strong> <span id="viewAdmCourses">-</span></p>
+                            <p><strong>Document Submitted:</strong> <span id="viewAdmDocument">-</span></p>
+                            <p><strong>Notes:</strong> <span id="viewAdmNotes">-</span></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="btnPrintAdmission">
+                        <i class="bi bi-printer me-2"></i>Print
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Details Modal -->
+    <div class="modal fade" id="batchDetailsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-people me-2"></i>Batch Details: <span id="batchStudentName"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="batchDetailsContent">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No batch information available
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fee Installments Modal -->
+    <div class="modal fade" id="feeInstallmentsModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-cash-stack me-2"></i>Fee Installments: <span id="feeInstStudentName"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Total Amount</label>
+                            <input type="text" class="form-control" id="feeInstTotalAmount" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Total Inst. Amount</label>
+                            <input type="text" class="form-control" id="feeInstTotalInstAmount" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Inst. Start Date <span class="required">*</span></label>
+                            <input type="date" class="form-control" id="feeInstStartDate" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">No. of Inst.</label>
+                            <input type="number" class="form-control" id="feeInstNoOfInstallments" min="1">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Days</label>
+                            <input type="number" class="form-control" id="feeInstDays" min="1">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="button" class="btn btn-primary w-100" onclick="generateFeeInstallments()">
+                                <i class="bi bi-calculator me-2"></i>Generate
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered installment-table">
+                            <thead>
+                            <tr>
+                                <th>DATE</th>
+                                <th>AMOUNT</th>
+                                <th>STATUS</th>
+                                <th>REMOVE</th>
+                            </tr>
+                            </thead>
+                            <tbody id="feeInstallmentsBody">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No data available in table</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveFeeInstallments()">
+                        <i class="bi bi-check-circle me-2"></i>Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Admission Form Modal -->
+    <div class="modal fade" id="printAdmissionModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-printer me-2"></i>Admission Form
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="printAdmissionContent">
+                    <!-- Admission Form Content -->
+                    <div style="border: 2px solid #000; padding: 20px; margin: 10px;">
+                        <div style="border: 1px solid #000; padding: 15px;">
+                            <!-- Header -->
+                            <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect fill='%23667eea' width='80' height='80'/%3E%3C/svg%3E"
+                                     alt="Logo" style="width: 80px; height: 80px; margin-right: 20px;">
+                                <div style="flex: 1;">
+                                    <h2 style="margin: 0; font-weight: bold;" id="printBranchName">TechnoKraft Training & Solutions</h2>
+                                    <p style="margin: 5px 0;" id="printAddress">1st Floor, Kanchwala Avenue,</p>
+                                    <p style="margin: 5px 0;" id="printAddressLine2">Above Viju's Dabeli, College Road, Nashik</p>
+                                    <p style="margin: 5px 0;">
+                                        <strong>E-mail:</strong> <span id="printEmail">info@tts.net.in</span> &nbsp;&nbsp;&nbsp;
+                                        <strong>Mobile no:</strong> <span id="printMobile">02332312447</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <hr style="border: 1px solid #000;">
+
+                            <!-- Title -->
+                            <h1 style="text-align: center; margin: 20px 0; text-decoration: underline;">ADMISSION FORM</h1>
+
+                            <div style="display: flex; justify-content: space-between;">
+                                <div style="flex: 1;">
+                                    <p><strong style="font-size: 18px;">Reg. no:</strong> <span id="printRegNo" style="font-size: 18px;"></span></p>
+                                    <p><strong style="font-size: 18px;">Admission Date:</strong> <span id="printAdmDate" style="font-size: 18px;"></span></p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <img id="printStudentPhoto" src="https://via.placeholder.com/150"
+                                         alt="Student Photo" style="width: 110px; height: 150px; border: 1px solid #000;">
+                                </div>
+                            </div>
+
+                            <!-- Personal Details -->
+                            <h6 style="text-decoration: underline; margin-top: 20px;"><strong>Personal Details</strong></h6>
+                            <p><strong>1. Student name:</strong> <span id="printStudentName"></span></p>
+                            <p><strong>2. Birth date:</strong> <span id="printBirthDate"></span></p>
+                            <p><strong>3. Gender:</strong> <span id="printGender"></span></p>
+                            <table style="width: 100%; margin: 10px 0;">
+                                <tr>
+                                    <td style="width: 50%;"><strong>4. Aadhaar no:</strong> <span id="printAadhaar"></span></td>
+                                    <td><strong>5. Blood group:</strong> <span id="printBloodGroup"></span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>6. Category:</strong> <span id="printCategory"></span></td>
+                                    <td><strong>7. Cast:</strong> <span id="printCast"></span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>8. Qualification:</strong> <span id="printQualification"></span></td>
+                                    <td><strong>9. College:</strong> <span id="printCollege"></span></td>
+                                </tr>
+                            </table>
+
+                            <!-- Communication Details -->
+                            <h6 style="text-decoration: underline; margin-top: 20px;"><strong>Communication Details</strong></h6>
+                            <table style="width: 100%; margin: 10px 0;">
+                                <tr>
+                                    <td style="width: 50%;"><strong>10. Primary Mob. no:</strong> <span id="printMobile1"></span></td>
+                                    <td><strong>11. Secondary Mob. no:</strong> <span id="printMobile2"></span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>12. Primary e-mail Id:</strong> <span id="printEmail1"></span></td>
+                                    <td><strong>13. Secondary e-mail Id:</strong> <span id="printEmail2"></span></td>
+                                </tr>
+                            </table>
+                            <p><strong>14. Current Address:</strong> <span id="printCurrentAddr"></span></p>
+                            <p><strong>15. Permanent Address:</strong> <span id="printPermanentAddr"></span></p>
+
+                            <!-- Course Details -->
+                            <h6 style="text-decoration: underline; margin-top: 20px;"><strong>Course Details</strong></h6>
+                            <p><strong>16. Courses:</strong> <span id="printCourses"></span></p>
+                            <p><strong>17. Document Submitted:</strong> <span id="printDocument"></span></p>
+                            <p><strong>18. Notes:</strong> <span id="printNotes"></span></p>
+
+                            <!-- Declaration -->
+                            <h6 style="text-decoration: underline; margin-top: 30px;"><strong>Declaration</strong></h6>
+                            <p><strong>I hereby declare that above furnished information are true to the best of my knowledge and belief.</strong></p>
+
+                            <div style="margin-top: 30px;">
+                                <p><strong>Place: ___________________</strong></p>
+                                <p><strong>Date: ___________________</strong></p>
+                            </div>
+
+                            <p style="text-align: right; margin-top: 50px;"><strong>Student's Signature</strong></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="printToPDF()">
+                        <i class="bi bi-printer me-2"></i>Print / Save PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transfer Admission Modal -->
+    <div class="modal fade" id="transferAdmissionModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-arrow-left-right me-2"></i>Transfer Admission: <span id="transferStudentName"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Progress Bar -->
+                    <div class="progress-wizard">
+                        <div class="progress-wizard-bar" id="transferProgressBar" style="width: 20%"></div>
+                    </div>
+
+                    <!-- Tabs -->
+                    <ul class="nav nav-pills nav-justified mb-4" id="transferTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="pill" href="#transferTab1" data-transfer-progress="20">
+                                <small>1.</small> Personal Info
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="pill" href="#transferTab2" data-transfer-progress="40">
+                                <small>2.</small> Other Details
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="pill" href="#transferTab3" data-transfer-progress="60">
+                                <small>3.</small> Course Details
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="pill" href="#transferTab4" data-transfer-progress="80">
+                                <small>4.</small> Batch Details
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="pill" href="#transferTab5" data-transfer-progress="100">
+                                <small>5.</small> Academic Year
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content">
+                        <!-- Tab 1: Personal Information (Read-only) -->
+                        <div class="tab-pane fade show active" id="transferTab1">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="transferFirstName" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Middle Name</label>
+                                    <input type="text" class="form-control" id="transferMiddleName" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="transferLastName" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">College/School</label>
+                                    <input type="text" class="form-control" id="transferCollege" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Qualification</label>
+                                    <input type="text" class="form-control" id="transferQualification" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Birth Date</label>
+                                    <input type="date" class="form-control" id="transferDob" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Gender</label>
+                                    <input type="text" class="form-control" id="transferGender" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Blood Group</label>
+                                    <input type="text" class="form-control" id="transferBloodGroup" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Other Details (Read-only) -->
+                        <div class="tab-pane fade" id="transferTab2">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Primary Mobile No.</label>
+                                    <input type="tel" class="form-control" id="transferMobilePrimary" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Secondary Mobile No.</label>
+                                    <input type="tel" class="form-control" id="transferMobileSecondary" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Primary Email</label>
+                                    <input type="email" class="form-control" id="transferEmailPrimary" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Current Address</label>
+                                    <textarea class="form-control" id="transferCurrentAddress" rows="3" readonly></textarea>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Document</label>
+                                    <input type="text" class="form-control" id="transferDocument" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Lead Source</label>
+                                    <input type="text" class="form-control" id="transferLeadSource" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 3: Course Details (Editable) -->
+                        <div class="tab-pane fade" id="transferTab3">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Package</label>
+                                    <select class="form-select" id="transferPackage">
+                                        <option value="">-- Select Package --</option>
+                                        <option value="Basic">Basic</option>
+                                        <option value="Standard">Standard</option>
+                                        <option value="Premium">Premium</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Course <span class="required">*</span></label>
+                                    <select class="form-select" id="transferCourse" required>
+                                        <option value="">-- Select Course --</option>
+                                        <option value="JAVA">JAVA CORE AND ADVANCE</option>
+                                        <option value="PYTHON">PYTHON</option>
+                                        <option value="WEB DEV">WEB DEVELOPMENT</option>
+                                        <option value="DATA SCIENCE">DATA SCIENCE</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Total Payable Fees</label>
+                                    <input type="number" class="form-control" id="transferTotalFees" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Total Receivable Fees</label>
+                                    <input type="number" class="form-control" id="transferReceivableFees" readonly>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Discount %</label>
+                                    <input type="number" class="form-control" id="transferDiscountPercent">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Discount Amount</label>
+                                    <input type="number" class="form-control" id="transferDiscountAmount">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 4: Batch Details (Editable) -->
+                        <div class="tab-pane fade" id="transferTab4">
+                            <div class="row">
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Select Batch <span class="required">*</span></label>
+                                    <select class="form-select" id="transferBatch" multiple size="5" required>
+                                        <option value="Batch 1">Morning Batch (9 AM - 11 AM)</option>
+                                        <option value="Batch 2">Afternoon Batch (2 PM - 4 PM)</option>
+                                        <option value="Batch 3">Evening Batch (6 PM - 8 PM)</option>
+                                        <option value="Batch 4">Weekend Batch (Sat-Sun)</option>
+                                    </select>
+                                    <small class="text-muted">Hold Ctrl/Cmd to select multiple batches</small>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Select Subject</label>
+                                    <select class="form-select" id="transferSubject" multiple size="5">
+                                        <option value="Subject 1">Java Fundamentals</option>
+                                        <option value="Subject 2">Advanced Java</option>
+                                        <option value="Subject 3">Database Management</option>
+                                        <option value="Subject 4">Web Technologies</option>
+                                    </select>
+                                    <small class="text-muted">Hold Ctrl/Cmd to select multiple subjects</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 5: Academic Year (Editable) -->
+                        <div class="tab-pane fade" id="transferTab5">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Academic Year <span class="required">*</span></label>
+                                    <select class="form-select" id="transferAcademicYear" required>
+                                        <option value="">-- Select Academic Year --</option>
+                                        <option value="2024-2025">2024-2025</option>
+                                        <option value="2025-2026">2025-2026</option>
+                                        <option value="2026-2027">2026-2027</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Transfer Date <span class="required">*</span></label>
+                                    <input type="date" class="form-control" id="transferDate" required>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Transfer Reason</label>
+                                    <textarea class="form-control" id="transferReason" rows="4" placeholder="Enter reason for transfer..."></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <div class="alert alert-warning">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                        <strong>Note:</strong> Transferring this admission will update the batch, course, and academic year details. Previous records will be archived.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnTransferAdmission">
+                        <i class="bi bi-arrow-left-right me-2"></i>Transfer Admission
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+       const admissionEnquiry = sessionStorage.getItem('admissionEnquiry');
+       if (admissionEnquiry) {
+           const enquiry = JSON.parse(admissionEnquiry);
+           prefillAdmissionForm(enquiry);
+           sessionStorage.removeItem('admissionEnquiry');
+       }
+    });
+    </script>
+
+    <script th:src="@{/assets/js/admission.js}" src="/assets/js/admission.js" defer></script>
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.all.min.js"></script>
+
+</main>
+
+</body>
+</html>

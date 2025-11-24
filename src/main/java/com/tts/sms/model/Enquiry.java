@@ -5,16 +5,17 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
 
-/**
- * Entity representing student enquiries
- * Supports both old format (single name field) and new format (first, middle, last name)
- */
 @Entity
 @Table(name = "enquiries", indexes = {
+        @Index(name = "idx_enquiry_no", columnList = "enquiry_no"),
         @Index(name = "idx_mobile", columnList = "mobile"),
         @Index(name = "idx_email", columnList = "email"),
         @Index(name = "idx_status", columnList = "status"),
@@ -32,7 +33,10 @@ public class Enquiry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Student Name Fields (New Format)
+    @Column(name = "enquiry_no", length = 50)
+    private String enquiryNo;
+
+    // Student Name Fields
     @Column(name = "first_name", length = 100)
     private String firstName;
 
@@ -42,7 +46,6 @@ public class Enquiry {
     @Column(name = "last_name", length = 100)
     private String lastName;
 
-    // Old Format Support - for imported legacy data
     @Column(name = "full_name", length = 255)
     private String fullName;
 
@@ -94,10 +97,11 @@ public class Enquiry {
     @Column(name = "gender", length = 20)
     private String gender;
 
-    // Course Interest
-    @NotBlank(message = "Course is required")
-    @Column(name = "course", nullable = false, columnDefinition = "TEXT")
-    private String course;
+    // Course Interest - Use List<String> type
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "courses", columnDefinition = "json")
+    @Builder.Default
+    private List<String> courses = new ArrayList<>();
 
     @Column(name = "package_name", length = 150)
     private String packageName;
@@ -153,9 +157,8 @@ public class Enquiry {
     private Boolean isDeleted = false;
 
     @Column(name = "import_source", length = 50)
-    private String importSource; // "OLD_CSV", "NEW_CSV", "MANUAL"
+    private String importSource;
 
-    // Helper method to get display name
     @Transient
     public String getDisplayName() {
         if (fullName != null && !fullName.isBlank()) {
@@ -171,22 +174,31 @@ public class Enquiry {
     @PrePersist
     @PreUpdate
     private void validateData() {
-        // Ensure either fullName or firstName exists
-        if ((fullName == null || fullName.isBlank()) &&
-                (firstName == null || firstName.isBlank())) {
-
-            // Try to build full name from components if lastName exists
-            if (lastName != null && !lastName.isBlank()) {
-                StringBuilder name = new StringBuilder();
-                if (middleName != null && !middleName.isBlank()) {
-                    name.append(middleName).append(" ");
-                }
-                name.append(lastName);
-                this.fullName = name.toString();
-                return;
+        // Build full name if missing
+        if (fullName == null || fullName.isBlank()) {
+            StringBuilder name = new StringBuilder();
+            if (firstName != null && !firstName.isBlank()) {
+                name.append(firstName);
             }
-
-            throw new IllegalStateException("Either full name or first name must be provided");
+            if (middleName != null && !middleName.isBlank()) {
+                if (name.length() > 0) name.append(" ");
+                name.append(middleName);
+            }
+            if (lastName != null && !lastName.isBlank()) {
+                if (name.length() > 0) name.append(" ");
+                name.append(lastName);
+            }
+            if (name.length() > 0) {
+                this.fullName = name.toString();
+            }
         }
+
+        // Ensure courses list is not null
+        if (courses == null) {
+            courses = new ArrayList<>();
+        }
+
+        // Remove empty courses
+        courses.removeIf(c -> c == null || c.trim().isEmpty());
     }
 }
