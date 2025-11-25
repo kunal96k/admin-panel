@@ -14,14 +14,21 @@ import java.util.List;
 import java.util.ArrayList;
 
 @Entity
-@Table(name = "enquiries", indexes = {
-        @Index(name = "idx_enquiry_no", columnList = "enquiry_no"),
-        @Index(name = "idx_mobile", columnList = "mobile"),
-        @Index(name = "idx_email", columnList = "email"),
-        @Index(name = "idx_status", columnList = "status"),
-        @Index(name = "idx_source", columnList = "source"),
-        @Index(name = "idx_enquiry_date", columnList = "enquiry_date")
-})
+@Table(
+        name = "enquiries",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uc_enquiry_no", columnNames = {"enquiry_no"})
+        },
+        indexes = {
+                @Index(name = "idx_enquiry_no", columnList = "enquiry_no"),
+                @Index(name = "idx_mobile", columnList = "mobile"),
+                @Index(name = "idx_email", columnList = "email"),
+                @Index(name = "idx_status", columnList = "status"),
+                @Index(name = "idx_source", columnList = "source"),
+                @Index(name = "idx_enquiry_date", columnList = "enquiry_date")
+        }
+)
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -50,20 +57,15 @@ public class Enquiry {
     private String fullName;
 
     // Contact Information
-    @NotBlank(message = "Mobile number is required")
-    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Invalid mobile number format")
-    @Column(name = "mobile", nullable = false, length = 15)
+    @Column(name = "mobile", length = 15)
     private String mobile;
 
-    @Column(name = "secondary_mobile", length = 15)
-    @Pattern(regexp = "^$|^[6-9]\\d{9}$", message = "Invalid secondary mobile number format")
     private String secondaryMobile;
 
     @Email(message = "Invalid email format")
     @Column(name = "email", length = 100)
     private String email;
 
-    @Email(message = "Invalid secondary email format")
     @Column(name = "secondary_email", length = 100)
     private String secondaryEmail;
 
@@ -88,7 +90,6 @@ public class Enquiry {
     private String qualification;
 
     @Column(name = "aadhaar", length = 12)
-    @Pattern(regexp = "^$|^\\d{12}$", message = "Aadhaar must be 12 digits")
     private String aadhaar;
 
     @Column(name = "birth_date")
@@ -114,14 +115,14 @@ public class Enquiry {
 
     // Enquiry Details
     @NotBlank(message = "Enquiry source is required")
-    @Column(name = "source", nullable = false, length = 100)
+    @Column(name = "source", length = 100)
     private String source;
 
     @Column(name = "reference_name", length = 100)
     private String referenceName;
 
     @NotNull(message = "Enquiry date is required")
-    @Column(name = "enquiry_date", nullable = false)
+    @Column(name = "enquiry_date")
     private LocalDate enquiryDate;
 
     @Column(name = "followup_date")
@@ -139,7 +140,7 @@ public class Enquiry {
 
     // Metadata
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
@@ -193,12 +194,25 @@ public class Enquiry {
             }
         }
 
-        // Ensure courses list is not null
+        // Ensure courses list is not null and contains no empty values
         if (courses == null) {
             courses = new ArrayList<>();
         }
-
-        // Remove empty courses
         courses.removeIf(c -> c == null || c.trim().isEmpty());
+
+        // Ensure enquiry date is set
+        if (enquiryDate == null) {
+            enquiryDate = LocalDate.now();
+        }
+
+        // Ensure source is set
+        if (source == null || source.isBlank()) {
+            source = "Unknown";
+        }
+
+        // Ensure status is set
+        if (status == null || status.isBlank()) {
+            status = "New";
+        }
     }
 }

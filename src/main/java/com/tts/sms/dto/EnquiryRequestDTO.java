@@ -1,5 +1,7 @@
 package com.tts.sms.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.tts.sms.config.CustomLocalDateDeserializer;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -11,7 +13,6 @@ import java.util.List;
 @Builder
 public class EnquiryRequestDTO {
 
-    // **NEW: Enquiry Number from CSV**
     private String enquiryNo;
 
     // Name fields
@@ -21,7 +22,6 @@ public class EnquiryRequestDTO {
     private String lastName;
 
     // Contact
-    @NotBlank(message = "Mobile number is required")
     private String mobile;
     private String secondaryMobile;
     private String email;
@@ -37,11 +37,12 @@ public class EnquiryRequestDTO {
     private String college;
     private String qualification;
     private String aadhaar;
+
+    @JsonDeserialize(using = CustomLocalDateDeserializer.class)
     private LocalDate birthDate;
     private String gender;
 
     // Course
-    @NotNull(message = "At least one course is required")
     @Size(min = 1)
     private List<String> courses;
 
@@ -49,11 +50,15 @@ public class EnquiryRequestDTO {
     private Boolean demoLectureRequired;
     private String interestLevel;
 
-    @NotBlank(message = "Source is required")
+
     private String source;
 
     private String referenceName;
+
+    @JsonDeserialize(using = CustomLocalDateDeserializer.class)
     private LocalDate enquiryDate;
+
+    @JsonDeserialize(using = CustomLocalDateDeserializer.class)
     private LocalDate followupDate;
     private String assignTo;
     private String status;

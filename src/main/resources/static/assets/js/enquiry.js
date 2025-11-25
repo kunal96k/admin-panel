@@ -5,6 +5,11 @@
     let currentEnquiryId = null;
     let currentFollowUpEnquiry = null;
 
+    let currentPage = 0;
+    let pageSize = 25;
+    let totalPages = 0;
+    let totalElements = 0;
+
     const COURSE_NAMES = [
       "SPRING BOOT",
       "MongoDB",
@@ -272,12 +277,24 @@
         }
 
         // Search with debounce
-        document.getElementById('searchInput')?.addEventListener('input', debounce(searchEnquiries, 500));
+       document.getElementById('searchInput')?.addEventListener('input', debounce(searchEnquiries, 500));
+
+
+       const pageSizeSelect = document.querySelector('.form-select[style*="max-width: 150px"]');
+       if (pageSizeSelect) {
+           pageSizeSelect.addEventListener('change', function() {
+               pageSize = parseInt(this.value);
+               loadEnquiries(0, pageSize);
+           });
+       }
     }
 
     // Load Enquiries from API
     async function loadEnquiries(page = 0, size = 25) {
         try {
+            currentPage = page;
+            pageSize = size;
+
             const response = await fetch(`/api/enquiries?page=${page}&size=${size}`);
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -285,7 +302,12 @@
             }
 
             const data = await response.json();
+            totalPages = data.totalPages || 0;
+            totalElements = data.totalElements || 0;
+
             renderEnquiriesTable(data.content || []);
+            updatePaginationControls();
+            updateEntriesInfo();
         } catch (error) {
             console.error('Error loading enquiries:', error);
             renderEnquiriesTable([]);
@@ -482,34 +504,125 @@
     }
 
     // Search Enquiries
-    async function searchEnquiries(e) {
-        const searchTerm = e.target.value.trim();
+// Search Enquiries
+async function searchEnquiries(e) {
+    const searchTerm = e.target.value.trim();
 
-        try {
-            const searchDTO = {
-                searchTerm: searchTerm || null,
-                page: 0,
-                size: 25,
-                sortBy: 'enquiryDate',
-                sortDirection: 'DESC'
-            };
+    try {
+        const searchDTO = {
+            searchTerm: searchTerm || null,
+            page: 0,  // Reset to first page on new search
+            size: pageSize,
+            sortBy: 'enquiryDate',
+            sortDirection: 'DESC'
+        };
 
-            const response = await fetch('/api/enquiries/search', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(searchDTO)
-            });
+        const response = await fetch('/api/enquiries/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(searchDTO)
+        });
 
-            if (!response.ok) throw new Error('Search failed');
+        if (!response.ok) throw new Error('Search failed');
 
-            const data = await response.json();
-            renderEnquiriesTable(data.content);
-        } catch (error) {
-            console.error('Search error:', error);
+        const data = await response.json();
+        currentPage = 0;
+        totalPages = data.totalPages || 0;
+        totalElements = data.totalElements || 0;
+
+        renderEnquiriesTable(data.content);
+        updatePaginationControls();
+        updateEntriesInfo();
+    } catch (error) {
+        console.error('Search error:', error);
+    }
+}
+
+function updatePaginationControls() {
+    const paginationEl = document.getElementById('paginationControls');
+    if (!paginationEl) return;
+
+    let html = '';
+
+    // Previous button
+    html += `
+        <li class="page-item ${currentPage === 0 ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage - 1}">Previous</a>
+        </li>
+    `;
+
+    // Page numbers
+    const maxVisiblePages = 5;
+    let startPage = Math.max(0, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage < maxVisiblePages - 1) {
+        startPage = Math.max(0, endPage - maxVisiblePages + 1);
+    }
+
+    // First page
+    if (startPage > 0) {
+        html += `<li class="page-item"><a class="page-link" href="#" data-page="0">1</a></li>`;
+        if (startPage > 1) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
         }
     }
+
+    // Page numbers
+    for (let i = startPage; i <= endPage; i++) {
+        html += `
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" data-page="${i}">${i + 1}</a>
+            </li>
+        `;
+    }
+
+    // Last page
+    if (endPage < totalPages - 1) {
+        if (endPage < totalPages - 2) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        html += `<li class="page-item"><a class="page-link" href="#" data-page="${totalPages - 1}">${totalPages}</a></li>`;
+    }
+
+    // Next button
+    html += `
+        <li class="page-item ${currentPage >= totalPages - 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage + 1}">Next</a>
+        </li>
+    `;
+
+    paginationEl.innerHTML = html;
+
+    // Attach click handlers
+    paginationEl.querySelectorAll('.page-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!this.parentElement.classList.contains('disabled') &&
+                !this.parentElement.classList.contains('active')) {
+                const page = parseInt(this.getAttribute('data-page'));
+                loadEnquiries(page, pageSize);
+            }
+        });
+    });
+}
+
+function updateEntriesInfo() {
+    const startEl = document.getElementById('entriesStart');
+    const endEl = document.getElementById('entriesEnd');
+    const totalEl = document.getElementById('totalEntries');
+
+    if (!startEl || !endEl || !totalEl) return;
+
+    const start = totalElements === 0 ? 0 : (currentPage * pageSize) + 1;
+    const end = Math.min((currentPage + 1) * pageSize, totalElements);
+
+    startEl.textContent = start;
+    endEl.textContent = end;
+    totalEl.textContent = totalElements;
+}
 
    function renderEnquiriesTable(enquiries) {
        const tbody = document.querySelector('#enquiryTable tbody');
@@ -1042,56 +1155,51 @@
    function parseCSV(text) {
        const lines = text.split('\n').filter(line => line.trim());
        const importType = document.querySelector('input[name="importType"]:checked').value;
-
+   
        importedData = [];
        const previewData = [];
-
+   
        for (let i = 1; i < lines.length; i++) {
            const values = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
            const row = values.map(v => v.trim().replace(/^"|"$/g, ''));
-
+   
            if (row.length > 0) {
                let record;
-
+   
                if (importType === 'old') {
                    const nameParts = (row[1] || '').split(' ').filter(Boolean);
-
-                   // Parse multiple courses
                    const coursesStr = row[3] || '';
                    const rawCourses = coursesStr
                        .split(/[,\n]/)
                        .map(c => c.trim())
                        .filter(Boolean);
-
+   
                    if (rawCourses.length === 0) {
                        console.warn(`Row ${i}: No courses found, skipping`);
                        continue;
                    }
-
-                   console.log(`Row ${i}: Found ${rawCourses.length} courses:`, rawCourses);
-
+   
                    record = {
-                       enquiryNo: row[0] && row[0].trim() ? row[0].trim() : null,  // ✅ Capture enquiry no
+                       enquiryNo: row[0] && row[0].trim() ? row[0].trim() : null,
                        firstName: nameParts[0] || '',
                        middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '',
                        lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : '',
                        mobilePrimary: row[2],
                        courses: rawCourses,
                        leadSource: row[4] || 'Unknown',
-                       enquiryDate: row[5] && row[5].trim() ? row[5].trim() : null,
+                       enquiryDate: validateDate(row[5]) || getTodayDate(), //  Validate date
                        assignTo: row[6] || null,
                        status: row[7] || 'New'
                    };
                } else {
-                   // New format
                    const coursesStr = row[13] || '';
                    const rawCourses = coursesStr
                        .split(/[,\n]/)
                        .map(c => c.trim())
                        .filter(Boolean);
-
+   
                    record = {
-                       enquiryNo: row[0] && row[0].trim() ? row[0].trim() : null,  // ✅ Capture enquiry no
+                       enquiryNo: row[0] && row[0].trim() ? row[0].trim() : null,
                        firstName: row[1],
                        middleName: row[2],
                        lastName: row[3],
@@ -1101,14 +1209,14 @@
                        currentAddress: row[7],
                        permanentAddress: row[8],
                        college: row[9],
-                       enquiryDate: row[10] || null,
-                       followupDate: row[11] || null,
+                       enquiryDate: validateDate(row[10]) || getTodayDate(), //  Validate date
+                       followupDate: validateDate(row[11]) || null,
                        note: row[12],
                        courses: rawCourses,
                        leadSource: row[14] || 'Unknown'
                    };
                }
-
+   
                // Validate required fields
                if (record.mobilePrimary && record.courses.length > 0) {
                    importedData.push(record);
@@ -1118,10 +1226,28 @@
                }
            }
        }
-
+   
        displayPreview(previewData);
        document.getElementById('recordCount').textContent = importedData.length;
        document.getElementById('importBtn').disabled = false;
+   }
+   
+   //  Add date validation function
+   function validateDate(dateStr) {
+       if (!dateStr || dateStr.trim() === '') return null;
+       
+       // Try parsing DD-MM-YYYY format
+       const parts = dateStr.trim().split(/[-/]/);
+       if (parts.length === 3) {
+           const [day, month, year] = parts;
+           return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+       }
+       
+       return null;
+   }
+   
+   function getTodayDate() {
+       return new Date().toISOString().split('T')[0];
    }
 
     function displayPreview(data) {

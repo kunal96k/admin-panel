@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.Year;
@@ -28,6 +29,7 @@ public class AdmissionService {
     private final EnquiryRepository enquiryRepository;
     private final FeeInstallmentRepository feeInstallmentRepository;
     private final AdmissionMapper admissionMapper;
+    private final CSVService csvService;
 
     /**
      * Get all admissions with pagination
@@ -474,5 +476,198 @@ public class AdmissionService {
 
         log.info("Generated statistics: {}", stats);
         return stats;
+    }
+
+    @Transactional
+    public BulkImportResponseDTO bulkImportAdmissions(MultipartFile file, String importType) {
+        log.info("Starting bulk admission import from CSV file: {}", file.getOriginalFilename());
+
+        try {
+            List<AdmissionRequestDTO> dtos;
+
+            if ("OLD_FORMAT".equals(importType)) {
+                dtos = csvService.parseOldFormatAdmissionCSV(file);
+            } else {
+                throw new IllegalArgumentException("Only OLD_FORMAT is currently supported");
+            }
+
+            return processBulkAdmissionImport(dtos, importType);
+
+        } catch (Exception e) {
+            log.error("Error during bulk admission import", e);
+            return BulkImportResponseDTO.builder()
+                    .success(false)
+                    .totalRecords(0)
+                    .successfulImports(0)
+                    .failedImports(0)
+                    .message("Failed to process CSV file: " + e.getMessage())
+                    .build();
+        }
+    }
+
+    @Transactional
+    public BulkImportResponseDTO processBulkAdmissionImport(List<AdmissionRequestDTO> dtos, String importSource) {
+        log.info("🔄 LENIENT ADMISSION IMPORT: Processing {} records", dtos.size());
+        log.info("📌 MODE: Import ALL data - Handle missing enquiries");
+
+        int successCount = 0;
+        int withWarnings = 0;
+        List<BulkImportResponseDTO.ImportError> errors = new ArrayList<>();
+
+        for (int i = 0; i < dtos.size(); i++) {
+            final int rowNumber = i + 2; // CSV row (header = 1)
+            AdmissionRequestDTO dto = dtos.get(i);
+            boolean hasWarnings = false;
+
+            try {
+                // ============ STEP 1: FIX MISSING/INVALID MOBILE ============
+                String originalMobile = dto.getMobilePrimary();
+
+                if (originalMobile == null || originalMobile.trim().isEmpty() ||
+                        !originalMobile.matches("^[6-9]\\d{9}$")) {
+
+                    String placeholderMobile = String.format("8888%06d", rowNumber);
+                    dto.setMobilePrimary(placeholderMobile);
+
+                    hasWarnings = true;
+                    log.warn("⚠️ Row {}: Invalid mobile '{}' → Using placeholder '{}'",
+                            rowNumber, originalMobile, placeholderMobile);
+
+                    errors.add(BulkImportResponseDTO.ImportError.builder()
+                            .rowNumber(rowNumber)
+                            .fieldName("mobile")
+                            .errorMessage("Invalid mobile - using placeholder")
+                            .rejectedValue(originalMobile)
+                            .build());
+                }
+
+                // ============ STEP 2: CHECK FOR ENQUIRY (OPTIONAL) ============
+                Long enquiryId = null;
+                Optional<Enquiry> enquiryOpt = enquiryRepository
+                        .findByMobileAndIsDeletedFalse(dto.getMobilePrimary());
+
+                if (enquiryOpt.isPresent()) {
+                    enquiryId = enquiryOpt.get().getId();
+                    log.debug("✓ Row {}: Found enquiry ID: {}", rowNumber, enquiryId);
+                } else {
+                    // NO ENQUIRY - Create admission without enquiry link
+                    hasWarnings = true;
+                    log.warn("⚠️ Row {}: No enquiry found for mobile '{}' - Creating admission without enquiry link",
+                            rowNumber, dto.getMobilePrimary());
+
+                    errors.add(BulkImportResponseDTO.ImportError.builder()
+                            .rowNumber(rowNumber)
+                            .fieldName("enquiry")
+                            .errorMessage("No enquiry found - admission created independently")
+                            .rejectedValue(dto.getMobilePrimary())
+                            .build());
+                }
+
+                // ============ STEP 3: HANDLE DUPLICATE MOBILE ============
+                if (admissionRepository.existsByMobilePrimaryAndIsDeletedFalse(dto.getMobilePrimary())) {
+                    String duplicateMobile = dto.getMobilePrimary();
+                    String uniqueMobile = duplicateMobile + "_ADM" + rowNumber;
+                    dto.setMobilePrimary(uniqueMobile);
+
+                    hasWarnings = true;
+                    log.warn("⚠️ Row {}: Duplicate mobile '{}' → Using unique '{}'",
+                            rowNumber, duplicateMobile, uniqueMobile);
+
+                    errors.add(BulkImportResponseDTO.ImportError.builder()
+                            .rowNumber(rowNumber)
+                            .fieldName("mobile")
+                            .errorMessage("Duplicate mobile - made unique")
+                            .rejectedValue(duplicateMobile)
+                            .build());
+                }
+
+                // ============ STEP 4: FIX MISSING COURSES ============
+                if (dto.getCourses() == null || dto.getCourses().isEmpty()) {
+                    dto.setCourses(List.of("Not Specified"));
+                    hasWarnings = true;
+                    log.warn("⚠️ Row {}: Missing courses → Added placeholder", rowNumber);
+                }
+
+                // ============ STEP 5: FIX MISSING NAME ============
+                if ((dto.getFirstName() == null || dto.getFirstName().trim().isEmpty()) &&
+                        (dto.getLastName() == null || dto.getLastName().trim().isEmpty())) {
+
+                    dto.setFirstName("Unknown");
+                    dto.setLastName("Student");
+                    hasWarnings = true;
+                    log.warn("⚠️ Row {}: Missing name → Using 'Unknown Student'", rowNumber);
+                }
+
+                // ============ STEP 6: SET DEFAULTS ============
+                if (dto.getAdmissionDate() == null) {
+                    dto.setAdmissionDate(LocalDate.now());
+                }
+                if (dto.getLeadSource() == null || dto.getLeadSource().trim().isEmpty()) {
+                    dto.setLeadSource("CSV Import");
+                }
+                if (dto.getAcademicYear() == null || dto.getAcademicYear().trim().isEmpty()) {
+                    dto.setAcademicYear(String.valueOf(java.time.Year.now().getValue()));
+                }
+
+                // ============ STEP 7: CREATE ADMISSION ============
+                Admission admission = admissionMapper.toEntity(dto);
+
+                // Set enquiry ID (can be null)
+                admission.setEnquiryId(enquiryId);
+
+                // Generate registration number
+                admission.setRegistrationNumber(generateRegistrationNumber());
+
+                // Set metadata
+                admission.setCreatedBy("BULK_IMPORT");
+
+                // Save to database
+                admissionRepository.save(admission);
+
+                successCount++;
+                if (hasWarnings) {
+                    withWarnings++;
+                }
+
+                log.info("✅ Row {}: Imported {} (Mobile: {}, Reg: {}, Enquiry: {})",
+                        rowNumber,
+                        hasWarnings ? "WITH WARNINGS" : "SUCCESSFULLY",
+                        dto.getMobilePrimary(),
+                        admission.getRegistrationNumber(),
+                        enquiryId != null ? enquiryId : "NONE");
+
+            } catch (Exception e) {
+                log.error("❌ Row {}: FAILED to save - {}", rowNumber, e.getMessage(), e);
+
+                errors.add(BulkImportResponseDTO.ImportError.builder()
+                        .rowNumber(rowNumber)
+                        .fieldName("database")
+                        .errorMessage("Database save failed: " + e.getMessage())
+                        .rejectedValue(dto != null ? dto.getMobilePrimary() : "unknown")
+                        .build());
+            }
+        }
+
+        int failedCount = dtos.size() - successCount;
+
+        log.info("📊 ==================== ADMISSION IMPORT COMPLETE ====================");
+        log.info("   Total Records: {}", dtos.size());
+        log.info("   ✅ Successfully Imported: {}", successCount);
+        log.info("   ⚠️  With Warnings: {}", withWarnings);
+        log.info("   ❌ Failed: {}", failedCount);
+        log.info("   Success Rate: {}%", (successCount * 100 / dtos.size()));
+        log.info("====================================================================");
+
+        return BulkImportResponseDTO.builder()
+                .success(successCount > 0)
+                .totalRecords(dtos.size())
+                .successfulImports(successCount)
+                .failedImports(failedCount)
+                .errors(errors)
+                .message(String.format(
+                        "Admission import completed: %d/%d successful (%d with warnings, %d failed)",
+                        successCount, dtos.size(), withWarnings, failedCount
+                ))
+                .build();
     }
 }

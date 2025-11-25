@@ -24,89 +24,44 @@ public class EnquiryController {
     private final EnquiryService enquiryService;
     private final FollowUpService followUpService;
 
-    @GetMapping
-    public ResponseEntity<Page<EnquiryResponseDTO>> getAllEnquiries(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "25") int size) {
+    // ✅ CRITICAL: Specific routes MUST come BEFORE /{id} route
 
-        log.info("GET /api/enquiries - page: {}, size: {}", page, size);
-        Page<EnquiryResponseDTO> enquiries = enquiryService.getAllEnquiries(page, size);
-        return ResponseEntity.ok(enquiries);
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, String>> health() {
+        return ResponseEntity.ok(Map.of(
+                "status", "UP",
+                "service", "Enquiry Service",
+                "timestamp", java.time.LocalDateTime.now().toString()
+        ));
+    }
+
+    @GetMapping("/statistics")
+    public ResponseEntity<Map<String, Object>> getStatistics() {
+        log.info("GET /api/enquiries/statistics");
+        Map<String, Object> stats = enquiryService.getEnquiryStatistics();
+        return ResponseEntity.ok(stats);
+    }
+
+    @GetMapping("/export/csv")
+    public ResponseEntity<byte[]> exportToCSV() {
+        log.info("GET /api/enquiries/export/csv");
+        byte[] csvData = enquiryService.exportEnquiriesToCSV();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv"));
+        headers.setContentDisposition(
+                ContentDisposition.attachment()
+                        .filename("enquiries_" + System.currentTimeMillis() + ".csv")
+                        .build()
+        );
+        return ResponseEntity.ok().headers(headers).body(csvData);
     }
 
     @PostMapping("/search")
     public ResponseEntity<Page<EnquiryResponseDTO>> searchEnquiries(
             @Valid @RequestBody EnquirySearchDTO searchDTO) {
-
         log.info("POST /api/enquiries/search - criteria: {}", searchDTO);
         Page<EnquiryResponseDTO> results = enquiryService.searchEnquiries(searchDTO);
         return ResponseEntity.ok(results);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<EnquiryResponseDTO> getEnquiryById(@PathVariable Long id) {
-        log.info("GET /api/enquiries/{}", id);
-        EnquiryResponseDTO enquiry = enquiryService.getEnquiryById(id);
-        return ResponseEntity.ok(enquiry);
-    }
-
-    @PostMapping
-    public ResponseEntity<EnquiryResponseDTO> createEnquiry(
-            @Valid @RequestBody EnquiryRequestDTO requestDTO) {
-
-        log.info("POST /api/enquiries - mobile: {}", requestDTO.getMobile());
-        EnquiryResponseDTO created = enquiryService.createEnquiry(requestDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<EnquiryResponseDTO> updateEnquiry(
-            @PathVariable Long id,
-            @Valid @RequestBody EnquiryRequestDTO requestDTO) {
-
-        log.info("PUT /api/enquiries/{} - mobile: {}", id, requestDTO.getMobile());
-        EnquiryResponseDTO updated = enquiryService.updateEnquiry(id, requestDTO);
-        return ResponseEntity.ok(updated);
-    }
-
-    /**
-     * Update enquiry status - FIXED
-     */
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<Map<String, Object>> updateEnquiryStatus(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> request) {
-
-        log.info("PATCH /api/enquiries/{}/status - status: {}", id, request.get("status"));
-
-        try {
-            String status = request.get("status");
-            if (status == null || status.trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("success", false, "message", "Status is required"));
-            }
-
-            EnquiryResponseDTO updated = enquiryService.updateEnquiryStatus(id, status);
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Status updated successfully",
-                    "data", updated
-            ));
-        } catch (Exception e) {
-            log.error("Error updating status", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("success", false, "message", e.getMessage()));
-        }
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> deleteEnquiry(@PathVariable Long id) {
-        log.info("DELETE /api/enquiries/{}", id);
-        enquiryService.deleteEnquiry(id);
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "message", "Enquiry deleted successfully"
-        ));
     }
 
     @PostMapping("/bulk-import")
@@ -134,7 +89,6 @@ public class EnquiryController {
         }
 
         BulkImportResponseDTO result = enquiryService.bulkImportEnquiries(file, importType);
-
         HttpStatus status = result.isSuccess() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
         return ResponseEntity.status(status).body(result);
     }
@@ -144,7 +98,8 @@ public class EnquiryController {
             @RequestBody List<EnquiryRequestDTO> enquiries,
             @RequestParam(defaultValue = "MANUAL") String importSource) {
 
-        log.info("POST /api/enquiries/bulk-import-json - {} records", enquiries.size());
+        log.info("POST /api/enquiries/bulk-import-json - {} records, source: {}",
+                enquiries.size(), importSource);
 
         if (enquiries == null || enquiries.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -157,52 +112,94 @@ public class EnquiryController {
                             .build());
         }
 
-        BulkImportResponseDTO result = enquiryService.processBulkImport(enquiries, importSource);
-
-        HttpStatus status = result.isSuccess() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
-        return ResponseEntity.status(status).body(result);
+        try {
+            BulkImportResponseDTO result = enquiryService.processBulkImport(enquiries, importSource);
+            HttpStatus status = result.isSuccess() ? HttpStatus.OK : HttpStatus.PARTIAL_CONTENT;
+            return ResponseEntity.status(status).body(result);
+        } catch (Exception e) {
+            log.error("Bulk import failed", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BulkImportResponseDTO.builder()
+                            .success(false)
+                            .totalRecords(enquiries.size())
+                            .successfulImports(0)
+                            .failedImports(enquiries.size())
+                            .message("Import failed: " + e.getMessage())
+                            .build());
+        }
     }
 
-    @GetMapping("/export/csv")
-    public ResponseEntity<byte[]> exportToCSV() {
-        log.info("GET /api/enquiries/export/csv");
+    // ✅ Generic routes come AFTER specific routes
 
-        byte[] csvData = enquiryService.exportEnquiriesToCSV();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType("text/csv"));
-        headers.setContentDisposition(
-                ContentDisposition.attachment()
-                        .filename("enquiries_" + System.currentTimeMillis() + ".csv")
-                        .build()
-        );
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(csvData);
+    @GetMapping
+    public ResponseEntity<Page<EnquiryResponseDTO>> getAllEnquiries(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size) {
+        log.info("GET /api/enquiries - page: {}, size: {}", page, size);
+        Page<EnquiryResponseDTO> enquiries = enquiryService.getAllEnquiries(page, size);
+        return ResponseEntity.ok(enquiries);
     }
 
-    @GetMapping("/statistics")
-    public ResponseEntity<Map<String, Object>> getStatistics() {
-        log.info("GET /api/enquiries/statistics");
-        Map<String, Object> stats = enquiryService.getEnquiryStatistics();
-        return ResponseEntity.ok(stats);
+    @GetMapping("/{id}")
+    public ResponseEntity<EnquiryResponseDTO> getEnquiryById(@PathVariable Long id) {
+        log.info("GET /api/enquiries/{}", id);
+        EnquiryResponseDTO enquiry = enquiryService.getEnquiryById(id);
+        return ResponseEntity.ok(enquiry);
     }
 
-    @GetMapping("/health")
-    public ResponseEntity<Map<String, String>> health() {
+    @PostMapping
+    public ResponseEntity<EnquiryResponseDTO> createEnquiry(
+            @Valid @RequestBody EnquiryRequestDTO requestDTO) {
+        log.info("POST /api/enquiries - mobile: {}", requestDTO.getMobile());
+        EnquiryResponseDTO created = enquiryService.createEnquiry(requestDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<EnquiryResponseDTO> updateEnquiry(
+            @PathVariable Long id,
+            @Valid @RequestBody EnquiryRequestDTO requestDTO) {
+        log.info("PUT /api/enquiries/{} - mobile: {}", id, requestDTO.getMobile());
+        EnquiryResponseDTO updated = enquiryService.updateEnquiry(id, requestDTO);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Map<String, Object>> updateEnquiryStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        log.info("PATCH /api/enquiries/{}/status - status: {}", id, request.get("status"));
+        try {
+            String status = request.get("status");
+            if (status == null || status.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Status is required"));
+            }
+            EnquiryResponseDTO updated = enquiryService.updateEnquiryStatus(id, status);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Status updated successfully",
+                    "data", updated
+            ));
+        } catch (Exception e) {
+            log.error("Error updating status", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> deleteEnquiry(@PathVariable Long id) {
+        log.info("DELETE /api/enquiries/{}", id);
+        enquiryService.deleteEnquiry(id);
         return ResponseEntity.ok(Map.of(
-                "status", "UP",
-                "service", "Enquiry Service",
-                "timestamp", java.time.LocalDateTime.now().toString()
+                "success", true,
+                "message", "Enquiry deleted successfully"
         ));
     }
 
-    // ================= FOLLOW-UP APIs - FIXED =================
+    // ================= FOLLOW-UP APIs =================
 
-    /**
-     * Get follow-up history for an enquiry
-     */
     @GetMapping("/{enquiryId}/followups")
     public ResponseEntity<?> getFollowUpHistory(@PathVariable Long enquiryId) {
         log.info("GET /api/enquiries/{}/followups", enquiryId);
@@ -216,20 +213,13 @@ public class EnquiryController {
         }
     }
 
-    /**
-     * Add a follow-up for an enquiry - FIXED
-     */
     @PostMapping("/{enquiryId}/followups")
     public ResponseEntity<?> addFollowUp(
             @PathVariable Long enquiryId,
             @RequestBody FollowUpDTO followUp) {
-
         log.info("POST /api/enquiries/{}/followups - mode: {}", enquiryId, followUp.getMode());
-
         try {
-            // Set enquiry ID from path
             followUp.setEnquiryId(enquiryId);
-
             FollowUpDTO created = followUpService.addFollowUp(enquiryId, followUp);
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                     "success", true,
@@ -243,9 +233,6 @@ public class EnquiryController {
         }
     }
 
-    /**
-     * Delete a follow-up
-     */
     @DeleteMapping("/followups/{followUpId}")
     public ResponseEntity<Map<String, Object>> deleteFollowUp(@PathVariable Long followUpId) {
         log.info("DELETE /api/enquiries/followups/{}", followUpId);

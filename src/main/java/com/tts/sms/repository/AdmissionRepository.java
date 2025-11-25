@@ -42,34 +42,23 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
     /**
      * Advanced search with multiple criteria - FIXED for JSON arrays using native query
      */
-    @Query(value = "SELECT a.* FROM admissions a WHERE a.is_deleted = false " +
-            "AND (:searchTerm IS NULL OR " +
-            "LOWER(a.first_name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-            "LOWER(a.last_name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-            "LOWER(a.mobile_primary) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-            "LOWER(a.registration_number) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-            "LOWER(a.email_primary) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) " +
-            "AND (:status IS NULL OR a.status = :status) " +
-            "AND (:course IS NULL OR JSON_CONTAINS(a.courses, JSON_QUOTE(:course))) " +
-            "AND (:batch IS NULL OR JSON_CONTAINS(a.batches, JSON_QUOTE(:batch))) " +
-            "AND (:academicYear IS NULL OR a.academic_year = :academicYear) " +
-            "AND (:admissionDateFrom IS NULL OR a.admission_date >= :admissionDateFrom) " +
-            "AND (:admissionDateTo IS NULL OR a.admission_date <= :admissionDateTo) " +
-            "ORDER BY a.admission_date DESC",
-            countQuery = "SELECT COUNT(*) FROM admissions a WHERE a.is_deleted = false " +
-                    "AND (:searchTerm IS NULL OR " +
-                    "LOWER(a.first_name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-                    "LOWER(a.last_name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-                    "LOWER(a.mobile_primary) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-                    "LOWER(a.registration_number) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-                    "LOWER(a.email_primary) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) " +
-                    "AND (:status IS NULL OR a.status = :status) " +
-                    "AND (:course IS NULL OR JSON_CONTAINS(a.courses, JSON_QUOTE(:course))) " +
-                    "AND (:batch IS NULL OR JSON_CONTAINS(a.batches, JSON_QUOTE(:batch))) " +
-                    "AND (:academicYear IS NULL OR a.academic_year = :academicYear) " +
-                    "AND (:admissionDateFrom IS NULL OR a.admission_date >= :admissionDateFrom) " +
-                    "AND (:admissionDateTo IS NULL OR a.admission_date <= :admissionDateTo)",
-            nativeQuery = true)
+            @Query(value = """
+            SELECT a.* FROM admissions a
+            WHERE a.is_deleted = false
+            AND (?1 IS NULL OR LOWER(a.first_name) LIKE LOWER(CONCAT('%', ?2, '%'))
+                OR LOWER(a.last_name) LIKE LOWER(CONCAT('%', ?3, '%'))
+                OR LOWER(a.mobile_primary) LIKE LOWER(CONCAT('%', ?4, '%'))
+                OR LOWER(a.registration_number) LIKE LOWER(CONCAT('%', ?5, '%'))
+                OR LOWER(a.email_primary) LIKE LOWER(CONCAT('%', ?6, '%')))
+            AND (?7 IS NULL OR a.status = ?8)
+            AND (?9 IS NULL OR JSON_CONTAINS(a.courses, JSON_QUOTE(?10)))
+            AND (?11 IS NULL OR JSON_CONTAINS(a.batches, JSON_QUOTE(?12)))
+            AND (?13 IS NULL OR a.academic_year = ?14)
+            AND (?15 IS NULL OR a.admission_date >= ?16)
+            AND (?17 IS NULL OR a.admission_date <= ?18)
+            ORDER BY a.admission_date DESC
+            """,
+                    nativeQuery = true)
     Page<Admission> advancedSearch(
             @Param("searchTerm") String searchTerm,
             @Param("status") String status,

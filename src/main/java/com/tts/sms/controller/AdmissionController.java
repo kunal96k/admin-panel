@@ -9,6 +9,7 @@
     import org.springframework.http.HttpStatus;
     import org.springframework.http.ResponseEntity;
     import org.springframework.web.bind.annotation.*;
+    import org.springframework.web.multipart.MultipartFile;
 
     import java.util.List;
     import java.util.Map;
@@ -221,4 +222,57 @@
                             "message", ex.getMessage()
                     ));
         }
+        /**
+         * Bulk import admissions from CSV
+         */
+        @PostMapping("/bulk-import")
+        public ResponseEntity<BulkImportResponseDTO> bulkImportFromCSV(
+                @RequestParam("file") MultipartFile file,
+                @RequestParam(defaultValue = "OLD_FORMAT") String importType) {
+
+            log.info("POST /api/admissions/bulk-import - file: {}, type: {}",
+                    file.getOriginalFilename(), importType);
+
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(BulkImportResponseDTO.builder()
+                                .success(false)
+                                .message("File is empty")
+                                .build());
+            }
+
+            BulkImportResponseDTO result = admissionService.bulkImportAdmissions(file, importType);
+
+            HttpStatus status = result.isSuccess() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(status).body(result);
+        }
+
+
+        /**
+         * Bulk import admissions from JSON (for client-side parsing)
+         */
+        @PostMapping("/bulk-import-json")
+        public ResponseEntity<BulkImportResponseDTO> bulkImportFromJSON(
+                @RequestBody List<AdmissionRequestDTO> admissions,
+                @RequestParam(defaultValue = "CSV_IMPORT") String importSource) {
+
+            log.info("POST /api/admissions/bulk-import-json - {} records", admissions.size());
+
+            if (admissions == null || admissions.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(BulkImportResponseDTO.builder()
+                                .success(false)
+                                .totalRecords(0)
+                                .successfulImports(0)
+                                .failedImports(0)
+                                .message("Admissions list cannot be empty")
+                                .build());
+            }
+
+            BulkImportResponseDTO result = admissionService.processBulkAdmissionImport(admissions, importSource);
+
+            HttpStatus status = result.isSuccess() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(status).body(result);
+        }
+
     }
