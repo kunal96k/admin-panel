@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AdmissionRepository extends JpaRepository<Admission, Long> {
@@ -30,9 +31,20 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
     boolean existsByMobilePrimaryAndIsDeletedFalse(String mobilePrimary);
 
     /**
-     * Find admission by mobile number
+     * Find admissions by mobile number - Returns ALL matches (allows duplicates)
      */
     List<Admission> findByMobilePrimaryAndIsDeletedFalse(String mobilePrimary);
+
+    /**
+     * Find FIRST admission by mobile number (for backward compatibility)
+     */
+    @Query("SELECT a FROM Admission a WHERE a.mobilePrimary = :mobile AND a.isDeleted = false ORDER BY a.admissionDate DESC")
+    Optional<Admission> findFirstByMobilePrimaryAndIsDeletedFalse(@Param("mobile") String mobile);
+
+    /**
+     * Find ALL admissions by mobile (allows duplicates)
+     */
+    List<Admission> findAllByMobilePrimaryAndIsDeletedFalse(String mobilePrimary);
 
     /**
      * Find admission by registration number

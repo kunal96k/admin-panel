@@ -32,6 +32,11 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Long>,
     Page<Enquiry> findByIsDeletedFalse(Pageable pageable);
 
     /**
+     * Find ALL enquiries by mobile (returns list to handle duplicates)
+     */
+    List<Enquiry> findAllByMobileAndIsDeletedFalse(String mobile);
+
+    /**
      * Find by mobile/email + not deleted
      */
     Optional<Enquiry> findByMobileAndIsDeletedFalse(String mobile);
@@ -113,6 +118,12 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Long>,
             "AND e.followupDate <= :date " +
             "AND e.status NOT IN ('Closed', 'Admitted')")
     List<Enquiry> findPendingFollowups(@Param("date") LocalDate date);
+
+    /**
+     * Find FIRST enquiry by mobile (handles duplicates gracefully)
+     */
+    @Query("SELECT e FROM Enquiry e WHERE e.mobile = :mobile AND e.isDeleted = false ORDER BY e.createdAt DESC")
+    Optional<Enquiry> findFirstByMobileAndIsDeletedFalse(@Param("mobile") String mobile);
 
     /**
      * Advanced search with multiple filters  using native query for JSON

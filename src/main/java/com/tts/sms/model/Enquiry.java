@@ -16,9 +16,6 @@ import java.util.ArrayList;
 @Entity
 @Table(
         name = "enquiries",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uc_enquiry_no", columnNames = {"enquiry_no"})
-        },
         indexes = {
                 @Index(name = "idx_enquiry_no", columnList = "enquiry_no"),
                 @Index(name = "idx_mobile", columnList = "mobile"),

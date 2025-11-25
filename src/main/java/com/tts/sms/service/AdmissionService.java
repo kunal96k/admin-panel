@@ -430,7 +430,7 @@ public class AdmissionService {
 
     @Transactional
     public BulkImportResponseDTO processBulkAdmissionImport(List<AdmissionRequestDTO> dtos, String importSource) {
-        log.info("🔄 LENIENT ADMISSION IMPORT: Processing {} records", dtos.size());
+        log.info("🔄 EXACT IMPORT: Processing {} records - NO modifications", dtos.size());
 
         int successCount = 0;
         int withWarnings = 0;
@@ -442,65 +442,45 @@ public class AdmissionService {
             boolean hasWarnings = false;
 
             try {
-                // STEP 1: Fix missing/invalid mobile
-                String originalMobile = dto.getMobilePrimary();
-
-                if (originalMobile == null || originalMobile.trim().isEmpty() ||
-                        !originalMobile.matches("^[6-9]\\d{9}$")) {
-
-                    String placeholderMobile = String.format("8888%06d", rowNumber);
-                    dto.setMobilePrimary(placeholderMobile);
-
+                // STEP 1: Handle ONLY NULL/EMPTY - Replace with "N/A", NOT placeholders
+                if (dto.getMobilePrimary() == null || dto.getMobilePrimary().trim().isEmpty()) {
+                    dto.setMobilePrimary("N/A");
                     hasWarnings = true;
-                    log.warn("⚠️ Row {}: Invalid mobile '{}' → Using placeholder '{}'",
-                            rowNumber, originalMobile, placeholderMobile);
-
-                    errors.add(BulkImportResponseDTO.ImportError.builder()
-                            .rowNumber(rowNumber)
-                            .fieldName("mobile")
-                            .errorMessage("Invalid mobile - using placeholder")
-                            .rejectedValue(originalMobile)
-                            .build());
                 }
 
-                // STEP 2: Check for enquiry (optional)
+                if (dto.getFirstName() == null || dto.getFirstName().trim().isEmpty()) {
+                    dto.setFirstName("N/A");
+                    hasWarnings = true;
+                }
+
+                if (dto.getLastName() == null || dto.getLastName().trim().isEmpty()) {
+                    dto.setLastName("N/A");
+                    hasWarnings = true;
+                }
+
+                // STEP 2: Handle enquiry lookup (NO modification of data)
                 Long enquiryId = null;
-                Optional<Enquiry> enquiryOpt = enquiryRepository
-                        .findByMobileAndIsDeletedFalse(dto.getMobilePrimary());
+                try {
+                    List<Enquiry> enquiries = enquiryRepository
+                            .findAllByMobileAndIsDeletedFalse(dto.getMobilePrimary());
 
-                if (enquiryOpt.isPresent()) {
-                    enquiryId = enquiryOpt.get().getId();
-                } else {
-                    hasWarnings = true;
-                    log.warn("⚠️ Row {}: No enquiry found - Creating admission without enquiry link", rowNumber);
-
-                    errors.add(BulkImportResponseDTO.ImportError.builder()
-                            .rowNumber(rowNumber)
-                            .fieldName("enquiry")
-                            .errorMessage("No enquiry found - admission created independently")
-                            .rejectedValue(dto.getMobilePrimary())
-                            .build());
+                    if (!enquiries.isEmpty()) {
+                        enquiryId = enquiries.get(0).getId(); // Take first one
+                        if (enquiries.size() > 1) {
+                            log.debug("Row {}: Multiple enquiries found, using first", rowNumber);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.debug("Row {}: Enquiry check skipped - {}", rowNumber, e.getMessage());
                 }
 
-                // STEP 3: Allow duplicates - No mobile uniqueness check
-                // Duplicates are allowed in the system
-
-               // STEP 4: Fix missing courses
+                // STEP 3: Handle missing courses
                 if (dto.getCourses() == null || dto.getCourses().isEmpty()) {
-                    dto.setCourses(List.of("Not Specified"));
+                    dto.setCourses(List.of("N/A"));
                     hasWarnings = true;
                 }
 
-                // STEP 5: Fix missing name
-                if ((dto.getFirstName() == null || dto.getFirstName().trim().isEmpty()) &&
-                        (dto.getLastName() == null || dto.getLastName().trim().isEmpty())) {
-
-                    dto.setFirstName("Unknown");
-                    dto.setLastName("Student");
-                    hasWarnings = true;
-                }
-
-                // STEP 6: Set defaults
+                // STEP 4: Set defaults ONLY for required system fields
                 if (dto.getAdmissionDate() == null) {
                     dto.setAdmissionDate(LocalDate.now());
                 }
@@ -511,35 +491,68 @@ public class AdmissionService {
                     dto.setAcademicYear(String.valueOf(Year.now().getValue()));
                 }
                 if (dto.getDocumentType() == null || dto.getDocumentType().trim().isEmpty()) {
-                    dto.setDocumentType("Aadhaar Card");
+                    dto.setDocumentType("N/A");
                 }
 
-                // STEP 7: Create admission
+                // STEP 5: Create admission - KEEP ALL VALUES AS-IS
                 Admission admission = admissionMapper.toEntity(dto);
                 admission.setEnquiryId(enquiryId);
-                admission.setRegistrationNumber(generateRegistrationNumber());
                 admission.setCreatedBy("BULK_IMPORT");
 
-                admissionRepository.save(admission);
+                // STEP 6: Handle registration number
+                String regNumber = dto.getRegistrationNumber();
+                if (regNumber != null && !regNumber.trim().isEmpty()) {
+                    // KEEP ORIGINAL - Check for duplicates
+                    Admission existing = admissionRepository
+                            .findByRegistrationNumberAndIsDeletedFalse(regNumber);
 
-                successCount++;
-                if (hasWarnings) {
-                    withWarnings++;
+                    if (existing != null) {
+                        // Keep original but append suffix to make unique
+                        regNumber = regNumber + "_DUP" + rowNumber;
+                        hasWarnings = true;
+
+                        errors.add(BulkImportResponseDTO.ImportError.builder()
+                                .rowNumber(rowNumber)
+                                .fieldName("registrationNumber")
+                                .errorMessage("Duplicate reg number - appended suffix")
+                                .rejectedValue(dto.getRegistrationNumber())
+                                .build());
+                    }
+                    admission.setRegistrationNumber(regNumber);
+                } else {
+                    admission.setRegistrationNumber(generateRegistrationNumber());
                 }
 
-                log.info("✅ Row {}: Imported {} (Mobile: {}, Reg: {})",
-                        rowNumber,
-                        hasWarnings ? "WITH WARNINGS" : "SUCCESSFULLY",
-                        dto.getMobilePrimary(),
-                        admission.getRegistrationNumber());
+                // STEP 7: Save in isolated transaction
+                try {
+                    saveAdmissionInNewTransaction(admission);
+                    successCount++;
+
+                    if (hasWarnings) {
+                        withWarnings++;
+                    }
+
+                    log.info("✅ Row {}: Saved (Mobile: {}, Reg: {})",
+                            rowNumber, admission.getMobilePrimary(), admission.getRegistrationNumber());
+
+                } catch (Exception saveEx) {
+                    log.error("❌ Row {}: Save failed - {}", rowNumber, saveEx.getMessage());
+
+                    errors.add(BulkImportResponseDTO.ImportError.builder()
+                            .rowNumber(rowNumber)
+                            .fieldName("database")
+                            .errorMessage("Save failed: " + saveEx.getMessage())
+                            .rejectedValue(dto.getMobilePrimary())
+                            .build());
+                }
 
             } catch (Exception e) {
-                log.error("❌ Row {}: FAILED to save - {}", rowNumber, e.getMessage());
+                log.error("❌ Row {}: Processing error - {}", rowNumber, e.getMessage(), e);
 
                 errors.add(BulkImportResponseDTO.ImportError.builder()
                         .rowNumber(rowNumber)
-                        .fieldName("database")
-                        .errorMessage("Database save failed: " + e.getMessage())
+                        .fieldName("processing")
+                        .errorMessage("Error: " + e.getMessage())
                         .rejectedValue(dto != null ? dto.getMobilePrimary() : "unknown")
                         .build());
             }
@@ -547,7 +560,7 @@ public class AdmissionService {
 
         int failedCount = dtos.size() - successCount;
 
-        log.info("📊 ADMISSION IMPORT COMPLETE: {}/{} successful ({} with warnings, {} failed)",
+        log.info("📊 IMPORT RESULT: {}/{} saved ({} warnings, {} failed)",
                 successCount, dtos.size(), withWarnings, failedCount);
 
         return BulkImportResponseDTO.builder()
@@ -557,9 +570,14 @@ public class AdmissionService {
                 .failedImports(failedCount)
                 .errors(errors)
                 .message(String.format(
-                        "Admission import completed: %d/%d successful (%d with warnings, %d failed)",
+                        "%d/%d records saved (%d warnings, %d failed)",
                         successCount, dtos.size(), withWarnings, failedCount
                 ))
-                .build();
+            .build();
+        }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveAdmissionInNewTransaction(Admission admission) {
+        admissionRepository.save(admission);
     }
 }

@@ -48,7 +48,7 @@ public class EnquiryService {
     public Page<EnquiryResponseDTO> searchEnquiries(EnquirySearchDTO searchDTO) {
         log.debug("Searching enquiries with criteria: {}", searchDTO);
 
-        // ✅ Map camelCase to snake_case for database columns
+        //  Map camelCase to snake_case for database columns
         String sortColumn = "enquiry_date"; // Default
 
         if ("enquiryDate".equals(searchDTO.getSortBy())) {
@@ -228,7 +228,7 @@ public class EnquiryService {
     // ==================== LENIENT BULK IMPORT - IMPORT ALL DATA ====================
 
     /**
-     * 🔥 LENIENT MODE: Import ALL rows regardless of validation errors
+     *  LENIENT MODE: Import ALL rows regardless of validation errors
      * - Missing mobile → Generate placeholder
      * - Duplicate mobile → Append row number
      * - Missing courses → Add placeholder
@@ -239,8 +239,8 @@ public class EnquiryService {
      * NOTE: No @Transactional here - each record saved in its own transaction
      */
     public BulkImportResponseDTO processBulkImport(List<EnquiryRequestDTO> dtos, String importSource) {
-        log.info("🔄 LENIENT BULK IMPORT: Processing {} records", dtos.size());
-        log.info("📌 MODE: Import ALL data - No rows will be skipped");
+        log.info(" LENIENT BULK IMPORT: Processing {} records", dtos.size());
+        log.info(" MODE: Import ALL data - No rows will be skipped");
 
         int successCount = 0;
         int withWarnings = 0;
@@ -252,7 +252,7 @@ public class EnquiryService {
             boolean hasWarnings = false;
 
             try {
-                // ============ STEP 1: FIX MISSING/INVALID MOBILE ============
+                // ============ STEP 1:  MISSING/INVALID MOBILE ============
                 String originalMobile = dto.getMobile();
 
                 if (originalMobile == null || originalMobile.trim().isEmpty() ||
@@ -266,7 +266,7 @@ public class EnquiryService {
                     dto.setNote(note);
 
                     hasWarnings = true;
-                    log.warn("⚠️ Row {}: Invalid mobile '{}' → Using placeholder '{}'",
+                    log.warn(" Row {}: Invalid mobile '{}' → Using placeholder '{}'",
                             rowNumber, originalMobile, placeholderMobile);
 
                     errors.add(BulkImportResponseDTO.ImportError.builder()
@@ -286,7 +286,7 @@ public class EnquiryService {
                     dto.setNote(note);
 
                     hasWarnings = true;
-                    log.warn("⚠️ Row {}: Duplicate mobile '{}' - Importing anyway",
+                    log.warn(" Row {}: Duplicate mobile '{}' - Importing anyway",
                             rowNumber, duplicateMobile);
 
                     errors.add(BulkImportResponseDTO.ImportError.builder()
@@ -298,7 +298,7 @@ public class EnquiryService {
                     
                 }
 
-                // ============ STEP 3: FIX MISSING COURSES ============
+                // ============ STEP 3:  MISSING COURSES ============
                 if (dto.getCourses() == null || dto.getCourses().isEmpty()) {
                     dto.setCourses(List.of("Not Specified"));
 
@@ -307,7 +307,7 @@ public class EnquiryService {
                     dto.setNote(note);
 
                     hasWarnings = true;
-                    log.warn("⚠️ Row {}: Missing courses → Added placeholder", rowNumber);
+                    log.warn(" Row {}: Missing courses → Added placeholder", rowNumber);
 
                     errors.add(BulkImportResponseDTO.ImportError.builder()
                             .rowNumber(rowNumber)
@@ -317,7 +317,7 @@ public class EnquiryService {
                             .build());
                 }
 
-                // ============ STEP 4: FIX MISSING NAME ============
+                // ============ STEP 4:  MISSING NAME ============
                 if ((dto.getFirstName() == null || dto.getFirstName().trim().isEmpty()) &&
                         (dto.getLastName() == null || dto.getLastName().trim().isEmpty()) &&
                         (dto.getName() == null || dto.getName().trim().isEmpty())) {
@@ -331,7 +331,7 @@ public class EnquiryService {
                     dto.setNote(note);
 
                     hasWarnings = true;
-                    log.warn("⚠️ Row {}: Missing name → Using 'Unknown Student'", rowNumber);
+                    log.warn(" Row {}: Missing name → Using 'Unknown Student'", rowNumber);
                 }
 
                 // ============ STEP 5: SET DEFAULTS ============
@@ -356,7 +356,7 @@ public class EnquiryService {
                         withWarnings++;
                     }
 
-                    log.info("✅ Row {}: Imported {} (Mobile: {}, Courses: {})",
+                    log.info(" Row {}: Imported {} (Mobile: {}, Courses: {})",
                             rowNumber,
                             hasWarnings ? "WITH WARNINGS" : "SUCCESSFULLY",
                             dto.getMobile(),
@@ -367,7 +367,7 @@ public class EnquiryService {
 
             } catch (Exception e) {
                 // Even if save fails, we tried our best - log it
-                log.error("❌ Row {}: FAILED to save - {}", rowNumber, e.getMessage());
+                log.error(" Row {}: FAILED to save - {}", rowNumber, e.getMessage());
 
                 errors.add(BulkImportResponseDTO.ImportError.builder()
                         .rowNumber(rowNumber)
@@ -382,9 +382,9 @@ public class EnquiryService {
 
         log.info("📊 ==================== IMPORT COMPLETE ====================");
         log.info("   Total Records: {}", dtos.size());
-        log.info("   ✅ Successfully Imported: {}", successCount);
-        log.info("   ⚠️  With Warnings/Fixes: {}", withWarnings);
-        log.info("   ❌ Failed (DB Errors): {}", failedCount);
+        log.info("    Successfully Imported: {}", successCount);
+        log.info("     With Warnings/es: {}", withWarnings);
+        log.info("    Failed (DB Errors): {}", failedCount);
         log.info("   Success Rate: {}%", (successCount * 100 / dtos.size()));
         log.info("==========================================================");
 
@@ -411,7 +411,7 @@ public class EnquiryService {
         enquiry.setImportSource(importSource);
         enquiry.setCreatedBy("BULK_IMPORT");
 
-        // Ensure required fields have values (already fixed in processBulkImport)
+        // Ensure required fields have values (already ed in processBulkImport)
         if (enquiry.getEnquiryDate() == null) {
             enquiry.setEnquiryDate(LocalDate.now());
         }

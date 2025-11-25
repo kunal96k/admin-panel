@@ -151,7 +151,7 @@ public class CSVService {
                 }
             }
 
-            log.info("✅ CSV IMPORT COMPLETE:");
+            log.info(" CSV IMPORT COMPLETE:");
             log.info("   Total Rows: {}", totalRows);
             log.info("   Successfully Parsed: {}", successRows);
             log.info("   With Warnings/Placeholders: {}", warningRows);
@@ -252,7 +252,7 @@ public class CSVService {
                 }
             }
 
-            log.info("✅ NEW FORMAT IMPORT: {} total, {} warnings", totalRows, warningRows);
+            log.info(" NEW FORMAT IMPORT: {} total, {} warnings", totalRows, warningRows);
             return dtos;
 
         } catch (CsvException e) {
@@ -285,13 +285,33 @@ public class CSVService {
     }
 
     /**
-     * Parse multiple courses - LENIENT (returns empty list if nothing found)
+     * Clean mobile - LENIENT (returns null if invalid, caller handles)
+     */
+    /**
+     * Clean mobile - KEEP ORIGINAL, only remove country code
+     */
+    private String cleanMobileNumber(String mobile) {
+        if (mobile == null || mobile.trim().isEmpty()) return null;
+
+        String cleaned = mobile.replaceAll("\\s+", "").trim(); // Only remove spaces
+
+        // Remove country code if present
+        if (cleaned.startsWith("91") && cleaned.length() == 12) {
+            cleaned = cleaned.substring(2);
+        }
+
+        // Return as-is (even if invalid format)
+        return cleaned.isEmpty() ? null : cleaned;
+    }
+
+    /**
+     * Parse multiple courses - KEEP EXACT VALUES
      */
     private List<String> parseMultipleCourses(String coursesStr) {
         List<String> courses = new ArrayList<>();
 
         if (coursesStr == null || coursesStr.trim().isEmpty()) {
-            return courses; // Return empty, caller will add placeholder
+            return courses; // Return empty
         }
 
         String normalized = coursesStr.trim()
@@ -302,8 +322,8 @@ public class CSVService {
 
         for (String part : parts) {
             String course = part.trim();
-            if (!course.isEmpty() && !courses.contains(course)) {
-                courses.add(course);
+            if (!course.isEmpty()) {
+                courses.add(course); // Add exactly as-is
             }
         }
 
@@ -311,15 +331,15 @@ public class CSVService {
     }
 
     /**
-     * Split name - SAFE (never returns nulls)
+     * Split name - KEEP ORIGINAL VALUES
      */
     private String[] splitName(String fullName) {
         String[] result = new String[3];
 
         if (fullName == null || fullName.trim().isEmpty()) {
-            result[0] = "Unknown";
+            result[0] = "";
             result[1] = "";
-            result[2] = "Student";
+            result[2] = "";
             return result;
         }
 
@@ -340,24 +360,6 @@ public class CSVService {
         }
 
         return result;
-    }
-
-    /**
-     * Clean mobile - LENIENT (returns null if invalid, caller handles)
-     */
-    private String cleanMobileNumber(String mobile) {
-        if (mobile == null || mobile.trim().isEmpty()) return null;
-
-        // Remove all non-digits and spaces
-        String cleaned = mobile.replaceAll("[^0-9]", "").trim();
-
-        // Remove country code if present
-        if (cleaned.startsWith("91") && cleaned.length() == 12) {
-            cleaned = cleaned.substring(2);
-        }
-
-        // Return only if exactly 10 digits
-        return cleaned.length() == 10 ? cleaned : null;
     }
 
     /**
@@ -398,7 +400,6 @@ public class CSVService {
 
         List<com.tts.sms.dto.AdmissionRequestDTO> dtos = new ArrayList<>();
         int totalRows = 0;
-        int warningRows = 0;
 
         try (Reader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
              CSVReader csvReader = new CSVReader(reader)) {
@@ -417,15 +418,13 @@ public class CSVService {
                 String[] row = records.get(i);
 
                 try {
-                    // Column 0: Reg No (can be null)
+                    // Column 0: Reg No
                     String regNo = getValueOrNull(row, 0);
 
                     // Column 1: Student Name
                     String fullName = getValueOrNull(row, 1);
                     if (fullName == null || fullName.trim().isEmpty()) {
                         fullName = "Unknown Student";
-                        warningRows++;
-                        log.warn("⚠️ Row {}: Missing name, using default", i + 1);
                     }
                     String[] nameParts = splitName(fullName);
 
@@ -434,28 +433,24 @@ public class CSVService {
                     String mobile = cleanMobileNumber(rawMobile);
                     if (mobile == null || mobile.isEmpty()) {
                         mobile = generatePlaceholderMobile(i);
-                        warningRows++;
-                        log.warn("⚠️ Row {}: Invalid mobile '{}', using placeholder '{}'",
-                                i + 1, rawMobile, mobile);
                     }
 
-                    // Column 3: Course(s) - Can be comma-separated
+                    // Column 3: Course(s)
                     String coursesStr = getValueOrNull(row, 3);
                     List<String> coursesList = parseMultipleCourses(coursesStr);
                     if (coursesList.isEmpty()) {
                         coursesList.add("Not Specified");
-                        warningRows++;
-                        log.warn("⚠️ Row {}: No courses found, using placeholder", i + 1);
                     }
 
                     // Column 4: Admission Date
                     LocalDate admissionDate = parseDate(getValueOrNull(row, 4));
                     if (admissionDate == null) {
                         admissionDate = LocalDate.now();
-                        log.debug("Row {}: Using current date", i + 1);
                     }
 
+                    // CREATE DTO - IMPORT ALL DATA
                     com.tts.sms.dto.AdmissionRequestDTO dto = com.tts.sms.dto.AdmissionRequestDTO.builder()
+                            .registrationNumber(regNo)  // FROM CSV
                             .firstName(nameParts[0])
                             .middleName(nameParts[1])
                             .lastName(nameParts[2])
@@ -463,7 +458,7 @@ public class CSVService {
                             .courses(coursesList)
                             .admissionDate(admissionDate)
                             .leadSource("CSV_IMPORT")
-                            .documentType("Aadhaar Card") // Default
+                            .documentType("Aadhaar Card")
                             .academicYear(String.valueOf(java.time.Year.now().getValue()))
                             .build();
 
@@ -471,9 +466,8 @@ public class CSVService {
 
                 } catch (Exception e) {
                     log.error("❌ Row {}: Error parsing - {}", i + 1, e.getMessage());
-                    warningRows++;
 
-                    // Create fallback admission DTO
+                    // Create minimal fallback
                     com.tts.sms.dto.AdmissionRequestDTO fallbackDto = com.tts.sms.dto.AdmissionRequestDTO.builder()
                             .firstName("Import")
                             .lastName("Error")
@@ -489,11 +483,7 @@ public class CSVService {
                 }
             }
 
-            log.info("✅ ADMISSION CSV IMPORT COMPLETE:");
-            log.info("   Total Rows: {}", totalRows);
-            log.info("   With Warnings: {}", warningRows);
-            log.info("   Records Created: {}", dtos.size());
-
+            log.info(" ADMISSION CSV IMPORT COMPLETE: {} records created", dtos.size());
             return dtos;
 
         } catch (CsvException e) {

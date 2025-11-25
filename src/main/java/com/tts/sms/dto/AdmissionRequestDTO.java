@@ -38,16 +38,12 @@ public class AdmissionRequestDTO {
 
     private String registrationNumber;
 
-    // Contact Information
-    @NotBlank(message = "Primary mobile is required")
     private String mobilePrimary;
 
     private String mobileSecondary;
 
-    @Email(message = "Invalid email format")
     private String emailPrimary;
 
-    @Email(message = "Invalid secondary email format")
     private String emailSecondary;
 
     private String currentAddress;

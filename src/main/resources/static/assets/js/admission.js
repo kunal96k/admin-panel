@@ -1,16 +1,16 @@
 (function() {
     'use strict';
 
-    let currentTab = 1;
-    const totalTabs = 6;
-    let admissionData = {};
-    let importedAdmissions = [];
-    let videoStream = null;
+        let currentTab = 1;
+       const totalTabs = 6;
+       let admissionData = {};
+       let importedAdmissions = [];
+       let videoStream = null;
 
-    let currentPage = 0;
-    let pageSize = 25;
-    let totalPages = 0;
-    let totalElements = 0;
+       let currentPage = 0;
+       let pageSize = 25;
+       let totalPages = 0;
+       let totalElements = 0;
 
     // Course list
     const COURSE_NAMES = [
@@ -87,46 +87,65 @@
     }
 
     // Check for enquiry pre-fill
-    function checkEnquiryPreFill() {
-        const admissionEnquiry = sessionStorage.getItem('admissionEnquiry');
-        const fromEnquiry = sessionStorage.getItem('admissionFromEnquiry');
+   function checkEnquiryPreFill() {
+           const admissionEnquiry = sessionStorage.getItem('admissionEnquiry');
+           const fromEnquiry = sessionStorage.getItem('admissionFromEnquiry');
 
-        if (admissionEnquiry && fromEnquiry === 'true') {
-            try {
-                const enquiry = JSON.parse(admissionEnquiry);
+           if (admissionEnquiry && fromEnquiry === 'true') {
+               try {
+                   const enquiry = JSON.parse(admissionEnquiry);
 
-                // Clear session storage first
-                sessionStorage.removeItem('admissionEnquiry');
-                sessionStorage.removeItem('admissionFromEnquiry');
+                   // Clear session storage first
+                   sessionStorage.removeItem('admissionEnquiry');
+                   sessionStorage.removeItem('admissionFromEnquiry');
 
-                // Open modal
-                const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
-                modal.show();
+                   // Open modal
+                   const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
+                   modal.show();
 
-                setTimeout(() => {
-                    prefillAdmissionForm(enquiry);
+                   setTimeout(() => {
+                       prefillAdmissionForm(enquiry);
 
-                    Swal.fire({
-                        title: 'Form Pre-filled',
-                        text: 'Student details loaded from enquiry. Please review and complete remaining fields.',
-                        icon: 'success',
-                        timer: 3000,
-                        showConfirmButton: false,
-                        toast: true,
-                        position: 'top-end'
-                    });
-                }, 500);
+                       Swal.fire({
+                           title: 'Form Pre-filled',
+                           text: 'Student details loaded from enquiry. Please review and complete remaining fields.',
+                           icon: 'success',
+                           timer: 3000,
+                           showConfirmButton: false,
+                           toast: true,
+                           position: 'top-end'
+                       });
+                   }, 500);
 
-            } catch (error) {
-                console.error('Error pre-filling form:', error);
-            }
-        }
-    }
+               } catch (error) {
+                   console.error('Error pre-filling form:', error);
+               }
+           }
+       }
+
+       function getCsrfToken() {
+           const metaTag = document.querySelector('meta[name="_csrf"]');
+           return metaTag ? metaTag.getAttribute('content') : null;
+       }
+
+       function getCsrfHeader() {
+           const metaTag = document.querySelector('meta[name="_csrf_header"]');
+           return metaTag ? metaTag.getAttribute('content') : 'X-CSRF-TOKEN';
+       }
 
     // Load Admissions from API
     async function loadAdmissions(page = 0, size = 25) {
         try {
             showLoading('Loading admissions...');
+
+             const csrfToken = getCsrfToken();
+                    const headers = {
+                        'Content-Type': 'application/json'
+                    };
+
+                     if (csrfToken) {
+                                headers[getCsrfHeader()] = csrfToken;
+                     }
 
             const response = await fetch(`/api/admissions?page=${page}&size=${size}`);
 
@@ -384,7 +403,6 @@
         modal.show();
     }
 
-    // Pre-fill Admission Form
     function prefillAdmissionForm(data, isUpdate = false) {
         console.log('Pre-filling form with:', data);
 
@@ -1138,12 +1156,12 @@
 
                               record = {
                                   registrationNumber: row[0] || null,
-                                  firstName: nameParts[0] || '',
+                                  firstName: nameParts[0] || 'Unknown',
                                   middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '',
-                                  lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : '',
-                                  mobilePrimary: cleanMobile(row[2]),
-                                  courses: coursesList,
-                                  admissionDate: parseDate(row[4]),
+                                  lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : 'Student',
+                                  mobilePrimary: cleanMobile(row[2]) || `temp${i}`,
+                                  courses: coursesList.length > 0 ? coursesList : ['Not Specified'],
+                                  admissionDate: parseDate(row[4]) || new Date().toISOString().split('T')[0],
                                   leadSource: 'CSV_IMPORT',
                                   documentType: 'Aadhaar Card'
                               };
@@ -1151,27 +1169,27 @@
                               const coursesList = (row[11] || '').split(/[,\n]/).map(c => c.trim()).filter(Boolean);
 
                               record = {
-                                  firstName: row[0],
-                                  middleName: row[1],
-                                  lastName: row[2],
-                                  mobilePrimary: cleanMobile(row[3]),
+                                  registrationNumber: row[0] || null,
+                                  firstName: row[0] || 'Unknown',
+                                  middleName: row[1] || '',
+                                  lastName: row[2] || 'Student',
+                                  mobilePrimary: cleanMobile(row[3]) || `temp${i}`,
                                   mobileSecondary: cleanMobile(row[4]),
                                   emailPrimary: row[5],
                                   currentAddress: row[6],
                                   college: row[7],
                                   totalPayableFees: parseFloat(row[8]) || 0,
                                   totalReceivableFees: parseFloat(row[9]) || 0,
-                                  admissionDate: parseDate(row[10]),
-                                  courses: coursesList,
+                                  admissionDate: parseDate(row[10]) || new Date().toISOString().split('T')[0],
+                                  courses: coursesList.length > 0 ? coursesList : ['Not Specified'],
                                   leadSource: row[12] || 'CSV_IMPORT',
                                   documentType: 'Aadhaar Card'
                               };
                           }
 
-                          if (record.mobilePrimary && record.courses && record.courses.length > 0) {
-                              importedAdmissions.push(record);
-                              if (previewData.length < 5) previewData.push(record);
-                          }
+                          // LENIENT: Import ALL records - NO validation filter
+                          importedAdmissions.push(record);
+                          if (previewData.length < 5) previewData.push(record);
                       }
 
                       displayPreview(previewData);
@@ -1243,11 +1261,20 @@
 
                   function cleanMobile(mobile) {
                       if (!mobile) return null;
+
                       const cleaned = mobile.replace(/\D/g, '');
+
+                      // Remove country code if present
                       if (cleaned.startsWith('91') && cleaned.length === 12) {
                           return cleaned.substring(2);
                       }
-                      return cleaned.length === 10 ? cleaned : null;
+
+                      // Accept 10-digit numbers
+                      if (cleaned.length === 10) {
+                          return cleaned;
+                      }
+
+                      return cleaned || null;
                   }
 
                   function parseDate(dateStr) {
@@ -1318,17 +1345,17 @@
                       if (bar) bar.style.width = width + '%';
                   }
 
-                  function getValue(id) {
-                      const el = document.getElementById(id);
-                      return el ? el.value : '';
-                  }
-
                   function setValue(id, value) {
                       const el = document.getElementById(id);
                       if (el && value != null) {
                           el.value = value;
                           el.dispatchEvent(new Event('change', { bubbles: true }));
                       }
+                  }
+
+                  function getValue(id) {
+                      const el = document.getElementById(id);
+                      return el ? el.value : '';
                   }
 
                   function closeModal(modalId) {
@@ -1372,42 +1399,42 @@
                       };
                   }
 
-                  function highlightPrefilledFields() {
-                      const fieldsToHighlight = [
-                          'admFirstName', 'admMiddleName', 'admLastName',
-                          'admMobilePrimary', 'admEmailPrimary',
-                          'admCollege', 'admCurrentAddress'
-                      ];
+                 function highlightPrefilledFields() {
+                     const fieldsToHighlight = [
+                         'admFirstName', 'admMiddleName', 'admLastName',
+                         'admMobilePrimary', 'admEmailPrimary',
+                         'admCollege', 'admCurrentAddress'
+                     ];
 
-                      fieldsToHighlight.forEach(fieldId => {
-                          const field = document.getElementById(fieldId);
-                          if (field && field.value) {
-                              field.style.backgroundColor = '#e0f2fe';
-                              field.style.transition = 'background-color 2s';
+                     fieldsToHighlight.forEach(fieldId => {
+                         const field = document.getElementById(fieldId);
+                         if (field && field.value) {
+                             field.style.backgroundColor = '#e0f2fe';
+                             field.style.transition = 'background-color 2s';
 
-                              setTimeout(() => {
-                                  field.style.backgroundColor = '';
-                              }, 3000);
-                          }
-                      });
-                  }
+                             setTimeout(() => {
+                                 field.style.backgroundColor = '';
+                             }, 3000);
+                         }
+                     });
+                 }
 
-                  function displaySelectedCourses(courses) {
-                      const tbody = document.getElementById('selectedCoursesBody');
-                      if (!tbody || !courses || courses.length === 0) return;
+            function displaySelectedCourses(courses) {
+                const tbody = document.getElementById('selectedCoursesBody');
+                if (!tbody || !courses || courses.length === 0) return;
 
-                      tbody.innerHTML = courses.map((course, index) => `
-                          <tr>
-                              <td>${course}</td>
-                              <td><input type="number" class="form-control form-control-sm" value="0" id="courseAmount${index}"></td>
-                              <td>
-                                  <button class="btn btn-sm btn-danger" onclick="window.removeCourse(this)">
-                                      <i class="bi bi-trash"></i>
-                                  </button>
-                              </td>
-                          </tr>
-                      `).join('');
-                  }
+                tbody.innerHTML = courses.map((course, index) => `
+                    <tr>
+                        <td>${course}</td>
+                        <td><input type="number" class="form-control form-control-sm" value="0" id="courseAmount${index}"></td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="window.removeCourse(this)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
 
   // Update pagination info text
   function updatePaginationInfo() {

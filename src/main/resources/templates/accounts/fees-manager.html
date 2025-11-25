@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}"
+      lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fees Manager</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <!-- SweetAlert2 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" th:href="@{/assets/css/fees-manager.css}" href="/assets/css/fees-manager.css">
+</head>
+<body>
+
+<!-- Dashboard Content Fragment -->
+<main layout:fragment="content">
+
+    <!-- Page Header -->
+    <div class="container-fluid mt-4">
+        <div class="page-header">
+            <h2><i class="bi bi-currency-rupee"></i>
+                Fees Manager</h2>
+            <p class="mb-0 opacity-90">Manage student fees, receipts, and refunds efficiently</p>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-card">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-3 mb-lg-0">
+                    <button class="btn btn-success btn-action me-2" id="btnImportCSV">
+                        <i class="bi bi-upload me-2"></i>Import CSV
+                    </button>
+                    <button class="btn btn-info btn-action" id="btnExportCSV">
+                        <i class="bi bi-download me-2"></i>Export CSV
+                    </button>
+                </div>
+                <div class="col-lg-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search by reg no, name, mobile...">
+                        <select class="form-select" id="entriesPerPage" style="max-width: 150px;">
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fees Status Table -->
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="table table-hover" id="feesTable">
+                    <thead>
+                    <tr>
+                        <th>REG. NO.</th>
+                        <th>STUDENT NAME</th>
+                        <th>MOB NO.</th>
+                        <th>TOTAL FEES</th>
+                        <th>FEES DUE</th>
+                        <th>TOTAL PAID</th>
+                        <th>DUE DATE</th>
+                        <th>FEES REFUND</th>
+                        <th>STATUS</th>
+                        <th>COURSE</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td colspan="11" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2 mb-0">Loading fees data...</p>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="d-flex justify-content-between align-items-center mt-3 px-3 pb-3">
+                <div class="text-muted">
+                    Showing <span id="entriesStart">0</span> to <span id="entriesEnd">0</span>
+                    of <span id="totalEntries">0</span> entries
+                </div>
+                <nav>
+                    <ul class="pagination mb-0" id="paginationControls">
+                        <!-- Pagination buttons will be inserted here -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+        <!-- New Fee Receipt Modal -->
+        <div class="modal fade" id="feeReceiptModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-receipt me-2"></i>New Fee Receipt
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="feeReceiptForm">
+                            <div class="row">
+                                <!-- Left Column -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Student Name</label>
+                                        <input type="text" class="form-control" id="receiptStudentName" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Total Fees</label>
+                                        <input type="text" class="form-control" id="receiptTotalFees" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Pending Fees</label>
+                                        <input type="text" class="form-control" id="receiptPendingFees" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Enable GST</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enableGst">
+                                            <label class="form-check-label" id="gstStatus"></label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3" id="sgstField" style="display:none;">
+                                        <label class="form-label">SGST (%)</label>
+                                        <input type="number" class="form-control" id="sgstPercent" readonly>
+                                    </div>
+                                    <div class="mb-3" id="invoiceValueField" style="display:none;">
+                                        <label class="form-label">Invoice Value</label>
+                                        <input type="text" class="form-control" id="invoiceValue" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Payment Mode</label>
+                                        <select class="form-select" id="paymentMode">
+                                            <option value="Cash" selected>Cash</option>
+                                            <option value="Cheque">Cheque</option>
+                                            <option value="Online">Online Transfer</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3" id="bankField" style="display:none;">
+                                        <label class="form-label">Bank <span class="required">*</span></label>
+                                        <select class="form-select" id="bankName">
+                                            <option value="">-- Select Bank --</option>
+                                            <option value="SBI">SBI</option>
+                                            <option value="HDFC">HDFC</option>
+                                            <option value="ICICI">ICICI</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3" id="chequeDateField" style="display:none;">
+                                        <label class="form-label">Cheque Date <span class="required">*</span></label>
+                                        <input type="date" class="form-control" id="chequeDate">
+                                    </div>
+                                    <div class="mb-3" id="transactionField" style="display:none;">
+                                        <label class="form-label">Transaction No. <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="transactionNo" maxlength="16">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Notes</label>
+                                        <textarea class="form-control" id="receiptNotes" rows="3" maxlength="250"></textarea>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Date</label>
+                                        <input type="date" class="form-control" id="receiptDate">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Received Fees</label>
+                                        <input type="text" class="form-control" id="receivedFees" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Now Receiving <span class="required">*</span></label>
+                                        <input type="number" class="form-control" id="nowReceiving" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Installment <span class="required">*</span></label>
+                                        <select class="form-select" id="installment" required>
+                                            <option value="">-- Select Installment --</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3" id="cgstField" style="display:none;">
+                                        <label class="form-label">CGST (%)</label>
+                                        <input type="number" class="form-control" id="cgstPercent" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Next Due Date <span class="required">*</span></label>
+                                        <input type="date" class="form-control" id="nextDueDate" required>
+                                    </div>
+                                    <div class="mb-3" id="chequeNoField" style="display:none;">
+                                        <label class="form-label">Cheque No. <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="chequeNo" maxlength="10">
+                                    </div>
+                                    <div class="mb-3" id="ifscField" style="display:none;">
+                                        <label class="form-label">IFSC Code</label>
+                                        <input type="text" class="form-control" id="ifscCode" maxlength="12">
+                                    </div>
+                                    <div class="mb-3" id="onlinePaymentField" style="display:none;">
+                                        <label class="form-label">Online Payment Mode <span class="required">*</span></label>
+                                        <select class="form-select" id="onlinePaymentMode">
+                                            <option value="">-- Select Mode --</option>
+                                            <option value="UPI">UPI</option>
+                                            <option value="NEFT">NEFT</option>
+                                            <option value="RTGS">RTGS</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-success" id="btnSavePrint">
+                            <i class="bi bi-printer me-2"></i>Save & Print
+                        </button>
+                        <button type="button" class="btn btn-primary" id="btnSaveReceipt">
+                            <i class="bi bi-check-circle me-2"></i>Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Fee Receipts Modal -->
+        <div class="modal fade" id="viewReceiptsModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-receipt-cutoff me-2"></i>Fee Receipts: <span id="viewReceiptStudentName"></span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered table-hover">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>Receipt No.</th>
+                                    <th>Invoice No.</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th>Payment Mode</th>
+                                    <th>Note</th>
+                                    <th>Receipt Type</th>
+                                    <th>Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody id="receiptsTableBody">
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">
+                                        <small>Loading receipts...</small>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Fees Status Modal -->
+        <div class="modal fade" id="changeStatusModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-arrow-repeat me-2"></i>Change Fees Status
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="changeStatusForm">
+                            <div class="mb-3">
+                                <label class="form-label">Payment Status</label>
+                                <select class="form-select" id="paymentStatus" required>
+                                    <option value="">-- Select --</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Clear">Clear</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-success" id="btnSaveStatus">
+                            <i class="bi bi-check-circle me-2"></i>Ok
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fee Installments Modal -->
+        <div class="modal fade" id="installmentsModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-calendar3 me-2"></i>Fee Installments
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="installmentsForm">
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label">Total Amount</label>
+                                    <input type="text" class="form-control" id="installmentTotalAmt" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Total Installment Amount</label>
+                                    <input type="text" class="form-control" id="totalInstallmentAmt" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Installment Start Date <span class="required">*</span></label>
+                                    <input type="date" class="form-control" id="installmentStartDate" required>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">No of Installments <span class="required">*</span></label>
+                                    <input type="number" class="form-control" id="noOfInstallments" min="1" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Days Gap <span class="required">*</span></label>
+                                    <input type="number" class="form-control" id="daysGap" min="1" required>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <button type="button" class="btn btn-primary w-100" id="btnGenerateInstallments">
+                                        <i class="bi bi-gear me-2"></i>Generate
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered table-hover">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Remove</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="installmentsTableBody">
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted">
+                                            <small>No installments generated yet</small>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="btnSaveInstallments">
+                            <i class="bi bi-check-circle me-2"></i>Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fees Refund Modal -->
+        <div class="modal fade" id="feesRefundModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-arrow-counterclockwise me-2"></i>Fees Refund
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="feesRefundForm">
+                            <div class="row">
+                                <!-- Left Column -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Student Name</label>
+                                        <input type="text" class="form-control" id="refundStudentName" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Paid Fees</label>
+                                        <input type="text" class="form-control" id="refundPaidFees" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Fee Refund <span class="required">*</span></label>
+                                        <input type="number" class="form-control" id="refundAmount" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Payment Mode</label>
+                                        <select class="form-select" id="refundPaymentMode">
+                                            <option value="Cash" selected>Cash</option>
+                                            <option value="Cheque">Cheque</option>
+                                            <option value="Online">Online Transfer</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3" id="refundBankField" style="display:none;">
+                                        <label class="form-label">Bank <span class="required">*</span></label>
+                                        <select class="form-select" id="refundBankName">
+                                            <option value="">-- Select Bank --</option>
+                                            <option value="SBI">SBI</option>
+                                            <option value="HDFC">HDFC</option>
+                                            <option value="ICICI">ICICI</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3" id="refundChequeDateField" style="display:none;">
+                                        <label class="form-label">Cheque Date <span class="required">*</span></label>
+                                        <input type="date" class="form-control" id="refundChequeDate">
+                                    </div>
+                                    <div class="mb-3" id="refundTransactionField" style="display:none;">
+                                        <label class="form-label">Transaction No. <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="refundTransactionNo" maxlength="16">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Notes</label>
+                                        <textarea class="form-control" id="refundNotes" rows="3" maxlength="250"></textarea>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Total Fees</label>
+                                        <input type="text" class="form-control" id="refundTotalFees" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Fees Pending</label>
+                                        <input type="text" class="form-control" id="refundPendingFees" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Date</label>
+                                        <input type="date" class="form-control" id="refundDate">
+                                    </div>
+                                    <div class="mb-3" id="refundChequeNoField" style="display:none;">
+                                        <label class="form-label">Cheque No. <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="refundChequeNo" maxlength="10">
+                                    </div>
+                                    <div class="mb-3" id="refundIfscField" style="display:none;">
+                                        <label class="form-label">IFSC Code</label>
+                                        <input type="text" class="form-control" id="refundIfscCode" maxlength="12">
+                                    </div>
+                                    <div class="mb-3" id="refundOnlinePaymentField" style="display:none;">
+                                        <label class="form-label">Online Payment Mode <span class="required">*</span></label>
+                                        <select class="form-select" id="refundOnlinePaymentMode">
+                                            <option value="">-- Select Mode --</option>
+                                            <option value="UPI">UPI</option>
+                                            <option value="NEFT">NEFT</option>
+                                            <option value="RTGS">RTGS</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Payment Clear</label>
+                                        <select class="form-select" id="refundPaymentClear">
+                                            <option value="false">No</option>
+                                            <option value="true">Yes</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-success" id="btnSaveRefundPrint">
+                            <i class="bi bi-printer me-2"></i>Save & Print
+                        </button>
+                        <button type="button" class="btn btn-primary" id="btnSaveRefund">
+                            <i class="bi bi-check-circle me-2"></i>Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import CSV Modal -->
+        <div class="modal fade" id="importModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-upload me-2"></i>Import Fees Data from CSV
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>CSV Format:</strong> Your CSV file should contain:
+                            <br>
+                            <small>Reg No., Student Name, Mobile No., Total Fees, Fees Due, Total Paid, Due Date, Fees Refund, Status, Course</small>
+                        </div>
+
+                        <div class="import-area" id="importArea">
+                            <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #667eea;"></i>
+                            <h5 class="mt-3">Drop your CSV file here or click to browse</h5>
+                            <p class="text-muted mb-3">Maximum file size: 5MB</p>
+                            <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+                            <button class="btn btn-outline-primary" id="btnBrowseFile">
+                                <i class="bi bi-folder2-open me-2"></i>Browse Files
+                            </button>
+                        </div>
+
+                        <div id="importPreview" class="mt-4" style="display: none;">
+                            <h6 class="mb-3">Preview Data:</h6>
+                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-sm table-bordered">
+                                    <thead id="previewTableHead"></thead>
+                                    <tbody id="previewTableBody"></tbody>
+                                </table>
+                            </div>
+                            <div class="alert alert-success mt-3">
+                                <i class="bi bi-check-circle me-2"></i>
+                                <strong id="recordCount">0</strong> records found and ready to import.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-success" id="importBtn" disabled>
+                            <i class="bi bi-check-circle me-2"></i>Import Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.js"></script>
+    <script th:src="@{/assets/js/fees-manager.js}" src="/assets/js/fees-manager.js" defer></script>
+</main>
+
+</body>
+</html>

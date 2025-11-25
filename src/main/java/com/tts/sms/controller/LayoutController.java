@@ -18,7 +18,7 @@ public class LayoutController {
     public String enquiry(Model model) {
         model.addAttribute("pageTitle", "Student Enquiry");
         model.addAttribute("activePage", "enquiry");
-        return "student/enquiry";  // Loads student/enquiry.html
+        return "student/enquiry";
     }
 
     // Student Admission Page
@@ -31,9 +31,7 @@ public class LayoutController {
 
     // Fees Manager
     @GetMapping("/accounts/fees-manager")
-    public String feesManager(Model model) {
-        model.addAttribute("pageTitle", "Fees Manager - TechnoKraft");
-        model.addAttribute("activePage", "fees-manager");
+    public String feesManager() {
         return "accounts/fees-manager";
     }
 
