@@ -128,7 +128,7 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Long>,
             "    LOWER(e.full_name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "    e.mobile LIKE CONCAT('%', :search, '%') OR " +
             "    LOWER(e.email) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-            "ORDER BY e.enquiry_date DESC",  // ← MUST END HERE, NO COMMA
+            "",
             countQuery = "SELECT COUNT(*) FROM enquiries e WHERE e.is_deleted = false " +
                     "AND (:status IS NULL OR LOWER(e.status) = LOWER(:status)) " +
                     "AND (:source IS NULL OR LOWER(e.source) = LOWER(:source)) " +
@@ -149,6 +149,7 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Long>,
             @Param("assignTo") String assignTo,
             Pageable pageable
     );
+
     /**
      * Dashboard statistics
      */

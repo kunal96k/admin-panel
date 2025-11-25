@@ -7,6 +7,11 @@
     let importedAdmissions = [];
     let videoStream = null;
 
+    let currentPage = 0;
+    let pageSize = 25;
+    let totalPages = 0;
+    let totalElements = 0;
+
     // Course list
     const COURSE_NAMES = [
         "JAVA CORE AND ADVANCE",
@@ -131,8 +136,16 @@
 
             const data = await response.json();
 
+            // Update pagination variables
+            currentPage = data.number || 0;
+            pageSize = data.size || 25;
+            totalPages = data.totalPages || 0;
+            totalElements = data.totalElements || 0;
+
             Swal.close();
             renderAdmissionsTable(data.content || []);
+            updatePaginationInfo();
+            renderPaginationControls();
 
         } catch (error) {
             Swal.close();
@@ -611,35 +624,43 @@
         return true;
     }
 
-    // Search Admissions - FIXED: Remove duplicate ORDER BY
-    async function searchAdmissions(e) {
-        const searchTerm = e.target.value.trim();
+    // Search Admissions
+   async function searchAdmissions(e) {
+       const searchTerm = e.target.value.trim();
 
-        try {
-            const searchDTO = {
-                searchTerm: searchTerm || null,
-                page: 0,
-                size: 25,
-                sortBy: 'admission_date', // Use snake_case to match DB column
-                sortDirection: 'DESC'
-            };
+       try {
+           const searchDTO = {
+               searchTerm: searchTerm || null,
+               page: 0, // Reset to first page on search
+               size: pageSize,
+               sortBy: 'admission_date',
+               sortDirection: 'DESC'
+           };
 
-            const response = await fetch('/api/admissions/search', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(searchDTO)
-            });
+           const response = await fetch('/api/admissions/search', {
+               method: 'POST',
+               headers: {
+                   'Content-Type': 'application/json',
+               },
+               body: JSON.stringify(searchDTO)
+           });
 
-            if (!response.ok) throw new Error('Search failed');
+           if (!response.ok) throw new Error('Search failed');
 
-            const data = await response.json();
-            renderAdmissionsTable(data.content);
-        } catch (error) {
-            console.error('Search error:', error);
-        }
-    }
+           const data = await response.json();
+
+           // Update pagination for search results
+           currentPage = data.number || 0;
+           totalPages = data.totalPages || 0;
+           totalElements = data.totalElements || 0;
+
+           renderAdmissionsTable(data.content);
+           updatePaginationInfo();
+           renderPaginationControls();
+       } catch (error) {
+           console.error('Search error:', error);
+       }
+   }
 
     // Export Admissions
     async function exportAdmissions() {
@@ -1116,6 +1137,7 @@
                                   .filter(Boolean);
 
                               record = {
+                                  registrationNumber: row[0] || null,
                                   firstName: nameParts[0] || '',
                                   middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '',
                                   lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : '',
@@ -1386,13 +1408,109 @@
                           </tr>
                       `).join('');
                   }
-  // Make functions globally available
-  window.capturePhoto = capturePhoto;
-  window.handlePhotoUpload = handlePhotoUpload;
-  window.generateInstallments = generateInstallments;
-  window.generateFeeInstallments = generateFeeInstallments;
-  window.saveFeeInstallments = saveFeeInstallments;
-  window.removeCourse = removeCourse;
-  window.removeInstallment = removeInstallment;
-  window.printToPDF = printToPDF;
+
+  // Update pagination info text
+  function updatePaginationInfo() {
+      const start = totalElements === 0 ? 0 : (currentPage * pageSize) + 1;
+      const end = Math.min((currentPage + 1) * pageSize, totalElements);
+
+      document.getElementById('entriesStart').textContent = start;
+      document.getElementById('entriesEnd').textContent = end;
+      document.getElementById('totalEntries').textContent = totalElements;
+  }
+
+  // Render pagination controls
+  function renderPaginationControls() {
+      const paginationControls = document.getElementById('paginationControls');
+
+      if (totalPages <= 1) {
+          paginationControls.innerHTML = '';
+          return;
+      }
+
+      let html = '';
+
+      // Previous button
+      html += `
+          <li class="page-item ${currentPage === 0 ? 'disabled' : ''}">
+              <a class="page-link" href="#" data-page="${currentPage - 1}">
+                  <i class="bi bi-chevron-left"></i>
+              </a>
+          </li>
+      `;
+
+      // Page numbers
+      const maxVisiblePages = 5;
+      let startPage = Math.max(0, currentPage - Math.floor(maxVisiblePages / 2));
+      let endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1);
+
+      if (endPage - startPage < maxVisiblePages - 1) {
+          startPage = Math.max(0, endPage - maxVisiblePages + 1);
+      }
+
+      // First page
+      if (startPage > 0) {
+          html += `
+              <li class="page-item">
+                  <a class="page-link" href="#" data-page="0">1</a>
+              </li>
+          `;
+          if (startPage > 1) {
+              html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+          }
+      }
+
+      // Page numbers
+      for (let i = startPage; i <= endPage; i++) {
+          html += `
+              <li class="page-item ${i === currentPage ? 'active' : ''}">
+                  <a class="page-link" href="#" data-page="${i}">${i + 1}</a>
+              </li>
+          `;
+      }
+
+      // Last page
+      if (endPage < totalPages - 1) {
+          if (endPage < totalPages - 2) {
+              html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+          }
+          html += `
+              <li class="page-item">
+                  <a class="page-link" href="#" data-page="${totalPages - 1}">${totalPages}</a>
+              </li>
+          `;
+      }
+
+      // Next button
+      html += `
+          <li class="page-item ${currentPage === totalPages - 1 ? 'disabled' : ''}">
+              <a class="page-link" href="#" data-page="${currentPage + 1}">
+                  <i class="bi bi-chevron-right"></i>
+              </a>
+          </li>
+      `;
+
+      paginationControls.innerHTML = html;
+
+      // Attach click handlers
+      paginationControls.querySelectorAll('a.page-link').forEach(link => {
+          link.addEventListener('click', function(e) {
+              e.preventDefault();
+              const page = parseInt(this.getAttribute('data-page'));
+              if (!isNaN(page) && page !== currentPage && page >= 0 && page < totalPages) {
+                  loadAdmissions(page, pageSize);
+              }
+          });
+      });
+  }
+
+      // Make functions globally available
+      window.capturePhoto = capturePhoto;
+      window.handlePhotoUpload = handlePhotoUpload;
+      window.generateInstallments = generateInstallments;
+      window.generateFeeInstallments = generateFeeInstallments;
+      window.saveFeeInstallments = saveFeeInstallments;
+      window.removeCourse = removeCourse;
+      window.removeInstallment = removeInstallment;
+      window.printToPDF = printToPDF;
   })();

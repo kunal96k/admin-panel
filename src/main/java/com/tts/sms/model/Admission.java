@@ -31,7 +31,7 @@ public class Admission {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "registration_number", unique = true, nullable = false, length = 50)
+    @Column(name = "registration_number", unique = true, length = 50)
     private String registrationNumber;
 
     @Column(name = "roll_number", length = 50)
@@ -49,14 +49,14 @@ public class Admission {
 
     // Personal Information
     @NotBlank(message = "First name is required")
-    @Column(name = "first_name", nullable = false, length = 100)
+    @Column(name = "first_name", length = 100)
     private String firstName;
 
     @Column(name = "middle_name", length = 100)
     private String middleName;
 
     @NotBlank(message = "Last name is required")
-    @Column(name = "last_name", nullable = false, length = 100)
+    @Column(name = "last_name", length = 100)
     private String lastName;
 
     @Column(name = "college", length = 200)
@@ -88,9 +88,7 @@ public class Admission {
     private String bloodGroup;
 
     // Contact Information
-    @NotBlank(message = "Primary mobile is required")
-    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Invalid mobile number")
-    @Column(name = "mobile_primary", nullable = false, length = 15)
+    @Column(name = "mobile_primary", length = 15)
     private String mobilePrimary;
 
     @Column(name = "mobile_secondary", length = 15)
@@ -116,7 +114,6 @@ public class Admission {
     @Column(name = "pin_code_permanent", length = 10)
     private String pinCodePermanent;
 
-    // Course Details - **CRITICAL FIX: Use List<String> type**
     @Column(name = "package_name", length = 150)
     private String packageName;
 
@@ -170,7 +167,7 @@ public class Admission {
 
     // Metadata
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at",nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp

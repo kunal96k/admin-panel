@@ -47,13 +47,29 @@ public class EnquiryService {
     @Transactional(readOnly = true)
     public Page<EnquiryResponseDTO> searchEnquiries(EnquirySearchDTO searchDTO) {
         log.debug("Searching enquiries with criteria: {}", searchDTO);
+
+        // ✅ Map camelCase to snake_case for database columns
+        String sortColumn = "enquiry_date"; // Default
+
+        if ("enquiryDate".equals(searchDTO.getSortBy())) {
+            sortColumn = "enquiry_date";
+        } else if ("firstName".equals(searchDTO.getSortBy())) {
+            sortColumn = "first_name";
+        } else if ("lastName".equals(searchDTO.getSortBy())) {
+            sortColumn = "last_name";
+        } else if ("mobile".equals(searchDTO.getSortBy())) {
+            sortColumn = "mobile";
+        }
+
         Sort sort = Sort.by(
                 "DESC".equalsIgnoreCase(searchDTO.getSortDirection())
                         ? Sort.Direction.DESC
                         : Sort.Direction.ASC,
-                searchDTO.getSortBy()
+                sortColumn
         );
+
         Pageable pageable = PageRequest.of(searchDTO.getPage(), searchDTO.getSize(), sort);
+
         Page<Enquiry> results = enquiryRepository.advancedSearch(
                 searchDTO.getSearchTerm(),
                 searchDTO.getStatus(),
@@ -82,12 +98,7 @@ public class EnquiryService {
     @Transactional
     public EnquiryResponseDTO createEnquiry(EnquiryRequestDTO requestDTO) {
         log.debug("Creating new enquiry for mobile: {}", requestDTO.getMobile());
-        if (enquiryRepository.existsByMobileAndIsDeletedFalse(requestDTO.getMobile())) {
-            log.warn("Enquiry with mobile {} already exists", requestDTO.getMobile());
-            throw new IllegalArgumentException(
-                    "Enquiry with mobile number " + requestDTO.getMobile() + " already exists"
-            );
-        }
+
         Enquiry enquiry = enquiryMapper.toEntity(requestDTO);
         enquiry.setImportSource("MANUAL");
         enquiry.setCreatedBy("SYSTEM");
@@ -269,23 +280,22 @@ public class EnquiryService {
                 // ============ STEP 2: HANDLE DUPLICATE MOBILE ============
                 if (enquiryRepository.existsByMobileAndIsDeletedFalse(dto.getMobile())) {
                     String duplicateMobile = dto.getMobile();
-                    String uniqueMobile = duplicateMobile + "_R" + rowNumber;
-                    dto.setMobile(uniqueMobile);
 
                     String note = dto.getNote() != null ? dto.getNote() + "\n" : "";
-                    note += "[DUPLICATE MOBILE: Original='" + duplicateMobile + "', Made Unique='" + uniqueMobile + "']";
+                    note += "[DUPLICATE MOBILE: Another enquiry exists with mobile '" + duplicateMobile + "']";
                     dto.setNote(note);
 
                     hasWarnings = true;
-                    log.warn("⚠️ Row {}: Duplicate mobile '{}' → Using unique '{}'",
-                            rowNumber, duplicateMobile, uniqueMobile);
+                    log.warn("⚠️ Row {}: Duplicate mobile '{}' - Importing anyway",
+                            rowNumber, duplicateMobile);
 
                     errors.add(BulkImportResponseDTO.ImportError.builder()
                             .rowNumber(rowNumber)
                             .fieldName("mobile")
-                            .errorMessage("Duplicate mobile number")
+                            .errorMessage("Duplicate mobile number - imported anyway")
                             .rejectedValue(duplicateMobile)
                             .build());
+                    
                 }
 
                 // ============ STEP 3: FIX MISSING COURSES ============

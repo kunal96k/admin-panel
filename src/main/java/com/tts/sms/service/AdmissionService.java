@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,26 +32,16 @@ public class AdmissionService {
     private final AdmissionMapper admissionMapper;
     private final CSVService csvService;
 
-    /**
-     * Get all admissions with pagination
-     */
     @Transactional(readOnly = true)
     public Page<AdmissionResponseDTO> getAllAdmissions(int page, int size) {
         log.debug("Fetching admissions - page: {}, size: {}", page, size);
-
-        Pageable pageable = PageRequest.of(page, size,
-                Sort.by("admissionDate").descending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("admissionDate").descending());
         Page<Admission> admissions = admissionRepository.findByIsDeletedFalse(pageable);
-
         log.info("Retrieved {} admissions out of {} total",
                 admissions.getNumberOfElements(), admissions.getTotalElements());
-
         return admissions.map(this::toResponseDTOWithInstallments);
     }
 
-    /**
-     * Search admissions with filters
-     */
     @Transactional(readOnly = true)
     public Page<AdmissionResponseDTO> searchAdmissions(AdmissionSearchDTO searchDTO) {
         log.debug("Searching admissions with criteria: {}", searchDTO);
@@ -64,14 +55,17 @@ public class AdmissionService {
 
         Pageable pageable = PageRequest.of(searchDTO.getPage(), searchDTO.getSize(), sort);
 
+        // Pass parameters in correct order matching native query
         Page<Admission> results = admissionRepository.advancedSearch(
-                searchDTO.getSearchTerm(),
-                searchDTO.getStatus(),
-                searchDTO.getCourse(),
-                searchDTO.getBatch(),
-                searchDTO.getAcademicYear(),
-                searchDTO.getAdmissionDateFrom(),
-                searchDTO.getAdmissionDateTo(),
+                searchDTO.getSearchTerm(), searchDTO.getSearchTerm(),
+                searchDTO.getSearchTerm(), searchDTO.getSearchTerm(),
+                searchDTO.getSearchTerm(), searchDTO.getSearchTerm(),
+                searchDTO.getStatus(), searchDTO.getStatus(),
+                searchDTO.getCourse(), searchDTO.getCourse(),
+                searchDTO.getBatch(), searchDTO.getBatch(),
+                searchDTO.getAcademicYear(), searchDTO.getAcademicYear(),
+                searchDTO.getAdmissionDateFrom(), searchDTO.getAdmissionDateFrom(),
+                searchDTO.getAdmissionDateTo(), searchDTO.getAdmissionDateTo(),
                 pageable
         );
 
@@ -79,79 +73,61 @@ public class AdmissionService {
         return results.map(this::toResponseDTOWithInstallments);
     }
 
-    /**
-     * Get admission by ID
-     */
     @Transactional(readOnly = true)
     public AdmissionResponseDTO getAdmissionById(Long id) {
         log.debug("Fetching admission with id: {}", id);
-
         Admission admission = admissionRepository.findById(id)
                 .filter(a -> !a.getIsDeleted())
                 .orElseThrow(() -> {
                     log.error("Admission not found with id: {}", id);
                     return new ResourceNotFoundException("Admission not found with id: " + id);
                 });
-
         log.info("Retrieved admission: {}", admission.getFullName());
         return toResponseDTOWithInstallments(admission);
     }
 
-    /**
-     * Create new admission - REQUIRES ENQUIRY TO EXIST
-     */
     @Transactional
     public AdmissionResponseDTO createAdmission(AdmissionRequestDTO requestDTO) {
         log.debug("Creating new admission for mobile: {}", requestDTO.getMobilePrimary());
 
-        // CRITICAL: Check if enquiry exists for this mobile number
-        Enquiry enquiry = enquiryRepository
-                .findByMobileAndIsDeletedFalse(requestDTO.getMobilePrimary())
-                .orElseThrow(() -> {
-                    log.error("No enquiry found for mobile: {}", requestDTO.getMobilePrimary());
-                    return new IllegalArgumentException(
-                            "Cannot create admission. No enquiry found for mobile number: "
-                                    + requestDTO.getMobilePrimary() +
-                                    ". Please create an enquiry first."
-                    );
-                });
+        // Check if enquiry exists (optional for bulk import)
+        Long enquiryId = null;
+        Optional<Enquiry> enquiryOpt = enquiryRepository
+                .findByMobileAndIsDeletedFalse(requestDTO.getMobilePrimary());
 
-        log.info("Found enquiry with ID: {} for mobile: {}",
-                enquiry.getId(), requestDTO.getMobilePrimary());
-
-        // Check if admission already exists for this enquiry
-        if (admissionRepository.existsByEnquiryIdAndIsDeletedFalse(enquiry.getId())) {
-            log.warn("Admission already exists for enquiry: {}", enquiry.getId());
-            throw new IllegalArgumentException(
-                    "Admission already exists for this student (Enquiry ID: "
-                            + enquiry.getId() + ")"
-            );
-        }
-
-        // Check for duplicate mobile
-        if (admissionRepository.existsByMobilePrimaryAndIsDeletedFalse(
-                requestDTO.getMobilePrimary())) {
-            log.warn("Admission with mobile {} already exists", requestDTO.getMobilePrimary());
-            throw new IllegalArgumentException(
-                    "Admission with mobile number " + requestDTO.getMobilePrimary()
-                            + " already exists"
-            );
+        if (enquiryOpt.isPresent()) {
+            enquiryId = enquiryOpt.get().getId();
+            log.info("Found enquiry with ID: {} for mobile: {}", enquiryId, requestDTO.getMobilePrimary());
+        } else {
+            log.warn("No enquiry found for mobile: {} - Creating admission without enquiry link",
+                    requestDTO.getMobilePrimary());
         }
 
         // Create admission entity
         Admission admission = admissionMapper.toEntity(requestDTO);
-        admission.setEnquiryId(enquiry.getId());
+        admission.setEnquiryId(enquiryId);
 
-        // Generate registration number
-        admission.setRegistrationNumber(generateRegistrationNumber());
+        // Use registration number from CSV if provided, otherwise generate
+        if (requestDTO.getRegistrationNumber() != null && !requestDTO.getRegistrationNumber().trim().isEmpty()) {
+            admission.setRegistrationNumber(requestDTO.getRegistrationNumber());
+        } else {
+            admission.setRegistrationNumber(generateRegistrationNumber());
+        }
 
         // Set defaults
-        admission.setCreatedBy("SYSTEM"); // TODO: Get from security context
+        admission.setCreatedBy("SYSTEM");
 
         // Save admission
         Admission savedAdmission = admissionRepository.save(admission);
         log.info("Created admission with id: {} and reg no: {}",
                 savedAdmission.getId(), savedAdmission.getRegistrationNumber());
+
+        // Update enquiry status if exists
+        if (enquiryId != null) {
+            Enquiry enquiry = enquiryOpt.get();
+            enquiry.setStatus("Admitted");
+            enquiryRepository.save(enquiry);
+        }
 
         // Generate fee installments if config provided
         if (requestDTO.getInstallmentConfig() != null) {
@@ -159,16 +135,9 @@ public class AdmissionService {
                     requestDTO.getTotalReceivableFees());
         }
 
-        // Update enquiry status to 'Admitted'
-        enquiry.setStatus("Admitted");
-        enquiryRepository.save(enquiry);
-
         return toResponseDTOWithInstallments(savedAdmission);
     }
 
-    /**
-     * Update existing admission
-     */
     @Transactional
     public AdmissionResponseDTO updateAdmission(Long id, AdmissionRequestDTO requestDTO) {
         log.debug("Updating admission with id: {}", id);
@@ -180,19 +149,8 @@ public class AdmissionService {
                     return new ResourceNotFoundException("Admission not found with id: " + id);
                 });
 
-        // Check if mobile is being changed and if new mobile already exists
-        if (!existingAdmission.getMobilePrimary().equals(requestDTO.getMobilePrimary()) &&
-                admissionRepository.existsByMobilePrimaryAndIsDeletedFalse(
-                        requestDTO.getMobilePrimary())) {
-            log.warn("Mobile number {} already exists for another admission",
-                    requestDTO.getMobilePrimary());
-            throw new IllegalArgumentException(
-                    "Mobile number " + requestDTO.getMobilePrimary() + " already exists"
-            );
-        }
-
         admissionMapper.updateEntityFromDTO(requestDTO, existingAdmission);
-        existingAdmission.setUpdatedBy("SYSTEM"); // TODO: Get from security context
+        existingAdmission.setUpdatedBy("SYSTEM");
 
         Admission updated = admissionRepository.save(existingAdmission);
         log.info("Updated admission with id: {}", id);
@@ -200,9 +158,6 @@ public class AdmissionService {
         return toResponseDTOWithInstallments(updated);
     }
 
-    /**
-     * Transfer admission to new academic year/batch
-     */
     @Transactional
     public AdmissionResponseDTO transferAdmission(TransferAdmissionDTO transferDTO) {
         log.debug("Transferring admission with id: {}", transferDTO.getAdmissionId());
@@ -216,15 +171,15 @@ public class AdmissionService {
         admission.setAcademicYear(transferDTO.getAcademicYear());
 
         if (transferDTO.getCourses() != null && !transferDTO.getCourses().isEmpty()) {
-            admission.setCourses(Collections.singletonList(String.join(", ", transferDTO.getCourses())));
+            admission.setCourses(transferDTO.getCourses());
         }
 
         if (transferDTO.getBatches() != null && !transferDTO.getBatches().isEmpty()) {
-            admission.setBatches(Collections.singletonList(String.join(", ", transferDTO.getBatches())));
+            admission.setBatches(transferDTO.getBatches());
         }
 
         if (transferDTO.getSubjects() != null && !transferDTO.getSubjects().isEmpty()) {
-            admission.setSubjects(Collections.singletonList(String.join(", ", transferDTO.getSubjects())));
+            admission.setSubjects(transferDTO.getSubjects());
         }
 
         if (transferDTO.getPackageName() != null) {
@@ -262,9 +217,6 @@ public class AdmissionService {
         return toResponseDTOWithInstallments(transferred);
     }
 
-    /**
-     * Delete admission (soft delete)
-     */
     @Transactional
     public void deleteAdmission(Long id) {
         log.debug("Deleting admission with id: {}", id);
@@ -283,9 +235,6 @@ public class AdmissionService {
         log.info("Soft deleted admission with id: {}", id);
     }
 
-    /**
-     * Generate fee installments
-     */
     @Transactional
     public List<FeeInstallmentDTO> generateInstallments(Long admissionId,
                                                         InstallmentConfigDTO config,
@@ -322,9 +271,6 @@ public class AdmissionService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Get installments for admission
-     */
     @Transactional(readOnly = true)
     public List<FeeInstallmentDTO> getInstallments(Long admissionId) {
         log.debug("Fetching installments for admission: {}", admissionId);
@@ -337,25 +283,18 @@ public class AdmissionService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Check if enquiry exists before admission
-     */
     @Transactional(readOnly = true)
     public boolean canCreateAdmission(String mobileNumber) {
         log.debug("Checking if admission can be created for mobile: {}", mobileNumber);
 
-        // Check if enquiry exists
-        boolean enquiryExists = enquiryRepository
-                .existsByMobileAndIsDeletedFalse(mobileNumber);
+        boolean enquiryExists = enquiryRepository.existsByMobileAndIsDeletedFalse(mobileNumber);
 
         if (!enquiryExists) {
             log.warn("No enquiry found for mobile: {}", mobileNumber);
             return false;
         }
 
-        // Check if admission already exists
-        boolean admissionExists = admissionRepository
-                .existsByMobilePrimaryAndIsDeletedFalse(mobileNumber);
+        boolean admissionExists = admissionRepository.existsByMobilePrimaryAndIsDeletedFalse(mobileNumber);
 
         if (admissionExists) {
             log.warn("Admission already exists for mobile: {}", mobileNumber);
@@ -365,9 +304,6 @@ public class AdmissionService {
         return true;
     }
 
-    /**
-     * Get enquiry data for admission form pre-fill
-     */
     @Transactional(readOnly = true)
     public EnquiryResponseDTO getEnquiryForAdmission(String mobileNumber) {
         log.debug("Fetching enquiry data for mobile: {}", mobileNumber);
@@ -377,7 +313,6 @@ public class AdmissionService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "No enquiry found for mobile: " + mobileNumber));
 
-        // Map to response (reuse EnquiryMapper)
         return EnquiryResponseDTO.builder()
                 .id(enquiry.getId())
                 .firstName(enquiry.getFirstName())
@@ -397,9 +332,6 @@ public class AdmissionService {
                 .build();
     }
 
-    /**
-     * Generate unique registration number
-     */
     private String generateRegistrationNumber() {
         String prefix = "ADM" + Year.now().getValue();
         String maxRegNo = admissionRepository.findMaxRegistrationNumber(prefix);
@@ -417,13 +349,9 @@ public class AdmissionService {
         return String.format("%s%04d", prefix, nextNumber);
     }
 
-    /**
-     * Convert to DTO with installments
-     */
     private AdmissionResponseDTO toResponseDTOWithInstallments(Admission admission) {
         AdmissionResponseDTO dto = admissionMapper.toResponseDTO(admission);
 
-        // Fetch installments
         List<FeeInstallment> installments =
                 feeInstallmentRepository.findByAdmissionIdOrderByDueDateAsc(admission.getId());
 
@@ -433,7 +361,6 @@ public class AdmissionService {
 
         dto.setTotalInstallments(installments.size());
 
-        // Calculate totals
         Double totalPaid = feeInstallmentRepository.getTotalPaidAmount(admission.getId());
         Double totalDue = feeInstallmentRepository.getTotalDueAmount(admission.getId());
 
@@ -443,16 +370,12 @@ public class AdmissionService {
         return dto;
     }
 
-    /**
-     * Get admission statistics
-     */
     @Transactional(readOnly = true)
     public Map<String, Object> getAdmissionStatistics() {
         log.debug("Calculating admission statistics");
 
         Map<String, Object> stats = new HashMap<>();
 
-        // Status-wise count
         List<Object[]> statusStats = admissionRepository.getAdmissionStatsByStatus();
         Map<String, Long> statusMap = statusStats.stream()
                 .collect(Collectors.toMap(
@@ -461,7 +384,6 @@ public class AdmissionService {
                 ));
         stats.put("byStatus", statusMap);
 
-        // Year-wise count
         List<Object[]> yearStats = admissionRepository.getAdmissionStatsByYear();
         Map<String, Long> yearMap = yearStats.stream()
                 .collect(Collectors.toMap(
@@ -470,13 +392,14 @@ public class AdmissionService {
                 ));
         stats.put("byYear", yearMap);
 
-        // Total count
         long total = admissionRepository.count();
         stats.put("total", total);
 
         log.info("Generated statistics: {}", stats);
         return stats;
     }
+
+    // ==================== LENIENT BULK IMPORT ====================
 
     @Transactional
     public BulkImportResponseDTO bulkImportAdmissions(MultipartFile file, String importType) {
@@ -508,19 +431,18 @@ public class AdmissionService {
     @Transactional
     public BulkImportResponseDTO processBulkAdmissionImport(List<AdmissionRequestDTO> dtos, String importSource) {
         log.info("🔄 LENIENT ADMISSION IMPORT: Processing {} records", dtos.size());
-        log.info("📌 MODE: Import ALL data - Handle missing enquiries");
 
         int successCount = 0;
         int withWarnings = 0;
         List<BulkImportResponseDTO.ImportError> errors = new ArrayList<>();
 
         for (int i = 0; i < dtos.size(); i++) {
-            final int rowNumber = i + 2; // CSV row (header = 1)
+            final int rowNumber = i + 2;
             AdmissionRequestDTO dto = dtos.get(i);
             boolean hasWarnings = false;
 
             try {
-                // ============ STEP 1: FIX MISSING/INVALID MOBILE ============
+                // STEP 1: Fix missing/invalid mobile
                 String originalMobile = dto.getMobilePrimary();
 
                 if (originalMobile == null || originalMobile.trim().isEmpty() ||
@@ -541,19 +463,16 @@ public class AdmissionService {
                             .build());
                 }
 
-                // ============ STEP 2: CHECK FOR ENQUIRY (OPTIONAL) ============
+                // STEP 2: Check for enquiry (optional)
                 Long enquiryId = null;
                 Optional<Enquiry> enquiryOpt = enquiryRepository
                         .findByMobileAndIsDeletedFalse(dto.getMobilePrimary());
 
                 if (enquiryOpt.isPresent()) {
                     enquiryId = enquiryOpt.get().getId();
-                    log.debug("✓ Row {}: Found enquiry ID: {}", rowNumber, enquiryId);
                 } else {
-                    // NO ENQUIRY - Create admission without enquiry link
                     hasWarnings = true;
-                    log.warn("⚠️ Row {}: No enquiry found for mobile '{}' - Creating admission without enquiry link",
-                            rowNumber, dto.getMobilePrimary());
+                    log.warn("⚠️ Row {}: No enquiry found - Creating admission without enquiry link", rowNumber);
 
                     errors.add(BulkImportResponseDTO.ImportError.builder()
                             .rowNumber(rowNumber)
@@ -563,65 +482,44 @@ public class AdmissionService {
                             .build());
                 }
 
-                // ============ STEP 3: HANDLE DUPLICATE MOBILE ============
-                if (admissionRepository.existsByMobilePrimaryAndIsDeletedFalse(dto.getMobilePrimary())) {
-                    String duplicateMobile = dto.getMobilePrimary();
-                    String uniqueMobile = duplicateMobile + "_ADM" + rowNumber;
-                    dto.setMobilePrimary(uniqueMobile);
+                // STEP 3: Allow duplicates - No mobile uniqueness check
+                // Duplicates are allowed in the system
 
-                    hasWarnings = true;
-                    log.warn("⚠️ Row {}: Duplicate mobile '{}' → Using unique '{}'",
-                            rowNumber, duplicateMobile, uniqueMobile);
-
-                    errors.add(BulkImportResponseDTO.ImportError.builder()
-                            .rowNumber(rowNumber)
-                            .fieldName("mobile")
-                            .errorMessage("Duplicate mobile - made unique")
-                            .rejectedValue(duplicateMobile)
-                            .build());
-                }
-
-                // ============ STEP 4: FIX MISSING COURSES ============
+               // STEP 4: Fix missing courses
                 if (dto.getCourses() == null || dto.getCourses().isEmpty()) {
                     dto.setCourses(List.of("Not Specified"));
                     hasWarnings = true;
-                    log.warn("⚠️ Row {}: Missing courses → Added placeholder", rowNumber);
                 }
 
-                // ============ STEP 5: FIX MISSING NAME ============
+                // STEP 5: Fix missing name
                 if ((dto.getFirstName() == null || dto.getFirstName().trim().isEmpty()) &&
                         (dto.getLastName() == null || dto.getLastName().trim().isEmpty())) {
 
                     dto.setFirstName("Unknown");
                     dto.setLastName("Student");
                     hasWarnings = true;
-                    log.warn("⚠️ Row {}: Missing name → Using 'Unknown Student'", rowNumber);
                 }
 
-                // ============ STEP 6: SET DEFAULTS ============
+                // STEP 6: Set defaults
                 if (dto.getAdmissionDate() == null) {
                     dto.setAdmissionDate(LocalDate.now());
                 }
                 if (dto.getLeadSource() == null || dto.getLeadSource().trim().isEmpty()) {
-                    dto.setLeadSource("CSV Import");
+                    dto.setLeadSource("CSV_IMPORT");
                 }
                 if (dto.getAcademicYear() == null || dto.getAcademicYear().trim().isEmpty()) {
-                    dto.setAcademicYear(String.valueOf(java.time.Year.now().getValue()));
+                    dto.setAcademicYear(String.valueOf(Year.now().getValue()));
+                }
+                if (dto.getDocumentType() == null || dto.getDocumentType().trim().isEmpty()) {
+                    dto.setDocumentType("Aadhaar Card");
                 }
 
-                // ============ STEP 7: CREATE ADMISSION ============
+                // STEP 7: Create admission
                 Admission admission = admissionMapper.toEntity(dto);
-
-                // Set enquiry ID (can be null)
                 admission.setEnquiryId(enquiryId);
-
-                // Generate registration number
                 admission.setRegistrationNumber(generateRegistrationNumber());
-
-                // Set metadata
                 admission.setCreatedBy("BULK_IMPORT");
 
-                // Save to database
                 admissionRepository.save(admission);
 
                 successCount++;
@@ -629,15 +527,14 @@ public class AdmissionService {
                     withWarnings++;
                 }
 
-                log.info("✅ Row {}: Imported {} (Mobile: {}, Reg: {}, Enquiry: {})",
+                log.info("✅ Row {}: Imported {} (Mobile: {}, Reg: {})",
                         rowNumber,
                         hasWarnings ? "WITH WARNINGS" : "SUCCESSFULLY",
                         dto.getMobilePrimary(),
-                        admission.getRegistrationNumber(),
-                        enquiryId != null ? enquiryId : "NONE");
+                        admission.getRegistrationNumber());
 
             } catch (Exception e) {
-                log.error("❌ Row {}: FAILED to save - {}", rowNumber, e.getMessage(), e);
+                log.error("❌ Row {}: FAILED to save - {}", rowNumber, e.getMessage());
 
                 errors.add(BulkImportResponseDTO.ImportError.builder()
                         .rowNumber(rowNumber)
@@ -650,13 +547,8 @@ public class AdmissionService {
 
         int failedCount = dtos.size() - successCount;
 
-        log.info("📊 ==================== ADMISSION IMPORT COMPLETE ====================");
-        log.info("   Total Records: {}", dtos.size());
-        log.info("   ✅ Successfully Imported: {}", successCount);
-        log.info("   ⚠️  With Warnings: {}", withWarnings);
-        log.info("   ❌ Failed: {}", failedCount);
-        log.info("   Success Rate: {}%", (successCount * 100 / dtos.size()));
-        log.info("====================================================================");
+        log.info("📊 ADMISSION IMPORT COMPLETE: {}/{} successful ({} with warnings, {} failed)",
+                successCount, dtos.size(), withWarnings, failedCount);
 
         return BulkImportResponseDTO.builder()
                 .success(successCount > 0)

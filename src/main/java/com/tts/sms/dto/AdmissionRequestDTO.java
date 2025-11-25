@@ -36,12 +36,12 @@ public class AdmissionRequestDTO {
     private String physicallyHandicapped;
     private String bloodGroup;
 
+    private String registrationNumber;
+
     // Contact Information
     @NotBlank(message = "Primary mobile is required")
-    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Invalid mobile number")
     private String mobilePrimary;
 
-    @Pattern(regexp = "^$|^[6-9]\\d{9}$", message = "Invalid secondary mobile number")
     private String mobileSecondary;
 
     @Email(message = "Invalid email format")

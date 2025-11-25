@@ -57,7 +57,7 @@ public class Enquiry {
     private String fullName;
 
     // Contact Information
-    @Column(name = "mobile", length = 15)
+    @Column(name = "mobile", length = 25)
     private String mobile;
 
     private String secondaryMobile;
