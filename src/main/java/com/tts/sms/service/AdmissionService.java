@@ -287,21 +287,20 @@ public class AdmissionService {
     public boolean canCreateAdmission(String mobileNumber) {
         log.debug("Checking if admission can be created for mobile: {}", mobileNumber);
 
-        boolean enquiryExists = enquiryRepository.existsByMobileAndIsDeletedFalse(mobileNumber);
+        // ✅ REMOVED: No longer check if admission exists
+        // Students can create multiple admissions for different courses
 
-        if (!enquiryExists) {
-            log.warn("No enquiry found for mobile: {}", mobileNumber);
-            return false;
+        // Only check if enquiry exists (optional - for pre-filling data)
+        List<Enquiry> enquiries = enquiryRepository.findAllByMobileAndIsDeletedFalse(mobileNumber);
+
+        if (enquiries.isEmpty()) {
+            log.warn("⚠️ No enquiry found for mobile: {} - Will create without pre-fill", mobileNumber);
+            // Return true anyway - allow admission without enquiry
+        } else {
+            log.info("✅ Found {} enquiry(ies) for mobile: {}", enquiries.size(), mobileNumber);
         }
 
-        boolean admissionExists = admissionRepository.existsByMobilePrimaryAndIsDeletedFalse(mobileNumber);
-
-        if (admissionExists) {
-            log.warn("Admission already exists for mobile: {}", mobileNumber);
-            return false;
-        }
-
-        return true;
+        return true; // ✅ ALWAYS allow admission creation
     }
 
     @Transactional(readOnly = true)

@@ -1,10 +1,7 @@
 package com.tts.sms.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -14,18 +11,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 @Entity
-@Table(
-        name = "enquiries",
-        indexes = {
-                @Index(name = "idx_enquiry_no", columnList = "enquiry_no"),
-                @Index(name = "idx_mobile", columnList = "mobile"),
-                @Index(name = "idx_email", columnList = "email"),
-                @Index(name = "idx_status", columnList = "status"),
-                @Index(name = "idx_source", columnList = "source"),
-                @Index(name = "idx_enquiry_date", columnList = "enquiry_date")
-        }
-)
-
+@Table(name = "enquiries")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -40,7 +26,7 @@ public class Enquiry {
     @Column(name = "enquiry_no", length = 50)
     private String enquiryNo;
 
-    // Student Name Fields
+    // Name fields
     @Column(name = "first_name", length = 100)
     private String firstName;
 
@@ -53,20 +39,20 @@ public class Enquiry {
     @Column(name = "full_name", length = 255)
     private String fullName;
 
-    // Contact Information
-    @Column(name = "mobile", length = 25)
+    // Contact
+    @Column(name = "mobile", length = 50)
     private String mobile;
 
+    @Column(name = "secondary_mobile", length = 50)
     private String secondaryMobile;
 
-    @Email(message = "Invalid email format")
     @Column(name = "email", length = 100)
     private String email;
 
     @Column(name = "secondary_email", length = 100)
     private String secondaryEmail;
 
-    // Address Information
+    // Address
     @Column(name = "current_address", columnDefinition = "TEXT")
     private String currentAddress;
 
@@ -79,7 +65,7 @@ public class Enquiry {
     @Column(name = "pin_permanent", length = 10)
     private String pinPermanent;
 
-    // Academic Information
+    // Academic
     @Column(name = "college", length = 200)
     private String college;
 
@@ -95,7 +81,7 @@ public class Enquiry {
     @Column(name = "gender", length = 20)
     private String gender;
 
-    // Course Interest - Use List<String> type
+    // Course
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "courses", columnDefinition = "json")
     @Builder.Default
@@ -111,14 +97,12 @@ public class Enquiry {
     private String interestLevel;
 
     // Enquiry Details
-    @NotBlank(message = "Enquiry source is required")
     @Column(name = "source", length = 100)
     private String source;
 
     @Column(name = "reference_name", length = 100)
     private String referenceName;
 
-    @NotNull(message = "Enquiry date is required")
     @Column(name = "enquiry_date")
     private LocalDate enquiryDate;
 
@@ -136,11 +120,9 @@ public class Enquiry {
     private String note;
 
     // Metadata
-    @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
@@ -169,47 +151,45 @@ public class Enquiry {
         return name.toString().trim();
     }
 
+    /**
+     * MINIMAL PrePersist - Only set defaults for NULL fields
+     * NO validation, NO data modification
+     */
     @PrePersist
     @PreUpdate
-    private void validateData() {
-        // Build full name if missing
-        if (fullName == null || fullName.isBlank()) {
-            StringBuilder name = new StringBuilder();
-            if (firstName != null && !firstName.isBlank()) {
-                name.append(firstName);
-            }
-            if (middleName != null && !middleName.isBlank()) {
-                if (name.length() > 0) name.append(" ");
-                name.append(middleName);
-            }
-            if (lastName != null && !lastName.isBlank()) {
-                if (name.length() > 0) name.append(" ");
-                name.append(lastName);
-            }
-            if (name.length() > 0) {
-                this.fullName = name.toString();
-            }
+    private void setDefaults() {
+        // Set timestamps
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
         }
+        updatedAt = LocalDateTime.now();
 
-        // Ensure courses list is not null and contains no empty values
-        if (courses == null) {
-            courses = new ArrayList<>();
-        }
-        courses.removeIf(c -> c == null || c.trim().isEmpty());
-
-        // Ensure enquiry date is set
+        // Set defaults only if NULL
         if (enquiryDate == null) {
             enquiryDate = LocalDate.now();
         }
 
-        // Ensure source is set
-        if (source == null || source.isBlank()) {
-            source = "Unknown";
+        if (source == null) {
+            source = "N/A";
         }
 
-        // Ensure status is set
-        if (status == null || status.isBlank()) {
+        if (status == null) {
             status = "New";
+        }
+
+        if (courses == null || courses.isEmpty()) {
+            courses = new ArrayList<>(List.of("N/A"));
+        }
+
+        // Build full name only if ALL name fields are present
+        if (fullName == null && firstName != null && lastName != null) {
+            StringBuilder name = new StringBuilder();
+            name.append(firstName);
+            if (middleName != null && !middleName.equals("N/A")) {
+                name.append(" ").append(middleName);
+            }
+            name.append(" ").append(lastName);
+            fullName = name.toString();
         }
     }
 }

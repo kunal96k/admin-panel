@@ -14,13 +14,10 @@ public class AdmissionRequestDTO {
 
     private Long enquiryId;
 
-    // Personal Information
-    @NotBlank(message = "First name is required")
     private String firstName;
 
     private String middleName;
 
-    @NotBlank(message = "Last name is required")
     private String lastName;
 
     private String college;

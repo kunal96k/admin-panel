@@ -18,9 +18,21 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Long>,
         JpaSpecificationExecutor<Enquiry> {
 
     /**
-     * Basic finders
+     * Find ALL enquiries with mobile containing the search term
+     * Returns list to handle duplicates (mobile, mobile_2, mobile_3, etc.)
+     */
+    List<Enquiry> findByMobileContaining(String mobile);
+
+    /**
+     * Check if ANY enquiry exists with this exact mobile
+     */
+    boolean existsByMobileAndIsDeletedFalse(String mobile);
+
+    /**
+     * Find by exact mobile (for single record queries)
      */
     List<Enquiry> findByMobile(String mobile);
+
 
     List<Enquiry> findByEmailIgnoreCase(String email);
 
@@ -42,8 +54,6 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Long>,
     Optional<Enquiry> findByMobileAndIsDeletedFalse(String mobile);
 
     Optional<Enquiry> findByEmailAndIsDeletedFalse(String email);
-
-    boolean existsByMobileAndIsDeletedFalse(String mobile);
 
     /**
      * Find by status/source with non-deleted constraint

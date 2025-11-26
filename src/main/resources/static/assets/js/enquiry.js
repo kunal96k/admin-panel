@@ -295,7 +295,14 @@
             currentPage = page;
             pageSize = size;
 
-            const response = await fetch(`/api/enquiries?page=${page}&size=${size}`);
+            const response = await fetch(`/api/enquiries?page=${page}&size=${size}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.message || 'Failed to load enquiries');
@@ -312,6 +319,43 @@
             console.error('Error loading enquiries:', error);
             renderEnquiriesTable([]);
             showError(error.message || 'Failed to load enquiries');
+        }
+    }
+
+    // Search Enquiries
+    async function searchEnquiries(e) {
+        const searchTerm = e.target.value.trim();
+
+        try {
+            const searchDTO = {
+                searchTerm: searchTerm || null,
+                page: 0,
+                size: pageSize,
+                sortBy: 'enquiryDate',
+                sortDirection: 'DESC'
+            };
+
+            const response = await fetch('/api/enquiries/search', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(searchDTO)
+            });
+
+            if (!response.ok) throw new Error('Search failed');
+
+            const data = await response.json();
+            currentPage = 0;
+            totalPages = data.totalPages || 0;
+            totalElements = data.totalElements || 0;
+
+            renderEnquiriesTable(data.content);
+            updatePaginationControls();
+            updateEntriesInfo();
+        } catch (error) {
+            console.error('Search error:', error);
         }
     }
 
@@ -502,43 +546,6 @@
             showError('Failed to export CSV');
         }
     }
-
-    // Search Enquiries
-// Search Enquiries
-async function searchEnquiries(e) {
-    const searchTerm = e.target.value.trim();
-
-    try {
-        const searchDTO = {
-            searchTerm: searchTerm || null,
-            page: 0,  // Reset to first page on new search
-            size: pageSize,
-            sortBy: 'enquiryDate',
-            sortDirection: 'DESC'
-        };
-
-        const response = await fetch('/api/enquiries/search', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(searchDTO)
-        });
-
-        if (!response.ok) throw new Error('Search failed');
-
-        const data = await response.json();
-        currentPage = 0;
-        totalPages = data.totalPages || 0;
-        totalElements = data.totalElements || 0;
-
-        renderEnquiriesTable(data.content);
-        updatePaginationControls();
-        updateEntriesInfo();
-    } catch (error) {
-        console.error('Search error:', error);
-    }
-}
 
 function updatePaginationControls() {
     const paginationEl = document.getElementById('paginationControls');

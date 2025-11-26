@@ -315,93 +315,135 @@
         }
     }
 
-    // Open New Admission Modal
-    async function openNewAdmissionModal() {
-        const fromEnquiry = sessionStorage.getItem('admissionFromEnquiry');
+async function openNewAdmissionModal() {
+    const fromEnquiry = sessionStorage.getItem('admissionFromEnquiry');
 
-        if (!fromEnquiry) {
-            const { value: mobile } = await Swal.fire({
-                title: 'Enter Student Mobile Number',
-                html: `
-                    <input type="tel" id="swalMobile" class="form-control"
-                           placeholder="10-digit mobile number" maxlength="10"
-                           pattern="[6-9][0-9]{9}">
-                    <small class="text-muted d-block mt-2">
-                        <i class="bi bi-info-circle me-1"></i>
-                        An enquiry must exist for this mobile number
-                    </small>
-                `,
-                showCancelButton: true,
-                confirmButtonText: 'Check & Continue',
-                cancelButtonText: 'Cancel',
-                confirmButtonColor: '#667eea',
-                preConfirm: () => {
-                    const mobileInput = document.getElementById('swalMobile').value;
-                    if (!/^[6-9]\d{9}$/.test(mobileInput)) {
-                        Swal.showValidationMessage('Please enter a valid 10-digit mobile number');
-                        return false;
-                    }
-                    return mobileInput;
+    if (!fromEnquiry) {
+        const { value: mobile } = await Swal.fire({
+            title: 'Enter Student Mobile Number',
+            html: `
+                <input type="tel" id="swalMobile" class="form-control"
+                       placeholder="10-digit mobile number" maxlength="10"
+                       pattern="[6-9][0-9]{9}">
+                <small class="text-muted d-block mt-2">
+                    <i class="bi bi-info-circle me-1"></i>
+                    We'll check if an enquiry exists to pre-fill the form
+                </small>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Check & Continue',
+            cancelButtonText: 'Skip & Create New',
+            confirmButtonColor: '#667eea',
+            preConfirm: () => {
+                const mobileInput = document.getElementById('swalMobile').value;
+                if (!/^[6-9]\d{9}$/.test(mobileInput)) {
+                    Swal.showValidationMessage('Please enter a valid 10-digit mobile number');
+                    return false;
                 }
-            });
+                return mobileInput;
+            }
+        });
 
-            if (mobile) {
-                try {
-                    showLoading('Checking enquiry...');
+        if (mobile) {
+            try {
+                showLoading('Checking for existing enquiry...');
 
-                    const canCreateResponse = await fetch(`/api/admissions/can-create/${mobile}`);
-                    const canCreateData = await canCreateResponse.json();
+                // ✅ ONLY check if enquiry exists (for pre-filling)
+                const enquiryResponse = await fetch(`/api/admissions/enquiry-data/${mobile}`);
 
-                    if (!canCreateData.canCreate) {
-                        Swal.close();
-                        await Swal.fire({
-                            title: 'Cannot Create Admission',
-                            html: `
-                                <div class="alert alert-danger">
-                                    <strong>No enquiry found for mobile: ${mobile}</strong>
-                                    <p class="mb-0 mt-2">
-                                        Please create an enquiry first before proceeding with admission.
-                                    </p>
-                                </div>
-                            `,
-                            icon: 'error',
-                            confirmButtonText: 'OK',
-                            confirmButtonColor: '#ef4444'
-                        });
-                        return;
-                    }
-
-                    const enquiryResponse = await fetch(`/api/admissions/enquiry-data/${mobile}`);
+                if (enquiryResponse.ok) {
                     const enquiry = await enquiryResponse.json();
-
                     Swal.close();
+
+                    // Show success message
+                    await Swal.fire({
+                        title: 'Enquiry Found!',
+                        html: `
+                            <div class="alert alert-success">
+                                <strong><i class="bi bi-check-circle me-2"></i>Form will be pre-filled</strong>
+                                <p class="mb-2 mt-3">Found enquiry for: <strong>${enquiry.firstName} ${enquiry.lastName}</strong></p>
+                                <p class="mb-0">The admission form will be pre-filled with enquiry details.</p>
+                            </div>
+                        `,
+                        icon: 'success',
+                        confirmButtonText: 'Continue',
+                        confirmButtonColor: '#10b981',
+                        timer: 2000
+                    });
 
                     sessionStorage.setItem('admissionEnquiry', JSON.stringify(enquiry));
                     sessionStorage.setItem('admissionFromEnquiry', 'true');
 
                     window.location.reload();
-
-                } catch (error) {
+                } else {
+                    // ✅ NO ERROR - Just proceed without pre-fill
                     Swal.close();
-                    console.error('Error:', error);
-                    await Swal.fire({
-                        title: 'Error',
-                        text: 'Failed to check enquiry. Please try again.',
-                        icon: 'error',
-                        confirmButtonColor: '#ef4444'
-                    });
-                }
-            }
-            return;
-        }
 
-        currentTab = 1;
-        clearForms();
-        updateNavigationButtons();
-        updateProgress(16.66);
-        const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
-        modal.show();
+                    await Swal.fire({
+                        title: 'No Enquiry Found',
+                        html: `
+                            <div class="alert alert-info">
+                                <strong><i class="bi bi-info-circle me-2"></i>Create New Admission</strong>
+                                <p class="mb-2 mt-3">No enquiry found for mobile: <strong>${mobile}</strong></p>
+                                <p class="mb-0">You can still create a new admission by filling the form manually.</p>
+                            </div>
+                        `,
+                        icon: 'info',
+                        confirmButtonText: 'Continue',
+                        confirmButtonColor: '#3b82f6',
+                        timer: 2500
+                    });
+
+                    // Open empty form
+                    currentTab = 1;
+                    clearForms();
+                    setValue('admMobilePrimary', mobile); // Pre-fill only mobile
+                    updateNavigationButtons();
+                    updateProgress(16.66);
+                    const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
+                    modal.show();
+                }
+
+            } catch (error) {
+                Swal.close();
+                console.error('Error:', error);
+
+                // ✅ Even on error, allow form to open
+                await Swal.fire({
+                    title: 'Notice',
+                    text: 'Could not check enquiry status. You can still create admission manually.',
+                    icon: 'info',
+                    confirmButtonColor: '#3b82f6'
+                });
+
+                currentTab = 1;
+                clearForms();
+                setValue('admMobilePrimary', mobile);
+                updateNavigationButtons();
+                updateProgress(16.66);
+                const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
+                modal.show();
+            }
+        } else if (mobile === null) {
+            // User clicked "Skip & Create New"
+            currentTab = 1;
+            clearForms();
+            updateNavigationButtons();
+            updateProgress(16.66);
+            const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
+            modal.show();
+        }
+        return;
     }
+
+    // If already has enquiry data in session, open modal
+    currentTab = 1;
+    clearForms();
+    updateNavigationButtons();
+    updateProgress(16.66);
+    const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
+    modal.show();
+}
 
     function prefillAdmissionForm(data, isUpdate = false) {
         console.log('Pre-filling form with:', data);
@@ -456,30 +498,6 @@
         }
 
         try {
-            showLoading('Validating enquiry...');
-
-            const canCreateResponse = await fetch(
-                `/api/admissions/can-create/${admissionData.mobilePrimary}`
-            );
-            const canCreateData = await canCreateResponse.json();
-
-            if (!canCreateData.canCreate) {
-                Swal.close();
-                await Swal.fire({
-                    title: 'Validation Failed',
-                    html: `
-                        <div class="alert alert-danger">
-                            <strong>Cannot create admission!</strong>
-                            <p class="mb-0 mt-2">No enquiry found for mobile: <strong>${admissionData.mobilePrimary}</strong></p>
-                        </div>
-                    `,
-                    icon: 'error',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#ef4444'
-                });
-                return;
-            }
-
             showLoading('Saving admission...');
 
             const response = await fetch('/api/admissions', {

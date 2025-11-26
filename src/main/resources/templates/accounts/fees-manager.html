@@ -241,7 +241,7 @@
             </div>
         </div>
 
-        <!-- View Fee Receipts Modal -->
+        <!-- View Fee Receipts Modal  -->
         <div class="modal fade" id="viewReceiptsModal" tabindex="-1" data-bs-backdrop="static">
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
@@ -263,7 +263,7 @@
                                     <th>Payment Mode</th>
                                     <th>Note</th>
                                     <th>Receipt Type</th>
-                                    <th>Actions</th>
+                                    <th style="min-width: 180px;">Actions</th>
                                 </tr>
                                 </thead>
                                 <tbody id="receiptsTableBody">
@@ -513,11 +513,36 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="alert alert-info">
+                        <!-- Import Type Selection -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Select Import Format:</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="feesImportType" id="feesImportOld" value="old" checked>
+                                <label class="btn btn-outline-primary" for="feesImportOld">
+                                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>Old Format (9 Columns)
+                                </label>
+
+                                <input type="radio" class="btn-check" name="feesImportType" id="feesImportNew" value="new">
+                                <label class="btn btn-outline-primary" for="feesImportNew">
+                                    <i class="bi bi-file-earmark-plus me-2"></i>New Format (12 Columns)
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Old Format Info -->
+                        <div class="alert alert-info" id="oldFeesFormatInfo">
                             <i class="bi bi-info-circle me-2"></i>
-                            <strong>CSV Format:</strong> Your CSV file should contain:
+                            <strong>Old CSV Format (9 columns):</strong>
                             <br>
                             <small>Reg No., Student Name, Mobile No., Total Fees, Fees Due, Total Paid, Due Date, Fees Refund, Status, Course</small>
+                        </div>
+
+                        <!-- New Format Info -->
+                        <div class="alert alert-info" id="newFeesFormatInfo" style="display: none;">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>New CSV Format (12 columns):</strong>
+                            <br>
+                            <small>Reg No., First Name, Last Name, Mobile, Email, Total Fees, Fees Due, Total Paid, Due Date, Fees Refund, Status, Course</small>
                         </div>
 
                         <div class="import-area" id="importArea">
@@ -556,10 +581,10 @@
 
     </div>
 
-    <!-- Scripts -->
+    <!-- Scripts - Load in correct order -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.js"></script>
-    <script th:src="@{/assets/js/fees-manager.js}" src="/assets/js/fees-manager.js" defer></script>
+    <script th:src="@{/assets/js/fees-manager.js}"></script>
 </main>
 
 </body>

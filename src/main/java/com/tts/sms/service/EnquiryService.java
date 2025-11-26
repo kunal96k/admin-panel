@@ -227,153 +227,61 @@ public class EnquiryService {
 
     // ==================== LENIENT BULK IMPORT - IMPORT ALL DATA ====================
 
-    /**
-     *  LENIENT MODE: Import ALL rows regardless of validation errors
-     * - Missing mobile → Generate placeholder
-     * - Duplicate mobile → Append row number
-     * - Missing courses → Add placeholder
-     * - Invalid data → Import with notes
-     *
-     * GOAL: 0 ROWS SKIPPED, ALL DATA IN DATABASE
-     *
-     * NOTE: No @Transactional here - each record saved in its own transaction
-     */
     public BulkImportResponseDTO processBulkImport(List<EnquiryRequestDTO> dtos, String importSource) {
-        log.info(" LENIENT BULK IMPORT: Processing {} records", dtos.size());
-        log.info(" MODE: Import ALL data - No rows will be skipped");
+        log.info("🚀 STRICT IMPORT: {} records", dtos.size());
+        log.info("✅ MODE: Import ALL - No validation, no modification");
 
         int successCount = 0;
-        int withWarnings = 0;
+        int duplicateCount = 0;
         List<BulkImportResponseDTO.ImportError> errors = new ArrayList<>();
 
         for (int i = 0; i < dtos.size(); i++) {
-            final int rowNumber = i + 2; // CSV row (header = 1)
+            final int rowNumber = i + 2;
             EnquiryRequestDTO dto = dtos.get(i);
-            boolean hasWarnings = false;
 
             try {
-                // ============ STEP 1:  MISSING/INVALID MOBILE ============
+                // Handle duplicate mobile - append suffix
                 String originalMobile = dto.getMobile();
+                String finalMobile = originalMobile;
 
-                if (originalMobile == null || originalMobile.trim().isEmpty() ||
-                        !originalMobile.matches("^[6-9]\\d{9}$")) {
+                List<Enquiry> existingEnquiries = enquiryRepository.findByMobileContaining(originalMobile);
 
-                    String placeholderMobile = String.format("9999%06d", rowNumber);
-                    dto.setMobile(placeholderMobile);
+                if (!existingEnquiries.isEmpty()) {
+                    int suffix = existingEnquiries.size() + 1;
+                    finalMobile = originalMobile + "_" + suffix;
+                    dto.setMobile(finalMobile);
+                    duplicateCount++;
 
-                    String note = dto.getNote() != null ? dto.getNote() + "\n" : "";
-                    note += "[INVALID MOBILE: Original='" + originalMobile + "', Placeholder='" + placeholderMobile + "']";
-                    dto.setNote(note);
-
-                    hasWarnings = true;
-                    log.warn(" Row {}: Invalid mobile '{}' → Using placeholder '{}'",
-                            rowNumber, originalMobile, placeholderMobile);
+                    log.warn("⚠️ Row {}: Duplicate mobile '{}' → '{}'",
+                            rowNumber, originalMobile, finalMobile);
 
                     errors.add(BulkImportResponseDTO.ImportError.builder()
                             .rowNumber(rowNumber)
                             .fieldName("mobile")
-                            .errorMessage("Invalid mobile - using placeholder")
-                            .rejectedValue(originalMobile)
+                            .errorMessage("Duplicate - appended suffix")
+                            .rejectedValue(originalMobile + " → " + finalMobile)
                             .build());
                 }
 
-                // ============ STEP 2: HANDLE DUPLICATE MOBILE ============
-                if (enquiryRepository.existsByMobileAndIsDeletedFalse(dto.getMobile())) {
-                    String duplicateMobile = dto.getMobile();
-
-                    String note = dto.getNote() != null ? dto.getNote() + "\n" : "";
-                    note += "[DUPLICATE MOBILE: Another enquiry exists with mobile '" + duplicateMobile + "']";
-                    dto.setNote(note);
-
-                    hasWarnings = true;
-                    log.warn(" Row {}: Duplicate mobile '{}' - Importing anyway",
-                            rowNumber, duplicateMobile);
-
-                    errors.add(BulkImportResponseDTO.ImportError.builder()
-                            .rowNumber(rowNumber)
-                            .fieldName("mobile")
-                            .errorMessage("Duplicate mobile number - imported anyway")
-                            .rejectedValue(duplicateMobile)
-                            .build());
-                    
-                }
-
-                // ============ STEP 3:  MISSING COURSES ============
-                if (dto.getCourses() == null || dto.getCourses().isEmpty()) {
-                    dto.setCourses(List.of("Not Specified"));
-
-                    String note = dto.getNote() != null ? dto.getNote() + "\n" : "";
-                    note += "[MISSING COURSES: Added placeholder 'Not Specified']";
-                    dto.setNote(note);
-
-                    hasWarnings = true;
-                    log.warn(" Row {}: Missing courses → Added placeholder", rowNumber);
-
-                    errors.add(BulkImportResponseDTO.ImportError.builder()
-                            .rowNumber(rowNumber)
-                            .fieldName("courses")
-                            .errorMessage("Missing required fields (mobile or courses)")
-                            .rejectedValue(dto.getMobile())
-                            .build());
-                }
-
-                // ============ STEP 4:  MISSING NAME ============
-                if ((dto.getFirstName() == null || dto.getFirstName().trim().isEmpty()) &&
-                        (dto.getLastName() == null || dto.getLastName().trim().isEmpty()) &&
-                        (dto.getName() == null || dto.getName().trim().isEmpty())) {
-
-                    dto.setFirstName("Unknown");
-                    dto.setLastName("Student");
-                    dto.setName("Unknown Student");
-
-                    String note = dto.getNote() != null ? dto.getNote() + "\n" : "";
-                    note += "[MISSING NAME: Using 'Unknown Student']";
-                    dto.setNote(note);
-
-                    hasWarnings = true;
-                    log.warn(" Row {}: Missing name → Using 'Unknown Student'", rowNumber);
-                }
-
-                // ============ STEP 5: SET DEFAULTS ============
-                if (dto.getEnquiryDate() == null) {
-                    dto.setEnquiryDate(LocalDate.now());
-                }
-                if (dto.getSource() == null || dto.getSource().trim().isEmpty()) {
-                    dto.setSource("Unknown");
-                }
-                if (dto.getStatus() == null || dto.getStatus().trim().isEmpty()) {
-                    dto.setStatus("New");
-                }
-
-                // ============ STEP 6: CONVERT AND SAVE ============
+                // Convert DTO to Entity (no validation)
                 Enquiry enquiry = convertDTOToEnquiry(dto, importSource);
 
-                // Save to database in separate transaction
-                try {
-                    saveEnquiryInNewTransaction(enquiry);
-                    successCount++;
-                    if (hasWarnings) {
-                        withWarnings++;
-                    }
+                // Save in isolated transaction
+                saveEnquiryInNewTransaction(enquiry);
+                successCount++;
 
-                    log.info(" Row {}: Imported {} (Mobile: {}, Courses: {})",
-                            rowNumber,
-                            hasWarnings ? "WITH WARNINGS" : "SUCCESSFULLY",
-                            dto.getMobile(),
-                            dto.getCourses().size());
-                } catch (Exception saveEx) {
-                    throw saveEx; // Let outer catch handle it
+                if (rowNumber % 100 == 0) {
+                    log.info("✅ Progress: {}/{} imported", successCount, rowNumber - 1);
                 }
 
             } catch (Exception e) {
-                // Even if save fails, we tried our best - log it
-                log.error(" Row {}: FAILED to save - {}", rowNumber, e.getMessage());
+                log.error("❌ Row {}: Failed - {}", rowNumber, e.getMessage());
 
                 errors.add(BulkImportResponseDTO.ImportError.builder()
                         .rowNumber(rowNumber)
                         .fieldName("database")
-                        .errorMessage("Database save failed: " + e.getMessage())
-                        .rejectedValue(dto != null ? dto.getMobile() : "unknown")
+                        .errorMessage("Save failed: " + e.getMessage())
+                        .rejectedValue(dto.getMobile())
                         .build());
             }
         }
@@ -382,10 +290,10 @@ public class EnquiryService {
 
         log.info("📊 ==================== IMPORT COMPLETE ====================");
         log.info("   Total Records: {}", dtos.size());
-        log.info("    Successfully Imported: {}", successCount);
-        log.info("     With Warnings/es: {}", withWarnings);
-        log.info("    Failed (DB Errors): {}", failedCount);
-        log.info("   Success Rate: {}%", (successCount * 100 / dtos.size()));
+        log.info("   ✅ Imported: {}", successCount);
+        log.info("   🔄 Duplicates Handled: {}", duplicateCount);
+        log.info("   ❌ Failed: {}", failedCount);
+        log.info("   📈 Success Rate: {}%", (successCount * 100 / dtos.size()));
         log.info("==========================================================");
 
         return BulkImportResponseDTO.builder()
@@ -395,8 +303,8 @@ public class EnquiryService {
                 .failedImports(failedCount)
                 .errors(errors)
                 .message(String.format(
-                        "Import completed: %d/%d successful (%d with warnings, %d failed)",
-                        successCount, dtos.size(), withWarnings, failedCount
+                        "Import completed: %d/%d successful (%d duplicates, %d failed)",
+                        successCount, dtos.size(), duplicateCount, failedCount
                 ))
                 .build();
     }

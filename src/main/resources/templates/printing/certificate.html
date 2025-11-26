@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}"
+      lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Certificate Management</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" th:href="@{/assets/css/certificate.css}" href="/assets/css/certificate.css">
+
+</head>
+<body>
+
+<!-- Dashboard Content Fragment -->
+<main layout:fragment="content">
+
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2><i class="bi bi-award me-2"></i>Student Certificate Management</h2>
+        <p class="mb-0 opacity-90">Issue and manage student certificates efficiently</p>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stats-card">
+                <div class="stats-icon total">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="stats-number" id="totalCount">0</div>
+                <div class="stats-label">Total Students</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stats-card">
+                <div class="stats-icon issued">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div class="stats-number" id="issuedCount">0</div>
+                <div class="stats-label">Certificates Issued</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stats-card">
+                <div class="stats-icon pending">
+                    <i class="bi bi-clock-fill"></i>
+                </div>
+                <div class="stats-number" id="pendingCount">0</div>
+                <div class="stats-label">Pending</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="action-card">
+        <div class="row align-items-center">
+            <div class="col-lg-3 mb-3 mb-lg-0">
+                <label class="form-label mb-2">Filter by Course</label>
+                <select class="form-select" id="courseFilter">
+                    <option value="">-- Select Course --</option>
+                    <option value="JAVA CORE AND ADVANCE">JAVA CORE AND ADVANCE</option>
+                    <option value="SPRING BOOT">SPRING BOOT</option>
+                    <option value="PYTHON">PYTHON</option>
+                    <option value="WEB DEVELOPMENT">WEB DEVELOPMENT</option>
+                    <option value="DATA SCIENCE">DATA SCIENCE</option>
+                </select>
+            </div>
+            <div class="col-lg-3 mb-3 mb-lg-0">
+                <label class="form-label mb-2">Filter by Status</label>
+                <select class="form-select" id="statusFilter">
+                    <option value="">-- All Status --</option>
+                    <option value="Issued">Issued</option>
+                    <option value="Pending">Pending</option>
+                </select>
+            </div>
+            <div class="col-lg-6">
+                <label class="form-label mb-2">Search</label>
+                <div class="input-group mb-2">
+                <span class="input-group-text bg-white">
+                    <i class="bi bi-search"></i>
+                </span>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search by name, registration no., certificate no...">
+                    <select class="form-select" style="max-width: 150px;" id="pageSizeSelect">
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Import/Export -->
+        <div class="d-flex gap-2 justify-content-end">
+            <button class="btn btn-success btn-sm" id="btnImportCSV">
+                <i class="bi bi-upload me-1"></i>Import CSV
+            </button>
+            <button class="btn btn-info btn-sm" id="btnExportCSV">
+                <i class="bi bi-download me-1"></i>Export CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- Certificate Table -->
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="table table-hover" id="certificateTable">
+                <thead>
+                <tr>
+                    <th>REG. NO.</th>
+                    <th>CERTIFICATE NO.</th>
+                    <th>STUDENT NAME</th>
+                    <th>COURSE</th>
+                    <th>BATCH</th>
+                    <th>GRADE</th>
+                    <th>ISSUE DATE</th>
+                    <th>STATUS</th>
+                    <th>ACTIONS</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td colspan="9" class="text-center py-5">
+                        <i class="bi bi-inbox" style="font-size: 3rem; color: #94a3b8;"></i>
+                        <p class="mt-3 mb-0 text-muted">No certificates found</p>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="d-flex justify-content-between align-items-center mt-3 px-3 pb-3">
+            <div class="text-muted">
+                Showing <span id="entriesStart">0</span> to <span id="entriesEnd">0</span>
+                of <span id="totalEntries">0</span> entries
+            </div>
+            <nav>
+                <ul class="pagination mb-0" id="paginationControls">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#">Previous</a>
+                    </li>
+                    <li class="page-item active">
+                        <a class="page-link" href="#">1</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="#">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- Certificate Issue Modal -->
+<div class="modal fade" id="certificateModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-award me-2"></i>Issue Certificate
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="certificateForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Student Name</label>
+                            <input type="text" class="form-control" id="studentName" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Course</label>
+                            <input type="text" class="form-control" id="courseName" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Grade <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="grade" placeholder="Enter Grade (e.g., A+, A, B+)" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Certificate No. <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="certificateNo" placeholder="Auto-generated" disabled>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Issue Date <span class="required">*</span></label>
+                            <input type="date" class="form-control" id="issueDate" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Course From Date <span class="required">*</span></label>
+                            <input type="date" class="form-control" id="courseFromDate" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Course To Date <span class="required">*</span></label>
+                            <input type="date" class="form-control" id="courseToDate" required>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" id="certificateNotes" rows="3" placeholder="Add any additional notes..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="btnSaveCertificate">
+                    <i class="bi bi-check-circle me-2"></i>Issue Certificate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Details Modal -->
+<div class="modal fade" id="batchModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-people me-2"></i>Batch Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="batchDetailsContent">
+                    <!-- Batch details will be loaded here -->
+                    <p class="text-muted">Loading batch information...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import CSV Modal -->
+<div class="modal fade" id="importCertificateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-upload me-2"></i>Import Certificates from CSV
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>CSV Format:</strong> Registration No, Certificate No, Student Name, Course, Batch, Grade, Issue Date, Status
+                </div>
+
+                <div class="import-area" id="importCertArea">
+                    <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #667eea;"></i>
+                    <h5 class="mt-3">Drop your CSV file here or click to browse</h5>
+                    <p class="text-muted mb-3">Maximum file size: 5MB</p>
+                    <input type="file" id="csvCertFileInput" accept=".csv" style="display: none;">
+                    <button class="btn btn-outline-primary" id="btnBrowseCertFile">
+                        <i class="bi bi-folder2-open me-2"></i>Browse Files
+                    </button>
+                </div>
+
+                <div id="importCertPreview" class="mt-4" style="display: none;">
+                    <h6 class="mb-3">Preview Data:</h6>
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered">
+                            <thead id="previewCertTableHead"></thead>
+                            <tbody id="previewCertTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-success mt-3">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong id="certRecordCount">0</strong> records found and ready to import.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="importCertBtn" disabled>
+                    <i class="bi bi-check-circle me-2"></i>Import Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom JS -->
+<script th:src="@{/assets/js/enquiry.js}" src="/assets/js/certificate.js" defer></script>
+<!-- Bootstrap JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<!-- SweetAlert2 JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.all.min.js"></script>
+
+</main>
+
+</body>
+</html>

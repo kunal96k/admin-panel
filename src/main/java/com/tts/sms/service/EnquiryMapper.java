@@ -62,31 +62,25 @@ public class EnquiryMapper {
                 .build();
     }
 
+    /**
+     * STRICT CONVERSION: DTO → Entity
+     * - No validation
+     * - Keep all values as-is
+     * - Only set defaults for truly null fields
+     */
     public Enquiry toEntity(EnquiryRequestDTO dto) {
         if (dto == null) return null;
 
-        List<String> coursesList = new ArrayList<>();
-        if (dto.getCourses() != null && !dto.getCourses().isEmpty()) {
-            coursesList = dto.getCourses().stream()
-                    .filter(course -> course != null && !course.trim().isEmpty())
-                    .map(String::trim)
-                    .distinct()
-                    .collect(Collectors.toList());
-        }
-
-        if (coursesList.isEmpty()) {
-            log.error("No valid courses found - DTO courses: {}", dto.getCourses());
-            throw new IllegalArgumentException("At least one course is required");
-        }
-
-        log.debug("Converting DTO to Entity - EnquiryNo: {}, Mobile: {}, Courses: {}",
-                dto.getEnquiryNo(), dto.getMobile(), coursesList);
+        // Handle courses - keep as-is or use "N/A"
+        List<String> coursesList = dto.getCourses() != null && !dto.getCourses().isEmpty()
+                ? new ArrayList<>(dto.getCourses())
+                : List.of("N/A");
 
         Enquiry.EnquiryBuilder builder = Enquiry.builder()
                 .enquiryNo(dto.getEnquiryNo())
                 .mobile(dto.getMobile())
                 .courses(coursesList)
-                .source(dto.getSource() != null ? dto.getSource() : "Unknown")
+                .source(dto.getSource() != null ? dto.getSource() : "N/A")
                 .secondaryMobile(dto.getSecondaryMobile())
                 .email(dto.getEmail())
                 .secondaryEmail(dto.getSecondaryEmail())
@@ -99,7 +93,6 @@ public class EnquiryMapper {
                 .aadhaar(dto.getAadhaar())
                 .birthDate(dto.getBirthDate())
                 .gender(dto.getGender())
-                .courses(coursesList)
                 .packageName(dto.getPackageName())
                 .demoLectureRequired(dto.getDemoLectureRequired())
                 .interestLevel(dto.getInterestLevel())
@@ -111,7 +104,7 @@ public class EnquiryMapper {
                 .note(dto.getNote());
 
         // Handle name fields
-        if (dto.getName() != null && !dto.getName().isBlank()) {
+        if (dto.getName() != null && !dto.getName().equals("N/A")) {
             builder.fullName(dto.getName());
             String[] parts = dto.getName().trim().split("\\s+");
             if (parts.length > 0) builder.firstName(parts[0]);
@@ -121,14 +114,14 @@ public class EnquiryMapper {
             } else if (parts.length == 2) {
                 builder.lastName(parts[1]);
             }
-        } else if (dto.getFirstName() != null || dto.getLastName() != null) {
+        } else {
             builder.firstName(dto.getFirstName())
                     .middleName(dto.getMiddleName())
                     .lastName(dto.getLastName());
 
             StringBuilder fullName = new StringBuilder();
             if (dto.getFirstName() != null) fullName.append(dto.getFirstName());
-            if (dto.getMiddleName() != null && !dto.getMiddleName().isEmpty()) {
+            if (dto.getMiddleName() != null && !dto.getMiddleName().equals("N/A")) {
                 if (fullName.length() > 0) fullName.append(" ");
                 fullName.append(dto.getMiddleName());
             }

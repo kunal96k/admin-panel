@@ -66,6 +66,8 @@ public interface FeeInstallmentRepository extends JpaRepository<FeeInstallment, 
             "WHERE f.admissionId = :admissionId AND f.status = 'Pending'")
     Long countPendingInstallments(@Param("admissionId") Long admissionId);
 
+    List<FeeInstallment> findByAdmissionIdIn(List<Long> admissionIds);
+
     /**
      * Update installment status
      */

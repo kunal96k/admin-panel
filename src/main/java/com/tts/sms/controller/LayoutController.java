@@ -24,7 +24,7 @@ public class LayoutController {
     // Student Admission Page
     @GetMapping("/students/admission")
     public String admission(Model model) {
-        model.addAttribute("pageTitle", "Student Admission - TechnoKraft");
+        model.addAttribute("pageTitle", "Student Admission");
         model.addAttribute("activePage", "admission");
         return "student/admission";
     }
@@ -38,23 +38,17 @@ public class LayoutController {
     // Certificate Printing
     @GetMapping("/printing/certificate")
     public String certificate(Model model) {
-        model.addAttribute("pageTitle", "Certificate Printing - TechnoKraft");
+        model.addAttribute("pageTitle", "Certificate");
         model.addAttribute("activePage", "certificate");
         return "printing/certificate";
     }
 
-    // Course Master
-    @GetMapping("/master/course")
-    public String course(Model model) {
-        model.addAttribute("pageTitle", "Course Master - TechnoKraft");
-        model.addAttribute("activePage", "course");
-        return "master/course";
-    }
+
 
     // Employee Master
     @GetMapping("/master/employee")
     public String employee(Model model) {
-        model.addAttribute("pageTitle", "Employee Master - TechnoKraft");
+        model.addAttribute("pageTitle", "Employee");
         model.addAttribute("activePage", "employee");
         return "master/employee";
     }
@@ -62,7 +56,7 @@ public class LayoutController {
     // Role Management
     @GetMapping("/master/role")
     public String role(Model model) {
-        model.addAttribute("pageTitle", "Role Management - TechnoKraft");
+        model.addAttribute("pageTitle", "Role Management");
         model.addAttribute("activePage", "role");
         return "master/role";
     }
@@ -70,7 +64,7 @@ public class LayoutController {
     // Bank Master
     @GetMapping("/master/bank")
     public String bank(Model model) {
-        model.addAttribute("pageTitle", "Bank Master - TechnoKraft");
+        model.addAttribute("pageTitle", "Bank Master ");
         model.addAttribute("activePage", "bank");
         return "master/bank";
     }
@@ -78,7 +72,7 @@ public class LayoutController {
     // Lead Source
     @GetMapping("/master/lead-source")
     public String leadSource(Model model) {
-        model.addAttribute("pageTitle", "Lead Source - TechnoKraft");
+        model.addAttribute("pageTitle", "Lead Source");
         model.addAttribute("activePage", "lead-source");
         return "master/lead-source";
     }
@@ -86,7 +80,7 @@ public class LayoutController {
     // Create Package
     @GetMapping("/master/package")
     public String createPackage(Model model) {
-        model.addAttribute("pageTitle", "Create Package - TechnoKraft");
+        model.addAttribute("pageTitle", "Create Package");
         model.addAttribute("activePage", "create-package");
         return "master/package";
     }
@@ -94,7 +88,7 @@ public class LayoutController {
     // Online Payment Mode
     @GetMapping("/master/online-payment")
     public String onlinePayment(Model model) {
-        model.addAttribute("pageTitle", "Online Payment Mode - TechnoKraft");
+        model.addAttribute("pageTitle", "Online Payment Mode");
         model.addAttribute("activePage", "online-payment");
         return "master/online-payment";
     }
@@ -102,7 +96,7 @@ public class LayoutController {
     // Course-wise Sales Report
     @GetMapping("/reports/course-wise-sales")
     public String courseWiseSales(Model model) {
-        model.addAttribute("pageTitle", "Course-wise Sales Report - TechnoKraft");
+        model.addAttribute("pageTitle", "Course-wise Sales Report");
         model.addAttribute("activePage", "course-wise-sales");
         return "reports/course-wise-sales";
     }
@@ -110,7 +104,7 @@ public class LayoutController {
     // Fees Collection Report
     @GetMapping("/reports/fees-collection")
     public String feesCollection(Model model) {
-        model.addAttribute("pageTitle", "Fees Collection Report - TechnoKraft");
+        model.addAttribute("pageTitle", "Fees Collection Report");
         model.addAttribute("activePage", "fees-collection");
         return "reports/fees-collection";
     }
