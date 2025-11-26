@@ -1,28 +1,23 @@
 package com.tts.sms.service;
 
-import com.opencsv.CSVReader;
-import com.opencsv.exceptions.CsvException;
 import com.tts.sms.dto.*;
 import com.tts.sms.exception.ResourceNotFoundException;
 import com.tts.sms.model.*;
 import com.tts.sms.repository.*;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.Year;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -30,6 +25,7 @@ import java.util.stream.Collectors;
 public class FeesManagerService {
 
     private final AdmissionRepository admissionRepository;
+    private final FeesRepository feesRepository;
     private final FeeReceiptRepository feeReceiptRepository;
     private final FeeRefundRepository feeRefundRepository;
     private final FeeInstallmentRepository feeInstallmentRepository;
@@ -44,206 +40,168 @@ public class FeesManagerService {
             DateTimeFormatter.ofPattern("d-M-yyyy")
     };
 
-    // ==================== FEES SUMMARY ====================
+    // ==================== FEES SUMMARY (FROM FEES TABLE) ====================
 
     @Transactional(readOnly = true)
     public Page<FeesSummaryDTO> getAllFeesSummary(int page, int size) {
         log.debug("Fetching fees summary - page: {}, size: {}", page, size);
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("admissionDate").descending());
-        Page<Admission> admissions = admissionRepository.findByIsDeletedFalse(pageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Fees> fees = feesRepository.findByIsDeletedFalse(pageable);
 
-        // FIX: Batch fetch all receipt/refund totals in ONE query instead of N queries
-        List<Long> admissionIds = admissions.getContent().stream()
-                .map(Admission::getId)
-                .collect(Collectors.toList());
-
-        // Single query for all receipts
-        Map<Long, Double> totalPaidMap = feeReceiptRepository
-                .findByAdmissionIdInAndIsDeletedFalse(admissionIds)
-                .stream()
-                .collect(Collectors.groupingBy(
-                        FeeReceipt::getAdmissionId,
-                        Collectors.summingDouble(FeeReceipt::getAmountReceived)
-                ));
-
-        // Single query for all refunds
-        Map<Long, Double> totalRefundMap = feeRefundRepository
-                .findByAdmissionIdInAndIsDeletedFalse(admissionIds)
-                .stream()
-                .collect(Collectors.groupingBy(
-                        FeeRefund::getAdmissionId,
-                        Collectors.summingDouble(FeeRefund::getRefundAmount)
-                ));
-
-        // Single query for all installments
-        Map<Long, List<FeeInstallment>> installmentsMap = feeInstallmentRepository
-                .findByAdmissionIdIn(admissionIds)
-                .stream()
-                .collect(Collectors.groupingBy(FeeInstallment::getAdmissionId));
-
-        // Now build DTOs using pre-fetched data (NO MORE QUERIES!)
-        return admissions.map(admission -> buildFeesSummaryDTOOptimized(
-                admission,
-                totalPaidMap.getOrDefault(admission.getId(), 0.0),
-                totalRefundMap.getOrDefault(admission.getId(), 0.0),
-                installmentsMap.getOrDefault(admission.getId(), Collections.emptyList())
-        ));
+        return fees.map(this::toFeesSummaryDTO);
     }
 
-    private FeesSummaryDTO buildFeesSummaryDTOOptimized(
-            Admission admission,
-            Double totalPaid,
-            Double totalRefund,
-            List<FeeInstallment> installments) {
-
-        // Calculate fees
-        Double totalFees = admission.getTotalReceivableFees() != null ? admission.getTotalReceivableFees() : 0.0;
-        Double feesDue = totalFees - totalPaid + totalRefund;
-
-        // Process installments
-        int totalInstallments = installments.size();
-        int paidInstallments = (int) installments.stream()
-                .filter(i -> "Paid".equals(i.getStatus()))
-                .count();
-        int pendingInstallments = totalInstallments - paidInstallments;
-
-        // Get next due date
-        LocalDate dueDate = installments.stream()
-                .filter(i -> "Pending".equals(i.getStatus()))
-                .map(FeeInstallment::getDueDate)
-                .min(LocalDate::compareTo)
-                .orElse(null);
-
-        // Determine status
-        String status = feesDue <= 0 ? "Clear" : "Pending";
-
+    private FeesSummaryDTO toFeesSummaryDTO(Fees fees) {
         return FeesSummaryDTO.builder()
-                .admissionId(admission.getId())
-                .registrationNumber(admission.getRegistrationNumber())
-                .studentName(admission.getFullName())
-                .mobile(admission.getMobilePrimary())
-                .course(admission.getCourses() != null && !admission.getCourses().isEmpty()
-                        ? String.join(", ", admission.getCourses())
-                        : "N/A")
-                .totalFees(totalFees)
-                .totalPaid(totalPaid)
-                .feesDue(feesDue)
-                .feesRefund(totalRefund)
-                .dueDate(dueDate)
-                .status(status)
-                .totalInstallments(totalInstallments)
-                .paidInstallments(paidInstallments)
-                .pendingInstallments(pendingInstallments)
+                .admissionId(fees.getAdmissionId())
+                .registrationNumber(fees.getRegistrationNumber())
+                .studentName(fees.getStudentName())
+                .mobile(fees.getMobile())
+                .course(fees.getCourse() != null ? fees.getCourse() : "N/A")
+                .totalFees(fees.getTotalFees())
+                .totalPaid(fees.getTotalPaid())
+                .feesDue(fees.getFeesDue())
+                .feesRefund(fees.getFeesRefund())
+                .dueDate(fees.getDueDate())
+                .status(fees.getStatus())
+                .totalInstallments(0)
+                .paidInstallments(0)
+                .pendingInstallments(0)
                 .build();
     }
 
-    @Transactional(readOnly = true)
-    public Page<FeesSummaryDTO> searchFees(FeesSearchDTO searchDTO) {
-        log.debug("Searching fees with criteria: {}", searchDTO);
+    // ==================== CSV IMPORT (FIXED) ====================
 
-        Pageable pageable = PageRequest.of(
-                searchDTO.getPage(),
-                searchDTO.getSize(),
-                Sort.by(
-                        "DESC".equalsIgnoreCase(searchDTO.getSortDirection())
-                                ? Sort.Direction.DESC
-                                : Sort.Direction.ASC,
-                        searchDTO.getSortBy()
-                )
-        );
+    @Transactional
+    public FeesBulkImportResponseDTO bulkImportFeesCSV(MultipartFile file) {
+        log.info("🔄 Starting bulk fees CSV import: {}", file.getOriginalFilename());
 
-        // Get all admissions (we'll filter in memory for simplicity)
-        Page<Admission> admissions = admissionRepository.findByIsDeletedFalse(pageable);
+        try {
+            List<FeesCSVImportDTO> dtos = csvService.parseFeesCSV(file);
+            return processBulkFeesImport(dtos);
 
-        List<FeesSummaryDTO> filtered = admissions.getContent().stream()
-                .map(this::buildFeesSummaryDTO)
-                .filter(dto -> matchesSearchCriteria(dto, searchDTO))
-                .collect(Collectors.toList());
-
-        return new PageImpl<>(filtered, pageable, filtered.size());
+        } catch (Exception e) {
+            log.error("❌ Error during bulk fees import", e);
+            return FeesBulkImportResponseDTO.builder()
+                    .success(false)
+                    .totalRecords(0)
+                    .successfulImports(0)
+                    .failedImports(0)
+                    .message("Failed to process CSV: " + e.getMessage())
+                    .build();
+        }
     }
 
-    private boolean matchesSearchCriteria(FeesSummaryDTO dto, FeesSearchDTO search) {
-        if (search.getSearchTerm() != null && !search.getSearchTerm().isEmpty()) {
-            String term = search.getSearchTerm().toLowerCase();
-            if (!dto.getRegistrationNumber().toLowerCase().contains(term) &&
-                    !dto.getStudentName().toLowerCase().contains(term) &&
-                    !dto.getMobile().contains(term)) {
-                return false;
+    @Transactional
+    public FeesBulkImportResponseDTO processBulkFeesImport(List<FeesCSVImportDTO> dtos) {
+        log.info("🔄 Processing {} fees records", dtos.size());
+
+        int successCount = 0;
+        int updateCount = 0;
+        int createCount = 0;
+        List<FeesBulkImportResponseDTO.ImportError> errors = new ArrayList<>();
+
+        for (int i = 0; i < dtos.size(); i++) {
+            final int rowNumber = i + 2;
+            FeesCSVImportDTO dto = dtos.get(i);
+
+            try {
+                // Validate required fields
+                if (dto.getRegistrationNumber() == null ||
+                        dto.getRegistrationNumber().equals("N/A") ||
+                        dto.getRegistrationNumber().isEmpty()) {
+
+                    errors.add(FeesBulkImportResponseDTO.ImportError.builder()
+                            .rowNumber(rowNumber)
+                            .fieldName("registrationNumber")
+                            .errorMessage("Registration number is required")
+                            .rejectedValue(dto.getRegistrationNumber())
+                            .build());
+                    continue;
+                }
+
+                // Check if fees record exists
+                Optional<Fees> existingFees = feesRepository
+                        .findByRegistrationNumberAndIsDeletedFalse(dto.getRegistrationNumber());
+
+                Fees fees;
+                if (existingFees.isPresent()) {
+                    // UPDATE existing record
+                    fees = existingFees.get();
+                    fees.setStudentName(dto.getStudentName());
+                    fees.setMobile(dto.getMobile());
+                    fees.setTotalFees(dto.getTotalFees());
+                    fees.setFeesDue(dto.getFeesDue());
+                    fees.setTotalPaid(dto.getTotalPaid());
+                    fees.setDueDate(dto.getDueDate());
+                    fees.setFeesRefund(dto.getFeesRefund());
+                    fees.setStatus(dto.getStatus());
+                    fees.setCourse(dto.getCourse());
+                    fees.setUpdatedBy("CSV_IMPORT");
+                    updateCount++;
+
+                    log.debug("✏️ Updating fees for: {}", dto.getRegistrationNumber());
+                } else {
+                    // CREATE new record
+                    fees = Fees.builder()
+                            .registrationNumber(dto.getRegistrationNumber())
+                            .studentName(dto.getStudentName())
+                            .mobile(dto.getMobile())
+                            .totalFees(dto.getTotalFees())
+                            .feesDue(dto.getFeesDue())
+                            .totalPaid(dto.getTotalPaid())
+                            .dueDate(dto.getDueDate())
+                            .feesRefund(dto.getFeesRefund())
+                            .status(dto.getStatus())
+                            .course(dto.getCourse())
+                            .createdBy("CSV_IMPORT")
+                            .build();
+                    createCount++;
+
+                    log.debug("➕ Creating new fees for: {}", dto.getRegistrationNumber());
+                }
+
+                // Try to link with admission if exists
+                Admission admission = admissionRepository
+                        .findByRegistrationNumberAndIsDeletedFalse(dto.getRegistrationNumber());
+                if (admission != null) {
+                    fees.setAdmissionId(admission.getId());
+                }
+
+                feesRepository.save(fees);
+                successCount++;
+
+                log.info("✅ Row {}: {} fees for {}",
+                        rowNumber,
+                        existingFees.isPresent() ? "Updated" : "Created",
+                        dto.getRegistrationNumber());
+
+            } catch (Exception e) {
+                log.error("❌ Row {}: Error - {}", rowNumber, e.getMessage(), e);
+
+                errors.add(FeesBulkImportResponseDTO.ImportError.builder()
+                        .rowNumber(rowNumber)
+                        .fieldName("processing")
+                        .errorMessage(e.getMessage())
+                        .rejectedValue(dto.getRegistrationNumber())
+                        .build());
             }
         }
 
-        if (search.getStatus() != null && !search.getStatus().equals(dto.getStatus())) {
-            return false;
-        }
+        int failedCount = dtos.size() - successCount;
 
-        if (search.getCourse() != null && !dto.getCourse().toLowerCase().contains(search.getCourse().toLowerCase())) {
-            return false;
-        }
+        log.info("📊 IMPORT RESULT: {}/{} processed (Created: {}, Updated: {}), {} failed",
+                successCount, dtos.size(), createCount, updateCount, failedCount);
 
-        if (search.getDueDateFrom() != null && dto.getDueDate() != null &&
-                dto.getDueDate().isBefore(search.getDueDateFrom())) {
-            return false;
-        }
-
-        if (search.getDueDateTo() != null && dto.getDueDate() != null &&
-                dto.getDueDate().isAfter(search.getDueDateTo())) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private FeesSummaryDTO buildFeesSummaryDTO(Admission admission) {
-        // Calculate fees
-        Double totalFees = admission.getTotalReceivableFees() != null ? admission.getTotalReceivableFees() : 0.0;
-
-        Double totalPaid = feeReceiptRepository.getTotalReceivedByAdmission(admission.getId());
-        totalPaid = totalPaid != null ? totalPaid : 0.0;
-
-        Double totalRefund = feeRefundRepository.getTotalRefundByAdmission(admission.getId());
-        totalRefund = totalRefund != null ? totalRefund : 0.0;
-
-        Double feesDue = totalFees - totalPaid + totalRefund;
-
-        // Get installments info
-        List<FeeInstallment> installments = feeInstallmentRepository
-                .findByAdmissionIdOrderByDueDateAsc(admission.getId());
-
-        int totalInstallments = installments.size();
-        int paidInstallments = (int) installments.stream()
-                .filter(i -> "Paid".equals(i.getStatus()))
-                .count();
-        int pendingInstallments = totalInstallments - paidInstallments;
-
-        // Get next due date
-        LocalDate dueDate = installments.stream()
-                .filter(i -> "Pending".equals(i.getStatus()))
-                .map(FeeInstallment::getDueDate)
-                .min(LocalDate::compareTo)
-                .orElse(null);
-
-        // Determine status
-        String status = feesDue <= 0 ? "Clear" : "Pending";
-
-        return FeesSummaryDTO.builder()
-                .admissionId(admission.getId())
-                .registrationNumber(admission.getRegistrationNumber())
-                .studentName(admission.getFullName())
-                .mobile(admission.getMobilePrimary())
-                .course(admission.getCourses() != null && !admission.getCourses().isEmpty()
-                        ? String.join(", ", admission.getCourses())
-                        : "N/A")
-                .totalFees(totalFees)
-                .totalPaid(totalPaid)
-                .feesDue(feesDue)
-                .feesRefund(totalRefund)
-                .dueDate(dueDate)
-                .status(status)
-                .totalInstallments(totalInstallments)
-                .paidInstallments(paidInstallments)
-                .pendingInstallments(pendingInstallments)
+        return FeesBulkImportResponseDTO.builder()
+                .success(successCount > 0)
+                .totalRecords(dtos.size())
+                .successfulImports(successCount)
+                .failedImports(failedCount)
+                .errors(errors)
+                .message(String.format("%d/%d records processed (Created: %d, Updated: %d)",
+                        successCount, dtos.size(), createCount, updateCount))
                 .build();
     }
 
@@ -287,7 +245,6 @@ public class FeesManagerService {
 
         FeeReceipt saved = feeReceiptRepository.save(receipt);
 
-        // Update installment status if provided
         if (requestDTO.getInstallmentId() != null) {
             updateInstallmentStatus(requestDTO.getInstallmentId(), "Paid");
         }
@@ -304,12 +261,11 @@ public class FeesManagerService {
                 .filter(a -> !a.getIsDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Admission not found: " + admissionId));
 
-        List<FeeReceipt> receipts = feeReceiptRepository
-                .findByAdmissionIdAndIsDeletedFalseOrderByReceiptDateDesc(admissionId);
-
-        return receipts.stream()
+        return feeReceiptRepository
+                .findByAdmissionIdAndIsDeletedFalseOrderByReceiptDateDesc(admissionId)
+                .stream()
                 .map(r -> toReceiptResponseDTO(r, admission))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional
@@ -371,12 +327,11 @@ public class FeesManagerService {
                 .filter(a -> !a.getIsDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Admission not found: " + admissionId));
 
-        List<FeeRefund> refunds = feeRefundRepository
-                .findByAdmissionIdAndIsDeletedFalseOrderByRefundDateDesc(admissionId);
-
-        return refunds.stream()
+        return feeRefundRepository
+                .findByAdmissionIdAndIsDeletedFalseOrderByRefundDateDesc(admissionId)
+                .stream()
                 .map(r -> toRefundResponseDTO(r, admission))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     // ==================== STATUS UPDATE ====================
@@ -396,144 +351,6 @@ public class FeesManagerService {
         log.info("Updated fee status to: {}", updateDTO.getPaymentStatus());
     }
 
-    // ==================== CSV IMPORT ====================
-
-    @Transactional
-    public FeesBulkImportResponseDTO bulkImportFeesCSV(MultipartFile file) {
-        log.info("🔄 Starting bulk fees CSV import: {}", file.getOriginalFilename());
-
-        try {
-            List<FeesCSVImportDTO> dtos = csvService.parseFeesCSV(file);
-            return processBulkFeesImport(dtos);
-
-        } catch (Exception e) {
-            log.error("Error during bulk fees import", e);
-            return FeesBulkImportResponseDTO.builder()
-                    .success(false)
-                    .totalRecords(0)
-                    .successfulImports(0)
-                    .failedImports(0)
-                    .message("Failed to process CSV: " + e.getMessage())
-                    .build();
-        }
-    }
-
-    private List<FeesCSVImportDTO> parseFeesCSV(MultipartFile file) throws IOException {
-        log.info("📥 Parsing fees CSV file");
-
-        List<FeesCSVImportDTO> dtos = new ArrayList<>();
-
-        try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
-             CSVReader csvReader = new CSVReader(reader)) {
-
-            List<String[]> records = csvReader.readAll();
-
-            if (records.isEmpty()) {
-                throw new IllegalArgumentException("CSV file is empty");
-            }
-
-            // Skip header
-            for (int i = 1; i < records.size(); i++) {
-                String[] row = records.get(i);
-
-                try {
-                    FeesCSVImportDTO dto = FeesCSVImportDTO.builder()
-                            .registrationNumber(getValue(row, 0))
-                            .studentName(getValue(row, 1))
-                            .mobile(getValue(row, 2))
-                            .totalFees(parseDouble(getValue(row, 3)))
-                            .feesDue(parseDouble(getValue(row, 4)))
-                            .totalPaid(parseDouble(getValue(row, 5)))
-                            .dueDate(parseDate(getValue(row, 6)))
-                            .feesRefund(parseDouble(getValue(row, 7)))
-                            .status(getValue(row, 8))
-                            .course(getValue(row, 9))
-                            .build();
-
-                    dtos.add(dto);
-
-                } catch (Exception e) {
-                    log.error("Error parsing row {}: {}", i + 1, e.getMessage());
-                    // Create fallback DTO
-                    dtos.add(createFallbackFeesDTO(i));
-                }
-            }
-
-            log.info("✅ Parsed {} fees records", dtos.size());
-            return dtos;
-
-        } catch (CsvException e) {
-            throw new IOException("CSV parsing error: " + e.getMessage(), e);
-        }
-    }
-
-    @Transactional
-    public FeesBulkImportResponseDTO processBulkFeesImport(List<FeesCSVImportDTO> dtos) {
-        log.info("🔄 Processing {} fees records", dtos.size());
-
-        int successCount = 0;
-        List<FeesBulkImportResponseDTO.ImportError> errors = new ArrayList<>();
-
-        for (int i = 0; i < dtos.size(); i++) {
-            final int rowNumber = i + 2;
-            FeesCSVImportDTO dto = dtos.get(i);
-
-            try {
-                // Find admission by registration number
-                Admission admission = admissionRepository
-                        .findByRegistrationNumberAndIsDeletedFalse(dto.getRegistrationNumber());
-
-                if (admission == null) {
-                    errors.add(FeesBulkImportResponseDTO.ImportError.builder()
-                            .rowNumber(rowNumber)
-                            .fieldName("registrationNumber")
-                            .errorMessage("Admission not found")
-                            .rejectedValue(dto.getRegistrationNumber())
-                            .build());
-                    continue;
-                }
-
-                // Update admission fees (AS-IS from CSV)
-                if (dto.getTotalFees() != null) {
-                    admission.setTotalReceivableFees(dto.getTotalFees());
-                }
-
-                saveAdmissionInNewTransaction(admission);
-                successCount++;
-
-                log.info("✅ Row {}: Updated fees for {}", rowNumber, dto.getRegistrationNumber());
-
-            } catch (Exception e) {
-                log.error("❌ Row {}: Error - {}", rowNumber, e.getMessage());
-
-                errors.add(FeesBulkImportResponseDTO.ImportError.builder()
-                        .rowNumber(rowNumber)
-                        .fieldName("processing")
-                        .errorMessage(e.getMessage())
-                        .rejectedValue(dto.getRegistrationNumber())
-                        .build());
-            }
-        }
-
-        int failedCount = dtos.size() - successCount;
-
-        log.info("📊 IMPORT RESULT: {}/{} updated, {} failed", successCount, dtos.size(), failedCount);
-
-        return FeesBulkImportResponseDTO.builder()
-                .success(successCount > 0)
-                .totalRecords(dtos.size())
-                .successfulImports(successCount)
-                .failedImports(failedCount)
-                .errors(errors)
-                .message(String.format("%d/%d records processed", successCount, dtos.size()))
-                .build();
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void saveAdmissionInNewTransaction(Admission admission) {
-        admissionRepository.save(admission);
-    }
-
     // ==================== HELPER METHODS ====================
 
     private String generateReceiptNumber() {
@@ -543,8 +360,7 @@ public class FeesManagerService {
         int nextNumber = 1;
         if (maxReceiptNo != null && maxReceiptNo.length() > prefix.length()) {
             try {
-                String numberPart = maxReceiptNo.substring(prefix.length());
-                nextNumber = Integer.parseInt(numberPart) + 1;
+                nextNumber = Integer.parseInt(maxReceiptNo.substring(prefix.length())) + 1;
             } catch (NumberFormatException e) {
                 log.warn("Error parsing receipt number: {}", maxReceiptNo);
             }
@@ -565,8 +381,7 @@ public class FeesManagerService {
         int nextNumber = 1;
         if (maxRefundNo != null && maxRefundNo.length() > prefix.length()) {
             try {
-                String numberPart = maxRefundNo.substring(prefix.length());
-                nextNumber = Integer.parseInt(numberPart) + 1;
+                nextNumber = Integer.parseInt(maxRefundNo.substring(prefix.length())) + 1;
             } catch (NumberFormatException e) {
                 log.warn("Error parsing refund number: {}", maxRefundNo);
             }
@@ -576,13 +391,10 @@ public class FeesManagerService {
     }
 
     private void updateInstallmentStatus(Long installmentId, String status) {
-        FeeInstallment installment = feeInstallmentRepository.findById(installmentId)
-                .orElse(null);
-
-        if (installment != null) {
+        feeInstallmentRepository.findById(installmentId).ifPresent(installment -> {
             installment.setStatus(status);
             feeInstallmentRepository.save(installment);
-        }
+        });
     }
 
     private FeeReceiptResponseDTO toReceiptResponseDTO(FeeReceipt receipt, Admission admission) {
@@ -642,44 +454,97 @@ public class FeesManagerService {
                 .build();
     }
 
-    private String getValue(String[] row, int index) {
-        if (index >= row.length) return "N/A";
-        String value = row[index];
-        return (value == null || value.trim().isEmpty()) ? "N/A" : value.trim();
+    @Transactional(readOnly = true)
+    public Page<FeesSummaryDTO> searchFees(FeesSearchDTO searchDTO) {
+        log.debug("Searching fees with criteria: {}", searchDTO);
+
+        // Create sort
+        Sort sort = Sort.by(
+                searchDTO.getSortDirection().equalsIgnoreCase("ASC")
+                        ? Sort.Direction.ASC
+                        : Sort.Direction.DESC,
+                searchDTO.getSortBy()
+        );
+
+        Pageable pageable = PageRequest.of(
+                searchDTO.getPage(),
+                searchDTO.getSize(),
+                sort
+        );
+
+        // Build specification
+        Specification<Fees> spec = buildFeesSpecification(searchDTO);
+
+        // Execute query
+        Page<Fees> fees = feesRepository.findAll(spec, pageable);
+
+        return fees.map(this::toFeesSummaryDTO);
     }
 
-    private Double parseDouble(String value) {
-        if (value == null || value.equals("N/A")) return 0.0;
-        try {
-            return Double.parseDouble(value);
-        } catch (NumberFormatException e) {
-            return 0.0;
-        }
-    }
+    /**
+     * Build dynamic specification based on search criteria
+     */
+    private Specification<Fees> buildFeesSpecification(FeesSearchDTO searchDTO) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
 
-    private LocalDate parseDate(String dateStr) {
-        if (dateStr == null || dateStr.equals("N/A")) return null;
+            // Always exclude deleted records
+            predicates.add(cb.isFalse(root.get("isDeleted")));
 
-        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
-            try {
-                return LocalDate.parse(dateStr, formatter);
-            } catch (DateTimeParseException ignored) {
+            // Search term (registration number, student name, or mobile)
+            if (searchDTO.getSearchTerm() != null && !searchDTO.getSearchTerm().trim().isEmpty()) {
+                String searchPattern = "%" + searchDTO.getSearchTerm().toLowerCase().trim() + "%";
+                Predicate regNo = cb.like(cb.lower(root.get("registrationNumber")), searchPattern);
+                Predicate name = cb.like(cb.lower(root.get("studentName")), searchPattern);
+                Predicate mobile = cb.like(root.get("mobile"), searchPattern);
+                predicates.add(cb.or(regNo, name, mobile));
             }
-        }
-        return null;
+
+            // Status filter
+            if (searchDTO.getStatus() != null && !searchDTO.getStatus().trim().isEmpty()) {
+                predicates.add(cb.equal(root.get("status"), searchDTO.getStatus()));
+            }
+
+            // Course filter
+            if (searchDTO.getCourse() != null && !searchDTO.getCourse().trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("course")),
+                        "%" + searchDTO.getCourse().toLowerCase() + "%"));
+            }
+
+            // Due date range
+            if (searchDTO.getDueDateFrom() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("dueDate"), searchDTO.getDueDateFrom()));
+            }
+            if (searchDTO.getDueDateTo() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("dueDate"), searchDTO.getDueDateTo()));
+            }
+
+            // Total fees range
+            if (searchDTO.getMinTotalFees() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("totalFees"), searchDTO.getMinTotalFees()));
+            }
+            if (searchDTO.getMaxTotalFees() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("totalFees"), searchDTO.getMaxTotalFees()));
+            }
+
+            // Fees due range
+            if (searchDTO.getMinFeesDue() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("feesDue"), searchDTO.getMinFeesDue()));
+            }
+            if (searchDTO.getMaxFeesDue() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("feesDue"), searchDTO.getMaxFeesDue()));
+            }
+
+            // Overdue filter
+            if (searchDTO.getOverdue() != null && searchDTO.getOverdue()) {
+                predicates.add(cb.and(
+                        cb.equal(root.get("status"), "Pending"),
+                        cb.lessThan(root.get("dueDate"), LocalDate.now())
+                ));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
-    private FeesCSVImportDTO createFallbackFeesDTO(int rowNumber) {
-        return FeesCSVImportDTO.builder()
-                .registrationNumber("ERROR_ROW_" + (rowNumber + 1))
-                .studentName("Import Error")
-                .mobile("N/A")
-                .totalFees(0.0)
-                .feesDue(0.0)
-                .totalPaid(0.0)
-                .feesRefund(0.0)
-                .status("Error")
-                .course("N/A")
-                .build();
-    }
 }

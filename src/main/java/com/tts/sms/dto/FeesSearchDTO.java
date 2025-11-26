@@ -7,17 +7,16 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
+/**
+ * DTO for searching fees with multiple criteria
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class FeesSearchDTO {
-    private String searchTerm; // Search by reg no, name, mobile
-    private String status; // Pending, Clear
-    private String course;
-    private LocalDate dueDateFrom;
-    private LocalDate dueDateTo;
 
+    // Pagination
     @Builder.Default
     private int page = 0;
 
@@ -25,8 +24,28 @@ public class FeesSearchDTO {
     private int size = 25;
 
     @Builder.Default
-    private String sortBy = "dueDate";
+    private String sortBy = "createdAt";
 
     @Builder.Default
-    private String sortDirection = "ASC";
+    private String sortDirection = "DESC";
+
+    private String searchTerm;
+
+    private String status; // Pending, Clear
+
+    private String course;
+
+    private LocalDate dueDateFrom;
+
+    private LocalDate dueDateTo;
+
+    private Double minTotalFees;
+
+    private Double maxTotalFees;
+
+    private Double minFeesDue;
+
+    private Double maxFeesDue;
+
+    private Boolean overdue;
 }

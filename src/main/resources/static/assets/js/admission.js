@@ -133,21 +133,18 @@
            return metaTag ? metaTag.getAttribute('content') : 'X-CSRF-TOKEN';
        }
 
-    // Load Admissions from API
+    // In admission.js - Update loadAdmissions function
     async function loadAdmissions(page = 0, size = 25) {
         try {
             showLoading('Loading admissions...');
 
-             const csrfToken = getCsrfToken();
-                    const headers = {
-                        'Content-Type': 'application/json'
-                    };
-
-                     if (csrfToken) {
-                                headers[getCsrfHeader()] = csrfToken;
-                     }
-
-            const response = await fetch(`/api/admissions?page=${page}&size=${size}`);
+            const response = await fetch(`/api/admissions?page=${page}&size=${size}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
 
             if (!response.ok) {
                 throw new Error('Failed to load admissions');
@@ -155,7 +152,6 @@
 
             const data = await response.json();
 
-            // Update pagination variables
             currentPage = data.number || 0;
             pageSize = data.size || 25;
             totalPages = data.totalPages || 0;
@@ -296,7 +292,13 @@
         try {
             showLoading('Loading admission details...');
 
-            const response = await fetch(`/api/admissions/${id}`);
+           const response = await fetch(`/api/admissions/${id}`, {
+                       method: 'GET',
+                       headers: {
+                           'Accept': 'application/json',
+                           'Content-Type': 'application/json'
+                       }
+                   });
             if (!response.ok) throw new Error('Failed to load admission');
 
             const admission = await response.json();
@@ -501,12 +503,13 @@ async function openNewAdmissionModal() {
             showLoading('Saving admission...');
 
             const response = await fetch('/api/admissions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(admissionData)
-            });
+                       method: 'POST',
+                       headers: {
+                           'Accept': 'application/json',
+                           'Content-Type': 'application/json'
+                       },
+                       body: JSON.stringify(admissionData)
+                   });
 
             if (!response.ok) {
                 const error = await response.json();
@@ -676,6 +679,7 @@ async function openNewAdmissionModal() {
            const response = await fetch('/api/admissions/search', {
                method: 'POST',
                headers: {
+                    'Accept': 'application/json',
                    'Content-Type': 'application/json',
                },
                body: JSON.stringify(searchDTO)
@@ -717,7 +721,14 @@ async function openNewAdmissionModal() {
         try {
             showLoading('Loading admission details...');
 
-            const response = await fetch(`/api/admissions/${id}`);
+           const response = await fetch(`/api/admissions/${id}`, {
+                       method: 'GET',
+                       headers: {
+                           'Accept': 'application/json',
+                           'Content-Type': 'application/json'
+                       }
+                   });
+
             if (!response.ok) throw new Error('Failed to load admission');
 
             const admission = await response.json();
@@ -754,7 +765,14 @@ async function openNewAdmissionModal() {
         try {
             showLoading('Loading installments...');
 
-            const response = await fetch(`/api/admissions/${id}/installments`);
+           const response = await fetch(`/api/admissions/${id}/installments`, {
+                      method: 'GET',
+                      headers: {
+                          'Accept': 'application/json',
+                          'Content-Type': 'application/json'
+                      }
+                  });
+
             if (!response.ok) throw new Error('Failed to load installments');
 
             const installments = await response.json();
@@ -794,7 +812,14 @@ async function openNewAdmissionModal() {
         try {
             showLoading('Loading admission...');
 
-            const response = await fetch(`/api/admissions/${id}`);
+            const response = await fetch(`/api/admissions/${id}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+
             if (!response.ok) throw new Error('Failed to load admission');
 
             const admission = await response.json();
@@ -822,7 +847,14 @@ async function openNewAdmissionModal() {
         try {
             showLoading('Generating print preview...');
 
-            const response = await fetch(`/api/admissions/${id}`);
+             const response = await fetch(`/api/admissions/${id}`, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
             if (!response.ok) throw new Error('Failed to load admission');
 
             const admission = await response.json();
@@ -880,8 +912,12 @@ async function openNewAdmissionModal() {
                 showLoading('Deleting admission...');
 
                 const response = await fetch(`/api/admissions/${id}`, {
-                    method: 'DELETE'
-                });
+                          method: 'DELETE',
+                          headers: {
+                              'Accept': 'application/json',
+                              'Content-Type': 'application/json'
+                          }
+                      });
 
                 if (!response.ok) throw new Error('Failed to delete admission');
 
@@ -1232,6 +1268,7 @@ async function openNewAdmissionModal() {
                       document.getElementById('admImportPreview').style.display = 'block';
                   }
 
+                  // In admission.js - Update importAdmissions function
                   async function importAdmissions() {
                       if (importedAdmissions.length === 0) {
                           showError('No data to import');
@@ -1241,9 +1278,11 @@ async function openNewAdmissionModal() {
                       try {
                           showLoading(`Importing ${importedAdmissions.length} admissions...`);
 
-                        const response = await fetch('/api/admissions/bulk-import-json?importSource=OLD_FORMAT', {                              method: 'POST',
+                          const response = await fetch('/api/admissions/bulk-import-json?importSource=OLD_FORMAT', {
+                              method: 'POST',
                               headers: {
-                                  'Content-Type': 'application/json',
+                                  'Accept': 'application/json',
+                                  'Content-Type': 'application/json'
                               },
                               body: JSON.stringify(importedAdmissions)
                           });

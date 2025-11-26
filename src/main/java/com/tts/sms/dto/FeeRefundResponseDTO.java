@@ -1,5 +1,6 @@
 package com.tts.sms.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,6 +27,8 @@ public class FeeRefundResponseDTO {
     private String paymentMode;
     private String bankName;
     private String chequeNumber;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate chequeDate;
     private String transactionNumber;
     private String ifscCode;

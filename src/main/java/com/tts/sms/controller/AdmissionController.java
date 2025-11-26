@@ -7,6 +7,7 @@
     import lombok.extern.slf4j.Slf4j;
     import org.springframework.data.domain.Page;
     import org.springframework.http.HttpStatus;
+    import org.springframework.http.MediaType;
     import org.springframework.http.ResponseEntity;
     import org.springframework.web.bind.annotation.*;
     import org.springframework.web.multipart.MultipartFile;
@@ -24,84 +25,6 @@
         private final AdmissionService admissionService;
 
         /**
-         * Get all admissions with pagination
-         */
-        @GetMapping
-        public ResponseEntity<Page<AdmissionResponseDTO>> getAllAdmissions(
-                @RequestParam(defaultValue = "0") int page,
-                @RequestParam(defaultValue = "25") int size) {
-
-            log.info("GET /api/admissions - page: {}, size: {}", page, size);
-
-            Page<AdmissionResponseDTO> admissions = admissionService.getAllAdmissions(page, size);
-            return ResponseEntity.ok(admissions);
-        }
-
-        /**
-         * Search admissions with filters
-         */
-        @PostMapping("/search")
-        public ResponseEntity<Page<AdmissionResponseDTO>> searchAdmissions(
-                @RequestBody AdmissionSearchDTO searchDTO) {
-
-            log.info("POST /api/admissions/search - {}", searchDTO);
-
-            Page<AdmissionResponseDTO> results = admissionService.searchAdmissions(searchDTO);
-            return ResponseEntity.ok(results);
-        }
-
-        /**
-         * Get admission by ID
-         */
-        @GetMapping("/{id}")
-        public ResponseEntity<AdmissionResponseDTO> getAdmissionById(@PathVariable Long id) {
-            log.info("GET /api/admissions/{}", id);
-
-            AdmissionResponseDTO admission = admissionService.getAdmissionById(id);
-            return ResponseEntity.ok(admission);
-        }
-
-        /**
-         * Create new admission
-         * REQUIRES: Enquiry must exist for the mobile number
-         */
-        @PostMapping
-        public ResponseEntity<?> createAdmission(
-                @Valid @RequestBody AdmissionRequestDTO requestDTO) {
-
-            log.info("POST /api/admissions - mobile: {}", requestDTO.getMobilePrimary());
-
-            try {
-                AdmissionResponseDTO created = admissionService.createAdmission(requestDTO);
-                return ResponseEntity.status(HttpStatus.CREATED).body(created);
-
-            } catch (IllegalArgumentException e) {
-                log.error("Validation error: {}", e.getMessage());
-                return ResponseEntity
-                        .status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of(
-                                "success", false,
-                                "message", e.getMessage(),
-                                "errorType", "ENQUIRY_NOT_FOUND"
-                        ));
-            }
-        }
-
-        /**
-         * Update existing admission
-         */
-        @PutMapping("/{id}")
-        public ResponseEntity<AdmissionResponseDTO> updateAdmission(
-                @PathVariable Long id,
-                @Valid @RequestBody AdmissionRequestDTO requestDTO) {
-
-            log.info("PUT /api/admissions/{}", id);
-
-            AdmissionResponseDTO updated = admissionService.updateAdmission(id, requestDTO);
-            return ResponseEntity.ok(updated);
-        }
-
-        /**
          * Transfer admission to new academic year/batch
          */
         @PostMapping("/transfer")
@@ -112,45 +35,6 @@
 
             AdmissionResponseDTO transferred = admissionService.transferAdmission(transferDTO);
             return ResponseEntity.ok(transferred);
-        }
-
-        /**
-         * Delete admission (soft delete)
-         */
-        @DeleteMapping("/{id}")
-        public ResponseEntity<Void> deleteAdmission(@PathVariable Long id) {
-            log.info("DELETE /api/admissions/{}", id);
-
-            admissionService.deleteAdmission(id);
-            return ResponseEntity.noContent().build();
-        }
-
-        /**
-         * Generate fee installments
-         */
-        @PostMapping("/{id}/installments")
-        public ResponseEntity<List<FeeInstallmentDTO>> generateInstallments(
-                @PathVariable Long id,
-                @Valid @RequestBody InstallmentConfigDTO config) {
-
-            log.info("POST /api/admissions/{}/installments", id);
-
-            AdmissionResponseDTO admission = admissionService.getAdmissionById(id);
-            List<FeeInstallmentDTO> installments = admissionService.generateInstallments(
-                    id, config, admission.getTotalReceivableFees());
-
-            return ResponseEntity.ok(installments);
-        }
-
-        /**
-         * Get installments for admission
-         */
-        @GetMapping("/{id}/installments")
-        public ResponseEntity<List<FeeInstallmentDTO>> getInstallments(@PathVariable Long id) {
-            log.info("GET /api/admissions/{}/installments", id);
-
-            List<FeeInstallmentDTO> installments = admissionService.getInstallments(id);
-            return ResponseEntity.ok(installments);
         }
 
         /**
@@ -171,39 +55,6 @@
                             ? "Admission can be created"
                             : "Cannot create admission. Either enquiry not found or admission already exists"
             ));
-        }
-
-        /**
-         * Get enquiry data for pre-filling admission form
-         */
-        @GetMapping("/enquiry-data/{mobileNumber}")
-        public ResponseEntity<?> getEnquiryForAdmission(@PathVariable String mobileNumber) {
-            log.info("GET /api/admissions/enquiry-data/{}", mobileNumber);
-
-            try {
-                EnquiryResponseDTO enquiry = admissionService.getEnquiryForAdmission(mobileNumber);
-                return ResponseEntity.ok(enquiry);
-
-            } catch (Exception e) {
-                log.error("Error fetching enquiry: {}", e.getMessage());
-                return ResponseEntity
-                        .status(HttpStatus.NOT_FOUND)
-                        .body(Map.of(
-                                "success", false,
-                                "message", "No enquiry found for mobile: " + mobileNumber
-                        ));
-            }
-        }
-
-        /**
-         * Get admission statistics
-         */
-        @GetMapping("/statistics")
-        public ResponseEntity<Map<String, Object>> getStatistics() {
-            log.info("GET /api/admissions/statistics");
-
-            Map<String, Object> stats = admissionService.getAdmissionStatistics();
-            return ResponseEntity.ok(stats);
         }
 
         /**
@@ -273,6 +124,145 @@
 
             HttpStatus status = result.isSuccess() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
             return ResponseEntity.status(status).body(result);
+        }
+
+        /**
+         * Bulk import - FIX: Add produces
+         */
+        @PostMapping(value = "/bulk-import-json",
+                consumes = MediaType.APPLICATION_JSON_VALUE,
+                produces = MediaType.APPLICATION_JSON_VALUE)  // ✅ ADD THIS
+        public ResponseEntity<BulkImportResponseDTO> bulkImportJson(
+                @RequestBody List<AdmissionRequestDTO> admissions,
+                @RequestParam(defaultValue = "OLD_FORMAT") String importSource) {
+
+            log.info("POST /api/admissions/bulk-import-json - {} records", admissions.size());
+            BulkImportResponseDTO response = admissionService.processBulkAdmissionImport(admissions, importSource);
+            return ResponseEntity.ok(response);
+        }
+
+        /**
+         * Get all admissions with pagination
+         */
+        @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<Page<AdmissionResponseDTO>> getAllAdmissions(
+                @RequestParam(defaultValue = "0") int page,
+                @RequestParam(defaultValue = "25") int size) {
+
+            log.debug("GET /api/admissions - page: {}, size: {}", page, size);
+            Page<AdmissionResponseDTO> admissions = admissionService.getAllAdmissions(page, size);
+            return ResponseEntity.ok(admissions);
+        }
+
+        /**
+         * Search admissions
+         */
+        @PostMapping(value = "/search",
+                consumes = MediaType.APPLICATION_JSON_VALUE,
+                produces = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<Page<AdmissionResponseDTO>> searchAdmissions(
+                @RequestBody AdmissionSearchDTO searchDTO) {
+
+            log.debug("POST /api/admissions/search - {}", searchDTO);
+            Page<AdmissionResponseDTO> results = admissionService.searchAdmissions(searchDTO);
+            return ResponseEntity.ok(results);
+        }
+
+        /**
+         * Get admission by ID
+         */
+        @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<AdmissionResponseDTO> getAdmissionById(@PathVariable Long id) {
+            log.debug("GET /api/admissions/{}", id);
+            AdmissionResponseDTO admission = admissionService.getAdmissionById(id);
+            return ResponseEntity.ok(admission);
+        }
+
+        /**
+         * Create new admission
+         */
+        @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
+                produces = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<AdmissionResponseDTO> createAdmission(
+                @Valid @RequestBody AdmissionRequestDTO requestDTO) {
+
+            log.debug("POST /api/admissions - Creating admission");
+            AdmissionResponseDTO created = admissionService.createAdmission(requestDTO);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        }
+
+        /**
+         * Update admission
+         */
+        @PutMapping(value = "/{id}",
+                consumes = MediaType.APPLICATION_JSON_VALUE,
+                produces = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<AdmissionResponseDTO> updateAdmission(
+                @PathVariable Long id,
+                @Valid @RequestBody AdmissionRequestDTO requestDTO) {
+
+            log.debug("PUT /api/admissions/{}", id);
+            AdmissionResponseDTO updated = admissionService.updateAdmission(id, requestDTO);
+            return ResponseEntity.ok(updated);
+        }
+
+        /**
+         * Delete admission
+         */
+        @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<Map<String, String>> deleteAdmission(@PathVariable Long id) {
+            log.debug("DELETE /api/admissions/{}", id);
+            admissionService.deleteAdmission(id);
+            return ResponseEntity.ok(Map.of("message", "Admission deleted successfully"));
+        }
+
+        /**
+         * Get enquiry data for pre-fill
+         */
+        @GetMapping(value = "/enquiry-data/{mobile}", produces = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<EnquiryResponseDTO> getEnquiryForAdmission(@PathVariable String mobile) {
+            log.debug("GET /api/admissions/enquiry-data/{}", mobile);
+            EnquiryResponseDTO enquiry = admissionService.getEnquiryForAdmission(mobile);
+            return ResponseEntity.ok(enquiry);
+        }
+
+        /**
+         * Get installments
+         */
+        @GetMapping(value = "/{id}/installments", produces = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<List<FeeInstallmentDTO>> getInstallments(@PathVariable Long id) {
+            log.debug("GET /api/admissions/{}/installments", id);
+            List<FeeInstallmentDTO> installments = admissionService.getInstallments(id);
+            return ResponseEntity.ok(installments);
+        }
+
+        /**
+         * Generate installments
+         */
+        @PostMapping(value = "/{id}/installments",
+                consumes = MediaType.APPLICATION_JSON_VALUE,
+                produces = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<List<FeeInstallmentDTO>> generateInstallments(
+                @PathVariable Long id,
+                @Valid @RequestBody InstallmentConfigDTO config) {
+
+            log.debug("POST /api/admissions/{}/installments", id);
+
+            AdmissionResponseDTO admission = admissionService.getAdmissionById(id);
+            List<FeeInstallmentDTO> installments = admissionService.generateInstallments(
+                    id, config, admission.getTotalReceivableFees());
+
+            return ResponseEntity.ok(installments);
+        }
+
+        /**
+         * Get statistics
+         */
+        @GetMapping(value = "/statistics", produces = MediaType.APPLICATION_JSON_VALUE)
+        public ResponseEntity<Map<String, Object>> getStatistics() {
+            log.debug("GET /api/admissions/statistics");
+            Map<String, Object> stats = admissionService.getAdmissionStatistics();
+            return ResponseEntity.ok(stats);
         }
 
     }

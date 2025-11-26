@@ -203,6 +203,7 @@ async function importFeesCSV() {
         const response = await fetch('/api/fees-manager/bulk-import-json', {
             method: 'POST',
             headers: {
+                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(importedFeesData)
@@ -893,6 +894,7 @@ async function importFeesCSV() {
         const response = await fetch('/api/fees-manager/bulk-import-json', {
             method: 'POST',
             headers: {
+                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(importedFeesData)
@@ -1357,12 +1359,16 @@ async function deleteReceipt(receiptId) {
 
     if (result.isConfirmed) {
         try {
-            const response = await fetch(
-                `/api/fees-manager/receipts/${receiptId}`,
-                {
-                    method: 'DELETE'
-                }
-            );
+             const response = await fetch(
+                        `/api/fees-manager/receipts/${receiptId}`,
+                        {
+                            method: 'DELETE',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            }
+                        }
+                    );
 
             if (response.ok) {
                 Swal.fire({
