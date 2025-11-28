@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}"
+      lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Source Management</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <!-- SweetAlert2 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" th:href="@{/assets/css/lead-source.css}" href="/assets/css/lead-source.css">
+
+</head>
+<body>
+
+<!-- Dashboard Content Fragment -->
+<main layout:fragment="content">
+
+    <!-- Page Header -->
+    <div class="container-fluid mt-4">
+        <div class="page-header">
+            <h2><i class="bi bi-megaphone me-2"></i>Lead Source Management</h2>
+            <p class="mb-0 opacity-90">Manage all enquiry lead sources efficiently</p>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-card">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-3 mb-lg-0">
+                    <button class="btn btn-primary btn-action" id="btnAddLeadSource">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Lead Source
+                    </button>
+                </div>
+                <div class="col-lg-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search lead source...">
+                        <select class="form-select" id="entriesPerPage" style="max-width: 150px;">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lead Source Table -->
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="table table-hover" id="leadSourceTable">
+                    <thead>
+                    <tr>
+                        <th>SR. NO.</th>
+                        <th>LEAD SOURCE TITLE</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                    </thead>
+                    <tbody id="leadSourceTableBody">
+                    <tr>
+                        <td>1</td>
+                        <td>Walk-in</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-secondary action-btn" onclick="editLeadSource(1)">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary action-btn" onclick="deleteLeadSource(1)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Website</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-secondary action-btn" onclick="editLeadSource(2)">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary action-btn" onclick="deleteLeadSource(2)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Social Media</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-secondary action-btn" onclick="editLeadSource(3)">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary action-btn" onclick="deleteLeadSource(3)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="d-flex justify-content-between align-items-center mt-3 px-3 pb-3">
+                <div class="text-muted">
+                    Showing <span id="entriesStart">1</span> to <span id="entriesEnd">3</span>
+                    of <span id="totalEntries">3</span> entries
+                </div>
+                <nav>
+                    <ul class="pagination mb-0" id="paginationControls">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Previous</a>
+                        </li>
+                        <li class="page-item active">
+                            <a class="page-link" href="#">1</a>
+                        </li>
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Lead Source Modal -->
+    <div class="modal fade" id="leadSourceModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">
+                        <i class="bi bi-megaphone me-2"></i>Add New Lead Source
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="leadSourceForm">
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Lead Source Title <span class="required">*</span></label>
+                                <input type="text" class="form-control" id="leadSourceTitle" placeholder="Enter lead source title" maxlength="50" required>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnSaveLeadSource">
+                        <i class="bi bi-check-circle me-2"></i>Save Lead Source
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirmation
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-center mb-0">Are you sure you want to remove selected lead source?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmDelete">
+                        <i class="bi bi-trash me-2"></i>Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<script th:src="@{/assets/js/lead-source.js}"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.js"></script>
+
+</main>
+</body>
+</html>

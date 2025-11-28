@@ -21,14 +21,20 @@ public interface FeeRefundRepository extends JpaRepository<FeeRefund, Long> {
     Page<FeeRefund> findByIsDeletedFalse(Pageable pageable);
 
     /**
-     * Find refunds by admission ID
+     * ✅ CHANGED: Find refunds by registration number
      */
-    List<FeeRefund> findByAdmissionIdAndIsDeletedFalseOrderByRefundDateDesc(Long admissionId);
+    List<FeeRefund> findByRegistrationNumberAndIsDeletedFalseOrderByRefundDateDesc(String registrationNumber);
 
     /**
      * Find refund by refund number
      */
     Optional<FeeRefund> findByRefundNumberAndIsDeletedFalse(String refundNumber);
+
+    /**
+     * Find max refund number for generating new refund numbers
+     */
+    @Query("SELECT MAX(r.refundNumber) FROM FeeRefund r WHERE r.refundNumber LIKE :prefix%")
+    String findMaxRefundNumber(@Param("prefix") String prefix);
 
     /**
      * Find refunds by date range
@@ -42,16 +48,16 @@ public interface FeeRefundRepository extends JpaRepository<FeeRefund, Long> {
     );
 
     /**
-     * Get total refund amount for admission
+     * ✅ CHANGED: Get total refund amount by registration number
      */
-    @Query("SELECT SUM(r.refundAmount) FROM FeeRefund r " +
-            "WHERE r.admissionId = :admissionId AND r.isDeleted = false")
-    Double getTotalRefundByAdmission(@Param("admissionId") Long admissionId);
+    @Query("SELECT COALESCE(SUM(r.refundAmount), 0.0) FROM FeeRefund r " +
+            "WHERE r.registrationNumber = :registrationNumber AND r.isDeleted = false")
+    Double getTotalRefundByRegistrationNumber(@Param("registrationNumber") String registrationNumber);
 
     /**
      * Get total refund amount for date range
      */
-    @Query("SELECT SUM(r.refundAmount) FROM FeeRefund r " +
+    @Query("SELECT COALESCE(SUM(r.refundAmount), 0.0) FROM FeeRefund r " +
             "WHERE r.isDeleted = false " +
             "AND r.refundDate BETWEEN :startDate AND :endDate")
     Double getTotalRefundByDateRange(
@@ -60,18 +66,11 @@ public interface FeeRefundRepository extends JpaRepository<FeeRefund, Long> {
     );
 
     /**
-     * Count refunds by admission
+     * ✅ CHANGED: Count refunds by registration number
      */
     @Query("SELECT COUNT(r) FROM FeeRefund r " +
-            "WHERE r.admissionId = :admissionId AND r.isDeleted = false")
-    Long countByAdmission(@Param("admissionId") Long admissionId);
-
-    /**
-     * Find max refund number for prefix
-     */
-    @Query("SELECT MAX(r.refundNumber) FROM FeeRefund r " +
-            "WHERE r.refundNumber LIKE CONCAT(:prefix, '%')")
-    String findMaxRefundNumber(@Param("prefix") String prefix);
+            "WHERE r.registrationNumber = :registrationNumber AND r.isDeleted = false")
+    Long countByRegistrationNumber(@Param("registrationNumber") String registrationNumber);
 
     /**
      * Get refund statistics by payment mode
@@ -81,7 +80,14 @@ public interface FeeRefundRepository extends JpaRepository<FeeRefund, Long> {
             "GROUP BY r.paymentMode")
     List<Object[]> getRefundStatsByPaymentMode();
 
-    List<FeeRefund> findByAdmissionIdInAndIsDeletedFalse(List<Long> admissionIds);
+    /**
+     * ✅ NEW: Find refunds by multiple registration numbers
+     */
+    @Query("SELECT r FROM FeeRefund r WHERE r.registrationNumber IN :registrationNumbers " +
+            "AND r.isDeleted = false")
+    List<FeeRefund> findByRegistrationNumberInAndIsDeletedFalse(
+            @Param("registrationNumbers") List<String> registrationNumbers
+    );
 
     /**
      * Get recent refunds
@@ -89,4 +95,38 @@ public interface FeeRefundRepository extends JpaRepository<FeeRefund, Long> {
     @Query("SELECT r FROM FeeRefund r WHERE r.isDeleted = false " +
             "ORDER BY r.refundDate DESC, r.createdAt DESC")
     List<FeeRefund> findRecentRefunds(Pageable pageable);
+
+    /**
+     * Get total refunds count
+     */
+    @Query("SELECT COUNT(r) FROM FeeRefund r WHERE r.isDeleted = false")
+    Long countTotalRefunds();
+
+    /**
+     * Get today's refunds
+     */
+    @Query("SELECT r FROM FeeRefund r WHERE r.isDeleted = false " +
+            "AND r.refundDate = CURRENT_DATE " +
+            "ORDER BY r.createdAt DESC")
+    List<FeeRefund> findTodaysRefunds();
+
+    /**
+     * Get total refund amount today
+     */
+    @Query("SELECT COALESCE(SUM(r.refundAmount), 0.0) FROM FeeRefund r " +
+            "WHERE r.isDeleted = false AND r.refundDate = CURRENT_DATE")
+    Double getTotalRefundToday();
+
+    /**
+     * Find refunds by payment mode
+     */
+    List<FeeRefund> findByPaymentModeAndIsDeletedFalse(String paymentMode);
+
+    /**
+     * Find refunds pending clearance
+     */
+    @Query("SELECT r FROM FeeRefund r WHERE r.isDeleted = false " +
+            "AND r.paymentClear = false " +
+            "ORDER BY r.refundDate ASC")
+    List<FeeRefund> findPendingClearance();
 }

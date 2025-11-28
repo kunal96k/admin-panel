@@ -87,26 +87,22 @@ body {
             position: relative;
         }
 
-        .action-menu {
-            background-color: #e2e8f0;
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: 0.5rem;
-            display: none;
-            min-width: 200px;
-            z-index: 3000;
-            pointer-events: auto;
+    .action-menu {
+        background-color: #e2e8f0;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 0.5rem;
+        display: none;
+        min-width: 220px;
+        z-index: 3000;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
         }
 
-        /* visible state */
         .action-menu.show {
             display: block;
-        }
-
-        tr:nth-child(-n+2) .action-menu {
-            bottom: auto;
-            top: auto;
         }
 
         .action-menu-item {
@@ -121,16 +117,21 @@ body {
             width: 100%;
             text-align: left;
             color: #1e293b;
-                }
+        }
 
-                .action-menu-item:hover {
-                    background-color: #f1f5f9;
-                }
+        .action-menu-item:hover {
+            background-color: #f1f5f9;
+        }
 
-                .action-menu-item i {
-                    width: 20px;
-                    font-size: 1rem;
-                }
+        .action-menu-item i {
+            width: 20px;
+            font-size: 1rem;
+        }
+
+        tr:nth-child(-n+2) .action-menu {
+            bottom: auto;
+            top: auto;
+        }
 
 .modal-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -430,3 +431,33 @@ body {
         box-shadow: none;
     }
 }
+
+        /* Course badges styling */
+        .badge.d-block {
+            margin-bottom: 4px;
+            text-align: left;
+            padding: 6px 10px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        /* Table course column */
+        #feesTable tbody td:nth-child(9) {
+            width: 250px;
+            max-width: 250px;
+            min-width: 250px;
+            vertical-align: top;
+            padding-top: 1rem;
+            white-space: normal;
+            word-wrap: break-word;
+        }
+
+        /* Course badges - better wrapping */
+        #feesTable tbody td:nth-child(9) .badge {
+            display: inline-block;
+            margin: 2px;
+            line-height: 1.5;
+            white-space: normal;
+            text-align: left;
+            max-width: 100%;
+        }

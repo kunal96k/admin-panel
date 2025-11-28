@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}"
+      lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Management</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <!-- SweetAlert2 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.css" rel="stylesheet">
+
+    <!-- Employee CSS -->
+    <link rel="stylesheet" th:href="@{/assets/css/employee.css}">
+</head>
+<body>
+
+<!-- Dashboard Content Fragment -->
+<main layout:fragment="content">
+
+    <!-- Page Header -->
+    <div class="container-fluid mt-4">
+        <div class="page-header">
+            <h2><i class="bi bi-people me-2"></i>Employee Management</h2>
+            <p class="mb-0 opacity-90">Manage employee information and access permissions</p>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-card">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-3 mb-lg-0">
+                    <button class="btn btn-primary btn-action me-2" id="btnAddEmployee">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Employee
+                    </button>
+                    <button class="btn btn-info btn-action" id="btnExportCSV">
+                        <i class="bi bi-download me-2"></i>Export CSV
+                    </button>
+                </div>
+                <div class="col-lg-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search by name, email, or mobile...">
+                        <select class="form-select" id="pageSizeSelect" style="max-width: 150px;">
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Table -->
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="table table-hover" id="employeeTable">
+                    <thead>
+                    <tr>
+                        <th style="width: 80px;">SR. NO.</th>
+                        <th>EMPLOYEE NAME</th>
+                        <th>ROLE</th>
+                        <th style="width: 150px;">MOBILE NO.</th>
+                        <th>EMAIL ID</th>
+                        <th style="width: 120px;">ACCESS INFO</th>
+                        <th style="width: 150px;">DATE OF BIRTH</th>
+                        <th style="width: 200px;">ACTIONS</th>
+                    </tr>
+                    </thead>
+                    <tbody id="employeeTableBody">
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2 mb-0">Loading employees...</p>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="d-flex justify-content-between align-items-center mt-3 px-3 pb-3">
+                <div class="text-muted">
+                    Showing <span id="entriesStart">0</span> to <span id="entriesEnd">0</span>
+                    of <span id="totalEntries">0</span> entries
+                </div>
+                <nav>
+                    <ul class="pagination mb-0" id="paginationControls"></ul>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Add/Edit Employee Modal -->
+        <div class="modal fade" id="employeeModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="employeeModalTitle">
+                            <i class="bi bi-plus-circle me-2"></i>Add New Employee
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Wizard Steps -->
+                        <div class="wizard-steps mb-4">
+                            <div class="wizard-step active" data-step="1">
+                                <div class="wizard-step-number">1</div>
+                                <div class="wizard-step-text">Personal Info</div>
+                            </div>
+                            <div class="wizard-step" data-step="2">
+                                <div class="wizard-step-number">2</div>
+                                <div class="wizard-step-text">Role & Access</div>
+                            </div>
+                            <div class="wizard-step" data-step="3">
+                                <div class="wizard-step-number">3</div>
+                                <div class="wizard-step-text">Mobile Access</div>
+                            </div>
+                            <div class="wizard-step" data-step="4">
+                                <div class="wizard-step-number">4</div>
+                                <div class="wizard-step-text">Photo</div>
+                            </div>
+                        </div>
+
+                        <form id="employeeForm">
+                            <input type="hidden" id="employeeId">
+
+                            <!-- Step 1: Personal Information -->
+                            <div class="wizard-content active" id="step1">
+                                <h6 class="mb-3 fw-bold">Personal Information</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Employee Name <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="employeeName" required maxlength="50" placeholder="Enter employee name">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Mobile No. <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="mobileNumber" required maxlength="10" placeholder="Enter mobile number">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Email ID <span class="required">*</span></label>
+                                        <input type="email" class="form-control" id="emailId" required maxlength="50" placeholder="Enter email address">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Designation</label>
+                                        <input type="text" class="form-control" id="designation" maxlength="20" placeholder="Enter designation">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Gender <span class="required">*</span></label>
+                                        <select class="form-select" id="gender" required>
+                                            <option value="">-- Select --</option>
+                                            <option value="M">Male</option>
+                                            <option value="F">Female</option>
+                                            <option value="O">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Date of Birth <span class="required">*</span></label>
+                                        <input type="date" class="form-control" id="dateOfBirth" required>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label">Address</label>
+                                        <textarea class="form-control" id="address" rows="3" maxlength="100" placeholder="Enter address"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Role & Access -->
+                            <div class="wizard-content" id="step2">
+                                <h6 class="mb-3 fw-bold">Role & Permissions</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Role <span class="required">*</span></label>
+                                        <select class="form-select" id="role" required>
+                                            <option value="">-- Select Role --</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Zoom Link</label>
+                                        <input type="text" class="form-control" id="zoomLink" maxlength="200" placeholder="Enter Zoom meeting link">
+                                    </div>
+                                </div>
+
+                                <!-- Menu Permissions Section -->
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <h6 class="mb-3">Menu Permissions <span class="badge bg-primary" id="menuPermissionCount">0 selected</span></h6>
+                                        <div class="row" id="menuPermissionsContainer">
+                                            <div class="col-12 text-center text-muted">Loading menus...</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- User Credentials Checkbox -->
+                                <div class="row mt-4">
+                                    <div class="col-12">
+                                        <div class="form-check" style="padding: 1rem; background: #f1f5f9; border-radius: 0.5rem;">
+                                            <input class="form-check-input" type="checkbox" id="addUserCheckbox"
+                                                   style="width: 20px; height: 20px;">
+                                            <label class="form-check-label" for="addUserCheckbox"
+                                                   style="margin-left: 0.5rem; font-weight: 600; color: #334155;">
+                                                <i class="bi bi-person-lock me-2"></i>Add User Login Credentials
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- User Credentials Section -->
+                                <div class="row mt-3" id="userCredentialsSection" style="display: none;">
+                                    <div class="col-12"><hr></div>
+
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Username <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="username" maxlength="50"
+                                               placeholder="Enter username">
+                                    </div>
+
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Password <span class="text-danger">*</span></label>
+                                        <div style="position: relative;">
+                                            <input type="password" class="form-control" id="password" maxlength="50"
+                                                   placeholder="Enter password" style="padding-right: 40px;">
+                                        </div>
+                                        <div id="passwordStrengthIndicator"></div>
+                                        <div id="passwordGuide"></div>
+                                    </div>
+
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                                        <div style="position: relative;">
+                                            <input type="password" class="form-control" id="confirmPassword" maxlength="50"
+                                                   placeholder="Re-enter password" style="padding-right: 40px;">
+                                        </div>
+                                        <div id="confirmPasswordFeedback" style="margin-top: 5px; font-size: 0.85rem;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Mobile App Access -->
+                            <div class="wizard-content" id="step3">
+                                <h6 class="mb-3 fw-bold">Mobile App Access Permissions</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="permission-card">
+                                            <h6 class="mb-3 text-primary">Admission & Enquiry</h6>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="newAdmission">
+                                                <label class="form-check-label" for="newAdmission">New Admission</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="viewAdmission">
+                                                <label class="form-check-label" for="viewAdmission">View Admission</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="newEnquiry">
+                                                <label class="form-check-label" for="newEnquiry">New Enquiry</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="viewEnquiry">
+                                                <label class="form-check-label" for="viewEnquiry">View Enquiry</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="accDashboard">
+                                                <label class="form-check-label" for="accDashboard">Accounts Dashboard</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="counsellorDash">
+                                                <label class="form-check-label" for="counsellorDash">Counsellor Dashboard</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="todaysFollowup">
+                                                <label class="form-check-label" for="todaysFollowup">Today's Followup</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="overdueFollowup">
+                                                <label class="form-check-label" for="overdueFollowup">Overdue Follow-up</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="permission-card">
+                                            <h6 class="mb-3 text-primary">Fees & Management</h6>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="feeManager">
+                                                <label class="form-check-label" for="feeManager">Fees Details</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="batchWiseFee">
+                                                <label class="form-check-label" for="batchWiseFee">Batch-wise Fee</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="paymentLink">
+                                                <label class="form-check-label" for="paymentLink">Send Payment Link</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="manageCourse">
+                                                <label class="form-check-label" for="manageCourse">Manage Course</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="manageBatch">
+                                                <label class="form-check-label" for="manageBatch">Manage Batch</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="timeTable">
+                                                <label class="form-check-label" for="timeTable">Timetable</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="timeTableAttendance">
+                                                <label class="form-check-label" for="timeTableAttendance">Timetable Attendance</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="studyNote">
+                                                <label class="form-check-label" for="studyNote">Study Notes</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="sendAppMsg">
+                                                <label class="form-check-label" for="sendAppMsg">Send App Message</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="shareVideo">
+                                                <label class="form-check-label" for="shareVideo">Share Video</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="liveLecture">
+                                                <label class="form-check-label" for="liveLecture">Live Lecture</label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="offlineExam">
+                                                <label class="form-check-label" for="offlineExam">Offline Exam</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 4: Employee Photo -->
+                            <div class="wizard-content" id="step4">
+                                <h6 class="mb-3 fw-bold">Employee Photo</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="photo-capture-section">
+                                            <h6 class="mb-3">Capture from Webcam</h6>
+                                            <video id="video" autoplay style="width: 100%; max-width: 320px; border-radius: 0.5rem;"></video>
+                                            <button type="button" class="btn btn-primary mt-3" id="captureBtn">
+                                                <i class="bi bi-camera me-2"></i>Capture Photo
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="photo-preview-section">
+                                            <h6 class="mb-3">Preview</h6>
+                                            <canvas id="canvas" style="width: 100%; max-width: 320px; border-radius: 0.5rem;"></canvas>
+                                            <div class="mt-3">
+                                                <label class="btn btn-secondary">
+                                                    <i class="bi bi-upload me-2"></i>Upload Image
+                                                    <input type="file" id="photoUpload" accept="image/*" style="display: none;">
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="prevBtn" style="display: none;">
+                            <i class="bi bi-arrow-left me-2"></i>Previous
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="nextBtn">
+                            Next <i class="bi bi-arrow-right ms-2"></i>
+                        </button>
+                        <button type="button" class="btn btn-success" id="saveEmployeeBtn" style="display: none;">
+                            <i class="bi bi-check-circle me-2"></i>Save Employee
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.js"></script>
+
+    <script th:src="@{/assets/js/employee.js}"></script>
+
+</main>
+
+</body>
+</html>

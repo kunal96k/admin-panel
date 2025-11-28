@@ -18,7 +18,7 @@ import java.util.List;
 @Builder
 public class AdmissionSearchDTO {
 
-    private String searchTerm;  // Search in name, mobile, reg no
+    private String searchTerm;
 
     private String status;
 

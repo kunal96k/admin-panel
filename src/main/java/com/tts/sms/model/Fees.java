@@ -46,6 +46,7 @@ public class Fees {
     @Builder.Default
     private Double totalPaid = 0.0;
 
+    // ALLOW NULL - DO NOT SET CURRENT DATE
     @Column(name = "due_date")
     private LocalDate dueDate;
 
@@ -60,7 +61,7 @@ public class Fees {
     @Column(name = "course", length = 200)
     private String course;
 
-    // Link to admission if exists
+    // Keep admission_id for reference if needed, but registration_number is primary
     @Column(name = "admission_id")
     private Long admissionId;
 

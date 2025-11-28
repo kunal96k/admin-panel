@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}"
+      lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role Management</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <!-- SweetAlert2 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.css" rel="stylesheet">
+
+    <!-- Role CSS -->
+    <link rel="stylesheet" th:href="@{/assets/css/role.css}">
+</head>
+<body>
+
+<!-- Dashboard Content Fragment -->
+<main layout:fragment="content">
+
+    <!-- Page Header -->
+    <div class="container-fluid mt-4">
+        <div class="page-header">
+            <h2><i class="bi bi-shield-lock me-2"></i>Role Management</h2>
+            <p class="mb-0 opacity-90">Create and manage employee roles with menu permissions</p>
+        </div>
+
+        <!-- Create Role Section -->
+        <div class="action-card">
+            <form id="roleForm">
+                <div class="row align-items-end">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Role Title <span class="required">*</span></label>
+                        <input type="text" class="form-control" id="roleTitle" required maxlength="50" placeholder="Enter role title">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button type="submit" class="btn btn-primary" id="saveRoleBtn">
+                            <i class="bi bi-check-circle me-2"></i>Save
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="cancelBtn">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Role List Table -->
+        <div class="table-card">
+            <h5 class="mb-3 fw-bold"><i class="bi bi-list-ul me-2"></i>Existing Roles</h5>
+            <div class="table-responsive">
+                <table class="table table-hover" id="roleTable">
+                    <thead>
+                    <tr>
+                        <th style="width: 80px;">SR. NO.</th>
+                        <th>ROLE TITLE</th>
+                        <th style="width: 200px;">ACTIONS</th>
+                    </tr>
+                    </thead>
+                    <tbody id="roleTableBody">
+                    <tr>
+                        <td colspan="3" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2 mb-0">Loading roles...</p>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Menu Permissions Section (shown when creating/editing role) -->
+        <div class="table-card" id="permissionsSection" style="display: none;">
+            <h5 class="mb-3 fw-bold"><i class="bi bi-key me-2"></i>Menu Permissions</h5>
+            <div class="table-responsive">
+                <table class="table table-hover" id="permissionsTable">
+                    <thead>
+                    <tr>
+                        <th>MAIN MENU</th>
+                        <th>SUBMENU</th>
+                        <th style="width: 100px;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAll">
+                                <label class="form-check-label" for="selectAll">SELECT ALL</label>
+                            </div>
+                        </th>
+                    </tr>
+                    </thead>
+                    <tbody id="permissionsTableBody">
+                    <tr>
+                        <td colspan="3" class="text-center py-4">
+                            <p class="mb-0 text-muted">Please save the role first to assign permissions</p>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.js"></script>
+
+    <script th:src="@{/assets/js/role.js}"></script>
+
+</main>
+
+</body>
+</html>

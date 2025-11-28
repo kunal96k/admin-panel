@@ -24,10 +24,10 @@ public class FeesManagerController {
 
     private final FeesManagerService feesManagerService;
 
-    // ==================== FEES SUMMARY ====================
+    // ==================== FEES SUMMARY (MISSING ENDPOINT) ====================
 
     /**
-     * Get all fees summary with pagination
+     * ✅ ADDED: Get all fees with pagination
      */
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Page<FeesSummaryDTO>> getAllFees(
@@ -40,19 +40,6 @@ public class FeesManagerController {
         return ResponseEntity.ok(fees);
     }
 
-    /**
-     * Search fees with filters
-     */
-    @PostMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Page<FeesSummaryDTO>> searchFees(
-            @RequestBody FeesSearchDTO searchDTO) {
-
-        log.info("POST /api/fees-manager/search - {}", searchDTO);
-
-        Page<FeesSummaryDTO> results = feesManagerService.searchFees(searchDTO);
-        return ResponseEntity.ok(results);
-    }
-
     // ==================== FEE RECEIPTS ====================
 
     /**
@@ -62,27 +49,27 @@ public class FeesManagerController {
     public ResponseEntity<FeeReceiptResponseDTO> createFeeReceipt(
             @Valid @RequestBody FeeReceiptRequestDTO requestDTO) {
 
-        log.info("POST /api/fees-manager/receipts - admission: {}", requestDTO.getAdmissionId());
+        log.info("POST /api/fees-manager/receipts - regNo: {}", requestDTO.getRegNo());
 
         FeeReceiptResponseDTO receipt = feesManagerService.createFeeReceipt(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(receipt);
     }
 
     /**
-     * Get receipts by admission ID
+     * Get receipts by registration number
      */
-    @GetMapping(value = "/receipts/admission/{admissionId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<FeeReceiptResponseDTO>> getReceiptsByAdmission(
-            @PathVariable Long admissionId) {
+    @GetMapping(value = "/receipts/{regNo}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<FeeReceiptResponseDTO>> getReceiptsByRegNo(
+            @PathVariable String regNo) {
 
-        log.info("GET /api/fees-manager/receipts/admission/{}", admissionId);
+        log.info("GET /api/fees-manager/receipts/{}", regNo);
 
-        List<FeeReceiptResponseDTO> receipts = feesManagerService.getReceiptsByAdmission(admissionId);
+        List<FeeReceiptResponseDTO> receipts = feesManagerService.getReceiptsByRegNo(regNo);
         return ResponseEntity.ok(receipts);
     }
 
     /**
-     * Delete fee receipt (soft delete)
+     * Delete fee receipt
      */
     @DeleteMapping(value = "/receipts/{receiptId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> deleteFeeReceipt(@PathVariable Long receiptId) {
@@ -101,69 +88,41 @@ public class FeesManagerController {
     public ResponseEntity<FeeRefundResponseDTO> createFeeRefund(
             @Valid @RequestBody FeeRefundRequestDTO requestDTO) {
 
-        log.info("POST /api/fees-manager/refunds - admission: {}", requestDTO.getAdmissionId());
+        log.info("POST /api/fees-manager/refunds - regNo: {}", requestDTO.getRegNo());
 
         FeeRefundResponseDTO refund = feesManagerService.createFeeRefund(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(refund);
     }
 
     /**
-     * Get refunds by admission ID
+     * Get refunds by registration number
      */
-    @GetMapping(value = "/refunds/admission/{admissionId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<FeeRefundResponseDTO>> getRefundsByAdmission(
-            @PathVariable Long admissionId) {
+    @GetMapping(value = "/refunds/{regNo}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<FeeRefundResponseDTO>> getRefundsByRegNo(
+            @PathVariable String regNo) {
 
-        log.info("GET /api/fees-manager/refunds/admission/{}", admissionId);
+        log.info("GET /api/fees-manager/refunds/{}", regNo);
 
-        List<FeeRefundResponseDTO> refunds = feesManagerService.getRefundsByAdmission(admissionId);
+        List<FeeRefundResponseDTO> refunds = feesManagerService.getRefundsByRegNo(regNo);
         return ResponseEntity.ok(refunds);
     }
 
-    // ==================== STATUS UPDATE ====================
+    // ==================== INSTALLMENTS ====================
 
     /**
-     * Update fee payment status
+     * Get installments by registration number
      */
-    @PutMapping(value = "/status", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, String>> updateFeeStatus(
-            @Valid @RequestBody FeeStatusUpdateDTO updateDTO) {
+    @GetMapping(value = "/installments/{regNo}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<FeeInstallmentDTO>> getInstallmentsByRegNo(
+            @PathVariable String regNo) {
 
-        log.info("PUT /api/fees-manager/status - admission: {}, status: {}",
-                updateDTO.getAdmissionId(), updateDTO.getPaymentStatus());
+        log.info("GET /api/fees-manager/installments/{}", regNo);
 
-        feesManagerService.updateFeeStatus(updateDTO);
-
-        return ResponseEntity.ok(Map.of(
-                "success", "true",
-                "message", "Fee status updated successfully"
-        ));
+        List<FeeInstallmentDTO> installments = feesManagerService.getInstallmentsByRegNo(regNo);
+        return ResponseEntity.ok(installments);
     }
 
     // ==================== CSV IMPORT ====================
-
-    /**
-     * Bulk import fees data from CSV
-     */
-    @PostMapping(value = "/bulk-import", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<FeesBulkImportResponseDTO> bulkImportFromCSV(
-            @RequestParam("file") MultipartFile file) {
-
-        log.info("POST /api/fees-manager/bulk-import - file: {}", file.getOriginalFilename());
-
-        if (file.isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body(FeesBulkImportResponseDTO.builder()
-                            .success(false)
-                            .message("File is empty")
-                            .build());
-        }
-
-        FeesBulkImportResponseDTO result = feesManagerService.bulkImportFeesCSV(file);
-
-        HttpStatus status = result.isSuccess() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
-        return ResponseEntity.status(status).body(result);
-    }
 
     /**
      * Bulk import fees from JSON
@@ -191,11 +150,31 @@ public class FeesManagerController {
         return ResponseEntity.status(status).body(result);
     }
 
+    /**
+     * Bulk import fees from CSV
+     */
+    @PostMapping(value = "/bulk-import", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<FeesBulkImportResponseDTO> bulkImportFromCSV(
+            @RequestParam("file") MultipartFile file) {
+
+        log.info("POST /api/fees-manager/bulk-import - file: {}", file.getOriginalFilename());
+
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(FeesBulkImportResponseDTO.builder()
+                            .success(false)
+                            .message("File is empty")
+                            .build());
+        }
+
+        FeesBulkImportResponseDTO result = feesManagerService.bulkImportFeesCSV(file);
+
+        HttpStatus status = result.isSuccess() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(result);
+    }
+
     // ==================== EXCEPTION HANDLING ====================
 
-    /**
-     * Exception handler for validation errors
-     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleValidationErrors(
             IllegalArgumentException ex) {

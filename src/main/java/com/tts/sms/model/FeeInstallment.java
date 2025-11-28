@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "fee_installments", indexes = {
-        @Index(name = "idx_admission_id", columnList = "admission_id"),
+        @Index(name = "idx_installment_reg_no", columnList = "registration_number"),
         @Index(name = "idx_due_date", columnList = "due_date"),
         @Index(name = "idx_status", columnList = "status")
 })
@@ -26,9 +26,10 @@ public class FeeInstallment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull(message = "Admission ID is required")
-    @Column(name = "admission_id", nullable = false)
-    private Long admissionId;
+    // CHANGED: Use registration_number instead of admission_id
+    @NotBlank(message = "Registration number is required")
+    @Column(name = "registration_number", nullable = false, length = 50)
+    private String registrationNumber;
 
     @NotNull(message = "Installment number is required")
     @Column(name = "installment_number", nullable = false)

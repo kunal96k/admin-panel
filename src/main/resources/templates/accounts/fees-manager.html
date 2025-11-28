@@ -73,7 +73,6 @@
                         <th>FEES DUE</th>
                         <th>TOTAL PAID</th>
                         <th>DUE DATE</th>
-                        <th>FEES REFUND</th>
                         <th>STATUS</th>
                         <th>COURSE</th>
                         <th>ACTIONS</th>
@@ -581,10 +580,12 @@
 
     </div>
 
-    <!-- Scripts - Load in correct order -->
+    <!-- Scripts -->
+    <script th:src="@{/assets/js/fees-manager.js}"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.js"></script>
-    <script th:src="@{/assets/js/fees-manager.js}"></script>
+
 </main>
 
 </body>

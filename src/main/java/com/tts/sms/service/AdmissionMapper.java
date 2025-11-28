@@ -154,7 +154,7 @@ public class AdmissionMapper {
 
         return FeeInstallmentDTO.builder()
                 .id(installment.getId())
-                .admissionId(installment.getAdmissionId())
+                .registrationNumber(installment.getRegistrationNumber())
                 .installmentNumber(installment.getInstallmentNumber())
                 .dueDate(installment.getDueDate())
                 .amount(installment.getAmount())

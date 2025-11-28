@@ -4,19 +4,15 @@ import com.tts.sms.dto.*;
 import com.tts.sms.exception.ResourceNotFoundException;
 import com.tts.sms.model.*;
 import com.tts.sms.repository.*;
-import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.Year;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 
 @Slf4j
@@ -31,16 +27,7 @@ public class FeesManagerService {
     private final FeeInstallmentRepository feeInstallmentRepository;
     private final CSVService csvService;
 
-    private static final DateTimeFormatter[] DATE_FORMATTERS = {
-            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-            DateTimeFormatter.ofPattern("dd/MM/yyyy"),
-            DateTimeFormatter.ofPattern("MM/dd/yyyy"),
-            DateTimeFormatter.ofPattern("dd-MM-yyyy"),
-            DateTimeFormatter.ofPattern("d/M/yyyy"),
-            DateTimeFormatter.ofPattern("d-M-yyyy")
-    };
-
-    // ==================== FEES SUMMARY (FROM FEES TABLE) ====================
+    // ==================== FEES SUMMARY ====================
 
     @Transactional(readOnly = true)
     public Page<FeesSummaryDTO> getAllFeesSummary(int page, int size) {
@@ -71,7 +58,7 @@ public class FeesManagerService {
                 .build();
     }
 
-    // ==================== CSV IMPORT (FIXED) ====================
+    // ==================== CSV IMPORT - PRESERVE NULL VALUES ====================
 
     @Transactional
     public FeesBulkImportResponseDTO bulkImportFeesCSV(MultipartFile file) {
@@ -107,11 +94,7 @@ public class FeesManagerService {
             FeesCSVImportDTO dto = dtos.get(i);
 
             try {
-                // Validate required fields
-                if (dto.getRegistrationNumber() == null ||
-                        dto.getRegistrationNumber().equals("N/A") ||
-                        dto.getRegistrationNumber().isEmpty()) {
-
+                if (dto.getRegistrationNumber() == null || dto.getRegistrationNumber().isEmpty()) {
                     errors.add(FeesBulkImportResponseDTO.ImportError.builder()
                             .rowNumber(rowNumber)
                             .fieldName("registrationNumber")
@@ -121,48 +104,40 @@ public class FeesManagerService {
                     continue;
                 }
 
-                // Check if fees record exists
                 Optional<Fees> existingFees = feesRepository
                         .findByRegistrationNumberAndIsDeletedFalse(dto.getRegistrationNumber());
 
                 Fees fees;
                 if (existingFees.isPresent()) {
-                    // UPDATE existing record
                     fees = existingFees.get();
                     fees.setStudentName(dto.getStudentName());
                     fees.setMobile(dto.getMobile());
-                    fees.setTotalFees(dto.getTotalFees());
-                    fees.setFeesDue(dto.getFeesDue());
-                    fees.setTotalPaid(dto.getTotalPaid());
-                    fees.setDueDate(dto.getDueDate());
-                    fees.setFeesRefund(dto.getFeesRefund());
-                    fees.setStatus(dto.getStatus());
+                    fees.setTotalFees(dto.getTotalFees() != null ? dto.getTotalFees() : 0.0);
+                    fees.setFeesDue(dto.getFeesDue() != null ? dto.getFeesDue() : 0.0);
+                    fees.setTotalPaid(dto.getTotalPaid() != null ? dto.getTotalPaid() : 0.0);
+                    fees.setDueDate(dto.getDueDate()); // KEEP NULL IF NULL
+                    fees.setFeesRefund(dto.getFeesRefund() != null ? dto.getFeesRefund() : 0.0);
+                    fees.setStatus(dto.getStatus() != null ? dto.getStatus() : "Pending");
                     fees.setCourse(dto.getCourse());
                     fees.setUpdatedBy("CSV_IMPORT");
                     updateCount++;
-
-                    log.debug("✏️ Updating fees for: {}", dto.getRegistrationNumber());
                 } else {
-                    // CREATE new record
                     fees = Fees.builder()
                             .registrationNumber(dto.getRegistrationNumber())
                             .studentName(dto.getStudentName())
                             .mobile(dto.getMobile())
-                            .totalFees(dto.getTotalFees())
-                            .feesDue(dto.getFeesDue())
-                            .totalPaid(dto.getTotalPaid())
-                            .dueDate(dto.getDueDate())
-                            .feesRefund(dto.getFeesRefund())
-                            .status(dto.getStatus())
+                            .totalFees(dto.getTotalFees() != null ? dto.getTotalFees() : 0.0)
+                            .feesDue(dto.getFeesDue() != null ? dto.getFeesDue() : 0.0)
+                            .totalPaid(dto.getTotalPaid() != null ? dto.getTotalPaid() : 0.0)
+                            .dueDate(dto.getDueDate()) // KEEP NULL IF NULL
+                            .feesRefund(dto.getFeesRefund() != null ? dto.getFeesRefund() : 0.0)
+                            .status(dto.getStatus() != null ? dto.getStatus() : "Pending")
                             .course(dto.getCourse())
                             .createdBy("CSV_IMPORT")
                             .build();
                     createCount++;
-
-                    log.debug("➕ Creating new fees for: {}", dto.getRegistrationNumber());
                 }
 
-                // Try to link with admission if exists
                 Admission admission = admissionRepository
                         .findByRegistrationNumberAndIsDeletedFalse(dto.getRegistrationNumber());
                 if (admission != null) {
@@ -172,14 +147,8 @@ public class FeesManagerService {
                 feesRepository.save(fees);
                 successCount++;
 
-                log.info("✅ Row {}: {} fees for {}",
-                        rowNumber,
-                        existingFees.isPresent() ? "Updated" : "Created",
-                        dto.getRegistrationNumber());
-
             } catch (Exception e) {
                 log.error("❌ Row {}: Error - {}", rowNumber, e.getMessage(), e);
-
                 errors.add(FeesBulkImportResponseDTO.ImportError.builder()
                         .rowNumber(rowNumber)
                         .fieldName("processing")
@@ -190,9 +159,6 @@ public class FeesManagerService {
         }
 
         int failedCount = dtos.size() - successCount;
-
-        log.info("📊 IMPORT RESULT: {}/{} processed (Created: {}, Updated: {}), {} failed",
-                successCount, dtos.size(), createCount, updateCount, failedCount);
 
         return FeesBulkImportResponseDTO.builder()
                 .success(successCount > 0)
@@ -205,21 +171,23 @@ public class FeesManagerService {
                 .build();
     }
 
-    // ==================== FEE RECEIPT ====================
+    // ==================== FEE RECEIPTS - USE REG NO ====================
 
     @Transactional
     public FeeReceiptResponseDTO createFeeReceipt(FeeReceiptRequestDTO requestDTO) {
-        log.debug("Creating fee receipt for admission: {}", requestDTO.getAdmissionId());
+        log.debug("Creating fee receipt for regNo: {}", requestDTO.getRegNo());
 
-        Admission admission = admissionRepository.findById(requestDTO.getAdmissionId())
-                .filter(a -> !a.getIsDeleted())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Admission not found: " + requestDTO.getAdmissionId()));
+        Admission admission = admissionRepository
+                .findByRegistrationNumberAndIsDeletedFalse(requestDTO.getRegNo());
+
+        if (admission == null) {
+            throw new ResourceNotFoundException("Admission not found: " + requestDTO.getRegNo());
+        }
 
         FeeReceipt receipt = FeeReceipt.builder()
                 .receiptNumber(generateReceiptNumber())
                 .invoiceNumber(generateInvoiceNumber())
-                .admissionId(requestDTO.getAdmissionId())
+                .registrationNumber(requestDTO.getRegNo()) // CHANGED
                 .installmentId(requestDTO.getInstallmentId())
                 .receiptDate(requestDTO.getReceiptDate() != null ? requestDTO.getReceiptDate() : LocalDate.now())
                 .amountReceived(requestDTO.getAmountReceived())
@@ -254,15 +222,16 @@ public class FeesManagerService {
     }
 
     @Transactional(readOnly = true)
-    public List<FeeReceiptResponseDTO> getReceiptsByAdmission(Long admissionId) {
-        log.debug("Fetching receipts for admission: {}", admissionId);
+    public List<FeeReceiptResponseDTO> getReceiptsByRegNo(String regNo) {
+        log.debug("Fetching receipts for regNo: {}", regNo);
 
-        Admission admission = admissionRepository.findById(admissionId)
-                .filter(a -> !a.getIsDeleted())
-                .orElseThrow(() -> new ResourceNotFoundException("Admission not found: " + admissionId));
+        Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+        if (admission == null) {
+            throw new ResourceNotFoundException("Admission not found: " + regNo);
+        }
 
         return feeReceiptRepository
-                .findByAdmissionIdAndIsDeletedFalseOrderByReceiptDateDesc(admissionId)
+                .findByRegistrationNumberAndIsDeletedFalseOrderByReceiptDateDesc(regNo) // CHANGED
                 .stream()
                 .map(r -> toReceiptResponseDTO(r, admission))
                 .toList();
@@ -282,20 +251,20 @@ public class FeesManagerService {
         log.info("Deleted fee receipt: {}", receipt.getReceiptNumber());
     }
 
-    // ==================== FEE REFUND ====================
+    // ==================== FEE REFUNDS - USE REG NO ====================
 
     @Transactional
     public FeeRefundResponseDTO createFeeRefund(FeeRefundRequestDTO requestDTO) {
-        log.debug("Creating fee refund for admission: {}", requestDTO.getAdmissionId());
+        log.debug("Creating fee refund for regNo: {}", requestDTO.getRegNo());
 
-        Admission admission = admissionRepository.findById(requestDTO.getAdmissionId())
-                .filter(a -> !a.getIsDeleted())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Admission not found: " + requestDTO.getAdmissionId()));
+        Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(requestDTO.getRegNo());
+        if (admission == null) {
+            throw new ResourceNotFoundException("Admission not found: " + requestDTO.getRegNo());
+        }
 
         FeeRefund refund = FeeRefund.builder()
                 .refundNumber(generateRefundNumber())
-                .admissionId(requestDTO.getAdmissionId())
+                .registrationNumber(requestDTO.getRegNo()) // CHANGED
                 .refundDate(requestDTO.getRefundDate() != null ? requestDTO.getRefundDate() : LocalDate.now())
                 .refundAmount(requestDTO.getRefundAmount())
                 .totalFees(requestDTO.getTotalFees())
@@ -320,35 +289,37 @@ public class FeesManagerService {
     }
 
     @Transactional(readOnly = true)
-    public List<FeeRefundResponseDTO> getRefundsByAdmission(Long admissionId) {
-        log.debug("Fetching refunds for admission: {}", admissionId);
+    public List<FeeRefundResponseDTO> getRefundsByRegNo(String regNo) {
+        log.debug("Fetching refunds for regNo: {}", regNo);
 
-        Admission admission = admissionRepository.findById(admissionId)
-                .filter(a -> !a.getIsDeleted())
-                .orElseThrow(() -> new ResourceNotFoundException("Admission not found: " + admissionId));
+        Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+        if (admission == null) {
+            throw new ResourceNotFoundException("Admission not found: " + regNo);
+        }
 
         return feeRefundRepository
-                .findByAdmissionIdAndIsDeletedFalseOrderByRefundDateDesc(admissionId)
+                .findByRegistrationNumberAndIsDeletedFalseOrderByRefundDateDesc(regNo) // CHANGED
                 .stream()
                 .map(r -> toRefundResponseDTO(r, admission))
                 .toList();
     }
 
-    // ==================== STATUS UPDATE ====================
+    // ==================== INSTALLMENTS - USE REG NO ====================
 
-    @Transactional
-    public void updateFeeStatus(FeeStatusUpdateDTO updateDTO) {
-        log.debug("Updating fee status for admission: {}", updateDTO.getAdmissionId());
+    @Transactional(readOnly = true)
+    public List<FeeInstallmentDTO> getInstallmentsByRegNo(String regNo) {
+        log.debug("Fetching installments for regNo: {}", regNo);
 
-        Admission admission = admissionRepository.findById(updateDTO.getAdmissionId())
-                .filter(a -> !a.getIsDeleted())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Admission not found: " + updateDTO.getAdmissionId()));
+        Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+        if (admission == null) {
+            throw new ResourceNotFoundException("Admission not found: " + regNo);
+        }
 
-        admission.setStatus(updateDTO.getPaymentStatus());
-        admissionRepository.save(admission);
-
-        log.info("Updated fee status to: {}", updateDTO.getPaymentStatus());
+        return feeInstallmentRepository
+                .findByRegistrationNumberOrderByDueDateAsc(regNo) // CHANGED
+                .stream()
+                .map(this::toInstallmentDTO)
+                .toList();
     }
 
     // ==================== HELPER METHODS ====================
@@ -397,14 +368,26 @@ public class FeesManagerService {
         });
     }
 
+    private FeeInstallmentDTO toInstallmentDTO(FeeInstallment installment) {
+        return FeeInstallmentDTO.builder()
+                .id(installment.getId())
+                .registrationNumber(installment.getRegistrationNumber()) // CHANGED
+                .installmentNumber(installment.getInstallmentNumber())
+                .dueDate(installment.getDueDate())
+                .amount(installment.getAmount())
+                .status(installment.getStatus())
+                .paidAmount(installment.getPaidAmount())
+                .paidDate(installment.getPaidDate())
+                .build();
+    }
+
     private FeeReceiptResponseDTO toReceiptResponseDTO(FeeReceipt receipt, Admission admission) {
         return FeeReceiptResponseDTO.builder()
                 .id(receipt.getId())
                 .receiptNumber(receipt.getReceiptNumber())
                 .invoiceNumber(receipt.getInvoiceNumber())
-                .admissionId(receipt.getAdmissionId())
+                .registrationNumber(receipt.getRegistrationNumber()) // CHANGED
                 .studentName(admission.getFullName())
-                .registrationNumber(admission.getRegistrationNumber())
                 .installmentId(receipt.getInstallmentId())
                 .receiptDate(receipt.getReceiptDate())
                 .amountReceived(receipt.getAmountReceived())
@@ -433,9 +416,8 @@ public class FeesManagerService {
         return FeeRefundResponseDTO.builder()
                 .id(refund.getId())
                 .refundNumber(refund.getRefundNumber())
-                .admissionId(refund.getAdmissionId())
+                .registrationNumber(refund.getRegistrationNumber()) // CHANGED
                 .studentName(admission.getFullName())
-                .registrationNumber(admission.getRegistrationNumber())
                 .refundDate(refund.getRefundDate())
                 .refundAmount(refund.getRefundAmount())
                 .totalFees(refund.getTotalFees())
@@ -453,98 +435,4 @@ public class FeesManagerService {
                 .status(refund.getStatus())
                 .build();
     }
-
-    @Transactional(readOnly = true)
-    public Page<FeesSummaryDTO> searchFees(FeesSearchDTO searchDTO) {
-        log.debug("Searching fees with criteria: {}", searchDTO);
-
-        // Create sort
-        Sort sort = Sort.by(
-                searchDTO.getSortDirection().equalsIgnoreCase("ASC")
-                        ? Sort.Direction.ASC
-                        : Sort.Direction.DESC,
-                searchDTO.getSortBy()
-        );
-
-        Pageable pageable = PageRequest.of(
-                searchDTO.getPage(),
-                searchDTO.getSize(),
-                sort
-        );
-
-        // Build specification
-        Specification<Fees> spec = buildFeesSpecification(searchDTO);
-
-        // Execute query
-        Page<Fees> fees = feesRepository.findAll(spec, pageable);
-
-        return fees.map(this::toFeesSummaryDTO);
-    }
-
-    /**
-     * Build dynamic specification based on search criteria
-     */
-    private Specification<Fees> buildFeesSpecification(FeesSearchDTO searchDTO) {
-        return (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-
-            // Always exclude deleted records
-            predicates.add(cb.isFalse(root.get("isDeleted")));
-
-            // Search term (registration number, student name, or mobile)
-            if (searchDTO.getSearchTerm() != null && !searchDTO.getSearchTerm().trim().isEmpty()) {
-                String searchPattern = "%" + searchDTO.getSearchTerm().toLowerCase().trim() + "%";
-                Predicate regNo = cb.like(cb.lower(root.get("registrationNumber")), searchPattern);
-                Predicate name = cb.like(cb.lower(root.get("studentName")), searchPattern);
-                Predicate mobile = cb.like(root.get("mobile"), searchPattern);
-                predicates.add(cb.or(regNo, name, mobile));
-            }
-
-            // Status filter
-            if (searchDTO.getStatus() != null && !searchDTO.getStatus().trim().isEmpty()) {
-                predicates.add(cb.equal(root.get("status"), searchDTO.getStatus()));
-            }
-
-            // Course filter
-            if (searchDTO.getCourse() != null && !searchDTO.getCourse().trim().isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("course")),
-                        "%" + searchDTO.getCourse().toLowerCase() + "%"));
-            }
-
-            // Due date range
-            if (searchDTO.getDueDateFrom() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("dueDate"), searchDTO.getDueDateFrom()));
-            }
-            if (searchDTO.getDueDateTo() != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("dueDate"), searchDTO.getDueDateTo()));
-            }
-
-            // Total fees range
-            if (searchDTO.getMinTotalFees() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("totalFees"), searchDTO.getMinTotalFees()));
-            }
-            if (searchDTO.getMaxTotalFees() != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("totalFees"), searchDTO.getMaxTotalFees()));
-            }
-
-            // Fees due range
-            if (searchDTO.getMinFeesDue() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("feesDue"), searchDTO.getMinFeesDue()));
-            }
-            if (searchDTO.getMaxFeesDue() != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("feesDue"), searchDTO.getMaxFeesDue()));
-            }
-
-            // Overdue filter
-            if (searchDTO.getOverdue() != null && searchDTO.getOverdue()) {
-                predicates.add(cb.and(
-                        cb.equal(root.get("status"), "Pending"),
-                        cb.lessThan(root.get("dueDate"), LocalDate.now())
-                ));
-            }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-    }
-
 }

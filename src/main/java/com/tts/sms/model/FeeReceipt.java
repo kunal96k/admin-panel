@@ -1,7 +1,6 @@
 package com.tts.sms.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -12,7 +11,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "fee_receipts", indexes = {
         @Index(name = "idx_receipt_no", columnList = "receipt_number", unique = true),
-        @Index(name = "idx_admission_id", columnList = "admission_id"),
+        @Index(name = "idx_reg_no", columnList = "registration_number"),
         @Index(name = "idx_receipt_date", columnList = "receipt_date"),
         @Index(name = "idx_payment_mode", columnList = "payment_mode")
 })
@@ -33,11 +32,13 @@ public class FeeReceipt {
     @Column(name = "invoice_number", length = 50)
     private String invoiceNumber;
 
-    @Column(name = "admission_id", nullable = false)
-    private Long admissionId;
+    // CHANGED: Use registration_number instead of admission_id
+    @Column(name = "registration_number", nullable = false, length = 50)
+    private String registrationNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "admission_id", insertable = false, updatable = false)
+    @JoinColumn(name = "registration_number", referencedColumnName = "registration_number",
+            insertable = false, updatable = false)
     private Admission admission;
 
     @Column(name = "installment_id")

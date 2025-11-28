@@ -23,7 +23,6 @@ public class AdmissionRequestDTO {
     private String college;
     private String qualification;
 
-    @Pattern(regexp = "^$|^\\d{12}$", message = "Aadhaar must be 12 digits")
     private String aadhaar;
 
     private LocalDate birthDate;

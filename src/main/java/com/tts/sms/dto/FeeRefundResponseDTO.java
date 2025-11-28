@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import java.time.LocalDate;
 
 @Data
@@ -14,10 +15,14 @@ import java.time.LocalDate;
 public class FeeRefundResponseDTO {
     private Long id;
     private String refundNumber;
-    private Long admissionId;
-    private String studentName;
+
+    // CHANGED: Use registrationNumber as primary identifier
     private String registrationNumber;
+    private String studentName;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate refundDate;
+
     private Double refundAmount;
     private Double totalFees;
     private Double paidFees;
@@ -30,11 +35,12 @@ public class FeeRefundResponseDTO {
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate chequeDate;
+
     private String transactionNumber;
     private String ifscCode;
     private String onlinePaymentMode;
-
     private Boolean paymentClear;
+
     private String notes;
     private String status;
 }

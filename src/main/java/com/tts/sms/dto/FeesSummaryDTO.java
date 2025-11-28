@@ -8,9 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
-/**
- * DTO for Fees Summary display
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -36,7 +33,7 @@ public class FeesSummaryDTO {
     private Double feesRefund;
 
     @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate dueDate;
+    private LocalDate dueDate; // CAN BE NULL
 
     private String status; // Pending, Clear
 

@@ -1,6 +1,6 @@
 package com.tts.sms.dto;
 
-
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,11 +16,14 @@ public class FeeReceiptResponseDTO {
     private Long id;
     private String receiptNumber;
     private String invoiceNumber;
-    private Long admissionId;
-    private String studentName;
     private String registrationNumber;
+    private String studentName;
+
     private Long installmentId;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate receiptDate;
+
     private Double amountReceived;
     private Double previousPaid;
     private Double totalFees;
@@ -36,12 +39,17 @@ public class FeeReceiptResponseDTO {
     private String paymentMode;
     private String bankName;
     private String chequeNumber;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate chequeDate;
+
     private String transactionNumber;
     private String ifscCode;
     private String onlinePaymentMode;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate nextDueDate;
+
     private String receiptType;
     private String notes;
     private String status;

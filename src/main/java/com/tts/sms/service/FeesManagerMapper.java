@@ -15,7 +15,7 @@ public class FeesManagerMapper {
         }
 
         return FeeReceipt.builder()
-                .admissionId(dto.getAdmissionId())
+                .registrationNumber(dto.getRegNo())
                 .installmentId(dto.getInstallmentId())
                 .receiptDate(dto.getReceiptDate())
                 .amountReceived(dto.getAmountReceived())
@@ -56,7 +56,6 @@ public class FeesManagerMapper {
                 .id(receipt.getId())
                 .receiptNumber(receipt.getReceiptNumber())
                 .invoiceNumber(receipt.getInvoiceNumber())
-                .admissionId(receipt.getAdmissionId())
                 .studentName(studentName)
                 .registrationNumber(regNumber)
                 .installmentId(receipt.getInstallmentId())
@@ -91,8 +90,7 @@ public class FeesManagerMapper {
         }
 
         return FeeRefund.builder()
-                .admissionId(dto.getAdmissionId())
-                .refundDate(dto.getRefundDate())
+                .registrationNumber(dto.getRegNo())                .refundDate(dto.getRefundDate())
                 .refundAmount(dto.getRefundAmount())
                 .totalFees(dto.getTotalFees())
                 .paidFees(dto.getPaidFees())
@@ -125,7 +123,6 @@ public class FeesManagerMapper {
         return FeeRefundResponseDTO.builder()
                 .id(refund.getId())
                 .refundNumber(refund.getRefundNumber())
-                .admissionId(refund.getAdmissionId())
                 .studentName(studentName)
                 .registrationNumber(regNumber)
                 .refundDate(refund.getRefundDate())

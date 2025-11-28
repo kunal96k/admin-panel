@@ -1,19 +1,72 @@
-# ============================================
-# application-common.yml (Shared Configuration)
-# ============================================
+# Super Admin Configuration
+app:
+  superadmin:
+    email: ${SUPERADMIN_EMAIL:kunalpatil192001@gmail.com}
+    username: ${SUPERADMIN_USERNAME:admin}
+    password: ${SUPERADMIN_PASSWORD:admin@123}
+
+  base-url: ${APP_BASE_URL:http://localhost:8081}
+  
+  upload:
+    courses:
+      dir: ${COURSES_UPLOAD_DIR:./uploads/courses}
+      max-file-size: 2MB
+      allowed-extensions: jpg,jpeg,png,gif
+
+  csv:
+    upload-dir: ${CSV_UPLOAD_DIR:./uploads/csv}
+    max-records: 10000
+
+  security:
+    cors:
+      allowed-origins: "*"
+      allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
+      allowed-headers: "*"
+      max-age: 3600
+
+  timezone: Asia/Kolkata
+
 spring:
+  main:
+    allow-bean-definition-overriding: true
+  
   application:
     name: tts-sms
+  
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:kunalpatil192001@gmail.com}
+    password: ${MAIL_PASSWORD:ijpb zhfr ufcw jnpn}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   profiles:
     active: ${SPRING_PROFILE:dev}
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    time-zone: Asia/Kolkata
+
   servlet:
     multipart:
+      enabled: true
       max-file-size: 10MB
       max-request-size: 10MB
+      file-size-threshold: 2MB
+      location: ${java.io.tmpdir}
+
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: false
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true
@@ -25,7 +78,6 @@ spring:
         order_updates: true
         connection:
           provider_disables_autocommit: true
-    open-in-view: false
 
   datasource:
     hikari:
@@ -37,12 +89,22 @@ spring:
       connection-test-query: SELECT 1
 
   thymeleaf:
+    enabled: true
     cache: false
+    check-template-location: true
     prefix: classpath:/templates/
     suffix: .html
-    mode: HTML
+    excluded-view-names: api/**
 
-  # Static Resources Configuration - ENHANCED
+  mvc:
+    static-path-pattern: /**
+    contentnegotiation:
+      favor-path-extension: false
+      favor-parameter: false
+    pathmatch:
+      use-suffix-pattern: false
+      use-registered-suffix-pattern: false
+
   web:
     resources:
       static-locations: classpath:/static/
@@ -57,26 +119,7 @@ spring:
             enabled: true
             paths: /**
 
-  # MIME type configuration - ENHANCED
-  mvc:
-    contentnegotiation:
-      favor-path-extension: false
-      favor-parameter: false
-      media-types:
-        js: application/javascript
-        mjs: application/javascript
-        css: text/css
-        json: application/json
-        xml: application/xml
-        map: application/json
-    static-path-pattern: /**
-
-# Server Configuration - ADDED
 server:
-  compression:
-    enabled: true
-    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
-    min-response-size: 1024
   servlet:
     context-path: /
     encoding:
@@ -84,33 +127,28 @@ server:
       enabled: true
       force: true
 
-# Logging Configuration
+  compression:
+    enabled: true
+    mime-types: >
+      text/html,text/xml,text/plain,text/css,
+      text/javascript,application/javascript,
+      application/json,application/xml
+    min-response-size: 1024
+
 logging:
   level:
     root: INFO
     com.tts.sms: DEBUG
     org.springframework.web: DEBUG
-    org.springframework.web.servlet.mvc: DEBUG
-    org.springframework.web.servlet.resource: DEBUG
+    org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
   file:
     name: logs/sms-application.log
     max-size: 10MB
     max-history: 30
-
-# Application Specific
-app:
-  csv:
-    upload-dir: ${CSV_UPLOAD_DIR:./uploads/csv}
-    max-records: 10000
-  security:
-    cors:
-      allowed-origins: "*"
-      allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
-      allowed-headers: "*"
-      max-age: 3600
-  timezone: Asia/Kolkata

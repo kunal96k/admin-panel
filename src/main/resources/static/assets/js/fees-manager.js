@@ -269,7 +269,7 @@ async function importFeesCSV() {
 
 async function loadFeesFromBackend() {
     try {
-        const response = await fetch('/api/fees-manager?page=0&size=1000', {
+        const response = await fetch('/api/fees-manager?page=0&size=100000', {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
@@ -284,7 +284,7 @@ async function loadFeesFromBackend() {
 
         if (data.content && Array.isArray(data.content)) {
             feesData = data.content.map(item => ({
-                admissionId: item.admissionId,
+                admissionId: item.regNo,
                 regNo: item.registrationNumber,
                 studentName: item.studentName,
                 mobile: item.mobile,
@@ -371,6 +371,7 @@ function handleSearch(e) {
     currentPage = 1;
     renderTable();
 }
+
 function renderTable() {
     const tbody = document.querySelector('#feesTable tbody');
 
@@ -399,7 +400,6 @@ function renderTable() {
             <td>₹${(item.feesDue || 0).toLocaleString()}</td>
             <td>₹${(item.totalPaid || 0).toLocaleString()}</td>
             <td>${item.dueDate ? formatDate(item.dueDate) : '-'}</td>
-            <td>₹${(item.feesRefund || 0).toLocaleString()}</td>
             <td><span class="badge ${item.status === 'Clear' ? 'bg-success' : 'bg-warning'}">${item.status || 'Pending'}</span></td>
             <td><span class="badge bg-primary">${item.course || 'N/A'}</span></td>
             <td>
@@ -408,23 +408,15 @@ function renderTable() {
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
                     <div class="action-menu">
-                        <button class="action-menu-item" onclick="openFeeReceipt(${item.admissionId})">
+                        <button class="action-menu-item" onclick="openFeeReceipt('${item.regNo}')">
                             <i class="bi bi-receipt text-primary"></i>
                             <span>New Fee Receipt</span>
                         </button>
-                        <button class="action-menu-item" onclick="viewReceipts(${item.admissionId})">
+                        <button class="action-menu-item" onclick="viewReceipts('${item.regNo}')">
                             <i class="bi bi-receipt-cutoff text-info"></i>
                             <span>View Receipts</span>
                         </button>
-                        <button class="action-menu-item" onclick="changeStatus(${item.admissionId})">
-                            <i class="bi bi-arrow-repeat text-warning"></i>
-                            <span>Update Fee Status</span>
-                        </button>
-                        <button class="action-menu-item" onclick="manageInstallments(${item.admissionId})">
-                            <i class="bi bi-calendar3 text-success"></i>
-                            <span>Fee Installments</span>
-                        </button>
-                        <button class="action-menu-item" onclick="feesRefund(${item.admissionId})">
+                        <button class="action-menu-item" onclick="feesRefund('${item.regNo}')">
                             <i class="bi bi-arrow-counterclockwise text-danger"></i>
                             <span>Fees Refund</span>
                         </button>
@@ -509,138 +501,6 @@ function changePage(page) {
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-GB');
-}
-
-// Modal Functions
-function openFeeReceipt(regNo) {
-    currentStudentId = regNo;
-    const student = feesData.find(s => s.regNo === regNo);
-
-    document.getElementById('receiptStudentName').value = student.studentName;
-    document.getElementById('receiptTotalFees').value = student.totalFees;
-    document.getElementById('receiptPendingFees').value = student.feesDue;
-    document.getElementById('receivedFees').value = student.totalPaid;
-
-    new bootstrap.Modal(document.getElementById('feeReceiptModal')).show();
-}
-
-function viewReceipts(regNo) {
-    currentStudentId = regNo;
-    const student = feesData.find(s => s.regNo === regNo);
-
-    document.getElementById('viewReceiptStudentName').textContent = student.studentName;
-
-    // Sample receipts data with enhanced actions including View button
-    const receiptsBody = document.getElementById('receiptsTableBody');
-    receiptsBody.innerHTML = `
-        <tr>
-            <td>REC001</td>
-            <td>INV001</td>
-            <td>₹10,000</td>
-            <td>${formatDate(new Date())}</td>
-            <td>Cash</td>
-            <td>First installment</td>
-            <td>Regular</td>
-            <td>
-                <div class="btn-group" role="group">
-                    <button class="btn btn-sm btn-secondary" onclick="viewReceiptPreview('REC001', '${student.regNo}')" title="View Receipt">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    <button class="btn btn-sm btn-primary" onclick="updateReceipt('REC001')" title="Update">
-                        <i class="bi bi-pencil-square"></i>
-                    </button>
-                    <button class="btn btn-sm btn-info" onclick="printReceipt('REC001')" title="Print">
-                        <i class="bi bi-printer"></i>
-                    </button>
-                    <button class="btn btn-sm btn-success" onclick="emailReceipt('REC001', '${student.studentName}', '${student.mobile}')" title="Email">
-                        <i class="bi bi-envelope"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteReceipt('REC001')" title="Delete">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-        <tr>
-            <td>REC002</td>
-            <td>INV002</td>
-            <td>₹15,000</td>
-            <td>${formatDate(new Date(Date.now() - 30*24*60*60*1000))}</td>
-            <td>Online</td>
-            <td>Second installment</td>
-            <td>Regular</td>
-            <td>
-                <div class="btn-group" role="group">
-                    <button class="btn btn-sm btn-secondary" onclick="viewReceiptPreview('REC002', '${student.regNo}')" title="View Receipt">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    <button class="btn btn-sm btn-primary" onclick="updateReceipt('REC002')" title="Update">
-                        <i class="bi bi-pencil-square"></i>
-                    </button>
-                    <button class="btn btn-sm btn-info" onclick="printReceipt('REC002')" title="Print">
-                        <i class="bi bi-printer"></i>
-                    </button>
-                    <button class="btn btn-sm btn-success" onclick="emailReceipt('REC002', '${student.studentName}', '${student.mobile}')" title="Email">
-                        <i class="bi bi-envelope"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteReceipt('REC002')" title="Delete">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `;
-
-    new bootstrap.Modal(document.getElementById('viewReceiptsModal')).show();
-}
-
-// View Receipt Preview with Print and Email options
-function viewReceiptPreview(receiptNo, regNo) {
-    const student = feesData.find(s => s.regNo === regNo);
-
-    // Mock receipt data - replace with actual API call
-    const receiptData = {
-        receiptNo: receiptNo,
-        invoiceNo: receiptNo.replace('REC', 'INV'),
-        date: formatDate(new Date()),
-        studentName: student.studentName,
-        regNo: student.regNo,
-        mobile: student.mobile,
-        course: student.course,
-        amount: 10000,
-        amountInWords: 'Ten Thousand Only',
-        paymentMode: 'Cash',
-        transactionId: receiptNo === 'REC001' ? '-' : 'TXN' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-        receivedBy: 'Admin',
-        note: 'First installment payment'
-    };
-
-    const receiptHTML = generateReceiptHTML(receiptData);
-
-    Swal.fire({
-        title: 'Fee Receipt Preview',
-        html: receiptHTML,
-        width: '800px',
-        showCloseButton: true,
-        showCancelButton: true,
-        showConfirmButton: true,
-        confirmButtonText: '<i class="bi bi-printer me-2"></i>Print Receipt',
-        cancelButtonText: '<i class="bi bi-envelope me-2"></i>Send via Email',
-        confirmButtonColor: '#667eea',
-        cancelButtonColor: '#10b981',
-        reverseButtons: true,
-        customClass: {
-            htmlContainer: 'receipt-preview-container'
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Print receipt
-            printReceiptContent(receiptHTML);
-        } else if (result.dismiss === Swal.DismissReason.cancel) {
-            // Send email
-            emailReceipt(receiptNo, student.studentName, student.mobile);
-        }
-    });
 }
 
 // Generate Receipt HTML
@@ -1044,33 +904,6 @@ function emailReceipt(receiptNo, studentName, mobile) {
     });
 }
 
-function changeStatus(regNo) {
-    currentStudentId = regNo;
-    new bootstrap.Modal(document.getElementById('changeStatusModal')).show();
-}
-
-function manageInstallments(regNo) {
-    currentStudentId = regNo;
-    const student = feesData.find(s => s.regNo === regNo);
-
-    document.getElementById('installmentTotalAmt').value = student.totalFees;
-    document.getElementById('totalInstallmentAmt').value = student.totalFees;
-
-    new bootstrap.Modal(document.getElementById('installmentsModal')).show();
-}
-
-function feesRefund(regNo) {
-    currentStudentId = regNo;
-    const student = feesData.find(s => s.regNo === regNo);
-
-    document.getElementById('refundStudentName').value = student.studentName;
-    document.getElementById('refundTotalFees').value = student.totalFees;
-    document.getElementById('refundPaidFees').value = student.totalPaid;
-    document.getElementById('refundPendingFees').value = student.feesDue;
-
-    new bootstrap.Modal(document.getElementById('feesRefundModal')).show();
-}
-
 // Toggle Functions
 function toggleGstFields() {
     const isChecked = document.getElementById('enableGst').checked;
@@ -1102,17 +935,106 @@ function toggleRefundPaymentFields() {
 }
 
 // Save Functions
-function saveReceipt() {
-    Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Fee receipt saved successfully',
-        confirmButtonColor: '#667eea'
-    }).then(() => {
-        bootstrap.Modal.getInstance(document.getElementById('feeReceiptModal')).hide();
-        loadFeesFromBackend();
-    });
+async function saveReceipt() {
+    const regNo = currentStudentRegNo;
+
+    if (!regNo) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student information is missing',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    // Validate required fields
+    const nowReceiving = parseFloat(document.getElementById('nowReceiving').value);
+    const installmentId = document.getElementById('installment').value;
+    const nextDueDate = document.getElementById('nextDueDate').value;
+
+    if (!nowReceiving || nowReceiving <= 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Validation Error',
+            text: 'Please enter a valid amount',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    // Prepare receipt data with regNo
+    const receiptData = {
+        regNo: regNo, // CHANGED FROM admissionId
+        installmentId: installmentId ? parseInt(installmentId) : null,
+        receiptDate: document.getElementById('receiptDate').value,
+        amountReceived: nowReceiving,
+        previousPaid: parseFloat(document.getElementById('receivedFees').value) || 0,
+        totalFees: parseFloat(document.getElementById('receiptTotalFees').value) || 0,
+        pendingFees: parseFloat(document.getElementById('receiptPendingFees').value) || 0,
+        gstEnabled: document.getElementById('enableGst').checked,
+        sgstPercent: document.getElementById('enableGst').checked ? parseFloat(document.getElementById('sgstPercent').value) : null,
+        cgstPercent: document.getElementById('enableGst').checked ? parseFloat(document.getElementById('cgstPercent').value) : null,
+        invoiceValue: document.getElementById('enableGst').checked ? parseFloat(document.getElementById('invoiceValue').value) : null,
+        paymentMode: document.getElementById('paymentMode').value,
+        bankName: document.getElementById('bankName').value || null,
+        chequeNumber: document.getElementById('chequeNo').value || null,
+        chequeDate: document.getElementById('chequeDate').value || null,
+        transactionNumber: document.getElementById('transactionNo').value || null,
+        ifscCode: document.getElementById('ifscCode').value || null,
+        onlinePaymentMode: document.getElementById('onlinePaymentMode').value || null,
+        nextDueDate: nextDueDate,
+        receiptType: 'Regular',
+        notes: document.getElementById('receiptNotes').value || null
+    };
+
+    try {
+        Swal.fire({
+            title: 'Saving...',
+            text: 'Please wait while we save the receipt',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const response = await fetch('/api/fees-manager/receipts', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(receiptData)
+        });
+
+        const result = await response.json();
+
+        Swal.close();
+
+        if (response.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: 'Fee receipt saved successfully',
+                confirmButtonColor: '#667eea'
+            }).then(() => {
+                bootstrap.Modal.getInstance(document.getElementById('feeReceiptModal')).hide();
+                loadFeesFromBackend();
+            });
+        } else {
+            throw new Error(result.message || 'Failed to save receipt');
+        }
+
+    } catch (error) {
+        Swal.close();
+        console.error('Error saving receipt:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to save receipt',
+            confirmButtonColor: '#ef4444'
+        });
+    }
 }
+
 
 function saveAndPrintReceipt() {
     Swal.fire({
@@ -1126,16 +1048,79 @@ function saveAndPrintReceipt() {
     });
 }
 
-function saveStatus() {
-    Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Fee status updated successfully',
-        confirmButtonColor: '#667eea'
-    }).then(() => {
-        bootstrap.Modal.getInstance(document.getElementById('changeStatusModal')).hide();
-        loadFeesFromBackend();
-    });
+async function saveStatus() {
+    const admissionId = currentStudentId;
+
+    if (!admissionId) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student information is missing',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    const paymentStatus = document.getElementById('paymentStatus').value;
+
+    if (!paymentStatus) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Validation Error',
+            text: 'Please select a payment status',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    try {
+        Swal.fire({
+            title: 'Updating...',
+            text: 'Please wait while we update the status',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const response = await fetch('/api/fees-manager/status', {
+            method: 'PUT',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                admissionId: admissionId,
+                paymentStatus: paymentStatus
+            })
+        });
+
+        const result = await response.json();
+
+        Swal.close();
+
+        if (response.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: 'Fee status updated successfully',
+                confirmButtonColor: '#667eea'
+            }).then(() => {
+                bootstrap.Modal.getInstance(document.getElementById('changeStatusModal')).hide();
+                loadFeesFromBackend();
+            });
+        } else {
+            throw new Error(result.message || 'Failed to update status');
+        }
+
+    } catch (error) {
+        Swal.close();
+        console.error('Error updating status:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to update status',
+            confirmButtonColor: '#ef4444'
+        });
+    }
 }
 
 function generateInstallments() {
@@ -1192,18 +1177,6 @@ function saveInstallments() {
         confirmButtonColor: '#667eea'
     }).then(() => {
         bootstrap.Modal.getInstance(document.getElementById('installmentsModal')).hide();
-    });
-}
-
-function saveRefund() {
-    Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Refund saved successfully',
-        confirmButtonColor: '#667eea'
-    }).then(() => {
-        bootstrap.Modal.getInstance(document.getElementById('feesRefundModal')).hide();
-        loadFeesFromBackend();
     });
 }
 
@@ -1395,4 +1368,392 @@ async function deleteReceipt(receiptId) {
             });
         }
     }
+}
+
+
+// ==================== Modal Functions - Search by admissionId ====================
+async function openFeeReceipt(regNo) {
+    if (!regNo) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student registration number is missing',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    currentStudentRegNo = regNo; // Store regNo instead of admissionId
+    const student = feesData.find(s => s.regNo === regNo);
+
+    if (!student) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student record not found',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    document.getElementById('receiptStudentName').value = student.studentName;
+    document.getElementById('receiptTotalFees').value = student.totalFees;
+    document.getElementById('receiptPendingFees').value = student.feesDue;
+    document.getElementById('receivedFees').value = student.totalPaid;
+
+    await loadInstallmentsForReceipt(regNo);
+
+    new bootstrap.Modal(document.getElementById('feeReceiptModal')).show();
+}
+async function loadInstallmentsForReceipt(regNo) {
+    try {
+        const response = await fetch(`/api/fees-manager/installments/${regNo}`, {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const installments = await response.json();
+            const select = document.getElementById('installment');
+
+            select.innerHTML = '<option value="">-- Select Installment --</option>';
+
+            installments.forEach(inst => {
+                const option = document.createElement('option');
+                option.value = inst.id;
+                option.textContent = `Installment ${inst.installmentNumber} - ₹${inst.amount.toLocaleString()} (${inst.status})`;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading installments:', error);
+    }
+}
+async function viewReceipts(regNo) {
+    currentStudentRegNo = regNo;
+    const student = feesData.find(s => s.regNo === regNo);
+
+    if (!student) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student record not found',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    document.getElementById('viewReceiptStudentName').textContent = student.studentName;
+
+    // Fetch receipts using regNo
+    try {
+        const response = await fetch(`/api/fees-manager/receipts/${regNo}`, {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch receipts');
+        }
+
+        const receipts = await response.json();
+
+        const receiptsBody = document.getElementById('receiptsTableBody');
+
+        if (receipts.length === 0) {
+            receiptsBody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center text-muted">
+                        <small>No receipts found for this student</small>
+                    </td>
+                </tr>
+            `;
+        } else {
+            receiptsBody.innerHTML = receipts.map(receipt => `
+                <tr>
+                    <td>${receipt.receiptNumber || 'N/A'}</td>
+                    <td>${receipt.invoiceNumber || 'N/A'}</td>
+                    <td>₹${(receipt.amountReceived || 0).toLocaleString()}</td>
+                    <td>${receipt.receiptDate ? formatDate(receipt.receiptDate) : '-'}</td>
+                    <td>${receipt.paymentMode || 'Cash'}</td>
+                    <td>${receipt.notes || '-'}</td>
+                    <td>${receipt.receiptType || 'Regular'}</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-secondary" onclick="viewReceiptPreview('${receipt.receiptNumber}', '${regNo}')" title="View Receipt">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-info" onclick="printReceipt('${receipt.receiptNumber}')" title="Print">
+                                <i class="bi bi-printer"></i>
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="emailReceipt('${receipt.receiptNumber}', '${student.studentName}', '${student.mobile}')" title="Email">
+                                <i class="bi bi-envelope"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteReceipt(${receipt.id})" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        new bootstrap.Modal(document.getElementById('viewReceiptsModal')).show();
+
+    } catch (error) {
+        console.error('Error fetching receipts:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to load receipts',
+            confirmButtonColor: '#ef4444'
+        });
+    }
+}
+
+function changeStatus(admissionId) {
+    if (!admissionId) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student admission ID is missing',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    currentStudentId = admissionId;
+    new bootstrap.Modal(document.getElementById('changeStatusModal')).show();
+}
+
+function changeStatus(admissionId) {
+    if (!admissionId) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student admission ID is missing',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    currentStudentId = admissionId;
+    new bootstrap.Modal(document.getElementById('changeStatusModal')).show();
+}
+
+//  manageInstallments function
+function manageInstallments(admissionId) {
+    if (!admissionId) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student admission ID is missing',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    currentStudentId = admissionId;
+    const student = feesData.find(s => s.admissionId === admissionId);
+
+    if (!student) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student record not found',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    document.getElementById('installmentTotalAmt').value = student.totalFees;
+    document.getElementById('totalInstallmentAmt').value = student.totalFees;
+
+    new bootstrap.Modal(document.getElementById('installmentsModal')).show();
+}
+
+//  feesRefund function
+function feesRefund(regNo) {
+    if (!regNo) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student registration number is missing',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    currentStudentRegNo = regNo;
+    const student = feesData.find(s => s.regNo === regNo);
+
+    if (!student) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student record not found',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    document.getElementById('refundStudentName').value = student.studentName;
+    document.getElementById('refundTotalFees').value = student.totalFees;
+    document.getElementById('refundPaidFees').value = student.totalPaid;
+    document.getElementById('refundPendingFees').value = student.feesDue;
+
+    new bootstrap.Modal(document.getElementById('feesRefundModal')).show();
+}
+
+// Update saveRefund to use regNo
+async function saveRefund() {
+    const regNo = currentStudentRegNo;
+
+    if (!regNo) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student information is missing',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    const refundAmount = parseFloat(document.getElementById('refundAmount').value);
+
+    if (!refundAmount || refundAmount <= 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Validation Error',
+            text: 'Please enter a valid refund amount',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    const refundData = {
+        regNo: regNo,
+        refundDate: document.getElementById('refundDate').value,
+        refundAmount: refundAmount,
+        totalFees: parseFloat(document.getElementById('refundTotalFees').value) || 0,
+        paidFees: parseFloat(document.getElementById('refundPaidFees').value) || 0,
+        pendingFees: parseFloat(document.getElementById('refundPendingFees').value) || 0,
+        paymentMode: document.getElementById('refundPaymentMode').value,
+        bankName: document.getElementById('refundBankName').value || null,
+        chequeNumber: document.getElementById('refundChequeNo').value || null,
+        chequeDate: document.getElementById('refundChequeDate').value || null,
+        transactionNumber: document.getElementById('refundTransactionNo').value || null,
+        ifscCode: document.getElementById('refundIfscCode').value || null,
+        onlinePaymentMode: document.getElementById('refundOnlinePaymentMode').value || null,
+        paymentClear: document.getElementById('refundPaymentClear').value === 'true',
+        notes: document.getElementById('refundNotes').value || null
+    };
+
+    try {
+        Swal.fire({
+            title: 'Saving...',
+            text: 'Please wait while we process the refund',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const response = await fetch('/api/fees-manager/refunds', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(refundData)
+        });
+
+        const result = await response.json();
+
+        Swal.close();
+
+        if (response.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: 'Refund saved successfully',
+                confirmButtonColor: '#667eea'
+            }).then(() => {
+                bootstrap.Modal.getInstance(document.getElementById('feesRefundModal')).hide();
+                loadFeesFromBackend();
+            });
+        } else {
+            throw new Error(result.message || 'Failed to save refund');
+        }
+
+    } catch (error) {
+        Swal.close();
+        console.error('Error saving refund:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to save refund',
+            confirmButtonColor: '#ef4444'
+        });
+    }
+}
+
+// ==================== View Receipt Preview ====================
+
+function viewReceiptPreview(receiptNo, admissionId) {
+    const student = feesData.find(s => s.admissionId === admissionId);
+
+    if (!student) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Student record not found',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    // Mock receipt data - replace with actual API call
+    const receiptData = {
+        receiptNo: receiptNo,
+        invoiceNo: receiptNo.replace('REC', 'INV'),
+        date: formatDate(new Date()),
+        studentName: student.studentName,
+        regNo: student.regNo,
+        mobile: student.mobile,
+        course: student.course,
+        amount: 10000,
+        amountInWords: 'Ten Thousand Only',
+        paymentMode: 'Cash',
+        transactionId: receiptNo === 'REC001' ? '-' : 'TXN' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+        receivedBy: 'Admin',
+        note: 'First installment payment'
+    };
+
+    const receiptHTML = generateReceiptHTML(receiptData);
+
+    Swal.fire({
+        title: 'Fee Receipt Preview',
+        html: receiptHTML,
+        width: '800px',
+        showCloseButton: true,
+        showCancelButton: true,
+        showConfirmButton: true,
+        confirmButtonText: '<i class="bi bi-printer me-2"></i>Print Receipt',
+        cancelButtonText: '<i class="bi bi-envelope me-2"></i>Send via Email',
+        confirmButtonColor: '#667eea',
+        cancelButtonColor: '#10b981',
+        reverseButtons: true,
+        customClass: {
+            htmlContainer: 'receipt-preview-container'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            printReceiptContent(receiptHTML);
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+            emailReceipt(receiptNo, student.studentName, student.mobile);
+        }
+    });
 }

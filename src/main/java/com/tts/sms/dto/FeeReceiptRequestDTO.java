@@ -1,40 +1,68 @@
+// FeeReceiptRequestDTO.java
 package com.tts.sms.dto;
 
-import lombok.*;
-        import java.time.LocalDate;
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-// ==================== FEE RECEIPT DTOs ====================
+import java.time.LocalDate;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class FeeReceiptRequestDTO {
-    private Long admissionId;
+
+    @NotNull(message = "Registration number is required")
+    private String regNo;
+
     private Long installmentId;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate receiptDate;
+
+    @NotNull(message = "Amount received is required")
     private Double amountReceived;
+
     private Double previousPaid;
+
     private Double totalFees;
+
     private Double pendingFees;
 
-    // GST
+    // GST Fields
     private Boolean gstEnabled;
+
     private Double sgstPercent;
+
     private Double cgstPercent;
+
     private Double invoiceValue;
 
     // Payment Details
+    @NotNull(message = "Payment mode is required")
     private String paymentMode;
+
     private String bankName;
+
     private String chequeNumber;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate chequeDate;
+
     private String transactionNumber;
+
     private String ifscCode;
+
     private String onlinePaymentMode;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate nextDueDate;
+
     private String receiptType;
+
     private String notes;
 }

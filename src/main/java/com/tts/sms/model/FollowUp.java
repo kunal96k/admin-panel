@@ -31,7 +31,7 @@ public class FollowUp {
     private LocalDate nextFollowUpDate;
 
     @Column(name = "mode", length = 50, nullable = false)
-    private String mode; // Phone Call, Walk-in, WhatsApp, Email, SMS
+    private String mode;
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;

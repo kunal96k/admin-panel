@@ -11,6 +11,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const mainWrapper = document.getElementById('mainWrapper');
     const pageTitle = document.getElementById('pageTitle');
 
+    document.addEventListener('DOMContentLoaded', function() {
+        // Log permissions for debugging
+        console.log('🔑 User Permissions:', userPermissions);
+
+        // Hide menu items user doesn't have access to
+        document.querySelectorAll('[data-menu-id]').forEach(item => {
+            const menuId = parseInt(item.getAttribute('data-menu-id'));
+            const hasAccess = userPermissions.includes(menuId);
+
+            console.log(`Menu ID: ${menuId}, Has Access: ${hasAccess}`);
+
+            if (!hasAccess) {
+                item.style.display = 'none';
+                console.log(`❌ Hiding menu: ${menuId}`);
+            } else {
+                console.log(`✅ Showing menu: ${menuId}`);
+            }
+        });
+    });
+
     // ========================================
     // SIDEBAR COLLAPSE (DESKTOP ONLY)
     // ========================================
@@ -289,6 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const logoutBtn = document.getElementById('logoutBtn');
     const sidebarLogout = document.getElementById('sidebarLogout');
+    const logoutForm = document.getElementById('logoutForm');
 
     function handleLogout(e) {
         e.preventDefault();
@@ -313,14 +334,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
 
+                // Submit the logout form
                 setTimeout(() => {
-                    Swal.fire({
-                        title: 'Logged Out Successfully!',
-                        icon: 'success',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                }, 1000);
+                    if (logoutForm) {
+                        logoutForm.submit();
+                    } else {
+                        // Fallback: redirect to logout URL
+                        window.location.href = '/logout';
+                    }
+                }, 500);
             }
         });
     }

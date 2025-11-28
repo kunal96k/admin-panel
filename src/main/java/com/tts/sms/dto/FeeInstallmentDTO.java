@@ -8,9 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
-/**
- * DTO for Fee Installment data
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,7 +16,8 @@ public class FeeInstallmentDTO {
 
     private Long id;
 
-    private Long admissionId;
+    // CHANGED: Use registrationNumber instead of admissionId
+    private String registrationNumber;
 
     private Integer installmentNumber;
 

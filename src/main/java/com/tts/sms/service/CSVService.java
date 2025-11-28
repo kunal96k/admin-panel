@@ -427,11 +427,11 @@ public class CSVService {
     }
 
     /**
-     * Parse FEES CSV - STRICT MODE (AS-IS Import)
+     * Parse FEES CSV - PRESERVE NULL/EMPTY VALUES
      * Format: Reg No, Student Name, Mobile, Total Fees, Fees Due, Total Paid, Due Date, Fees Refund, Status, Course
      */
     public List<FeesCSVImportDTO> parseFeesCSV(MultipartFile file) throws IOException {
-        log.info("📥 STRICT PARSING - FEES CSV: {}", file.getOriginalFilename());
+        log.info("📥 PARSING FEES CSV (PRESERVE NULLS): {}", file.getOriginalFilename());
 
         List<FeesCSVImportDTO> dtos = new ArrayList<>();
 
@@ -452,16 +452,16 @@ public class CSVService {
 
                 try {
                     FeesCSVImportDTO dto = FeesCSVImportDTO.builder()
-                            .registrationNumber(getOriginalValue(row, 0))
-                            .studentName(getOriginalValue(row, 1))
-                            .mobile(getOriginalValue(row, 2))
-                            .totalFees(parseDouble(getOriginalValue(row, 3)))
-                            .feesDue(parseDouble(getOriginalValue(row, 4)))
-                            .totalPaid(parseDouble(getOriginalValue(row, 5)))
-                            .dueDate(parseDate(getOriginalValue(row, 6)))
-                            .feesRefund(parseDouble(getOriginalValue(row, 7)))
-                            .status(getOriginalValue(row, 8))
-                            .course(getOriginalValue(row, 9))
+                            .registrationNumber(getStringOrNull(row, 0))
+                            .studentName(getStringOrNull(row, 1))
+                            .mobile(getStringOrNull(row, 2))
+                            .totalFees(parseDoubleOrNull(row, 3))
+                            .feesDue(parseDoubleOrNull(row, 4))
+                            .totalPaid(parseDoubleOrNull(row, 5))
+                            .dueDate(parseDateOrNull(row, 6)) // KEEP NULL IF EMPTY
+                            .feesRefund(parseDoubleOrNull(row, 7))
+                            .status(getStringOrNull(row, 8))
+                            .course(getStringOrNull(row, 9))
                             .build();
 
                     dtos.add(dto);
@@ -472,7 +472,7 @@ public class CSVService {
                 }
             }
 
-            log.info("✅ Parsed {} fees records (STRICT MODE)", dtos.size());
+            log.info("✅ Parsed {} fees records (NULL-SAFE MODE)", dtos.size());
             return dtos;
 
         } catch (CsvException e) {
@@ -480,17 +480,67 @@ public class CSVService {
         }
     }
 
+    // ==================== HELPER METHODS - NULL SAFE ====================
+
+    /**
+     * Get string value or null (NOT "N/A")
+     */
+    private String getStringOrNull(String[] row, int index) {
+        if (index >= row.length) return null;
+        String value = row[index];
+        if (value == null || value.trim().isEmpty() || value.trim().equalsIgnoreCase("N/A")) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    /**
+     * Parse double or return null
+     */
+    private Double parseDoubleOrNull(String[] row, int index) {
+        String value = getStringOrNull(row, index);
+        if (value == null) return null;
+
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            log.warn("Invalid number at row[{}]: {}", index, value);
+            return null;
+        }
+    }
+
+    /**
+     * Parse date or return NULL (DO NOT SET CURRENT DATE)
+     */
+    private LocalDate parseDateOrNull(String[] row, int index) {
+        String dateStr = getStringOrNull(row, index);
+        if (dateStr == null) {
+            return null; // KEEP NULL - DO NOT SET CURRENT DATE
+        }
+
+        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
+            try {
+                return LocalDate.parse(dateStr, formatter);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        log.warn("Invalid date format at row[{}]: {}", index, dateStr);
+        return null; // KEEP NULL ON PARSE ERROR
+    }
+
     private FeesCSVImportDTO createFallbackFeesDTO(int rowNumber) {
         return FeesCSVImportDTO.builder()
                 .registrationNumber("ERROR_ROW_" + (rowNumber + 1))
                 .studentName("Import Error")
-                .mobile("N/A")
-                .totalFees(0.0)
-                .feesDue(0.0)
-                .totalPaid(0.0)
-                .feesRefund(0.0)
+                .mobile(null)
+                .totalFees(null)
+                .feesDue(null)
+                .totalPaid(null)
+                .dueDate(null)
+                .feesRefund(null)
                 .status("Error")
-                .course("N/A")
+                .course(null)
                 .build();
     }
 

@@ -21,9 +21,15 @@ public interface FeeReceiptRepository extends JpaRepository<FeeReceipt, Long> {
     Page<FeeReceipt> findByIsDeletedFalse(Pageable pageable);
 
     /**
-     * Find receipts by admission ID
+     *  Find receipts by registration number
      */
-    List<FeeReceipt> findByAdmissionIdAndIsDeletedFalseOrderByReceiptDateDesc(Long admissionId);
+    List<FeeReceipt> findByRegistrationNumberAndIsDeletedFalseOrderByReceiptDateDesc(String registrationNumber);
+
+    /**
+     * Find max receipt number for generating new receipt numbers
+     */
+    @Query("SELECT MAX(r.receiptNumber) FROM FeeReceipt r WHERE r.receiptNumber LIKE :prefix%")
+    String findMaxReceiptNumber(@Param("prefix") String prefix);
 
     /**
      * Find receipt by receipt number
@@ -52,16 +58,16 @@ public interface FeeReceiptRepository extends JpaRepository<FeeReceipt, Long> {
     );
 
     /**
-     * Get total amount received for admission
+     *  Get total amount received by registration number
      */
-    @Query("SELECT SUM(r.amountReceived) FROM FeeReceipt r " +
-            "WHERE r.admissionId = :admissionId AND r.isDeleted = false")
-    Double getTotalReceivedByAdmission(@Param("admissionId") Long admissionId);
+    @Query("SELECT COALESCE(SUM(r.amountReceived), 0.0) FROM FeeReceipt r " +
+            "WHERE r.registrationNumber = :registrationNumber AND r.isDeleted = false")
+    Double getTotalReceivedByRegistrationNumber(@Param("registrationNumber") String registrationNumber);
 
     /**
      * Get total amount received for date range
      */
-    @Query("SELECT SUM(r.amountReceived) FROM FeeReceipt r " +
+    @Query("SELECT COALESCE(SUM(r.amountReceived), 0.0) FROM FeeReceipt r " +
             "WHERE r.isDeleted = false " +
             "AND r.receiptDate BETWEEN :startDate AND :endDate")
     Double getTotalReceivedByDateRange(
@@ -70,18 +76,11 @@ public interface FeeReceiptRepository extends JpaRepository<FeeReceipt, Long> {
     );
 
     /**
-     * Count receipts by admission
+     *  Count receipts by registration number
      */
     @Query("SELECT COUNT(r) FROM FeeReceipt r " +
-            "WHERE r.admissionId = :admissionId AND r.isDeleted = false")
-    Long countByAdmission(@Param("admissionId") Long admissionId);
-
-    /**
-     * Find max receipt number for prefix
-     */
-    @Query("SELECT MAX(r.receiptNumber) FROM FeeReceipt r " +
-            "WHERE r.receiptNumber LIKE CONCAT(:prefix, '%')")
-    String findMaxReceiptNumber(@Param("prefix") String prefix);
+            "WHERE r.registrationNumber = :registrationNumber AND r.isDeleted = false")
+    Long countByRegistrationNumber(@Param("registrationNumber") String registrationNumber);
 
     /**
      * Get receipt statistics by payment mode
@@ -91,7 +90,14 @@ public interface FeeReceiptRepository extends JpaRepository<FeeReceipt, Long> {
             "GROUP BY r.paymentMode")
     List<Object[]> getReceiptStatsByPaymentMode();
 
-    List<FeeReceipt> findByAdmissionIdInAndIsDeletedFalse(List<Long> admissionIds);
+    /**
+     *  Find receipts by multiple registration numbers
+     */
+    @Query("SELECT r FROM FeeReceipt r WHERE r.registrationNumber IN :registrationNumbers " +
+            "AND r.isDeleted = false")
+    List<FeeReceipt> findByRegistrationNumberInAndIsDeletedFalse(
+            @Param("registrationNumbers") List<String> registrationNumbers
+    );
 
     /**
      * Get recent receipts
@@ -99,4 +105,25 @@ public interface FeeReceiptRepository extends JpaRepository<FeeReceipt, Long> {
     @Query("SELECT r FROM FeeReceipt r WHERE r.isDeleted = false " +
             "ORDER BY r.receiptDate DESC, r.createdAt DESC")
     List<FeeReceipt> findRecentReceipts(Pageable pageable);
+
+    /**
+     * Get total receipts count
+     */
+    @Query("SELECT COUNT(r) FROM FeeReceipt r WHERE r.isDeleted = false")
+    Long countTotalReceipts();
+
+    /**
+     * Get today's receipts
+     */
+    @Query("SELECT r FROM FeeReceipt r WHERE r.isDeleted = false " +
+            "AND r.receiptDate = CURRENT_DATE " +
+            "ORDER BY r.createdAt DESC")
+    List<FeeReceipt> findTodaysReceipts();
+
+    /**
+     * Get total amount received today
+     */
+    @Query("SELECT COALESCE(SUM(r.amountReceived), 0.0) FROM FeeReceipt r " +
+            "WHERE r.isDeleted = false AND r.receiptDate = CURRENT_DATE")
+    Double getTotalReceivedToday();
 }

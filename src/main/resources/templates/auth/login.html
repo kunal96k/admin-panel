@@ -1,158 +1,508 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - TechnoKraft SMS</title>
+    <title>Login - SMS System</title>
 
-    <!-- Favicon -->
-    <link rel="icon" th:href="@{/assets/images/tts-logo-ev.png}" href="/assets/images/tts-logo-ev.png">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Michroma&family=Orbitron:wght@400..900&display=swap');
+    </style>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="icon" th:href="@{/assets/images/tts-logo-ev.png}">
 
     <!-- Bootstrap Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Michroma&display=swap" rel="stylesheet">
-
-    <!-- Custom CSS -->
-    <link rel="stylesheet" th:href="@{/assets/css/login.css}">
-
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Michroma&display=swap');
-    </style>
+        /* ================================
+   Fonts
+   ================================ */
+@import url('https://fonts.googleapis.com/css2?family=Michroma&family=Inter:wght@400;500&display=swap');
 
+/* ================================
+   Root + Global
+   ================================ */
+:root {
+    --background: #1a1a2e;
+    --color: #ffffff;
+    --primary-color: #0f3460;
+    --accent: #e94560;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(circle at top left, #30336b 0, #1a1a2e 40%, #0b1020 100%);
+    color: var(--color);
+    letter-spacing: 0.5px;
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* ================================
+   Container & Card
+   ================================ */
+.login-container {
+    width: 100%;              /* fixed width behaviour – no jumping on error/success */
+    max-width: 500px;
+    padding: 1.5rem;
+    margin: 0 auto;
+}
+
+.login-card {
+    position: relative;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 36px 1px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(22px);
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.06),
+        rgba(15, 52, 96, 0.3)
+    );
+    overflow: hidden;
+}
+
+/* Decorative circles (like original glassmorphism design) */
+.login-card::before,
+.login-card::after {
+    content: "";
+    position: absolute;
+    width: 7rem;
+    height: 7rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, #0f3460, #1a1a2e);
+    opacity: 0.8;
+    z-index: -1;
+}
+
+.login-card::before {
+    top: -2rem;
+    left: -2rem;
+    transform: translate(-15%, -15%);
+}
+
+.login-card::after {
+    bottom: -2rem;
+    right: -2rem;
+    transform: translate(15%, 15%);
+}
+
+/* ================================
+   Header & Logo
+   ================================ */
+.login-header {
+    padding: 2.5rem 2rem 1rem;
+    text-align: center;
+    color: var(--color);
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+}
+
+.logo-icon {
+    width: 70px;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.6));
+}
+
+.logo-text {
+    text-align: left;
+}
+
+.logo-title {
+    font-family: "Michroma", sans-serif;
+    font-size: 22px;
+    letter-spacing: 1px;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.logo-subtitle {
+    font-family: "Inter", sans-serif;
+    font-size: 11.2px;
+    letter-spacing: 0.3px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-left: 3%;
+}
+
+
+/* If you use text beside/under logo */
+.logo-text {
+    text-align: center;
+}
+
+.logo-title {
+    font-family: "Michroma", sans-serif;   /* TechnoKraft */
+    font-size: 22px;
+    letter-spacing: 1px;
+}
+
+.logo-subtitle {
+    font-family: "Inter", sans-serif;      /* Training and Solutions */
+    font-size: 11.2px;
+    letter-spacing: 0.3px;
+    opacity: 0.9;
+}
+
+.login-header h1 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0.5rem 0 0.25rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.login-header p {
+    margin: 0;
+    font-size: 0.85rem;
+    opacity: 0.75;
+}
+
+/* ================================
+   Body & Form
+   ================================ */
+.login-body {
+    padding: 1.75rem 2rem 1.5rem;
+}
+
+.form-label {
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.required {
+    color: #f87171;
+}
+
+/* Input + Select */
+.form-control,
+.form-select {
+    background-color: rgba(145, 145, 145, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: var(--color);
+    border-radius: 8px;
+    padding: 0.75rem 0.9rem;
+    font-size: 0.9rem;
+    outline: none;
+    backdrop-filter: blur(15px);
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 16px 1px rgba(0, 0, 0, 0.35);
+    background-color: rgba(145, 145, 145, 0.18);
+    color: var(--color);
+    animation: wobble 0.25s ease-in;
+}
+
+/* Input group with icons */
+.input-group-text {
+    background: rgba(145, 145, 145, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px 0 0 8px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.input-group .form-control {
+    border-radius: 0 8px 8px 0;
+    border-left: none;
+}
+
+/* Select options (dropdown) */
+.form-select {
+    cursor: pointer;
+}
+
+.form-select option {
+    color: #111827; /* normal dark text inside dropdown list */
+}
+
+/* ================================
+   Buttons
+   ================================ */
+.btn-login {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent));
+    border: none;
+    padding: 0.8rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 10px;
+    color: white;
+    width: 100%;
+    margin-top: 0.5rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-login:hover {
+    opacity: 0.96;
+}
+
+.btn-login:active {
+    transform: scale(0.99);
+}
+
+/* ================================
+   Alerts (Error / Success)
+   ================================ */
+.alert {
+    border-radius: 10px;
+    border: 1px solid transparent;
+    padding: 0.75rem 0.85rem;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.alert-danger {
+    background-color: rgba(248, 113, 113, 0.14);
+    border-color: rgba(248, 113, 113, 0.5);
+    color: #fecaca;
+}
+
+.alert-success {
+    background-color: rgba(52, 211, 153, 0.12);
+    border-color: rgba(52, 211, 153, 0.5);
+    color: #bbf7d0;
+}
+
+.alert i {
+    font-size: 1rem;
+}
+
+/* ================================
+   Checkbox (Remember me)
+   ================================ */
+.form-check-input {
+    background-color: transparent;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.form-check-input:checked {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+.form-check-label {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.85rem;
+}
+
+/* ================================
+   Footer
+   ================================ */
+.login-footer {
+    text-align: center;
+    padding: 0.9rem 0.75rem 1.1rem;
+    background: rgba(15, 23, 42, 0.75);
+    color: rgba(226, 232, 240, 0.85);
+    font-size: 0.8rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.login-footer a {
+    color: rgba(239, 246, 255, 0.96);
+    font-weight: 500;
+}
+
+.login-footer a:hover {
+    color: var(--accent);
+}
+
+/* ================================
+   Animation
+   ================================ */
+@keyframes wobble {
+    0% { transform: scale(1.02); }
+    25% { transform: scale(1); }
+    75% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+/* ================================
+   Responsive
+   ================================ */
+@media (max-width: 576px) {
+    .login-container {
+        max-width: 100%;
+        padding: 1rem;
+    }
+
+    .login-card {
+        border-radius: 14px;
+    }
+
+    .login-header {
+        padding: 2rem 1.5rem 0.75rem;
+    }
+
+    .login-body {
+        padding: 1.5rem 1.5rem 1.25rem;
+    }
+}
+
+    </style>
 </head>
 <body>
-<div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner"></div>
-</div>
-
 <div class="login-container">
     <div class="login-card">
-        <!-- Header -->
         <div class="login-header">
-            <div class="logo-container">
+            <!-- Logo -->
+            <div class="logo-container d-flex align-items-center justify-content-center gap-3">
+
+                <!-- Logo Icon -->
                 <img src="/assets/images/tts-logo-ev.png"
-                     th:src="@{/assets/images/tts-logo-ev.png}"
                      alt="TechnoKraft Logo"
-                     class="logo-img">
+                     onerror="this.src='https://via.placeholder.com/80?text=TTS'"
+                     class="logo-icon">
+
+                <!-- Logo Text -->
+                <div class="logo-text text-start">
+                    <div class="logo-title">TechnoKraft</div>
+                    <div class="logo-subtitle">Training and Solutions</div>
+                </div>
             </div>
-            <!-- brand-text and app-subtitle removed as requested -->
+
         </div>
 
-        <!-- Body -->
         <div class="login-body">
-            <div class="welcome-text">
-                <h2>Welcome Back!</h2>
-                <p>Please login to access your dashboard</p>
-            </div>
-
             <!-- Error Message -->
-            <div th:if="${error}" class="alert alert-danger">
-                <i class="bi bi-exclamation-triangle-fill"></i>
-                <span th:text="${error}">Invalid credentials</span>
+            <div th:if="${param.error}" class="alert alert-danger mb-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span th:text="${error}">Invalid username or password</span>
             </div>
 
-            <!-- Success (Logout) Message -->
-            <div th:if="${logoutMessage}" class="alert alert-success">
-                <i class="bi bi-check-circle-fill"></i>
+            <!-- Logout Message -->
+            <div th:if="${param.logout}" class="alert alert-success mb-3" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>
                 <span th:text="${logoutMessage}">You have been logged out successfully</span>
             </div>
 
             <!-- Login Form -->
-            <form th:action="@{/login}" method="post" id="loginForm">
-                <!-- Role Selection -->
-                <div class="form-group">
-                    <label for="role" class="form-label">
-                        <i class="bi bi-person-badge"></i>
-                        Select Role
-                    </label>
-                    <select class="form-control form-select"
-                            id="role"
-                            name="role"
-                            required>
-                        <option value="">-- Select Role --</option>
-                        <option value="ADMIN">Administrator</option>
-                        <option value="COUNSELOR">Counselor</option>
-                        <option value="ACCOUNTANT">Accountant</option>
-                        <option value="RECEPTIONIST">Receptionist</option>
-                        <option value="FACULTY">Faculty</option>
-                        <option value="MANAGER">Manager</option>
-                    </select>
-                </div>
+            <form th:action="@{/login}" method="post">
+                <!--                &lt;!&ndash; Role Selection &ndash;&gt;-->
+                <!--                <div class="mb-3">-->
+                <!--                    <label for="role" class="form-label">-->
+                <!--                        <i class="bi bi-person-badge me-1"></i>Select Role <span class="required">*</span>-->
+                <!--                    </label>-->
+                <!--                    <select class="form-select" id="role" name="role" required>-->
+                <!--                        <option value="">&#45;&#45; Select Role &#45;&#45;</option>-->
+                <!--                        <option th:each="role : ${roles}"-->
+                <!--                                th:value="${role.id}"-->
+                <!--                                th:text="${role.roleTitle}">-->
+                <!--                        </option>-->
+                <!--                    </select>-->
+                <!--                </div>-->
 
                 <!-- Username -->
-                <div class="form-group">
+                <div class="mb-3">
                     <label for="username" class="form-label">
-                        <i class="bi bi-person"></i>
-                        Username
+                        <i class="bi bi-person me-1"></i>Username <span class="required">*</span>
                     </label>
-                    <input type="text"
-                           class="form-control"
-                           id="username"
-                           name="username"
-                           placeholder="Enter your username"
-                           required
-                           autocomplete="username"
-                           autofocus>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-person-fill"></i>
+                        </span>
+                        <input type="text"
+                               class="form-control"
+                               id="username"
+                               name="username"
+                               placeholder="Enter your username"
+                               required
+                               autofocus>
+                    </div>
                 </div>
 
                 <!-- Password -->
-                <div class="form-group">
+                <div class="mb-3">
                     <label for="password" class="form-label">
-                        <i class="bi bi-lock"></i>
-                        Password
+                        <i class="bi bi-lock me-1"></i>Password <span class="required">*</span>
                     </label>
-                    <div class="input-wrapper">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-lock-fill"></i>
+                        </span>
                         <input type="password"
-                               class="form-control has-icon"
+                               class="form-control"
                                id="password"
                                name="password"
                                placeholder="Enter your password"
-                               required
-                               autocomplete="current-password">
-                        <button type="button"
-                                class="password-toggle"
-                                id="togglePassword"
-                                aria-label="Toggle password visibility">
-                            <i class="bi bi-eye" id="toggleIcon"></i>
-                        </button>
+                               required>
                     </div>
                 </div>
 
                 <!-- Remember Me -->
-<!--                <div class="form-check">-->
-<!--                    <input type="checkbox"-->
-<!--                           id="rememberMe"-->
-<!--                           name="remember-me">-->
-<!--                    <label for="rememberMe">Remember me</label>-->
-<!--                </div>-->
+                <!--                <div class="mb-4">-->
+                <!--                    <div class="form-check">-->
+                <!--                        <input class="form-check-input" type="checkbox" id="remember-me" name="remember-me">-->
+                <!--                        <label class="form-check-label" for="remember-me">-->
+                <!--                            Remember me-->
+                <!--                        </label>-->
+                <!--                    </div>-->
+                <!--                </div>-->
 
-                <!-- CSRF Token -->
-                <input type="hidden"
-                       th:if="${_csrf != null}"
-                       th:name="${_csrf.parameterName}"
-                       th:value="${_csrf.token}"/>
-
-                <!-- Submit Button -->
-                <button type="submit" class="btn-primary" id="loginBtn">
-                    <i class="bi bi-box-arrow-in-right"></i>
-                    <span>Sign In</span>
+                <!-- Login Button -->
+                <button type="submit" class="btn btn-login">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Login
                 </button>
             </form>
         </div>
 
-        <!-- Footer -->
         <div class="login-footer">
-            <p>&copy; 2025 <a href="https://tts.net.in/" target="_blank">TechnoKraft Training & Solution</a>. All rights reserved.</p>
+            <p>
+                &copy; <span th:text="${#dates.year(#dates.createNow())}">2024</span>
+                <a href="https://tts.net.in/" target="_blank">TechnoKraft Training &amp; Solution PVT LTD</a>.
+                All rights reserved. | Powered by TechnoKraft Service LLP
+            </p>
         </div>
     </div>
 </div>
 
-<!-- Custom JavaScript -->
-<script th:src="@{/assets/js/login.js}" src="/assets/js/login.js"></script>
-
+<!-- Bootstrap 5 JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

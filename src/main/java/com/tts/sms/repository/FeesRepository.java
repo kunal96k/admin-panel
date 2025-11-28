@@ -44,6 +44,7 @@ public interface FeesRepository extends JpaRepository<Fees, Long>, JpaSpecificat
             "f.mobile LIKE CONCAT('%', :search, '%'))")
     Page<Fees> searchFees(@Param("search") String search, Pageable pageable);
 
+
     /**
      * Get total fees statistics
      */

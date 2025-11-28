@@ -1,10 +1,15 @@
 package com.tts.sms.config;
 
+import com.tts.sms.service.CustomUserDetailsService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -12,6 +17,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
@@ -20,14 +27,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
-/**
- * Security Configuration for HTTPS, CSRF, and CORS
- * Handles different configurations for dev and prod environments
- */
 @Slf4j
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     @Value("${app.security.cors.allowed-origins:*}")
@@ -37,21 +41,24 @@ public class SecurityConfig {
     private String activeProfile;
 
     private final Environment environment;
-
-    public SecurityConfig(Environment environment) {
-        this.environment = environment;
-    }
+    private final CustomUserDetailsService userDetailsService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         log.info("Configuring security for profile: {}", activeProfile);
 
-        // CSRF Configuration
+        // CSRF configuration handler
         CsrfTokenRequestAttributeHandler csrfHandler = new CsrfTokenRequestAttributeHandler();
         csrfHandler.setCsrfRequestAttributeName("_csrf");
 
         http
+                // Use our custom DaoAuthenticationProvider
+                .authenticationProvider(authenticationProvider())
+
+                // CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // CSRF
                 .csrf(csrf -> {
                     if ("dev".equalsIgnoreCase(activeProfile)) {
                         // Disable CSRF in dev for easier testing
@@ -61,10 +68,14 @@ public class SecurityConfig {
                         // Enable CSRF in production with cookie-based tokens
                         log.info("CSRF protection ENABLED for production");
                         csrf
+                                // keep APIs CSRF-free like in your original config
+                                .ignoringRequestMatchers("/api/**")
                                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                                 .csrfTokenRequestHandler(csrfHandler);
                     }
                 })
+
+                // Authorization rules
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers(
@@ -76,31 +87,45 @@ public class SecurityConfig {
                                 "/css/**",
                                 "/js/**",
                                 "/images/**",
-                                "/uploads/**"
+                                "/uploads/**",
+                                "/webjars/**"
                         ).permitAll()
-                        // API endpoints - require authentication
+                        // Admin endpoints
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        // API endpoints
                         .requestMatchers("/api/**").authenticated()
-                        // All other requests require authentication
+                        // All other requests
                         .anyRequest().authenticated()
                 )
+
+                // Session management
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 )
+
+                // Form login with custom success/failure handlers
                 .formLogin(form -> form
                         .loginPage("/login")
                         .loginProcessingUrl("/login")
-                        .defaultSuccessUrl("/dashboard", true)
-                        .failureUrl("/login?error=true")
+                        .usernameParameter("username")
+                        .passwordParameter("password")
+                        .successHandler(authenticationSuccessHandler())
+                        .failureHandler(authenticationFailureHandler())
                         .permitAll()
                 )
                 .logout(logout -> logout
+                        .logoutUrl("/logout")
                         .logoutSuccessUrl("/login?logout")
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
-                        .permitAll()
+                        .clearAuthentication(true)
+                )
+                // Access denied handling
+                .exceptionHandling(exception -> exception
+                        .accessDeniedPage("/access-denied")
                 );
 
-        // HTTPS/SSL Configuration for production
+        // HTTPS/SSL in production
         if ("prod".equalsIgnoreCase(activeProfile)) {
             log.info("Enabling HTTPS redirect for production");
             http.requiresChannel(channel ->
@@ -109,6 +134,54 @@ public class SecurityConfig {
         }
 
         return http.build();
+    }
+
+    /**
+     * Authentication success handler:
+     * - reset failed attempts
+     * - redirect to /dashboard
+     */
+    @Bean
+    public AuthenticationSuccessHandler authenticationSuccessHandler() {
+        return (request, response, authentication) -> {
+            userDetailsService.resetFailedAttempts(authentication.getName());
+            response.sendRedirect("/dashboard");
+        };
+    }
+
+    /**
+     * Authentication failure handler:
+     * - increment failed attempts
+     * - redirect back to login with error
+     */
+    @Bean
+    public AuthenticationFailureHandler authenticationFailureHandler() {
+        return (request, response, exception) -> {
+            String username = request.getParameter("username");
+            if (username != null) {
+                userDetailsService.incrementFailedAttempts(username);
+            }
+            response.sendRedirect("/login?error");
+        };
+    }
+
+    /**
+     * DaoAuthenticationProvider using CustomUserDetailsService and BCrypt encoder
+     */
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
+    }
+
+    /**
+     * AuthenticationManager (needed if you inject it elsewhere)
+     */
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
     /**
@@ -139,7 +212,7 @@ public class SecurityConfig {
     }
 
     /**
-     * Password Encoder
+     * Password Encoder (BCrypt with strength 12)
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
