@@ -1,206 +1,333 @@
-    // Sample data
-    let leadSources = [
-        { id: 1, title: 'Walk-in' },
-        { id: 2, title: 'Website' },
-        { id: 3, title: 'Social Media' },
-        { id: 4, title: 'Referral' },
-        { id: 5, title: 'Newspaper Advertisement' },
-        { id: 6, title: 'Google Ads' }
-    ];
+let currentPage = 0;
+let entriesPerPage = 25;
+let totalElements = 0;
+let totalPages = 0;
+let currentSearch = '';
+let editingLeadSourceId = null;
 
-    let currentPage = 1;
-    let entriesPerPage = 25;
-    let filteredLeadSources = [...leadSources];
-    let editingLeadSourceId = null;
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadLeadSources();
+    setupEventListeners();
+});
 
-    // Initialize
-    document.addEventListener('DOMContentLoaded', function() {
-        renderTable();
-        setupEventListeners();
+function setupEventListeners() {
+    // Add Lead Source button
+    document.getElementById('btnAddLeadSource').addEventListener('click', function() {
+        editingLeadSourceId = null;
+        document.getElementById('modalTitle').innerHTML = '<i class="bi bi-megaphone me-2"></i>Add New Lead Source';
+        document.getElementById('leadSourceTitle').value = '';
+        document.getElementById('leadSourceTitle').classList.remove('is-invalid');
+        new bootstrap.Modal(document.getElementById('leadSourceModal')).show();
     });
 
-    function setupEventListeners() {
-        // Add Lead Source button
-        document.getElementById('btnAddLeadSource').addEventListener('click', function() {
-            editingLeadSourceId = null;
-            document.getElementById('modalTitle').innerHTML = '<i class="bi bi-megaphone me-2"></i>Add New Lead Source';
-            document.getElementById('leadSourceTitle').value = '';
-            new bootstrap.Modal(document.getElementById('leadSourceModal')).show();
-        });
+    // Save Lead Source button
+    document.getElementById('btnSaveLeadSource').addEventListener('click', saveLeadSource);
 
-        // Save Lead Source button
-        document.getElementById('btnSaveLeadSource').addEventListener('click', saveLeadSource);
+    // Search input with debounce
+    let searchTimeout;
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            currentSearch = e.target.value.trim();
+            currentPage = 0;
+            loadLeadSources();
+        }, 500);
+    });
 
-        // Search input
-        document.getElementById('searchInput').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            filteredLeadSources = leadSources.filter(source =>
-                source.title.toLowerCase().includes(searchTerm)
-            );
-            currentPage = 1;
-            renderTable();
-        });
+    // Entries per page
+    document.getElementById('entriesPerPage').addEventListener('change', function(e) {
+        entriesPerPage = parseInt(e.target.value);
+        currentPage = 0;
+        loadLeadSources();
+    });
 
-        // Entries per page
-        document.getElementById('entriesPerPage').addEventListener('change', function(e) {
-            entriesPerPage = parseInt(e.target.value);
-            currentPage = 1;
-            renderTable();
-        });
-    }
+    // Export CSV button
+    document.getElementById('btnExportCSV').addEventListener('click', exportToCSV);
 
-    function renderTable() {
-        const start = (currentPage - 1) * entriesPerPage;
-        const end = start + entriesPerPage;
-        const paginatedLeadSources = filteredLeadSources.slice(start, end);
+    // Form validation on input
+    document.getElementById('leadSourceTitle').addEventListener('input', function() {
+        this.classList.remove('is-invalid');
+    });
+}
 
-        const tbody = document.getElementById('leadSourceTableBody');
+async function loadLeadSources() {
+    try {
+        const response = await fetch(`/lead-source/list?search=${encodeURIComponent(currentSearch)}&page=${currentPage}&size=${entriesPerPage}`);
+        const result = await response.json();
 
-        if (paginatedLeadSources.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="3" class="text-center py-4">
-                        <i class="bi bi-inbox" style="font-size: 3rem; color: #cbd5e1;"></i>
-                        <p class="mt-2 mb-0 text-muted">No lead sources found</p>
-                    </td>
-                </tr>
-            `;
+        if (result.success) {
+            totalElements = result.totalElements;
+            totalPages = result.totalPages;
+            renderTable(result.data);
+            updatePaginationInfo();
+            renderPagination();
         } else {
-            tbody.innerHTML = paginatedLeadSources.map((source, index) => `
-                <tr>
-                    <td>${start + index + 1}</td>
-                    <td>${source.title}</td>
-                    <td>
-                        <button class="btn btn-sm btn-warning action-btn" onclick="editLeadSource(${source.id})">
-                            <i class="bi bi-pencil"></i> Edit
-                        </button>
-                        <button class="btn btn-sm btn-danger action-btn" onclick="deleteLeadSource(${source.id})">
-                            <i class="bi bi-trash"></i> Delete
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
+            showError('Error loading lead sources: ' + result.message);
         }
-
-        updatePaginationInfo();
-        renderPagination();
+    } catch (error) {
+        showError('Failed to load lead sources. Please try again.');
+        console.error('Error:', error);
     }
+}
 
-    function updatePaginationInfo() {
-        const start = filteredLeadSources.length === 0 ? 0 : (currentPage - 1) * entriesPerPage + 1;
-        const end = Math.min(currentPage * entriesPerPage, filteredLeadSources.length);
+function renderTable(leadSources) {
+    const tbody = document.getElementById('leadSourceTableBody');
 
-        document.getElementById('entriesStart').textContent = start;
-        document.getElementById('entriesEnd').textContent = end;
-        document.getElementById('totalEntries').textContent = filteredLeadSources.length;
-    }
-
-    function renderPagination() {
-        const totalPages = Math.ceil(filteredLeadSources.length / entriesPerPage);
-        const pagination = document.getElementById('paginationControls');
-
-        let html = `
-            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Previous</a>
-            </li>
+    if (leadSources.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center py-4">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #cbd5e1;"></i>
+                    <p class="mt-2 mb-0 text-muted">No lead sources found</p>
+                </td>
+            </tr>
         `;
+    } else {
+        tbody.innerHTML = leadSources.map((source, index) => `
+            <tr>
+                <td>${currentPage * entriesPerPage + index + 1}</td>
+                <td>${escapeHtml(source.sourceTitle)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-secondary action-btn" onclick="editLeadSource(${source.id})">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary action-btn" onclick="deleteLeadSource(${source.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+}
 
-        for (let i = 1; i <= totalPages; i++) {
-            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-                html += `
-                    <li class="page-item ${i === currentPage ? 'active' : ''}">
-                        <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
-                    </li>
-                `;
-            } else if (i === currentPage - 2 || i === currentPage + 2) {
-                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-            }
+function updatePaginationInfo() {
+    const start = totalElements === 0 ? 0 : currentPage * entriesPerPage + 1;
+    const end = Math.min((currentPage + 1) * entriesPerPage, totalElements);
+
+    document.getElementById('entriesStart').textContent = start;
+    document.getElementById('entriesEnd').textContent = end;
+    document.getElementById('totalEntries').textContent = totalElements;
+}
+
+function renderPagination() {
+    const pagination = document.getElementById('paginationControls');
+
+    let html = `
+        <li class="page-item ${currentPage === 0 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Previous</a>
+        </li>
+    `;
+
+    for (let i = 0; i < totalPages; i++) {
+        if (i === 0 || i === totalPages - 1 || (i >= currentPage - 1 && i <= currentPage + 1)) {
+            html += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i + 1}</a>
+                </li>
+            `;
+        } else if (i === currentPage - 2 || i === currentPage + 2) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
         }
-
-        html += `
-            <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a>
-            </li>
-        `;
-
-        pagination.innerHTML = html;
     }
 
-    function changePage(page) {
-        const totalPages = Math.ceil(filteredLeadSources.length / entriesPerPage);
-        if (page >= 1 && page <= totalPages) {
-            currentPage = page;
-            renderTable();
-        }
-    }
+    html += `
+        <li class="page-item ${currentPage === totalPages - 1 || totalPages === 0 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a>
+        </li>
+    `;
 
-    function editLeadSource(id) {
-        const source = leadSources.find(s => s.id === id);
-        if (source) {
+    pagination.innerHTML = html;
+}
+
+function changePage(page) {
+    if (page >= 0 && page < totalPages) {
+        currentPage = page;
+        loadLeadSources();
+    }
+}
+
+async function editLeadSource(id) {
+    try {
+        const response = await fetch(`/lead-source/${id}`);
+        const result = await response.json();
+
+        if (result.success) {
             editingLeadSourceId = id;
             document.getElementById('modalTitle').innerHTML = '<i class="bi bi-pencil me-2"></i>Edit Lead Source';
-            document.getElementById('leadSourceTitle').value = source.title;
+            document.getElementById('leadSourceTitle').value = result.data.sourceTitle;
+            document.getElementById('leadSourceTitle').classList.remove('is-invalid');
             new bootstrap.Modal(document.getElementById('leadSourceModal')).show();
+        } else {
+            showError(result.message);
         }
+    } catch (error) {
+        showError('Failed to load lead source details');
+        console.error('Error:', error);
+    }
+}
+
+async function saveLeadSource() {
+    const sourceTitle = document.getElementById('leadSourceTitle').value.trim();
+    const sourceTitleInput = document.getElementById('leadSourceTitle');
+    const errorDiv = document.getElementById('leadSourceTitleError');
+
+    // Validation
+    if (!sourceTitle) {
+        sourceTitleInput.classList.add('is-invalid');
+        errorDiv.textContent = 'Lead source title is required';
+        return;
     }
 
-    function saveLeadSource() {
-        const sourceTitle = document.getElementById('leadSourceTitle').value.trim();
+    if (sourceTitle.length > 50) {
+        sourceTitleInput.classList.add('is-invalid');
+        errorDiv.textContent = 'Lead source title must not exceed 50 characters';
+        return;
+    }
 
-        if (!sourceTitle) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Validation Error',
-                text: 'Please enter lead source title'
-            });
-            return;
-        }
+    const leadSourceDTO = {
+        sourceTitle: sourceTitle
+    };
 
-        if (editingLeadSourceId) {
-            // Update existing lead source
-            const source = leadSources.find(s => s.id === editingLeadSourceId);
-            if (source) {
-                source.title = sourceTitle;
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: 'Lead source updated successfully!',
-                    timer: 2000
-                });
-            }
-        } else {
-            // Add new lead source
-            const newId = Math.max(...leadSources.map(s => s.id), 0) + 1;
-            leadSources.push({ id: newId, title: sourceTitle });
+    try {
+        const url = editingLeadSourceId ? `/lead-source/update/${editingLeadSourceId}` : '/lead-source/create';
+        const method = editingLeadSourceId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(leadSourceDTO)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
             Swal.fire({
                 icon: 'success',
                 title: 'Success',
-                text: 'Lead source added successfully!',
-                timer: 2000
+                text: result.message,
+                timer: 2000,
+                showConfirmButton: false
             });
-        }
 
-        filteredLeadSources = [...leadSources];
-        renderTable();
-        bootstrap.Modal.getInstance(document.getElementById('leadSourceModal')).hide();
+            bootstrap.Modal.getInstance(document.getElementById('leadSourceModal')).hide();
+            loadLeadSources();
+        } else {
+            sourceTitleInput.classList.add('is-invalid');
+            errorDiv.textContent = result.message;
+        }
+    } catch (error) {
+        showError('Failed to save lead source. Please try again.');
+        console.error('Error:', error);
+    }
+}
+
+function deleteLeadSource(id) {
+    editingLeadSourceId = id;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+
+    document.getElementById('btnConfirmDelete').onclick = async function() {
+        try {
+            const response = await fetch(`/lead-source/delete/${id}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Deleted',
+                    text: result.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+                loadLeadSources();
+            } else {
+                showError(result.message);
+            }
+        } catch (error) {
+            showError('Failed to delete lead source. Please try again.');
+            console.error('Error:', error);
+        }
+    };
+}
+
+async function exportToCSV() {
+    if (totalElements === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Data',
+            text: 'Table is empty. Nothing to export.',
+            confirmButtonText: 'OK'
+        });
+        return;
     }
 
-    function deleteLeadSource(id) {
-        editingLeadSourceId = id;
-        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    try {
+        Swal.fire({
+            title: 'Exporting...',
+            text: 'Please wait while we prepare your CSV file',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
-        document.getElementById('btnConfirmDelete').onclick = function() {
-            leadSources = leadSources.filter(s => s.id !== id);
-            filteredLeadSources = [...leadSources];
-            renderTable();
+        const url = `/lead-source/export?search=${encodeURIComponent(currentSearch)}`;
+        const response = await fetch(url);
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = 'lead_sources_export.csv';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(downloadUrl);
+            document.body.removeChild(a);
 
             Swal.fire({
                 icon: 'success',
-                title: 'Deleted',
-                text: 'Lead source deleted successfully!',
-                timer: 2000
+                title: 'Success',
+                text: 'CSV exported successfully!',
+                timer: 2000,
+                showConfirmButton: false
             });
-
-            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
-        };
+        } else {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Export failed');
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Export Failed',
+            text: error.message || 'Failed to export CSV. Please try again.'
+        });
+        console.error('Error:', error);
     }
+}
+
+function showError(message) {
+    Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: message
+    });
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}

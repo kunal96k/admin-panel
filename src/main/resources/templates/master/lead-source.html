@@ -36,8 +36,11 @@
         <div class="action-card">
             <div class="row align-items-center">
                 <div class="col-lg-6 mb-3 mb-lg-0">
-                    <button class="btn btn-primary btn-action" id="btnAddLeadSource">
+                    <button class="btn btn-primary btn-action me-2" id="btnAddLeadSource">
                         <i class="bi bi-plus-circle me-2"></i>Add New Lead Source
+                    </button>
+                    <button class="btn btn-success btn-action" id="btnExportCSV">
+                        <i class="bi bi-file-earmark-spreadsheet me-2"></i>Export CSV
                     </button>
                 </div>
                 <div class="col-lg-6">
@@ -70,39 +73,10 @@
                     </thead>
                     <tbody id="leadSourceTableBody">
                     <tr>
-                        <td>1</td>
-                        <td>Walk-in</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-secondary action-btn" onclick="editLeadSource(1)">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary action-btn" onclick="deleteLeadSource(1)">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>Website</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-secondary action-btn" onclick="editLeadSource(2)">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary action-btn" onclick="deleteLeadSource(2)">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td>Social Media</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-secondary action-btn" onclick="editLeadSource(3)">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary action-btn" onclick="deleteLeadSource(3)">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                        <td colspan="3" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </td>
                     </tr>
                     </tbody>
@@ -112,8 +86,8 @@
             <!-- Pagination Controls -->
             <div class="d-flex justify-content-between align-items-center mt-3 px-3 pb-3">
                 <div class="text-muted">
-                    Showing <span id="entriesStart">1</span> to <span id="entriesEnd">3</span>
-                    of <span id="totalEntries">3</span> entries
+                    Showing <span id="entriesStart">0</span> to <span id="entriesEnd">0</span>
+                    of <span id="totalEntries">0</span> entries
                 </div>
                 <nav>
                     <ul class="pagination mb-0" id="paginationControls">
@@ -148,6 +122,7 @@
                             <div class="col-12 mb-3">
                                 <label class="form-label">Lead Source Title <span class="required">*</span></label>
                                 <input type="text" class="form-control" id="leadSourceTitle" placeholder="Enter lead source title" maxlength="50" required>
+                                <div class="invalid-feedback" id="leadSourceTitleError"></div>
                             </div>
                         </div>
                     </form>
@@ -186,10 +161,10 @@
     </div>
 
 
-<script th:src="@{/assets/js/lead-source.js}"></script>
+    <script th:src="@{/assets/js/lead-source.js}"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.js"></script>
 
 </main>
 </body>
