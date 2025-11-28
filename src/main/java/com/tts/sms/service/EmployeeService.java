@@ -42,7 +42,6 @@ public class EmployeeService {
     private String baseUrl;
 
     private static final String SUPER_ADMIN_ROLE = "SUPER_ADMIN";
-    private static final String ADMIN_ROLE = "ADMIN";
 
     /**
      * Get current logged-in user
@@ -92,44 +91,76 @@ public class EmployeeService {
 
         // Rule 1: Only SUPER_ADMIN can modify SUPER_ADMIN accounts
         if (isTargetSuperAdmin(targetEmployee) && !isSuperAdmin()) {
-            log.warn("⚠️ Unauthorized attempt to {} SUPER_ADMIN by non-SUPER_ADMIN user", operation);
+            log.warn("⚠️ SECURITY ALERT: User {} attempted to {} SUPER_ADMIN account {}",
+                    currentEmployee.getEmployeeName(), operation, targetEmployee.getEmployeeName());
             throw new UnauthorizedException(
-                    "Access Denied: Only SUPER_ADMIN can " + operation + " SUPER_ADMIN accounts. " +
-                            "This action has been logged for security purposes."
+                    "🚫 Access Denied: Only SUPER_ADMIN can " + operation + " SUPER_ADMIN accounts. " +
+                            "This security violation has been logged."
             );
         }
 
         // Rule 2: Prevent self-deletion
         if ("delete".equalsIgnoreCase(operation) &&
-                currentEmployee.getId().equals(targetEmployee.getId())) {
-            log.warn("⚠️ User attempted to delete their own account");
-            throw new UnauthorizedException("You cannot delete your own account");
+                currentEmployee.getId().equals(targetEmployee.getId()) && !isSuperAdmin() ) {
+            log.warn("⚠️ User {} attempted to delete their own account", currentEmployee.getEmployeeName());
+            throw new UnauthorizedException(
+                    "🚫 Security Policy: You cannot delete your own account. " +
+                            "Please contact another administrator."
+            );
         }
 
-        // Rule 3: Prevent downgrading own role
+        // Rule 3: Prevent self-modification of role/permissions
         if ("update".equalsIgnoreCase(operation) &&
-                currentEmployee.getId().equals(targetEmployee.getId())) {
-            log.warn("⚠️ User attempted to modify their own permissions");
+                currentEmployee.getId().equals(targetEmployee.getId()) && !isSuperAdmin() ) {
+            log.warn("⚠️ User {} attempted to modify their own role/permissions",
+                    currentEmployee.getEmployeeName());
             throw new UnauthorizedException(
-                    "You cannot modify your own role or permissions. " +
-                            "Please contact another administrator."
+                    "🚫 Security Policy: You cannot modify your own role or permissions. " +
+                            "Contact SUPER_ADMIN for changes to your account."
             );
         }
 
         log.info("✅ Permission check passed for {} operation", operation);
     }
 
+    /**
+     * Check if user can perform operation before loading data
+     */
+    public Map<String, Object> canModifyEmployee(Long employeeId) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            Employee targetEmployee = employeeRepository.findById(employeeId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+
+            validateModificationPermission(targetEmployee, "view");
+
+            result.put("canModify", true);
+            result.put("canDelete", true);
+            result.put("message", "Access granted");
+
+        } catch (UnauthorizedException e) {
+            result.put("canModify", false);
+            result.put("canDelete", false);
+            result.put("message", e.getMessage());
+        }
+
+        return result;
+    }
+
     @Transactional
     public EmployeeResponseDTO createEmployee(EmployeeRequestDTO requestDTO, MultipartFile photoFile) {
         log.info("📝 Creating employee: {}", requestDTO.getEmployeeName());
 
-        // Validate: Only SUPER_ADMIN can create other SUPER_ADMIN accounts
+        // Security: Only SUPER_ADMIN can create SUPER_ADMIN accounts
         Role targetRole = roleRepository.findById(requestDTO.getRoleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
 
         if (SUPER_ADMIN_ROLE.equalsIgnoreCase(targetRole.getRoleTitle()) && !isSuperAdmin()) {
+            log.warn("⚠️ SECURITY ALERT: Non-SUPER_ADMIN attempted to create SUPER_ADMIN account");
             throw new UnauthorizedException(
-                    "Access Denied: Only SUPER_ADMIN can create SUPER_ADMIN accounts"
+                    "🚫 Access Denied: Only SUPER_ADMIN can create SUPER_ADMIN accounts. " +
+                            "This security violation has been logged."
             );
         }
 
@@ -189,16 +220,27 @@ public class EmployeeService {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
 
-        // 🔒 SECURITY CHECK
+        // 🔒 CRITICAL SECURITY CHECK
         validateModificationPermission(employee, "update");
 
-        // Validate: Only SUPER_ADMIN can change role to SUPER_ADMIN
+        // Security: Only SUPER_ADMIN can assign SUPER_ADMIN role
         Role targetRole = roleRepository.findById(requestDTO.getRoleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
 
         if (SUPER_ADMIN_ROLE.equalsIgnoreCase(targetRole.getRoleTitle()) && !isSuperAdmin()) {
+            log.warn("⚠️ SECURITY ALERT: Non-SUPER_ADMIN attempted to assign SUPER_ADMIN role");
             throw new UnauthorizedException(
-                    "Access Denied: Only SUPER_ADMIN can assign SUPER_ADMIN role"
+                    "🚫 Access Denied: Only SUPER_ADMIN can assign SUPER_ADMIN role. " +
+                            "This security violation has been logged."
+            );
+        }
+
+        // Security: Prevent downgrading SUPER_ADMIN to regular role
+        if (isTargetSuperAdmin(employee) &&
+                !SUPER_ADMIN_ROLE.equalsIgnoreCase(targetRole.getRoleTitle()) &&
+                !isSuperAdmin()) {
+            throw new UnauthorizedException(
+                    "🚫 Security Policy: Cannot downgrade SUPER_ADMIN role"
             );
         }
 
@@ -253,13 +295,24 @@ public class EmployeeService {
 
     @Transactional
     public void deleteEmployee(Long id) {
-        log.info("🗑️ Deleting employee ID: {}", id);
+        log.info("🗑️ Attempting to delete employee ID: {}", id);
 
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
 
-        // 🔒 SECURITY CHECK
+        // 🔒 CRITICAL SECURITY CHECK
         validateModificationPermission(employee, "delete");
+
+        // Additional check: Prevent deletion of last SUPER_ADMIN
+        if (isTargetSuperAdmin(employee)) {
+            long superAdminCount = employeeRepository.countByRoleRoleTitle(SUPER_ADMIN_ROLE);
+            if (superAdminCount <= 1) {
+                throw new UnauthorizedException(
+                        "🚫 Security Policy: Cannot delete the last SUPER_ADMIN account. " +
+                                "At least one SUPER_ADMIN must exist in the system."
+                );
+            }
+        }
 
         // Delete in correct order to avoid FK constraint violations
         userRepository.findByEmployee(employee).ifPresent(user -> {
@@ -308,7 +361,6 @@ public class EmployeeService {
             }
         }
 
-        // Mobile permissions
         employee.setNewAdmission(dto.getNewAdmission() != null && dto.getNewAdmission());
         employee.setViewAdmission(dto.getViewAdmission() != null && dto.getViewAdmission());
         employee.setNewEnquiry(dto.getNewEnquiry() != null && dto.getNewEnquiry());

@@ -790,6 +790,106 @@
             }
         }
 
+
+        window.editEmployee = async function (id) {
+            try {
+                // Check if user can modify this employee
+                const securityCheck = await fetch(`${API_BASE_URL}/${id}/can-modify`);
+                const permission = await securityCheck.json();
+
+                if (!permission.canModify) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '🚫 Access Denied',
+                        html: permission.message,
+                        confirmButtonColor: '#ef4444',
+                        confirmButtonText: 'Understood'
+                    });
+                    return;
+                }
+
+                // Proceed with loading employee data
+                const response = await fetch(`${API_BASE_URL}/${id}`);
+                if (!response.ok) throw new Error('Failed to load employee');
+
+                const employee = await response.json();
+                editingEmployeeId = id;
+
+                document.getElementById('employeeModalTitle').innerHTML =
+                    '<i class="bi bi-pencil-square me-2"></i>Edit Employee';
+
+                // Fill form fields
+                document.getElementById('employeeName').value = employee.employeeName || '';
+                document.getElementById('mobileNumber').value = employee.mobileNumber || '';
+                document.getElementById('emailId').value = employee.emailId || '';
+                document.getElementById('designation').value = employee.designation || '';
+                document.getElementById('gender').value = employee.gender || '';
+                document.getElementById('dateOfBirth').value = employee.dateOfBirth || '';
+                document.getElementById('address').value = employee.address || '';
+                document.getElementById('role').value = employee.roleId || '';
+                document.getElementById('zoomLink').value = employee.zoomLink || '';
+
+                loadMenus();
+
+                currentStep = 1;
+                showStep(1);
+
+                const modal = new bootstrap.Modal(document.getElementById('employeeModal'));
+                modal.show();
+            } catch (error) {
+                console.error('Error loading employee:', error);
+                showError(error.message || 'Failed to load employee details');
+            }
+        };
+
+        // Security check before delete
+        window.deleteEmployee = async function (id) {
+            try {
+                // Check if user can delete this employee
+                const securityCheck = await fetch(`${API_BASE_URL}/${id}/can-modify`);
+                const permission = await securityCheck.json();
+
+                if (!permission.canDelete) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '🚫 Access Denied',
+                        html: permission.message,
+                        confirmButtonColor: '#ef4444',
+                        confirmButtonText: 'Understood'
+                    });
+                    return;
+                }
+
+                // Proceed with deletion confirmation
+                const result = await Swal.fire({
+                    title: 'Are you sure?',
+                    text: "You won't be able to revert this!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Yes, deleteDContinueit!'
+                });
+
+                if (result.isConfirmed) {
+                    const response = await fetch(`${API_BASE_URL}/${id}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.message || 'Failed to delete employee');
+                    }
+
+                    showSuccess('Employee deleted successfully!');
+                    await loadEmployees();
+                }
+            } catch (error) {
+                console.error('Error deleting employee:', error);
+                showError(error.message || 'Failed to delete employee');
+            }
+        };
+
         async function exportCSV() {
             try {
                 const response = await fetch(`${API_BASE_URL}?page=0&size=10000`);
@@ -798,8 +898,14 @@
                 const data = await response.json();
                 const employees = data.employees || [];
 
+                // Check if table is empty
                 if (employees.length === 0) {
-                    showError('No data to export');
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'No Data Available',
+                        text: 'The employee table is empty. There is no data to export.',
+                        confirmButtonColor: '#667eea'
+                    });
                     return;
                 }
 
@@ -819,76 +925,13 @@
                 a.click();
                 window.URL.revokeObjectURL(url);
 
-                showSuccess('CSV exported successfully!');
+                showSuccess(`CSV exported successfully! (${employees.length} records)`);
             } catch (error) {
                 console.error('Error exporting CSV:', error);
                 showError('Failed to export CSV');
             }
         }
 
-        // Expose functions globally
-            window.editEmployee = async function(id) {
-                try {
-                    const response = await fetch(`${API_BASE_URL}/${id}`);
-                    if (!response.ok) throw new Error('Failed to load employee');
-
-                    const employee = await response.json();
-                    editingEmployeeId = id;
-
-                    document.getElementById('employeeModalTitle').innerHTML =
-                        '<i class="bi bi-pencil-square me-2"></i>Edit Employee';
-
-                    // Fill form fields
-                    document.getElementById('employeeName').value = employee.employeeName || '';
-                    document.getElementById('mobileNumber').value = employee.mobileNumber || '';
-                    document.getElementById('emailId').value = employee.emailId || '';
-                    document.getElementById('designation').value = employee.designation || '';
-                    document.getElementById('gender').value = employee.gender || '';
-                    document.getElementById('dateOfBirth').value = employee.dateOfBirth || '';
-                    document.getElementById('address').value = employee.address || '';
-                    document.getElementById('role').value = employee.roleId || '';
-                    document.getElementById('zoomLink').value = employee.zoomLink || '';
-
-                    loadMenus();
-
-                    currentStep = 1;
-                    showStep(1);
-
-                    const modal = new bootstrap.Modal(document.getElementById('employeeModal'));
-                    modal.show();
-                } catch (error) {
-                    console.error('Error loading employee:', error);
-                    showError('Failed to load employee details');
-                }
-            };
-
-            window.deleteEmployee = async function(id) {
-                const result = await Swal.fire({
-                    title: 'Are you sure?',
-                    text: "You won't be able to revert this!",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#ef4444',
-                    cancelButtonColor: '#64748b',
-                    confirmButtonText: 'Yes, delete it!'
-                });
-
-                if (result.isConfirmed) {
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/${id}`, {
-                            method: 'DELETE'
-                        });
-
-                        if (!response.ok) throw new Error('Failed to delete employee');
-
-                        showSuccess('Employee deleted successfully!');
-                        await loadEmployees();
-                    } catch (error) {
-                        console.error('Error deleting employee:', error);
-                        showError('Failed to delete employee');
-                    }
-                }
-            };
 
             window.viewEmployee = async function(id) {
                 try {

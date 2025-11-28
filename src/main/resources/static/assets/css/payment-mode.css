@@ -1,0 +1,470 @@
+/* payment-mode.css */
+
+/* ===========================
+   GLOBAL / UTILITY
+=========================== */
+
+.opacity-90 {
+    opacity: 0.9;
+}
+
+/* Loading Spinner */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Required field star */
+.required {
+    color: #dc3545;
+}
+
+/* ===========================
+   PAGE HEADER
+=========================== */
+
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
+.page-header h2 {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.8rem;
+}
+
+.page-header p {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+}
+
+/* ===========================
+   ACTION CARD / BUTTONS
+=========================== */
+
+.action-card {
+    background: #ffffff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.btn-action {
+    padding: 0.6rem 1.5rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Button Loading State */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.btn-loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spinner 0.6s linear infinite;
+}
+
+@keyframes spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===========================
+   TABLE CARD / TABLE
+=========================== */
+
+.table-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    overflow: hidden; /* keep scrollbars inside .table-responsive */
+}
+
+/* Scroll container */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar (optional) */
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Table base */
+.table {
+    margin-bottom: 0;
+    table-layout: fixed; /* crucial for responsiveness and ellipsis */
+}
+
+/* Table head */
+.table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+}
+
+.table thead th {
+    border: none;
+    padding: 1rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* Table body */
+.table tbody tr {
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9ff;
+    /* removed transform: scale(...) to avoid scroll issues */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.table tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #e9ecef;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Column widths: SR NO / PAYMENT MODE / ACTIONS */
+.table thead th:nth-child(1),
+.table tbody td:nth-child(1) {
+    width: 90px;
+}
+
+.table thead th:nth-child(3),
+.table tbody td:nth-child(3) {
+    width: 140px;
+}
+
+/* ===========================
+   ACTION BUTTONS (INSIDE TABLE)
+=========================== */
+
+.action-btn {
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 2px solid;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    margin: 0 0.2rem;
+    background-color: transparent;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn-edit {
+    border-color: #ffc107;
+    color: #ffc107;
+}
+
+.btn-edit:hover {
+    background-color: #ffc107;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+}
+
+.btn-delete {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.btn-delete:hover {
+    background-color: #dc3545;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+}
+
+/* ===========================
+   SEARCH / FILTER (INPUT GROUP)
+=========================== */
+
+.input-group {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.input-group .form-control,
+.input-group .form-select {
+    border: none;
+    padding: 0.7rem 1rem;
+}
+
+.input-group .form-control:focus,
+.input-group .form-select:focus {
+    box-shadow: none;
+    border-color: #667eea;
+}
+
+.input-group-text {
+    border: none;
+    background-color: #ffffff;
+}
+
+/* ===========================
+   PAGINATION
+=========================== */
+
+.pagination {
+    margin: 0;
+}
+
+.page-link {
+    border: none;
+    color: #667eea;
+    padding: 0.5rem 1rem;
+    margin: 0 0.2rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.page-link:hover {
+    background-color: #667eea;
+    color: #ffffff;
+    transform: translateY(-2px);
+}
+
+.page-item.active .page-link {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.page-item.disabled .page-link {
+    background-color: transparent;
+    color: #6c757d;
+}
+
+/* ===========================
+   MODALS
+=========================== */
+
+.modal-content {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    border-radius: 15px 15px 0 0;
+    padding: 1.5rem;
+}
+
+.modal-title {
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-footer {
+    border-top: 1px solid #e9ecef;
+    padding: 1.5rem;
+}
+
+/* ===========================
+   FORM STYLES
+=========================== */
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.form-control.is-invalid {
+    border-color: #dc3545;
+}
+
+.invalid-feedback {
+    display: block;
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* ===========================
+   ANIMATIONS
+=========================== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.table-card,
+.action-card {
+    animation: fadeIn 0.5s ease;
+}
+
+/* ===========================
+   RESPONSIVE DESIGN
+=========================== */
+
+/* Small devices (≤ 576px) */
+@media (max-width: 576px) {
+
+    .page-header {
+        padding: 1.5rem 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+
+    .page-header h2 {
+        font-size: 1.4rem;
+    }
+
+    .page-header p {
+        font-size: 0.85rem;
+    }
+
+    .action-card {
+        padding: 1rem;
+    }
+
+    .btn-action {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .action-card .col-lg-6 {
+        margin-bottom: 0.75rem !important;
+    }
+
+    /* Make table more compact */
+    .table thead th,
+    .table tbody td {
+        padding: 0.6rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .action-btn {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.75rem;
+    }
+
+    /* Let table scroll full-width edge-to-edge for better UX */
+    .table-responsive {
+        margin: 0 -0.75rem;
+        border-radius: 0;
+    }
+
+    /* Pagination smaller */
+    .pagination {
+        font-size: 0.85rem;
+    }
+
+    .page-link {
+        padding: 0.4rem 0.8rem;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+}
+
+/* Medium devices (577px – 991.98px) */
+@media (min-width: 577px) and (max-width: 991.98px) {
+
+    .page-header h2 {
+        font-size: 1.6rem;
+    }
+
+    .table thead th,
+    .table tbody td {
+        padding: 0.7rem 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    .action-btn {
+        padding: 0.35rem 0.6rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Large devices (≥ 992px) */
+@media (min-width: 992px) {
+
+    .container-fluid {
+        max-width: 1140px;
+    }
+
+    .page-header,
+    .action-card,
+    .table-card {
+        margin-left: auto;
+        margin-right: auto;
+    }
+}

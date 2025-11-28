@@ -30,12 +30,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             "e.mobileNumber LIKE CONCAT('%', :searchTerm, '%')")
     Page<Employee> searchEmployees(String searchTerm, Pageable pageable);
 
-    /**
-     * Find employees with birthdays today
-     * @param month Current month (1-12)
-     * @param day Current day (1-31)
-     * @return List of employees with birthdays today
-     */
     @Query("SELECT e FROM Employee e WHERE " +
             "MONTH(e.dateOfBirth) = :month AND " +
             "DAY(e.dateOfBirth) = :day AND " +
@@ -43,10 +37,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             "e.emailId IS NOT NULL")
     List<Employee> findEmployeesWithBirthdayToday(@Param("month") int month, @Param("day") int day);
 
-    /**
-     * Find employees with upcoming birthdays (next N days)
-     * Useful for birthday reminders
-     */
     @Query("SELECT e FROM Employee e WHERE " +
             "MONTH(e.dateOfBirth) = :month AND " +
             "DAY(e.dateOfBirth) BETWEEN :startDay AND :endDay AND " +
@@ -57,4 +47,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             @Param("startDay") int startDay,
             @Param("endDay") int endDay
     );
+
+    // NEW: Count employees by role
+    @Query("SELECT COUNT(e) FROM Employee e WHERE e.role.roleTitle = :roleTitle")
+    long countByRoleRoleTitle(@Param("roleTitle") String roleTitle);
 }

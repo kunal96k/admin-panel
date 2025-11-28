@@ -1,301 +1,518 @@
- // Sample data
-    const courses = [
-        { id: 1, name: 'JAVA CORE AND ADVANCE', amount: 15000 },
-        { id: 2, name: 'SPRING BOOT', amount: 18000 },
-        { id: 3, name: 'PYTHON', amount: 12000 },
-        { id: 4, name: 'DATA SCIENCE', amount: 20000 },
-        { id: 5, name: 'WEB DEVELOPMENT', amount: 16000 },
-        { id: 6, name: 'FULL STACK JAVA', amount: 25000 },
-        { id: 7, name: 'FULL STACK PYTHON', amount: 22000 },
-        { id: 8, name: 'MONGODB', amount: 10000 }
-    ];
+let selectedCourses = [];
+let currentPage = 1;
+let entriesPerPage = 10;
+let allPackages = [];
+let filteredPackages = [];
+let allCourses = [];
+let editingPackageId = null;
 
-    let packages = [
-        {
-            id: 1,
-            name: 'Full Stack Development',
-            courses: [
-                { id: 1, name: 'JAVA CORE AND ADVANCE', amount: 15000 },
-                { id: 2, name: 'SPRING BOOT', amount: 18000 },
-                { id: 5, name: 'WEB DEVELOPMENT', amount: 16000 }
-            ],
-            totalAmount: 49000
+$(document).ready(function() {
+    initializeSelect2();
+    loadActiveCourses();
+    loadPackages();
+    setupEventListeners();
+});
+
+function initializeSelect2() {
+    $('#courseSelect').select2({
+        placeholder: '-- Select Course --',
+        allowClear: true,
+        width: '100%'
+    });
+}
+
+function setupEventListeners() {
+    $('#courseSelect').on('select2:select', function(e) {
+        const courseId = parseInt(e.params.data.id);
+        const course = allCourses.find(c => c.id === courseId);
+
+        if (course && !selectedCourses.find(c => c.id === courseId)) {
+            selectedCourses.push(course);
+            renderSelectedCourses();
+            updateTotalAmount();
         }
-    ];
 
-    let selectedCourses = [];
-    let currentPage = 1;
-    let entriesPerPage = 10;
-    let filteredPackages = [...packages];
+        $(this).val(null).trigger('change');
+    });
 
-    // Initialize
-    $(document).ready(function() {
-        setupEventListeners();
+    $('#packageForm').on('submit', function(e) {
+        e.preventDefault();
+        savePackage();
+    });
+
+    $('#btnCancel').on('click', function() {
+        resetForm();
+    });
+
+    $('#searchInput').on('input', debounce(function() {
+        const searchTerm = $(this).val().trim();
+        if (searchTerm) {
+            searchPackages(searchTerm);
+        } else {
+            loadPackages();
+        }
+    }, 500));
+
+    $('#entriesPerPage').on('change', function() {
+        entriesPerPage = parseInt($(this).val());
+        currentPage = 1;
         renderPackagesTable();
     });
 
-    function setupEventListeners() {
-        // Course selection
-        $('#courseSelect').on('change', function() {
-            const selectedOption = $(this).find('option:selected');
-            const courseId = parseInt($(this).val());
-            const courseName = selectedOption.text().split(' - ')[0];
-            const courseAmount = parseInt(selectedOption.data('amount'));
+    $('#btnExportCSV').on('click', function() {
+        exportToCSV();
+    });
+}
 
-            if (courseId && !selectedCourses.find(c => c.id === courseId)) {
-                selectedCourses.push({
-                    id: courseId,
-                    name: courseName,
-                    amount: courseAmount
-                });
-                renderSelectedCourses();
-                updateTotalAmount();
-            }
-
-            $(this).val('');
-        });
-
-        // Package form submission
-        $('#packageForm').on('submit', function(e) {
-            e.preventDefault();
-            savePackage();
-        });
-
-        // Cancel button
-        $('#btnCancel').on('click', function() {
-            resetForm();
-        });
-
-        // Search
-        $('#searchInput').on('input', function() {
-            const searchTerm = $(this).val().toLowerCase();
-            filteredPackages = packages.filter(pkg =>
-                pkg.name.toLowerCase().includes(searchTerm)
-            );
-            currentPage = 1;
-            renderPackagesTable();
-        });
-
-        // Entries per page
-        $('#entriesPerPage').on('change', function() {
-            entriesPerPage = parseInt($(this).val());
-            currentPage = 1;
-            renderPackagesTable();
-        });
-    }
-
-    function renderSelectedCourses() {
-        const tbody = $('#selectedCoursesBody');
-
-        if (selectedCourses.length === 0) {
-            tbody.html(`
-                <tr>
-                    <td colspan="3" class="text-center text-muted py-4">
-                        <i class="bi bi-inbox" style="font-size: 2rem; color: #cbd5e1;"></i>
-                        <p class="mt-2 mb-0">No courses selected</p>
-                    </td>
-                </tr>
-            `);
-        } else {
-            tbody.html(selectedCourses.map(course => `
-                <tr>
-                    <td>${course.name}</td>
-                    <td>₹${course.amount.toLocaleString('en-IN')}</td>
-                    <td>
-                        <button class="btn btn-sm btn-danger action-btn" onclick="removeCourse(${course.id})">
-                            <i class="bi bi-trash"></i> Remove
-                        </button>
-                    </td>
-                </tr>
-            `).join(''));
-        }
-    }
-
-    function removeCourse(courseId) {
-        selectedCourses = selectedCourses.filter(c => c.id !== courseId);
-        renderSelectedCourses();
-        updateTotalAmount();
-    }
-
-    function updateTotalAmount() {
-        const total = selectedCourses.reduce((sum, course) => sum + course.amount, 0);
-        $('#totalAmount').text(total.toLocaleString('en-IN'));
-    }
-
-    function savePackage() {
-        const packageTitle = $('#packageTitle').val().trim();
-
-        if (!packageTitle) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Validation Error',
-                text: 'Please enter package title'
-            });
-            return;
-        }
-
-        if (selectedCourses.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Validation Error',
-                text: 'Please select at least one course'
-            });
-            return;
-        }
-
-        const totalAmount = selectedCourses.reduce((sum, course) => sum + course.amount, 0);
-        const newPackage = {
-            id: Math.max(...packages.map(p => p.id), 0) + 1,
-            name: packageTitle,
-            courses: [...selectedCourses],
-            totalAmount: totalAmount
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
         };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
 
-        packages.push(newPackage);
-        filteredPackages = [...packages];
+function loadActiveCourses() {
+    $.ajax({
+        url: '/api/packages/courses/active',
+        method: 'GET',
+        success: function(courses) {
+            allCourses = courses;
+            populateCourseDropdown(courses);
+        },
+        error: function(xhr) {
+            console.error('Error loading courses:', xhr);
+            showError('Failed to load courses');
+        }
+    });
+}
 
-        Swal.fire({
-            icon: 'success',
-            title: 'Success',
-            text: 'Package created successfully!',
-            timer: 2000
-        });
+function populateCourseDropdown(courses) {
+    const select = $('#courseSelect');
+    select.empty().append('<option value="">-- Select Course --</option>');
 
-        resetForm();
-        renderPackagesTable();
+    courses.forEach(course => {
+        const option = new Option(
+            `${course.courseName} - ₹${course.courseFees.toLocaleString('en-IN')}`,
+            course.id
+        );
+        select.append(option);
+    });
+}
+
+function loadPackages() {
+    $.ajax({
+        url: '/api/packages',
+        method: 'GET',
+        data: {
+            page: currentPage - 1,
+            size: entriesPerPage
+        },
+        success: function(response) {
+            allPackages = response.packages;
+            filteredPackages = response.packages;
+            renderPackagesTable();
+            updatePaginationInfo(response);
+        },
+        error: function(xhr) {
+            console.error('Error loading packages:', xhr);
+            showError('Failed to load packages');
+        }
+    });
+}
+
+function searchPackages(searchTerm) {
+    $.ajax({
+        url: '/api/packages/search',
+        method: 'GET',
+        data: {
+            searchTerm: searchTerm,
+            page: 0,
+            size: entriesPerPage
+        },
+        success: function(response) {
+            filteredPackages = response.packages;
+            currentPage = 1;
+            renderPackagesTable();
+            updatePaginationInfo(response);
+        },
+        error: function(xhr) {
+            console.error('Error searching packages:', xhr);
+            showError('Failed to search packages');
+        }
+    });
+}
+
+function renderSelectedCourses() {
+    const tbody = $('#selectedCoursesBody');
+
+    if (selectedCourses.length === 0) {
+        tbody.html(`
+            <tr>
+                <td colspan="3" class="text-center text-muted py-4">
+                    <i class="bi bi-inbox" style="font-size: 2rem; color: #cbd5e1;"></i>
+                    <p class="mt-2 mb-0">No courses selected</p>
+                </td>
+            </tr>
+        `);
+    } else {
+        tbody.html(selectedCourses.map((course, index) => `
+            <tr data-course-id="${course.id}">
+                <td>
+                    <input type="text"
+                           class="form-control form-control-sm course-name-input"
+                           value="${course.courseName}"
+                           data-index="${index}"
+                           onchange="updateCourseName(${index}, this.value)">
+                </td>
+                <td>
+                    <input type="number"
+                           class="form-control form-control-sm course-fees-input"
+                           value="${course.courseFees}"
+                           min="0"
+                           step="0.01"
+                           data-index="${index}"
+                           onchange="updateCourseFees(${index}, this.value)">
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeCourse(${course.id})" title="Remove">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join(''));
     }
+}
 
-    function resetForm() {
-        $('#packageTitle').val('');
-        $('#courseSelect').val('');
-        selectedCourses = [];
-        renderSelectedCourses();
+function removeCourse(courseId) {
+    selectedCourses = selectedCourses.filter(c => c.id !== courseId);
+    renderSelectedCourses();
+    updateTotalAmount();
+}
+
+function updateCourseName(index, newName) {
+    if (newName && newName.trim()) {
+        selectedCourses[index].courseName = newName.trim();
+    }
+}
+
+function updateCourseFees(index, newFees) {
+    const fees = parseFloat(newFees);
+    if (!isNaN(fees) && fees >= 0) {
+        selectedCourses[index].courseFees = fees;
         updateTotalAmount();
     }
+}
 
-    function renderPackagesTable() {
-        const start = (currentPage - 1) * entriesPerPage;
-        const end = start + entriesPerPage;
-        const paginatedPackages = filteredPackages.slice(start, end);
+function updateTotalAmount() {
+    const total = selectedCourses.reduce((sum, course) => sum + parseFloat(course.courseFees || 0), 0);
+    $('#totalAmount').text(total.toLocaleString('en-IN'));
+    $('#totalAmountInput').val(total.toFixed(2));
+}
 
-        const tbody = $('#packagesTableBody');
+window.updateTotalAmountManually = function() {
+    const manualTotal = parseFloat($('#totalAmountInput').val());
+    if (!isNaN(manualTotal) && manualTotal >= 0) {
+        $('#totalAmount').text(manualTotal.toLocaleString('en-IN'));
+    } else {
+        updateTotalAmount();
+    }
+}
 
-        if (paginatedPackages.length === 0) {
-            tbody.html(`
-                <tr>
-                    <td colspan="5" class="text-center py-4">
-                        <i class="bi bi-inbox" style="font-size: 3rem; color: #cbd5e1;"></i>
-                        <p class="mt-2 mb-0 text-muted">No packages found</p>
-                    </td>
-                </tr>
-            `);
-        } else {
-            tbody.html(paginatedPackages.map((pkg, index) => `
-                <tr>
-                    <td>${start + index + 1}</td>
-                    <td>${pkg.name}</td>
-                    <td>
-                        ${pkg.courses.map(c => `<span class="course-badge">${c.name}</span>`).join('')}
-                    </td>
-                    <td>₹${pkg.totalAmount.toLocaleString('en-IN')}</td>
-                    <td>
-                        <button class="btn btn-sm btn-info action-btn" onclick="viewPackage(${pkg.id})">
-                            <i class="bi bi-eye"></i> View
-                        </button>
-                        <button class="btn btn-sm btn-danger action-btn" onclick="deletePackage(${pkg.id})">
-                            <i class="bi bi-trash"></i> Delete
-                        </button>
-                    </td>
-                </tr>
-            `).join(''));
+function savePackage() {
+    const packageName = $('#packageTitle').val().trim();
+
+    if (!packageName) {
+        showWarning('Please enter package title');
+        return;
+    }
+
+    if (selectedCourses.length === 0) {
+        showWarning('Please select at least one course');
+        return;
+    }
+
+    // Get the current total amount from input
+    const totalAmount = parseFloat($('#totalAmountInput').val());
+
+    if (isNaN(totalAmount) || totalAmount < 0) {
+        showWarning('Please enter a valid total amount');
+        return;
+    }
+
+    const requestData = {
+        packageName: packageName,
+        courseIds: selectedCourses.map(c => c.id),
+        totalAmount: totalAmount,
+        courses: selectedCourses.map(c => ({
+            id: c.id,
+            courseName: c.courseName,
+            courseFees: parseFloat(c.courseFees)
+        }))
+    };
+
+    const url = editingPackageId
+        ? `/api/packages/${editingPackageId}`
+        : '/api/packages';
+    const method = editingPackageId ? 'PUT' : 'POST';
+
+    $.ajax({
+        url: url,
+        method: method,
+        contentType: 'application/json',
+        data: JSON.stringify(requestData),
+        success: function(response) {
+            showSuccess(editingPackageId ? 'Package updated successfully!' : 'Package created successfully!');
+            resetForm();
+            loadPackages();
+        },
+        error: function(xhr) {
+            const errorMsg = xhr.responseJSON?.error || 'Failed to save package';
+            showError(errorMsg);
         }
+    });
+}
 
-        updatePackagesPaginationInfo();
-        renderPackagesPagination();
+function resetForm() {
+    $('#packageTitle').val('');
+    $('#courseSelect').val(null).trigger('change');
+    selectedCourses = [];
+    editingPackageId = null;
+    renderSelectedCourses();
+    $('#totalAmount').text('0');
+    $('#totalAmountInput').val('0');
+    $('#btnSave').html('<i class="bi bi-check-circle me-2"></i>Save Package');
+}
+
+function renderPackagesTable() {
+    const tbody = $('#packagesTableBody');
+
+    if (filteredPackages.length === 0) {
+        tbody.html(`
+            <tr>
+                <td colspan="5" class="text-center py-4">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #cbd5e1;"></i>
+                    <p class="mt-2 mb-0 text-muted">No packages found</p>
+                </td>
+            </tr>
+        `);
+    } else {
+        tbody.html(filteredPackages.map((pkg, index) => `
+            <tr>
+                <td>${(currentPage - 1) * entriesPerPage + index + 1}</td>
+                <td>${pkg.packageName}</td>
+                <td>
+                    ${pkg.courses.map(c => `<span class="course-badge">${c.courseName}</span>`).join('')}
+                </td>
+                <td>₹${pkg.totalAmount.toLocaleString('en-IN')}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-info" onclick="viewPackage(${pkg.id})" title="View">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning" onclick="editPackage(${pkg.id})" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deletePackage(${pkg.id})" title="Delete">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join(''));
     }
+}
 
-    function updatePackagesPaginationInfo() {
-        const start = filteredPackages.length === 0 ? 0 : (currentPage - 1) * entriesPerPage + 1;
-        const end = Math.min(currentPage * entriesPerPage, filteredPackages.length);
+function updatePaginationInfo(response) {
+    const start = response.totalItems === 0 ? 0 : (response.currentPage * entriesPerPage) + 1;
+    const end = Math.min((response.currentPage + 1) * entriesPerPage, response.totalItems);
 
-        $('#entriesStart').text(start);
-        $('#entriesEnd').text(end);
-        $('#totalEntries').text(filteredPackages.length);
-    }
+    $('#entriesStart').text(start);
+    $('#entriesEnd').text(end);
+    $('#totalEntries').text(response.totalItems);
 
-    function renderPackagesPagination() {
-        const totalPages = Math.ceil(filteredPackages.length / entriesPerPage);
-        const pagination = $('#paginationControls');
+    renderPagination(response.currentPage + 1, response.totalPages);
+}
 
-        let html = `
-            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="changePackagePage(${currentPage - 1}); return false;">Previous</a>
-            </li>
-        `;
+function renderPagination(current, total) {
+    const pagination = $('#paginationControls');
+    let html = `
+        <li class="page-item ${current === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changePackagePage(${current - 1}); return false;">Previous</a>
+        </li>
+    `;
 
-        for (let i = 1; i <= totalPages; i++) {
-            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-                html += `
-                    <li class="page-item ${i === currentPage ? 'active' : ''}">
-                        <a class="page-link" href="#" onclick="changePackagePage(${i}); return false;">${i}</a>
-                    </li>
-                `;
-            } else if (i === currentPage - 2 || i === currentPage + 2) {
-                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-            }
+    for (let i = 1; i <= total; i++) {
+        if (i === 1 || i === total || (i >= current - 1 && i <= current + 1)) {
+            html += `
+                <li class="page-item ${i === current ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePackagePage(${i}); return false;">${i}</a>
+                </li>
+            `;
+        } else if (i === current - 2 || i === current + 2) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
         }
-
-        html += `
-            <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="changePackagePage(${currentPage + 1}); return false;">Next</a>
-            </li>
-        `;
-
-        pagination.html(html);
     }
 
-    function changePackagePage(page) {
-        const totalPages = Math.ceil(filteredPackages.length / entriesPerPage);
-        if (page >= 1 && page <= totalPages) {
-            currentPage = page;
-            renderPackagesTable();
-        }
-    }
+    html += `
+        <li class="page-item ${current === total || total === 0 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changePackagePage(${current + 1}); return false;">Next</a>
+        </li>
+    `;
 
-    function viewPackage(id) {
-        const pkg = packages.find(p => p.id === id);
-        if (pkg) {
-            $('#viewPackageName').text(pkg.name);
+    pagination.html(html);
+}
+
+function changePackagePage(page) {
+    currentPage = page;
+    loadPackages();
+}
+
+function viewPackage(id) {
+    $.ajax({
+        url: `/api/packages/${id}`,
+        method: 'GET',
+        success: function(pkg) {
+            $('#viewPackageName').text(pkg.packageName);
             $('#viewPackageAmount').text('₹' + pkg.totalAmount.toLocaleString('en-IN'));
 
             const coursesHtml = pkg.courses.map(c => `
                 <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
-                    <span>${c.name}</span>
-                    <strong>₹${c.amount.toLocaleString('en-IN')}</strong>
+                    <span>${c.courseName}</span>
+                    <strong>₹${c.courseFees.toLocaleString('en-IN')}</strong>
                 </div>
             `).join('');
 
             $('#viewPackageCourses').html(coursesHtml);
-
             new bootstrap.Modal($('#viewPackageModal')[0]).show();
+        },
+        error: function(xhr) {
+            showError('Failed to load package details');
         }
-    }
+    });
+}
 
-    function deletePackage(id) {
-        new bootstrap.Modal($('#deleteModal')[0]).show();
+function editPackage(id) {
+    $.ajax({
+        url: `/api/packages/${id}`,
+        method: 'GET',
+        success: function(pkg) {
+            editingPackageId = id;
+            $('#packageTitle').val(pkg.packageName);
+            selectedCourses = pkg.courses.map(c => ({
+                id: c.id,
+                courseName: c.courseName,
+                courseFees: c.courseFees
+            }));
+            renderSelectedCourses();
+            $('#totalAmount').text(pkg.totalAmount.toLocaleString('en-IN'));
+            $('#totalAmountInput').val(pkg.totalAmount);
+            $('#btnSave').html('<i class="bi bi-check-circle me-2"></i>Update Package');
 
-        $('#btnConfirmDelete').off('click').on('click', function() {
-            packages = packages.filter(p => p.id !== id);
-            filteredPackages = [...packages];
-            renderPackagesTable();
+            $('html, body').animate({
+                scrollTop: $('#packageForm').offset().top - 100
+            }, 500);
+        },
+        error: function(xhr) {
+            showError('Failed to load package for editing');
+        }
+    });
+}
 
-            Swal.fire({
-                icon: 'success',
-                title: 'Deleted',
-                text: 'Package deleted successfully!',
-                timer: 2000
-            });
+function deletePackage(id) {
+    new bootstrap.Modal($('#deleteModal')[0]).show();
 
-            bootstrap.Modal.getInstance($('#deleteModal')[0]).hide();
+    $('#btnConfirmDelete').off('click').on('click', function() {
+        $.ajax({
+            url: `/api/packages/${id}`,
+            method: 'DELETE',
+            success: function() {
+                showSuccess('Package deleted successfully!');
+                bootstrap.Modal.getInstance($('#deleteModal')[0]).hide();
+                loadPackages();
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.error || 'Failed to delete package';
+                showError(errorMsg);
+                bootstrap.Modal.getInstance($('#deleteModal')[0]).hide();
+            }
         });
-    }
+    });
+}
+
+function exportToCSV() {
+    $.ajax({
+        url: '/api/packages/export/csv',
+        method: 'GET',
+        success: function(response) {
+            if (response.message) {
+                showWarning(response.message);
+                return;
+            }
+
+            const csvContent = generateCSVContent(response);
+            downloadCSV(csvContent, 'packages_export.csv');
+            showSuccess('Packages exported successfully!');
+        },
+        error: function(xhr) {
+            showError('Failed to export packages');
+        }
+    });
+}
+
+function generateCSVContent(data) {
+    const headers = ['S.No', 'Package Name', 'Courses', 'Total Amount'];
+    const rows = data.map(pkg => [
+        pkg.serialNo,
+        pkg.packageName,
+        pkg.courseNames,
+        pkg.totalAmount
+    ]);
+
+    let csv = headers.join(',') + '\n';
+    rows.forEach(row => {
+        csv += row.map(cell => `"${cell}"`).join(',') + '\n';
+    });
+
+    return csv;
+}
+
+function downloadCSV(content, filename) {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function showSuccess(message) {
+    Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: message,
+        timer: 2000,
+        showConfirmButton: false
+    });
+}
+
+function showError(message) {
+    Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: message
+    });
+}
+
+function showWarning(message) {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Warning',
+        text: message
+    });
+}

@@ -167,7 +167,7 @@ public class LayoutController {
     public String onlinePayment(Model model) {
         model.addAttribute("pageTitle", "Online Payment Mode");
         model.addAttribute("activePage", "online-payment");
-        return "master/online-payment";
+        return "master/payment-mode";
     }
 
     @GetMapping("/reports/course-wise-sales")

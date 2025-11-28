@@ -42,7 +42,12 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.getEmployeeById(id));
     }
 
-    // Create with multipart/form-data
+    // NEW: Security check endpoint
+    @GetMapping("/{id}/can-modify")
+    public ResponseEntity<Map<String, Object>> canModifyEmployee(@PathVariable Long id) {
+        return ResponseEntity.ok(employeeService.canModifyEmployee(id));
+    }
+
     @PostMapping(consumes = "multipart/form-data")
     public ResponseEntity<EmployeeResponseDTO> createEmployeeMultipart(
             @RequestParam("data") String employeeData,
@@ -56,7 +61,6 @@ public class EmployeeController {
         }
     }
 
-    // Create with JSON (backward compatibility)
     @PostMapping(consumes = "application/json")
     public ResponseEntity<EmployeeResponseDTO> createEmployeeJson(
             @RequestBody EmployeeRequestDTO requestDTO) {
@@ -64,7 +68,6 @@ public class EmployeeController {
                 .body(employeeService.createEmployee(requestDTO, null));
     }
 
-    // Update with multipart/form-data
     @PutMapping(value = "/{id}", consumes = "multipart/form-data")
     public ResponseEntity<EmployeeResponseDTO> updateEmployeeMultipart(
             @PathVariable Long id,
@@ -78,7 +81,6 @@ public class EmployeeController {
         }
     }
 
-    // Update with JSON (backward compatibility)
     @PutMapping(value = "/{id}", consumes = "application/json")
     public ResponseEntity<EmployeeResponseDTO> updateEmployeeJson(
             @PathVariable Long id,
