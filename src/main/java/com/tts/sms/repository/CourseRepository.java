@@ -63,4 +63,10 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
      * Count active courses
      */
     long countByIsActiveTrue();
+
+    /**
+     * Find course by name (case-insensitive)
+     */
+    @Query("SELECT c FROM Course c WHERE LOWER(c.courseName) = LOWER(:courseName) AND c.isActive = true")
+    Optional<Course> findByCourseNameAndIsActiveTrue(@Param("courseName") String courseName);
 }

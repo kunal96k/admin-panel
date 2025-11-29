@@ -128,6 +128,13 @@ public class LayoutController {
         return "master/course";
     }
 
+    @GetMapping("/master/batch")
+    public String batch(Model model) {
+        model.addAttribute("pageTitle", "Batch");
+        model.addAttribute("activePage", "batch");
+        return "master/batch";
+    }
+
     @GetMapping("/master/employee")
     public String employee(Model model) {
         model.addAttribute("pageTitle", "Employee");
@@ -152,7 +159,7 @@ public class LayoutController {
     @GetMapping("/master/lead-source")
     public String leadSource(Model model) {
         model.addAttribute("pageTitle", "Lead Source");
-        model.addAttribute("activePage", "lead-source.js");
+        model.addAttribute("activePage", "lead-source");
         return "master/lead-source";
     }
 

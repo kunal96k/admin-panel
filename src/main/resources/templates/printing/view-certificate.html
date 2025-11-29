@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Certificate - [[${studentName}]]</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet"/>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+        .certificate-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        #canvas {
+            width: 100%;
+            height: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            display: block;
+        }
+        .action-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-action {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .certificate-container {
+                box-shadow: none;
+                padding: 0;
+            }
+            .action-buttons {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="certificate-container">
+    <div class="text-center mb-4">
+        <h2><i class="bi bi-award-fill text-primary"></i> Certificate of Completion</h2>
+        <p class="text-muted">Certificate No: <strong th:text="${certificateNo}">CERT2025001</strong></p>
+    </div>
+
+    <!-- Canvas sized to your template design -->
+    <canvas id="canvas" width="1754" height="1240"></canvas>
+
+    <div class="action-buttons">
+        <button id="download-btn" class="btn btn-success btn-action">
+            <i class="bi bi-download"></i> Download Certificate
+        </button>
+        <button onclick="window.print()" class="btn btn-primary btn-action">
+            <i class="bi bi-printer"></i> Print Certificate
+        </button>
+        <button onclick="window.close()" class="btn btn-secondary btn-action">
+            <i class="bi bi-x-circle"></i> Close
+        </button>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    // ========================
+    // TEMPLATE VARIABLES (Thymeleaf inline)
+    // ========================
+    const studentName = /*[[${studentName}]]*/ 'Student Name';
+    const courseName  = /*[[${courseName}]]*/ 'Course Name';
+    const certificateNo = /*[[${certificateNo}]]*/ 'CERT001';
+    const issueDate = /*[[${issueDate}]]*/ '15/01/2025'; // keep original format dd/MM/yyyy or adjust
+    const courseImagePath = /*[[${certificate.courseImagePath}]]*/ null; // path or null
+
+    // ========================
+    // Canvas + images
+    // ========================
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const downloadBtn = document.getElementById('download-btn');
+
+    const certificateTemplate = new Image();
+    certificateTemplate.crossOrigin = "anonymous";
+    certificateTemplate.src = '/assets/images/TTS-Certificate.jpg'; // keep this correct relative path
+
+    const courseImage = new Image();
+    courseImage.crossOrigin = "anonymous";
+
+    if (courseImagePath) {
+        // If thymeleaf provides only filename, construct path; adapt if you store differently
+        courseImage.src = `/uploads/courses/${courseImagePath}`;
+    }
+
+    // Wait for template and (optionally) course image before drawing
+    let templateLoaded = false;
+    let courseLoadedOrMissing = !courseImagePath;
+
+    certificateTemplate.onload = () => {
+        templateLoaded = true;
+        if (courseLoadedOrMissing) drawCertificate();
+    };
+    certificateTemplate.onerror = () => {
+        console.error('Certificate template failed to load. Make sure /assets/images/TTS-Certificate.jpg exists.');
+        // still try to draw fallback blank template
+        templateLoaded = true;
+        if (courseLoadedOrMissing) drawCertificate();
+    };
+
+    if (courseImagePath) {
+        courseImage.onload = () => {
+            courseLoadedOrMissing = true;
+            if (templateLoaded) drawCertificate();
+        };
+        courseImage.onerror = () => {
+            console.warn('Course logo failed to load; proceeding without it.');
+            courseLoadedOrMissing = true;
+            if (templateLoaded) drawCertificate();
+        };
+    }
+
+    // ========================
+    // Layout constants (use exact coordinates you used server-side)
+    // ========================
+    const CANVAS_W = canvas.width;   // 1754
+    const CANVAS_H = canvas.height;  // 1240
+    const LEFT_X = 250;
+    const NAME_Y = 475;
+    const COURSE_Y = 630;
+    const MAX_TEXT_WIDTH = 1100;
+    const DATE_X = 990, DATE_Y = 1150;
+    const CERTNO_X = 550, CERTNO_Y = 1050;
+    const LOGO_X = 1250, LOGO_Y = 750, LOGO_W = 225, LOGO_H = 150;
+
+    // ========================
+    // Utility: wrap text into lines using canvas measureText
+    // ========================
+    function wrapText(ctx, text, maxWidth) {
+        if (!text) return [];
+        const words = text.split(/\s+/);
+        const lines = [];
+        let current = words[0] || '';
+        for (let i = 1; i < words.length; i++) {
+            const test = current + ' ' + words[i];
+            if (ctx.measureText(test).width <= maxWidth) {
+                current = test;
+            } else {
+                lines.push(current);
+                current = words[i];
+            }
+        }
+        if (current) lines.push(current);
+        return lines;
+    }
+
+    // ========================
+    // Utility: fit font size by reducing from base until the wrapped block height <= maxHeight
+    // returns {font, lines, lineHeight}
+    // (NOTE: this keeps font shrinking behavior but DOES NOT truncate with ellipsis)
+    // ========================
+    function fitFontAndWrap(ctx, text, baseFontSize, minFontSize, maxWidth, maxHeight, fontFamily = 'Century Gothic') {
+        let fontSize = baseFontSize;
+        let lines, lineHeight;
+        while (fontSize >= minFontSize) {
+            ctx.font = `bold ${Math.round(fontSize)}px ${fontFamily}`;
+            lines = wrapText(ctx, text, maxWidth);
+            // approximate line height (use measureText of 'M' for ascent)
+            const metrics = ctx.measureText('M');
+            lineHeight = Math.max(Math.round(fontSize * 0.9), Math.ceil((metrics.actualBoundingBoxAscent || fontSize*0.7) + (metrics.actualBoundingBoxDescent || fontSize*0.3)));
+            const totalHeight = lines.length * (lineHeight + 8); // 8px leading
+            if (totalHeight <= maxHeight) break;
+            fontSize -= 2;
+        }
+        // IMPORTANT: NO ellipsis/truncation added here — we intentionally keep lines as-is (or reduced font)
+        return { font: `bold ${Math.round(fontSize)}px ${fontFamily}`, lines: lines || [], lineHeight };
+    }
+
+    // ========================
+    // Main draw function
+    // ========================
+    function drawCertificate() {
+        // clear canvas
+        ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+        // draw template (or fallback blank if not loaded)
+        if (certificateTemplate && certificateTemplate.complete && certificateTemplate.naturalWidth > 0) {
+            ctx.drawImage(certificateTemplate, 0, 0, CANVAS_W, CANVAS_H);
+        } else {
+            // fallback blank template (simple white background)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        }
+
+        // STUDENT NAME: try to fit into a max block height so it doesn't collide with course/date
+        const maxNameBlockHeight = 260; // px
+        const nameFit = fitFontAndWrap(ctx, (studentName || '').toUpperCase(), 50, 18, MAX_TEXT_WIDTH, maxNameBlockHeight, 'Century Gothic');
+        ctx.font = nameFit.font;
+        ctx.fillStyle = '#e01d02';
+        ctx.textAlign = 'left';
+        let y = NAME_Y;
+        for (const line of nameFit.lines) {
+            ctx.fillText(line, LEFT_X, y);
+            y += nameFit.lineHeight + 8;
+        }
+        const afterNameY = y;
+
+        // --- INTRO REMOVED (as requested) ---
+        // No intro text will be drawn.
+
+        // COURSE NAME: ensure it starts after name block, and has limited vertical room before date area
+        const reservedBottomY = 1120;
+        const courseStartY = Math.max(afterNameY + 6, COURSE_Y);
+        const allowedCourseHeight = Math.max(40, reservedBottomY - courseStartY - 8);
+        const courseFit = fitFontAndWrap(ctx, (courseName || '').toUpperCase(), 50, 14, MAX_TEXT_WIDTH, allowedCourseHeight, 'Century Gothic');
+        ctx.font = courseFit.font;
+        ctx.fillStyle = '#e01d02';
+        y = courseStartY;
+        for (const line of courseFit.lines) {
+            // Draw lines until we hit reserved area; if running out of space we stop drawing additional lines.
+            if (y + courseFit.lineHeight > reservedBottomY) {
+                break; // don't draw beyond reserved area; no ellipsis or truncation per request
+            }
+            ctx.fillText(line, LEFT_X, y);
+            y += courseFit.lineHeight + 6;
+        }
+
+        // ISSUE DATE
+        ctx.font = 'bold 25px Century Gothic';
+        ctx.fillStyle = 'black';
+        ctx.fillText(issueDate, DATE_X, DATE_Y);
+
+        // CERTIFICATE NUMBER
+        ctx.fillText('TTS-' + certificateNo, CERTNO_X, CERTNO_Y);
+
+        // COURSE LOGO
+        if (courseImage && courseImage.complete && courseImage.naturalWidth > 0) {
+            try {
+                ctx.drawImage(courseImage, LOGO_X, LOGO_Y, LOGO_W, LOGO_H);
+            } catch (e) {
+                console.warn('Error drawing course logo', e);
+            }
+        }
+    }
+
+    // ========================
+    // Helper to truncate a single line to maxWidth (NO ellipsis) — not used but kept as safe no-op
+    // ========================
+    function truncateLineToWidth(ctx, text, maxWidth) {
+        if (!text) return '';
+        // Per request: do not append '...' and do not trim with ellipsis.
+        // We'll simply cut characters until they fit the width, returning the trimmed string.
+        let t = text;
+        while (t.length > 0 && ctx.measureText(t).width > maxWidth) {
+            t = t.slice(0, -1);
+        }
+        return t;
+    }
+
+    // ========================
+    // Download button: create anchor and click it
+    // ========================
+    downloadBtn.addEventListener('click', function () {
+        try {
+            // prefer JPEG at full quality
+            const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = `Certificate-TTS-${certificateNo}.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (err) {
+            console.error('Download failed', err);
+            alert('Download failed — try Print instead.');
+        }
+    });
+</script>
+</body>
+</html>

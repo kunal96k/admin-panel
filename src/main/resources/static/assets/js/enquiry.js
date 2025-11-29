@@ -124,6 +124,7 @@
         initializeEventListeners();
         loadEnquiries();
         initializeCourseSelector();
+        loadAllDropdownData();
     });
 
     function initializeCourseSelector() {
@@ -172,7 +173,6 @@
         updateSelectedCoursesDisplay();
     };
 
-   // Match and normalize course names from CSV - IMPROVED VERSION
    function matchCourseName(csvCourseName) {
        if (!csvCourseName) return null;
 
@@ -359,7 +359,6 @@
         }
     }
 
-    // Save Enquiry (Create or Update)
     async function saveEnquiry() {
         const enquiryData = collectFormData();
 
@@ -523,27 +522,6 @@
             Swal.close();
             console.error('Import error:', error);
             showError(error.message || 'Failed to import data');
-        }
-    }
-
-    // Export CSV
-    async function exportCSV() {
-        try {
-            const response = await fetch('/api/enquiries/export/csv');
-            if (!response.ok) throw new Error('Export failed');
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `enquiries_${Date.now()}.csv`;
-            link.click();
-            window.URL.revokeObjectURL(url);
-
-            showSuccess('CSV exported successfully!');
-        } catch (error) {
-            console.error('Export error:', error);
-            showError('Failed to export CSV');
         }
     }
 
@@ -1467,72 +1445,6 @@ function updateEntriesInfo() {
             window.location.href = `/admission?enquiryId=${enquiry.id}`;
         }
 
-        function collectFormData() {
-            const courseSelect = document.getElementById('course');
-            const selectedCourses = Array.from(courseSelect.selectedOptions).map(option => option.value);
-
-            return {
-                firstName: getValue('firstName'),
-                middleName: getValue('middleName'),
-                lastName: getValue('lastName'),
-                mobile: getValue('mobilePrimary'),
-                secondaryMobile: getValue('mobileSecondary'),
-                email: getValue('emailPrimary'),
-                secondaryEmail: getValue('emailSecondary'),
-                currentAddress: getValue('currentAddress'),
-                permanentAddress: getValue('permanentAddress'),
-                pinCurrent: getValue('pinCodeCurrent'),
-                pinPermanent: getValue('pinCodePermanent'),
-                college: getValue('college'),
-                qualification: getValue('qualification'),
-                aadhaar: getValue('aadhaar'),
-                birthDate: getValue('dob') || null,
-                gender: getValue('gender'),
-                courses: selectedCourses,
-                packageName: getValue('package'),
-                demoLectureRequired: getValue('demoLecture') === 'true',
-                interestLevel: getValue('interestLevel'),
-                source: getValue('leadSource'),
-                referenceName: getValue('referenceName'),
-                enquiryDate: getValue('enquiryDate') || new Date().toISOString().split('T')[0],
-                followupDate: getValue('followupDate') || null,
-                assignTo: getValue('assignTo'),
-                note: getValue('note')
-            };
-        }
-
-       function validateFormData(data) {
-           // Check required fields
-           if (!data.firstName || !data.lastName) {
-               console.error('Validation failed: Name required');
-               return false;
-           }
-
-           if (!data.mobile || !/^[6-9]\d{9}$/.test(data.mobile)) {
-               console.error('Validation failed: Invalid mobile number');
-               return false;
-           }
-
-           if (!data.courses || data.courses.length === 0) {
-               console.error('Validation failed: At least one course required');
-               return false;
-           }
-
-           if (!data.source) {
-               console.error('Validation failed: Source required');
-               return false;
-           }
-
-           console.log('Validation passed:', {
-               name: `${data.firstName} ${data.lastName}`,
-               mobile: data.mobile,
-               courses: data.courses,
-               source: data.source
-           });
-
-           return true;
-       }
-
         function getValue(id) {
             const el = document.getElementById(id);
             return el ? el.value : '';
@@ -1569,15 +1481,6 @@ function updateEntriesInfo() {
             });
         }
 
-        function openAddModal() {
-            currentEnquiryId = null;
-            clearForm();
-            document.getElementById('modalTitle').innerHTML = '<i class="bi bi-person-plus me-2"></i>Add New Enquiry';
-            const modal = new bootstrap.Modal(document.getElementById('enquiryModal'));
-            modal.show();
-            updateProgress(25);
-        }
-
         function clearForm() {
             ['personalForm', 'communicationForm', 'courseForm', 'sourceForm'].forEach(id => {
                 document.getElementById(id)?.reset();
@@ -1591,8 +1494,19 @@ function updateEntriesInfo() {
 
         function closeModal(modalId) {
             const modalEl = document.getElementById(modalId);
+            if (!modalEl) return;
+
             const modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
+            if (modal) {
+                modal.hide();
+            }
+                setTimeout(() => {
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) backdrop.remove();
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }, 300);
         }
 
         function updateProgress(width) {
@@ -1610,6 +1524,335 @@ function updateEntriesInfo() {
             return function(...args) {
                 clearTimeout(timeout);
                 timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+
+        // ==================== ADD TO enquiry.js ====================
+
+        // ADD THESE CACHE VARIABLES AT TOP (after other let declarations)
+        let coursesCache = [];
+        let packagesCache = [];
+        let employeesCache = [];
+        let leadSourcesCache = [];
+
+        // ADD THIS FUNCTION - Call on page load
+        async function loadAllDropdownData() {
+            try {
+                await Promise.all([
+                    loadCourses(),
+                    loadPackages(),
+                    loadEmployees(),
+                    loadLeadSources()
+                ]);
+            } catch (error) {
+                console.error('Error loading dropdown data:', error);
+                showError('Failed to load form options. Please refresh the page.');
+            }
+        }
+
+        // ADD THESE NEW FUNCTIONS
+        async function loadCourses() {
+            try {
+                const response = await fetch('/api/courses?page=0&size=1000');
+                if (!response.ok) throw new Error('Failed to load courses');
+                const data = await response.json();
+                coursesCache = data.courses || [];
+                populateCourseSelect();
+            } catch (error) {
+                console.error('Error loading courses:', error);
+                coursesCache = [];
+            }
+        }
+
+        async function loadPackages() {
+            try {
+                const response = await fetch('/api/packages?page=0&size=1000');
+                if (!response.ok) throw new Error('Failed to load packages');
+                const data = await response.json();
+                packagesCache = data.packages || [];
+                populatePackageSelect();
+            } catch (error) {
+                console.error('Error loading packages:', error);
+                packagesCache = [];
+            }
+        }
+
+        async function loadEmployees() {
+            try {
+                const response = await fetch('/api/employees?page=0&size=1000');
+                if (!response.ok) throw new Error('Failed to load employees');
+                const data = await response.json();
+                employeesCache = data.employees || [];
+                populateEmployeeSelect();
+            } catch (error) {
+                console.error('Error loading employees:', error);
+                employeesCache = [];
+            }
+        }
+
+        async function loadLeadSources() {
+            try {
+                const response = await fetch('/lead-source/list?page=0&size=1000');
+                if (!response.ok) throw new Error('Failed to load lead sources');
+                const data = await response.json();
+                leadSourcesCache = data.data || [];
+                populateLeadSourceSelect();
+            } catch (error) {
+                console.error('Error loading lead sources:', error);
+                leadSourcesCache = [];
+            }
+        }
+
+        function populateCourseSelect() {
+            const courseSelect = document.getElementById('course');
+            if (!courseSelect) return;
+
+            courseSelect.innerHTML = '';
+
+            if (coursesCache.length === 0) {
+                courseSelect.innerHTML = '<option value="">No courses available</option>';
+                courseSelect.disabled = true;
+                return;
+            }
+
+            coursesCache.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.courseName;
+                option.textContent = course.courseName;
+                courseSelect.appendChild(option);
+            });
+
+            courseSelect.disabled = false;
+        }
+
+        function populatePackageSelect() {
+            const packageSelect = document.getElementById('package');
+            if (!packageSelect) return;
+
+            packageSelect.innerHTML = '<option value="">-- Select Package --</option>';
+
+            if (packagesCache.length === 0) {
+                packageSelect.innerHTML += '<option value="" disabled>No packages available</option>';
+                return;
+            }
+
+            packagesCache.forEach(pkg => {
+                const option = document.createElement('option');
+                option.value = pkg.packageName;
+                option.textContent = pkg.packageName;
+                packageSelect.appendChild(option);
+            });
+        }
+
+        function populateEmployeeSelect() {
+            const assignToSelect = document.getElementById('assignTo');
+            if (!assignToSelect) return;
+
+            assignToSelect.innerHTML = '<option value="">-- Select Employee --</option>';
+
+            if (employeesCache.length === 0) {
+                assignToSelect.innerHTML += '<option value="" disabled>No employees available</option>';
+                return;
+            }
+
+            employeesCache.forEach(emp => {
+                let fullName = '';
+
+                if (emp.employeeName && emp.employeeName.trim()) {
+                    fullName = emp.employeeName.trim();
+                } else if (emp.firstName || emp.lastName) {
+                    fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
+                } else {
+                    fullName = emp.emailId || 'Unknown Employee';
+                }
+
+                if (fullName && fullName !== 'Unknown Employee') {
+                    const option = document.createElement('option');
+                    option.value = fullName;
+                    option.textContent = fullName;
+                    assignToSelect.appendChild(option);
+                }
+            });
+
+            // If still empty after processing
+            if (assignToSelect.options.length === 1) {
+                assignToSelect.innerHTML += '<option value="" disabled>No valid employees available</option>';
+            }
+        }
+
+        function populateLeadSourceSelect() {
+            const leadSourceSelect = document.getElementById('leadSource');
+            if (!leadSourceSelect) return;
+
+            leadSourceSelect.innerHTML = '<option value="">-- Select --</option>';
+
+            if (leadSourcesCache.length === 0) {
+                leadSourceSelect.innerHTML += '<option value="" disabled>No lead sources available</option>';
+                return;
+            }
+
+            leadSourcesCache.forEach(source => {
+                const option = document.createElement('option');
+                option.value = source.sourceTitle;
+                option.textContent = source.sourceTitle;
+                leadSourceSelect.appendChild(option);
+            });
+        }
+
+        async function exportCSV() {
+            try {
+                showLoading('Checking data...');
+
+                // Check if table has data
+                const response = await fetch('/api/enquiries?page=0&size=1');
+                if (!response.ok) throw new Error('Failed to check enquiries');
+
+                const data = await response.json();
+
+                Swal.close();
+
+                if (!data.content || data.content.length === 0 || data.totalElements === 0) {
+                    await Swal.fire({
+                        title: 'No Data Available',
+                        html: `
+                            <div class="text-center py-3">
+                                <i class="bi bi-inbox" style="font-size: 4rem; color: #94a3b8;"></i>
+                                <p class="mt-3 mb-0">The enquiry table is empty.</p>
+                                <p class="text-muted">There are no records to export.</p>
+                            </div>
+                        `,
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#667eea'
+                    });
+                    return;
+                }
+
+                // Proceed with export
+                showLoading('Exporting data...');
+
+                const exportResponse = await fetch('/api/enquiries/export/csv');
+                if (!exportResponse.ok) throw new Error('Export failed');
+
+                const blob = await exportResponse.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `enquiries_${Date.now()}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+
+                Swal.close();
+                showSuccess(`Successfully exported ${data.totalElements} enquiries!`);
+
+            } catch (error) {
+                Swal.close();
+                console.error('Export error:', error);
+                showError('Failed to export CSV: ' + error.message);
+            }
+        }
+
+        function openAddModal() {
+            currentEnquiryId = null;
+            clearForm();
+
+            loadAllDropdownData();
+
+            document.getElementById('modalTitle').innerHTML = '<i class="bi bi-person-plus me-2"></i>Add New Enquiry';
+            const modal = new bootstrap.Modal(document.getElementById('enquiryModal'));
+            modal.show();
+            updateProgress(25);
+        }
+
+        function validateFormData(data) {
+            const errors = [];
+
+            // Required fields
+            if (!data.firstName || data.firstName.trim().length === 0) {
+                errors.push('First Name is required');
+            }
+            if (!data.lastName || data.lastName.trim().length === 0) {
+                errors.push('Last Name is required');
+            }
+            if (!data.mobile || !/^[6-9]\d{9}$/.test(data.mobile)) {
+                errors.push('Valid 10-digit Mobile Number is required (must start with 6-9)');
+            }
+            if (!data.courses || data.courses.length === 0) {
+                errors.push('At least one Course must be selected');
+            }
+            if (!data.assignTo || data.assignTo.trim().length === 0) {
+                errors.push('Assign To employee is required');
+            }
+
+            // Optional field validations
+            if (data.secondaryMobile && !/^[6-9]\d{9}$/.test(data.secondaryMobile)) {
+                errors.push('Secondary Mobile must be a valid 10-digit number');
+            }
+            if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+                errors.push('Primary Email must be valid');
+            }
+            if (data.secondaryEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.secondaryEmail)) {
+                errors.push('Secondary Email must be valid');
+            }
+            if (data.aadhaar && !/^\d{12}$/.test(data.aadhaar)) {
+                errors.push('Aadhaar must be exactly 12 digits');
+            }
+            if (data.pinCurrent && !/^\d{6}$/.test(data.pinCurrent)) {
+                errors.push('Current Pin Code must be 6 digits');
+            }
+            if (data.pinPermanent && !/^\d{6}$/.test(data.pinPermanent)) {
+                errors.push('Permanent Pin Code must be 6 digits');
+            }
+
+            if (errors.length > 0) {
+                Swal.fire({
+                    title: 'Validation Failed',
+                    html: '<ul style="text-align: left;">' +
+                          errors.map(e => `<li>${e}</li>`).join('') +
+                          '</ul>',
+                    icon: 'error',
+                    confirmButtonColor: '#ef4444'
+                });
+                return false;
+            }
+
+            return true;
+        }
+
+        function collectFormData() {
+            const courseSelect = document.getElementById('course');
+            const selectedCourses = Array.from(courseSelect.selectedOptions).map(option => option.value);
+
+            return {
+                firstName: getValue('firstName')?.trim(),
+                middleName: getValue('middleName')?.trim(),
+                lastName: getValue('lastName')?.trim(),
+                mobile: getValue('mobilePrimary')?.trim(),
+                secondaryMobile: getValue('mobileSecondary')?.trim(),
+                email: getValue('emailPrimary')?.trim(),
+                secondaryEmail: getValue('emailSecondary')?.trim(),
+                currentAddress: getValue('currentAddress')?.trim(),
+                permanentAddress: getValue('permanentAddress')?.trim(),
+                pinCurrent: getValue('pinCodeCurrent')?.trim(),
+                pinPermanent: getValue('pinCodePermanent')?.trim(),
+                college: getValue('college')?.trim(),
+                qualification: getValue('qualification')?.trim(),
+                aadhaar: getValue('aadhaar')?.trim(),
+                birthDate: getValue('dob') || null,
+                gender: getValue('gender'),
+                courses: selectedCourses,
+                packageName: getValue('package'),
+                demoLectureRequired: getValue('demoLecture') === 'true',
+                interestLevel: getValue('interestLevel'),
+                source: getValue('leadSource'),
+                referenceName: getValue('referenceName')?.trim(),
+                enquiryDate: getValue('enquiryDate') || new Date().toISOString().split('T')[0],
+                followupDate: getValue('followupDate') || null,
+                assignTo: getValue('assignTo'),
+                note: getValue('note')?.trim()
             };
         }
 

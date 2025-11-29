@@ -1,3 +1,6 @@
+
+console.log('⚙️ Initializing TechnoKraft Admin Console...');
+
 document.addEventListener('DOMContentLoaded', function() {
 
     // ========================================

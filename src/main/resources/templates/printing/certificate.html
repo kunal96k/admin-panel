@@ -55,7 +55,7 @@
                     <i class="bi bi-clock-fill"></i>
                 </div>
                 <div class="stats-number" id="pendingCount">0</div>
-                <div class="stats-label">Pending</div>
+                <div class="stats-label">Not Issued</div>
             </div>
         </div>
     </div>
@@ -65,21 +65,27 @@
         <div class="row align-items-center">
             <div class="col-lg-3 mb-3 mb-lg-0">
                 <label class="form-label mb-2">Filter by Course</label>
-                <select class="form-select" id="courseFilter">
-                    <option value="">-- Select Course --</option>
-                    <option value="JAVA CORE AND ADVANCE">JAVA CORE AND ADVANCE</option>
-                    <option value="SPRING BOOT">SPRING BOOT</option>
-                    <option value="PYTHON">PYTHON</option>
-                    <option value="WEB DEVELOPMENT">WEB DEVELOPMENT</option>
-                    <option value="DATA SCIENCE">DATA SCIENCE</option>
-                </select>
+                <div class="position-relative">
+                    <input type="text" class="form-control mb-2" id="courseSearchInput"
+                           placeholder="Search courses...">
+
+                    <select class="form-select" id="courseFilter" size="5"
+                            style="max-height: 200px; overflow-y: auto;">
+                        <option value="">-- All Courses --</option>
+                        <option value="JAVA CORE AND ADVANCE">JAVA CORE AND ADVANCE</option>
+                        <option value="SPRING BOOT">SPRING BOOT</option>
+                        <option value="PYTHON">PYTHON</option>
+                        <option value="WEB DEVELOPMENT">WEB DEVELOPMENT</option>
+                        <option value="DATA SCIENCE">DATA SCIENCE</option>
+                    </select>
+                </div>
             </div>
             <div class="col-lg-3 mb-3 mb-lg-0">
                 <label class="form-label mb-2">Filter by Status</label>
                 <select class="form-select" id="statusFilter">
                     <option value="">-- All Status --</option>
                     <option value="Issued">Issued</option>
-                    <option value="Pending">Pending</option>
+                    <option value="Not Issued">Not Issued</option>
                 </select>
             </div>
             <div class="col-lg-6">
@@ -171,7 +177,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+               <div class="modal-body">
                 <form id="certificateForm">
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -183,8 +189,8 @@
                             <input type="text" class="form-control" id="courseName" readonly>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Grade <span class="required">*</span></label>
-                            <input type="text" class="form-control" id="grade" placeholder="Enter Grade (e.g., A+, A, B+)" required>
+                            <label class="form-label">Grade</label>
+                            <input type="text" class="form-control" id="grade" placeholder="Enter Grade (e.g., A+, A, B+) - Optional">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Certificate No. <span class="required">*</span></label>
@@ -293,7 +299,7 @@
 </div>
 
 <!-- Custom JS -->
-<script th:src="@{/assets/js/enquiry.js}" src="/assets/js/certificate.js" defer></script>
+<script th:src="@{/assets/js/certificate.js}" src="/assets/js/certificate.js" defer></script>
 <!-- Bootstrap JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 <!-- SweetAlert2 JS -->

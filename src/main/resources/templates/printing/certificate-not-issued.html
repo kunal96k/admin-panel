@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Not Issued</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .error-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            padding: 60px 40px;
+            text-align: center;
+            max-width: 600px;
+        }
+        .error-icon {
+            font-size: 80px;
+            color: #f59e0b;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="error-container">
+    <i class="bi bi-exclamation-triangle error-icon"></i>
+    <h1 class="mb-3">Certificate Not Issued</h1>
+    <p class="text-muted mb-4" th:text="${error}">
+        This certificate has not been issued yet. Please contact the administrator to issue the certificate.
+    </p>
+    <button onclick="window.close()" class="btn btn-primary">
+        <i class="bi bi-x-circle me-2"></i>Close Window
+    </button>
+</div>
+</body>
+</html>

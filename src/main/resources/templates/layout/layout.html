@@ -139,35 +139,38 @@
                 <a th:href="@{/master/course}" class="submenu-link"
                    data-menu-id="6"
                    th:classappend="${activePage == 'course'} ? 'active' : ''"
-                   data-page="course">Course</a> 
-
-                <a th:href="@{/master/employee}" class="submenu-link"
+                   data-page="course">Course</a>
+                <a th:href="@{/master/batch}" class="submenu-link"
                    data-menu-id="7"
+                   th:classappend="${activePage == 'batch'} ? 'active' : ''"
+                   data-page="batch">Batch</a>
+                <a th:href="@{/master/employee}" class="submenu-link"
+                   data-menu-id="8"
                    th:classappend="${activePage == 'employee'} ? 'active' : ''"
                    data-page="employee">Employee</a> 
 
                 <a th:href="@{/master/role}" class="submenu-link"
-                   data-menu-id="8"
+                   data-menu-id="9"
                    th:classappend="${activePage == 'role'} ? 'active' : ''"
                    data-page="role">Role</a> 
 
                 <a th:href="@{/master/bank}" class="submenu-link"
-                   data-menu-id="9"
+                   data-menu-id="10"
                    th:classappend="${activePage == 'bank'} ? 'active' : ''"
                    data-page="bank">Bank</a> 
 
                 <a th:href="@{/master/lead-source}" class="submenu-link"
-                   data-menu-id="10"
+                   data-menu-id="11"
                    th:classappend="${activePage == 'lead-source'} ? 'active' : ''"
                    data-page="lead-source">Lead Source</a> 
 
                 <a th:href="@{/master/package}" class="submenu-link"
-                   data-menu-id="11"
+                   data-menu-id="12"
                    th:classappend="${activePage == 'create-package'} ? 'active' : ''"
                    data-page="create-package">Create Package</a> 
 
                 <a th:href="@{/master/online-payment}" class="submenu-link"
-                   data-menu-id="12"
+                   data-menu-id="13"
                    th:classappend="${activePage == 'online-payment'} ? 'active' : ''"
                    data-page="online-payment">Online Payment Mode</a> 
             </div>
@@ -183,13 +186,13 @@
             <div class="submenu">
                 <a th:href="@{/reports/course-wise-sales}"
                    class="submenu-link"
-                   data-menu-id="13"
+                   data-menu-id="14"
                    th:classappend="${activePage == 'course-wise-sales'} ? 'active' : ''"
                    data-page="course-wise-sales">Course-wise Sales</a>
 
                 <a th:href="@{/reports/fees-collection}"
                    class="submenu-link"
-                   data-menu-id="14"
+                   data-menu-id="15"
                    th:classappend="${activePage == 'fees-collection'} ? 'active' : ''"
                    data-page="fees-collection">Fees Collection</a>
             </div>

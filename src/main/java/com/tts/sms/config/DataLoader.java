@@ -56,7 +56,7 @@ public class DataLoader implements CommandLineRunner {
                 roleRepository.save(role);
             });
 
-            log.info("✅ Loaded {} roles", roleNames.size());
+            log.info(" Loaded {} roles", roleNames.size());
         }
     }
 
@@ -64,29 +64,37 @@ public class DataLoader implements CommandLineRunner {
         if (menuRepository.count() == 0) {
             List<Menu> menus = Arrays.asList(
                     createMenu("Dashboard", "Dashboard", "/dashboard", 1),
+
                     createMenu("Student", "Enquiry", "/students/enquiry", 2),
                     createMenu("Student", "Admission", "/students/admission", 3),
+
                     createMenu("Accounts", "Fees Manager", "/accounts/fees-manager", 4),
+
                     createMenu("Printing", "Certificate", "/printing/certificate", 5),
+
+                    // MASTER SECTION
                     createMenu("Master", "Course", "/master/course", 6),
-                    createMenu("Master", "Employee", "/master/employee", 7),
-                    createMenu("Master", "Role", "/master/role", 8),
-                    createMenu("Master", "Bank", "/master/bank", 9),
-                    createMenu("Master", "Lead Source", "/master/lead-source.js", 10),
-                    createMenu("Master", "Create Package", "/master/package", 11),
-                    createMenu("Master", "Online Payment", "/master/online-payment", 12),
-                    createMenu("Reports", "Course-wise Sales", "/reports/course-wise-sales", 13),
-                    createMenu("Reports", "Fees Collection", "/reports/fees-collection", 14)
+                    createMenu("Master", "Batch", "/master/batch", 7),  
+                    createMenu("Master", "Employee", "/master/employee", 8),
+                    createMenu("Master", "Role", "/master/role", 9),
+                    createMenu("Master", "Bank", "/master/bank", 10),
+                    createMenu("Master", "Lead Source", "/master/lead-source", 11),
+                    createMenu("Master", "Create Package", "/master/package", 12),
+                    createMenu("Master", "Online Payment", "/master/online-payment", 13),
+
+                    // REPORTS
+                    createMenu("Reports", "Course-wise Sales", "/reports/course-wise-sales", 14),
+                    createMenu("Reports", "Fees Collection", "/reports/fees-collection", 15)
             );
 
             menuRepository.saveAll(menus);
-            log.info("✅ Loaded {} menus", menus.size());
+            log.info(" Loaded {} menus", menus.size());
         }
     }
 
     private void loadSuperAdmin() {
         if (userRepository.existsByUsername(superAdminUsername)) {
-            log.info("✅ Super Admin already exists");
+            log.info(" Super Admin already exists");
             return;
         }
 
@@ -110,7 +118,7 @@ public class DataLoader implements CommandLineRunner {
                 roleMenuPermissionRepository.save(permission);
             }
 
-            log.info("✅ Granted full menu access to SUPER_ADMIN role");
+            log.info(" Granted full menu access to SUPER_ADMIN role");
 
             // Create Super Admin Employee
             Employee superAdmin = new Employee();
@@ -148,7 +156,7 @@ public class DataLoader implements CommandLineRunner {
             superAdmin.setOfflineExam(true);
 
             Employee savedEmployee = employeeRepository.save(superAdmin);
-            log.info("✅ Super Admin employee created: {}", savedEmployee.getEmployeeName());
+            log.info(" Super Admin employee created: {}", savedEmployee.getEmployeeName());
 
             // Create Super Admin User with credentials
             User superAdminUser = new User();
@@ -170,13 +178,13 @@ public class DataLoader implements CommandLineRunner {
                         superAdminUsername,
                         superAdminPassword
                 );
-                log.info("✅ Credentials email sent to: {}", superAdminEmail);
+                log.info(" Credentials email sent to: {}", superAdminEmail);
             } catch (Exception e) {
                 log.warn("⚠️ Failed to send credentials email: {}", e.getMessage());
             }
 
             log.info("═══════════════════════════════════════════════════════");
-            log.info("✅ SUPER ADMIN USER CREATED SUCCESSFULLY!");
+            log.info(" SUPER ADMIN USER CREATED SUCCESSFULLY!");
             log.info("═══════════════════════════════════════════════════════");
             log.info("📧 Email: {}", superAdminEmail);
             log.info("👤 Username: {}", superAdminUsername);

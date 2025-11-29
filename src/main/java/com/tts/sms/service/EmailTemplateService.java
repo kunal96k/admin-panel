@@ -7,10 +7,13 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
+import org.springframework.core.io.ByteArrayResource;
 import org.thymeleaf.context.Context;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +28,57 @@ public class EmailTemplateService {
 
     @Value("${spring.mail.username}")
     private String fromEmail;
+
+    /**
+     * Send certificate email with attachment
+     */
+    public void sendCertificateEmail(String toEmail, String studentName, String certificateNo,
+                                     String courseName, String grade, LocalDate issueDate,
+                                     LocalDate courseFromDate, LocalDate courseToDate,
+                                     String batch, byte[] certificateImage) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            Context context = new Context();
+            context.setVariable("studentName", studentName);
+            context.setVariable("certificateNo", certificateNo);
+            context.setVariable("courseName", courseName);
+            context.setVariable("grade", grade);
+            context.setVariable("issueDate", issueDate != null ?
+                    issueDate.format(java.time.format.DateTimeFormatter.ofPattern("MMMM dd, yyyy")) : "N/A");
+            context.setVariable("courseFromDate", courseFromDate != null ?
+                    courseFromDate.format(java.time.format.DateTimeFormatter.ofPattern("MMMM dd, yyyy")) : null);
+            context.setVariable("courseToDate", courseToDate != null ?
+                    courseToDate.format(java.time.format.DateTimeFormatter.ofPattern("MMMM dd, yyyy")) : null);
+            context.setVariable("batch", batch);
+            context.setVariable("year", java.time.Year.now().getValue());
+
+            String htmlContent = templateEngine.process("email/certificate-email", context);
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Your Course Completion Certificate - " + courseName);
+            helper.setText(htmlContent, true);
+
+            // ✅ Attach certificate image
+            if (certificateImage != null && certificateImage.length > 0) {
+                helper.addAttachment(
+                        "Certificate-TTS-" + certificateNo + ".jpg",
+                        new ByteArrayResource(certificateImage),
+                        "image/jpeg"
+                );
+            }
+
+            mailSender.send(message);
+
+            log.info("✅ Certificate email sent successfully to: {}", toEmail);
+
+        } catch (MessagingException e) {
+            log.error("❌ Failed to send certificate email to: {}", toEmail, e);
+            throw new RuntimeException("Failed to send certificate email: " + e.getMessage());
+        }
+    }
 
     /**
      * Send employee credentials email with HTML template
@@ -52,7 +106,7 @@ public class EmailTemplateService {
 
             mailSender.send(message);
 
-            log.info("✅ Credentials email sent successfully to: {}", toEmail);
+            log.info(" Credentials email sent successfully to: {}", toEmail);
 
         } catch (MessagingException e) {
             log.error("❌ Failed to send credentials email to: {}", toEmail, e);
@@ -83,7 +137,7 @@ public class EmailTemplateService {
 
             mailSender.send(message);
 
-            log.info("✅ Password change notification sent to: {}", toEmail);
+            log.info(" Password change notification sent to: {}", toEmail);
 
         } catch (MessagingException e) {
             log.error("❌ Failed to send password change email to: {}", toEmail, e);
