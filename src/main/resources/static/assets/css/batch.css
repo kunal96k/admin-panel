@@ -1,0 +1,526 @@
+/* Batch Management Styles */
+:root {
+    --primary-color: #667eea;
+    --primary-dark: #5a67d8;
+    --secondary-color: #764ba2;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --info-color: #3b82f6;
+    --light-bg: #f8fafc;
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Page Header */
+.page-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--card-shadow);
+}
+
+.page-header h2 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.75rem;
+}
+
+.page-header p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* Action Card */
+.action-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 1.5rem;
+}
+
+/* Button Styles */
+.btn-action {
+    padding: 0.625rem 1.5rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+}
+
+.btn-info {
+    background: linear-gradient(135deg, var(--info-color), #2563eb);
+}
+
+/* Input Group Styling */
+.input-group .input-group-text {
+    border: 1px solid #e2e8f0;
+    background: white;
+}
+
+.input-group .form-control,
+.input-group .form-select {
+    border: 1px solid #e2e8f0;
+}
+
+.input-group .form-control:focus,
+.input-group .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+/* Table Card */
+.table-card {
+    background: white;
+    border-radius: 1rem;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+}
+
+/* Table Styles */
+.table {
+    margin-bottom: 0;
+}
+
+.table thead {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+}
+
+.table thead th {
+    border: none;
+    padding: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+}
+
+.table tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.table tbody tr:hover {
+    background-color: #f8fafc;
+    transition: background-color 0.2s ease;
+}
+
+/* Action Buttons in Table */
+.action-btn {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    margin: 0 0.25rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #64748b;
+    font-size: 1.2rem;
+}
+
+.action-btn:hover {
+    transform: scale(1.15);
+}
+
+.action-btn:hover .bi-pencil-square {
+    color: var(--info-color);
+}
+
+.action-btn:hover .bi-trash {
+    color: var(--danger-color);
+}
+
+.action-btn:hover .bi-eye {
+    color: var(--warning-color);
+}
+
+/* Badge Styles */
+.badge-status {
+    padding: 0.375rem 0.875rem;
+    border-radius: 0.375rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-inactive {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Wizard Steps */
+.wizard-steps {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    padding-bottom: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.wizard-steps::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 15%;
+    right: 15%;
+    height: 3px;
+    background: #e2e8f0;
+    z-index: 0;
+}
+
+.wizard-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+}
+
+.wizard-step-number {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.wizard-step.active .wizard-step-number {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.wizard-step.completed .wizard-step-number {
+    background: var(--success-color);
+    color: white;
+}
+
+.wizard-step-text {
+    font-size: 0.875rem;
+    color: #64748b;
+    text-align: center;
+    font-weight: 500;
+}
+
+.wizard-step.active .wizard-step-text {
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+/* Wizard Content */
+.wizard-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.wizard-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Form Styles */
+.form-label {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.5rem;
+}
+
+.form-control,
+.form-select {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.required {
+    color: var(--danger-color);
+    font-weight: bold;
+}
+
+/* Days Selection Card */
+.days-selection-card {
+    background: var(--light-bg);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 2px solid #e2e8f0;
+}
+
+.days-selection-card table {
+    background: white;
+}
+
+.days-selection-card thead {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+}
+
+.days-selection-card tbody td {
+    padding: 0.875rem;
+    font-weight: 500;
+}
+
+.day-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.day-checkbox:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Form Check Switch */
+.form-check-input {
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Modal Customization */
+.modal-content {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: 1rem 1rem 0 0;
+    padding: 1.25rem 1.5rem;
+}
+
+.modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.modal-title {
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Pagination */
+.pagination {
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.page-item .page-link {
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+    color: var(--primary-color);
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.page-item .page-link:hover {
+    background: #f1f5f9;
+    border-color: var(--primary-color);
+    color: var(--primary-dark);
+}
+
+.page-item.active .page-link {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.page-item.disabled .page-link {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #94a3b8;
+}
+
+/* Alert Customization */
+.alert {
+    border-radius: 0.75rem;
+    border: none;
+    padding: 1rem 1.25rem;
+}
+
+.alert-info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .page-header {
+        padding: 1.5rem;
+    }
+
+    .page-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .action-card {
+        padding: 1rem;
+    }
+
+    .btn-action {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .table thead th,
+    .table tbody td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .wizard-steps {
+        flex-wrap: wrap;
+    }
+
+    .wizard-step {
+        min-width: 50%;
+        margin-bottom: 1rem;
+    }
+
+    .wizard-steps::before {
+        display: none;
+    }
+
+    .action-btn {
+        font-size: 1rem;
+        padding: 0.375rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+
+    .wizard-step {
+        min-width: 100%;
+    }
+
+    .days-selection-card {
+        padding: 1rem;
+    }
+}
+
+/* Loading State */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3rem;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #94a3b8;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Smooth Transitions */
+* {
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+button {
+    transition: all 0.3s ease;
+}
+
+/* Focus States */
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
