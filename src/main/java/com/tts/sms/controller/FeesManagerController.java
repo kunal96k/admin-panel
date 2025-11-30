@@ -27,7 +27,7 @@ public class FeesManagerController {
     // ==================== FEES SUMMARY (MISSING ENDPOINT) ====================
 
     /**
-     * ✅ ADDED: Get all fees with pagination
+     *  Get all fees with pagination
      */
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Page<FeesSummaryDTO>> getAllFees(

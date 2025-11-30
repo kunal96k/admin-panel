@@ -28,7 +28,6 @@
         <h2><i class="bi bi-award me-2"></i>Student Certificate Management</h2>
         <p class="mb-0 opacity-90">Issue and manage student certificates efficiently</p>
     </div>
-
     <!-- Statistics Cards -->
     <div class="row mb-4">
         <div class="col-md-4">
@@ -56,6 +55,64 @@
                 </div>
                 <div class="stats-number" id="pendingCount">0</div>
                 <div class="stats-label">Not Issued</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Auto-Generate Card -->
+        <div class="col-md-4">
+            <div class="card border-success shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-success">
+                        <i class="bi bi-magic me-2"></i>Auto-Generate
+                    </h5>
+                    <p class="card-text text-muted small">
+                        Automatically create certificates for NEW admissions (REG*) with cleared fees
+                    </p>
+                    <button id="btnAutoGenerate" class="btn btn-success w-100">
+                        <i class="bi bi-stars me-2"></i>Generate from Cleared Fees
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Generate Card -->
+        <div class="col-md-4">
+            <div class="card border-warning shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">
+                        <i class="bi bi-pencil-square me-2"></i>Manual Entry
+                    </h5>
+                    <p class="card-text text-muted small">
+                        Create certificate manually for backup cases or missing records
+                    </p>
+                    <button id="btnManualGenerate" class="btn btn-warning w-100">
+                        <i class="bi bi-plus-circle me-2"></i>Create Certificate Manually
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import/Export Card -->
+        <div class="col-md-4">
+            <div class="card border-info shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-info">
+                        <i class="bi bi-file-earmark-arrow-up me-2"></i>Import/Export
+                    </h5>
+                    <p class="card-text text-muted small">
+                        Bulk import old admission certificates or export current data
+                    </p>
+                    <div class="d-flex gap-2">
+                        <button id="btnImportCSV" class="btn btn-info flex-fill">
+                            <i class="bi bi-upload me-1"></i>Import CSV
+                        </button>
+                        <button id="btnViewManualLogs" class="btn btn-outline-info flex-fill">
+                            <i class="bi bi-list-check me-1"></i>View Logs
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -103,16 +160,6 @@
                 </div>
 
             </div>
-        </div>
-
-        <!-- Import/Export -->
-        <div class="d-flex gap-2 justify-content-end">
-            <button class="btn btn-success btn-sm" id="btnImportCSV">
-                <i class="bi bi-upload me-1"></i>Import CSV
-            </button>
-            <button class="btn btn-info btn-sm" id="btnExportCSV">
-                <i class="bi bi-download me-1"></i>Export CSV
-            </button>
         </div>
     </div>
 

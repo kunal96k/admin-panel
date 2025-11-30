@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,6 +26,49 @@ import java.util.Map;
 public class CertificateRestController {
 
     private final CertificateService certificateService;
+
+    /**
+     * Receive canvas image data from frontend and send email
+     */
+    @PostMapping("/{id}/send-email-with-image")
+    public ResponseEntity<?> sendCertificateEmailWithImage(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            String imageData = request.get("imageData"); // base64 image from canvas
+
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Email address is required"));
+            }
+
+            if (imageData == null || imageData.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Certificate image data is required"));
+            }
+
+            // Remove data URL prefix if present
+            if (imageData.startsWith("data:image")) {
+                imageData = imageData.substring(imageData.indexOf(",") + 1);
+            }
+
+            byte[] imageBytes = Base64.getDecoder().decode(imageData);
+
+            certificateService.sendCertificateEmailWithImage(id, email, imageBytes);
+
+            return ResponseEntity.ok(Map.of("message", "Certificate sent successfully"));
+
+        } catch (RuntimeException e) {
+            log.error("Error sending certificate email", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error sending certificate email", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to send email: " + e.getMessage()));
+        }
+    }
 
     /**
      * Get all certificates with pagination and filters

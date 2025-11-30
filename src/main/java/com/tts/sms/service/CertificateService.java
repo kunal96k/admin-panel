@@ -49,6 +49,38 @@ public class CertificateService {
     private final CourseRepository courseRepository;
 
     /**
+     * Send certificate email with pre-rendered image from frontend
+     */
+    public void sendCertificateEmailWithImage(Long id, String email, byte[] certificateImage) {
+        Certificate certificate = certificateRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Certificate not found with id: " + id));
+
+        if (!certificate.getStatus().equals("Issued")) {
+            throw new RuntimeException("Certificate must be issued before sending email");
+        }
+
+        if (certificateImage == null || certificateImage.length == 0) {
+            throw new RuntimeException("Certificate image is required");
+        }
+
+        emailTemplateService.sendCertificateEmail(
+                email,
+                certificate.getStudentName(),
+                certificate.getCertificateNo(),
+                certificate.getCourseName(),
+                certificate.getGrade(),
+                certificate.getIssueDate(),
+                certificate.getCourseFromDate(),
+                certificate.getCourseToDate(),
+                certificate.getBatch(),
+                certificateImage
+        );
+
+        log.info(" Certificate email sent to: {} for certificate: {}",
+                email, certificate.getCertificateNo());
+    }
+
+    /**
      * Get certificates with pagination and filters
      */
     @Transactional(readOnly = true)
@@ -111,41 +143,6 @@ public class CertificateService {
         Certificate certificate = certificateRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Certificate not found with id: " + id));
         return convertToDTO(certificate);
-    }
-
-    /**
-     * Issue certificate
-     */
-    public CertificateDTO issueCertificate(Long id, CertificateDTO dto) {
-        Certificate certificate = certificateRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Certificate not found with id: " + id));
-
-        // Generate certificate number if not provided or if it's AUTO-GENERATED placeholder
-        String certNo = dto.getCertificateNo();
-        if (certNo == null || certNo.isEmpty() || certNo.equals("AUTO-GENERATED")) {
-            certNo = generateCertificateNumber();
-        }
-
-        // Validate certificate number uniqueness (only if it's different from current)
-        if (!certNo.equals(certificate.getCertificateNo())) {
-            if (certificateRepository.existsByCertificateNoAndIsActiveTrue(certNo)) {
-                throw new RuntimeException("Certificate number already exists: " + certNo);
-            }
-        }
-
-        certificate.setCertificateNo(certNo);
-        certificate.setGrade(dto.getGrade());
-        certificate.setIssueDate(dto.getIssueDate());
-        certificate.setCourseFromDate(dto.getCourseFromDate());
-        certificate.setCourseToDate(dto.getCourseToDate());
-        certificate.setNotes(dto.getNotes());
-        certificate.setStatus("Issued");
-
-        Certificate savedCertificate = certificateRepository.save(certificate);
-        log.info("Certificate issued: {} for student: {}",
-                savedCertificate.getCertificateNo(), savedCertificate.getStudentName());
-
-        return convertToDTO(savedCertificate);
     }
 
     /**
@@ -326,7 +323,7 @@ public class CertificateService {
             try {
                 importSingleCertificate(dto);
                 successCount++;
-                log.debug("✅ Imported: {} - {}", dto.getRegistrationNo(), dto.getStudentName());
+                log.debug(" Imported: {} - {}", dto.getRegistrationNo(), dto.getStudentName());
 
             } catch (Exception e) {
                 errorCount++;
@@ -337,7 +334,7 @@ public class CertificateService {
             }
         }
 
-        log.info("✅ Import complete: {} success, {} errors out of {} total",
+        log.info(" Import complete: {} success, {} errors out of {} total",
                 successCount, errorCount, importData.size());
 
         Map<String, Object> result = new HashMap<>();
@@ -422,7 +419,7 @@ public class CertificateService {
                 certificateImage
         );
 
-        log.info("✅ Certificate email sent to: {} for certificate: {}", email, certificate.getCertificateNo());
+        log.info(" Certificate email sent to: {} for certificate: {}", email, certificate.getCertificateNo());
     }
 
     /**
@@ -439,7 +436,7 @@ public class CertificateService {
             BufferedImage template;
             if (templateFile.exists()) {
                 template = ImageIO.read(templateFile);
-                log.info("✅ Template loaded: {}x{}", template.getWidth(), template.getHeight());
+                log.info(" Template loaded: {}x{}", template.getWidth(), template.getHeight());
             } else {
                 log.warn("⚠️ Template not found, using blank canvas");
                 template = new BufferedImage(1754, 1240, BufferedImage.TYPE_INT_RGB);
@@ -456,7 +453,7 @@ public class CertificateService {
             g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
             g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-            // ✅ EXACT COORDINATES - DO NOT CHANGE
+            //  EXACT COORDINATES - DO NOT CHANGE
             final int STUDENT_NAME_X = 285;
             final int STUDENT_NAME_Y = 550;
             final int COURSE_NAME_X = 285;
@@ -530,7 +527,7 @@ public class CertificateService {
                         BufferedImage courseLogo = ImageIO.read(logoFile);
                         Image scaledLogo = courseLogo.getScaledInstance(LOGO_SIZE, LOGO_SIZE, Image.SCALE_SMOOTH);
                         g2d.drawImage(scaledLogo, LOGO_X, LOGO_Y, null);
-                        log.debug("✅ Course logo drawn");
+                        log.debug(" Course logo drawn");
                     } else {
                         log.warn("⚠️ Course logo not found: {}", logoPath);
                     }
@@ -546,7 +543,7 @@ public class CertificateService {
             ImageIO.write(template, "jpg", baos);
             byte[] result = baos.toByteArray();
 
-            log.info("✅ Certificate generated: {} bytes", result.length);
+            log.info(" Certificate generated: {} bytes", result.length);
             return result;
 
         } catch (IOException e) {
@@ -656,4 +653,72 @@ public class CertificateService {
         }
         return lines;
     }
+
+    // Add this to CertificateService.java
+
+    /**
+     *  Issue certificate with unique certificate number
+     */
+    public CertificateDTO issueCertificate(Long id, CertificateDTO dto) {
+        Certificate certificate = certificateRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Certificate not found with id: " + id));
+
+        // Generate UNIQUE certificate number
+        String certNo = dto.getCertificateNo();
+
+        // If AUTO-GENERATED or empty, generate new unique number
+        if (certNo == null || certNo.isEmpty() || certNo.equals("AUTO-GENERATED")) {
+            certNo = generateUniqueCertificateNumber();
+        } else {
+            // If user provided a number, validate it's unique (skip if it's the same as current)
+            if (!certNo.equals(certificate.getCertificateNo())) {
+                if (certificateRepository.existsByCertificateNoAndIsActiveTrue(certNo)) {
+                    throw new RuntimeException("Certificate number already exists: " + certNo);
+                }
+            }
+        }
+
+        certificate.setCertificateNo(certNo);
+        certificate.setGrade(dto.getGrade());
+        certificate.setIssueDate(dto.getIssueDate());
+        certificate.setCourseFromDate(dto.getCourseFromDate());
+        certificate.setCourseToDate(dto.getCourseToDate());
+        certificate.setNotes(dto.getNotes());
+        certificate.setStatus("Issued");
+
+        Certificate savedCertificate = certificateRepository.save(certificate);
+        log.info(" Certificate issued: {} for student: {}",
+                savedCertificate.getCertificateNo(), savedCertificate.getStudentName());
+
+        return convertToDTO(savedCertificate);
+    }
+
+    /**
+     *  Generate UNIQUE certificate number with collision check
+     */
+    private String generateUniqueCertificateNumber() {
+        String year = String.valueOf(Year.now().getValue());
+        int maxAttempts = 100;
+        int attempt = 0;
+
+        while (attempt < maxAttempts) {
+            long count = certificateRepository.countByIsActiveTrue() + attempt + 1;
+            String certNo = String.format("CERT%s%04d", year, count);
+
+            // Check if this number already exists
+            if (!certificateRepository.existsByCertificateNoAndIsActiveTrue(certNo)) {
+                log.info("✅ Generated unique certificate number: {}", certNo);
+                return certNo;
+            }
+
+            attempt++;
+            log.warn("⚠️ Certificate number {} already exists, trying next...", certNo);
+        }
+
+        // Fallback: Use timestamp
+        String fallbackCertNo = String.format("CERT%s%d", year, System.currentTimeMillis() % 10000);
+        log.warn("⚠️ Using timestamp-based certificate number: {}", fallbackCertNo);
+        return fallbackCertNo;
+    }
+
 }

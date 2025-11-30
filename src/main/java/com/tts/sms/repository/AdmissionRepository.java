@@ -158,4 +158,5 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
     @Query("SELECT a FROM Admission a WHERE a.isDeleted = false " +
             "ORDER BY a.admissionDate DESC")
     List<Admission> findRecentAdmissions(Pageable pageable);
+
 }

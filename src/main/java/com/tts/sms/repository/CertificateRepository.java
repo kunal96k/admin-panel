@@ -15,16 +15,10 @@ import java.util.Optional;
 public interface CertificateRepository extends JpaRepository<Certificate, Long> {
 
     List<Certificate> findByRegistrationNoAndIsActiveTrue(String registrationNo);
-
-    // Find by certificate number
-    Optional<Certificate> findByCertificateNoAndIsActiveTrue(String certificateNo);
-
+    
     // Check if registration number exists
     boolean existsByRegistrationNoAndIsActiveTrue(String registrationNo);
-
-    // Check if certificate number exists
-    boolean existsByCertificateNoAndIsActiveTrue(String certificateNo);
-
+    
     // Get all active certificates with pagination
     Page<Certificate> findByIsActiveTrue(Pageable pageable);
 
@@ -86,8 +80,30 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
             @Param("courseName") String courseName,
             @Param("status") String status,
             Pageable pageable);
-
-    // Count statistics
-    long countByIsActiveTrue();
+    
     long countByStatusAndIsActiveTrue(String status);
+
+    boolean existsByRegistrationNoAndCourseNameAndIsActiveTrue(
+            String registrationNo,
+            String courseName
+    );
+
+    /**
+     *  Check if certificate number exists (case-insensitive for safety)
+     */
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Certificate c " +
+            "WHERE LOWER(c.certificateNo) = LOWER(:certificateNo) AND c.isActive = true")
+    boolean existsByCertificateNoAndIsActiveTrue(@Param("certificateNo") String certificateNo);
+
+    /**
+     *  Count all active certificates (for unique number generation)
+     */
+    long countByIsActiveTrue();
+
+    /**
+     *  Find certificate by certificate number (for validation)
+     */
+    @Query("SELECT c FROM Certificate c WHERE LOWER(c.certificateNo) = LOWER(:certificateNo) AND c.isActive = true")
+    Optional<Certificate> findByCertificateNoAndIsActiveTrue(@Param("certificateNo") String certificateNo);
+
 }
