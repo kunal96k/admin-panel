@@ -143,8 +143,15 @@ public class AdmissionController {
             @RequestBody AdmissionSearchDTO searchDTO) {
 
         log.debug("POST /api/admissions/search - {}", searchDTO);
-        Page<AdmissionResponseDTO> results = admissionService.searchAdmissions(searchDTO);
-        return ResponseEntity.ok(results);
+
+        try {
+            Page<AdmissionResponseDTO> results = admissionService.searchAdmissions(searchDTO);
+            return ResponseEntity.ok(results);
+        } catch (Exception e) {
+            log.error("Search error: ", e);
+            // Return empty page instead of error
+            return ResponseEntity.ok(Page.empty());
+        }
     }
 
     /**

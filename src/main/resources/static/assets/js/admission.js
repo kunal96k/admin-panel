@@ -87,9 +87,8 @@
            // Generate installments
            document.getElementById('btnGenerateInstallments')?.addEventListener('click', generateInstallments);
 
-           // Search
-           document.getElementById('searchInput')?.addEventListener('input', debounce(searchAdmissions, 500));
-
+            // Search
+            document.getElementById('searchInput')?.addEventListener('input', debounce(searchAdmissions, 800));
            // Package selection
            document.getElementById('admPackage')?.addEventListener('change', handlePackageChange);
 
@@ -1288,8 +1287,21 @@ function showErrorWithDetails(title, message, technicalError = null) {
        const searchTerm = e.target.value.trim();
 
        try {
+           // If search is empty, reload all admissions
+           if (!searchTerm) {
+               await loadAdmissions(0, pageSize);
+               return;
+           }
+
+           const csrfToken = getCsrfToken();
+           const headers = {
+               'Accept': 'application/json',
+               'Content-Type': 'application/json',
+           };
+           if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
            const searchDTO = {
-               searchTerm: searchTerm || null,
+               searchTerm: searchTerm,
                page: 0,
                size: pageSize,
                sortBy: 'createdAt',
@@ -1298,14 +1310,18 @@ function showErrorWithDetails(title, message, technicalError = null) {
 
            const response = await fetch('/api/admissions/search', {
                method: 'POST',
-               headers: {
-                   'Accept': 'application/json',
-                   'Content-Type': 'application/json',
-               },
+               headers: headers,
+               credentials: 'include',
                body: JSON.stringify(searchDTO)
            });
 
-           if (!response.ok) throw new Error('Search failed');
+           if (!response.ok) {
+               const contentType = response.headers.get('content-type');
+               if (contentType && contentType.includes('text/html')) {
+                   throw new Error('Server returned HTML instead of JSON. Check if you are logged in.');
+               }
+               throw new Error(`Search failed: ${response.status}`);
+           }
 
            const data = await response.json();
 
@@ -1316,8 +1332,12 @@ function showErrorWithDetails(title, message, technicalError = null) {
            renderAdmissionsTable(data.content);
            updatePaginationInfo();
            renderPaginationControls();
+
        } catch (error) {
            console.error('Search error:', error);
+           showError('Search failed: ' + error.message);
+           // Fallback to showing current data
+           renderAdmissionsTable([]);
        }
    }
 
@@ -3034,4 +3054,23 @@ window.printTable = async function() {
       window.removeCourse = removeCourse;
       window.removeInstallment = removeInstallment;
       window.printToPDF = printToPDF;
+
+      // Global fetch error handler
+      window.addEventListener('unhandledrejection', function(event) {
+          if (event.reason && event.reason.message && event.reason.message.includes('<!DOCTYPE')) {
+              console.error('Session expired or authentication required');
+              event.preventDefault();
+
+              Swal.fire({
+                  icon: 'warning',
+                  title: 'Session Expired',
+                  text: 'Please refresh the page and login again',
+                  confirmButtonText: 'Refresh Page',
+                  allowOutsideClick: false
+              }).then(() => {
+                  window.location.reload();
+              });
+          }
+      });
+
   })();

@@ -24,8 +24,6 @@ public class EnquiryController {
     private final EnquiryService enquiryService;
     private final FollowUpService followUpService;
 
-    // ✅ CRITICAL: Specific routes MUST come BEFORE /{id} route
-
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
         return ResponseEntity.ok(Map.of(
@@ -59,9 +57,18 @@ public class EnquiryController {
     @PostMapping("/search")
     public ResponseEntity<Page<EnquiryResponseDTO>> searchEnquiries(
             @Valid @RequestBody EnquirySearchDTO searchDTO) {
-        log.info("POST /api/enquiries/search - criteria: {}", searchDTO);
-        Page<EnquiryResponseDTO> results = enquiryService.searchEnquiries(searchDTO);
-        return ResponseEntity.ok(results);
+
+        log.info("POST /api/enquiries/search - searchTerm: {}, page: {}, size: {}",
+                searchDTO.getSearchTerm(), searchDTO.getPage(), searchDTO.getSize());
+
+        try {
+            Page<EnquiryResponseDTO> results = enquiryService.searchEnquiries(searchDTO);
+            log.info("Search returned {} results", results.getTotalElements());
+            return ResponseEntity.ok(results);
+        } catch (Exception e) {
+            log.error("Search failed", e);
+            throw new RuntimeException("Search operation failed: " + e.getMessage());
+        }
     }
 
     @PostMapping("/bulk-import")
@@ -129,7 +136,7 @@ public class EnquiryController {
         }
     }
 
-    // ✅ Generic routes come AFTER specific routes
+    // Generic routes come AFTER specific routes
 
     @GetMapping
     public ResponseEntity<Page<EnquiryResponseDTO>> getAllEnquiries(

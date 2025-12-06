@@ -344,8 +344,14 @@
         const searchTerm = e.target.value.trim();
 
         try {
+            // If search is empty, just reload normal enquiries
+            if (!searchTerm) {
+                await loadEnquiries(0, pageSize);
+                return;
+            }
+
             const searchDTO = {
-                searchTerm: searchTerm || null,
+                searchTerm: searchTerm,
                 page: 0,
                 size: pageSize,
                 sortBy: 'enquiryDate',
@@ -356,23 +362,39 @@
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    [getCsrfHeader()]: getCsrfToken()
                 },
+                credentials: 'include',
                 body: JSON.stringify(searchDTO)
             });
 
-            if (!response.ok) throw new Error('Search failed');
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error('Server returned non-JSON response:', await response.text());
+                throw new Error('Search endpoint returned invalid response. Please check server logs.');
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Search failed');
+            }
 
             const data = await response.json();
             currentPage = 0;
             totalPages = data.totalPages || 0;
             totalElements = data.totalElements || 0;
 
-            renderEnquiriesTable(data.content);
+            renderEnquiriesTable(data.content || []);
             updatePaginationControls();
             updateEntriesInfo();
+
         } catch (error) {
             console.error('Search error:', error);
+            showError(error.message || 'Search failed. Please try again.');
+            // Fallback to showing existing data
+            await loadEnquiries(0, pageSize);
         }
     }
 

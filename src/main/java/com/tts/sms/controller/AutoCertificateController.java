@@ -21,7 +21,7 @@ public class AutoCertificateController {
     private final AutoCertificateService autoCertificateService;
 
     /**
-     * ✅ AUTO-GENERATE CERTIFICATES FOR NEW ADMISSIONS
+     *  AUTO-GENERATE CERTIFICATES FOR NEW ADMISSIONS
      */
     @PostMapping("/auto-generate")
     public ResponseEntity<?> autoGenerateCertificates() {
@@ -47,7 +47,7 @@ public class AutoCertificateController {
     }
 
     /**
-     * ✅ MANUAL CERTIFICATE GENERATION (BACKUP)
+     *  MANUAL CERTIFICATE GENERATION (BACKUP)
      */
     @PostMapping("/manual-generate")
     public ResponseEntity<?> manualGenerateCertificate(
@@ -75,7 +75,7 @@ public class AutoCertificateController {
     }
 
     /**
-     * ✅ GET MANUAL CERTIFICATE LOGS
+     *  GET MANUAL CERTIFICATE LOGS
      */
     @GetMapping("/manual-logs")
     public ResponseEntity<List<ManualCertificateLogDTO>> getManualLogs() {
