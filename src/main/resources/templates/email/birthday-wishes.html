@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Birthday Wishes - TechnoKraft</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f7fa;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 650px;
+            margin: 40px auto;
+            background: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #f59e0b, #ef4444, #ec4899);
+        }
+        .logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 25px;
+            background: white;
+            border-radius: 50%;
+            padding: 15px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+        .logo img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .header p {
+            margin: 10px 0 0;
+            font-size: 18px;
+            opacity: 0.95;
+        }
+        .content {
+            padding: 45px 40px;
+        }
+        .greeting {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+        .employee-name {
+            font-size: 32px;
+            font-weight: 700;
+            color: #667eea;
+            margin: 15px 0;
+            letter-spacing: 0.5px;
+        }
+        .birthday-card {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+            border: 2px solid #fbbf24;
+            position: relative;
+        }
+        .birthday-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            padding: 10px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .birthday-icon img {
+            background-color: #1e293b;
+            max-width: 100%;
+            min-width: 70px;
+            height: auto;
+            display: block;
+            border-radius: 10px;
+        }
+        .wish-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: #92400e;
+            line-height: 1.5;
+            margin: 0;
+        }
+        .message-box {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 8px;
+        }
+        .message-box p {
+            margin: 0 0 15px;
+            font-size: 15px;
+            color: #475569;
+            line-height: 1.7;
+        }
+        .message-box p:last-child {
+            margin-bottom: 0;
+        }
+        .signature {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e2e8f0;
+        }
+        .signature p {
+            margin: 5px 0;
+            color: #475569;
+        }
+        .signature strong {
+            color: #1e293b;
+            font-size: 16px;
+        }
+        .footer {
+            background: #1e293b;
+            color: #cbd5e1;
+            padding: 35px 40px;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        .footer strong {
+            color: #f1f5f9;
+            font-size: 16px;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .footer a {
+            color: #93c5fd;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            color: #60a5fa;
+        }
+        .contact-row {
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        .contact-item {
+            display: block;
+            margin: 8px 0;
+        }
+        .contact-item a {
+            color: #93c5fd;
+            text-decoration: none;
+            word-break: break-word;
+        }
+        .divider {
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #667eea, transparent);
+            margin: 30px 0;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Header Section -->
+    <div class="header">
+        <div class="logo">
+            <img src="https://powerbi.ttsnasik.com/assets/image/tts-logo-ev.png"
+                 alt="TechnoKraft Logo">
+        </div>
+        <h1>Happy Birthday</h1>
+        <p>Celebrating You Today</p>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+        <!-- Greeting Section -->
+        <div class="greeting">
+            <p style="font-size: 16px; color: #64748b; margin: 0;">Dear</p>
+            <div class="employee-name" th:text="${employeeName}">Employee Name</div>
+        </div>
+
+        <!-- Birthday Card -->
+        <div class="birthday-card">
+            <div class="birthday-icon">
+                <img src="https://res.cloudinary.com/dpgnzxxvm/image/upload/v1765044050/cake-Photoroom_lukgjd.png"
+                     alt="Birthday Cake">
+            </div>
+            <p class="wish-text">
+                Wishing you a wonderful birthday filled with<br>
+                happiness, success, and memorable moments!
+            </p>
+        </div>
+
+        <!-- Message Section -->
+        <div class="message-box">
+            <p>
+                On behalf of the entire team at <strong>TechnoKraft Training & Solution Pvt. Ltd.</strong>,
+                we would like to extend our warmest birthday wishes to you. Your dedication, professionalism,
+                and positive contribution to our organization make you an invaluable member of our team.
+            </p>
+            <p>
+                We are grateful to have you with us and look forward to celebrating many more milestones
+                together. May this special day mark the beginning of another successful and fulfilling
+                year ahead.
+            </p>
+            <p>
+                Thank you for being an integral part of our organization's growth and success.
+                We hope your birthday is as exceptional as you are!
+            </p>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Signature -->
+        <div class="signature">
+            <p>Warm regards,</p>
+            <p><strong>The Management Team</strong></p>
+            <p style="color: #667eea; font-weight: 600;">TechnoKraft Training & Solution Pvt. Ltd.</p>
+        </div>
+    </div>
+
+    <!-- Footer Section -->
+    <div class="footer">
+        <strong>TechnoKraft Training & Solution Pvt. Ltd.</strong>
+
+        <p style="margin: 15px 0;">
+            1st Floor, Kanchwala Avenue, Above Viju's Dabeli<br>
+            Thatte Nagar Marg, College Road<br>
+            Nashik, Maharashtra 422005, India
+        </p>
+
+        <div class="contact-row">
+            <div class="contact-item">
+                <strong>Phone:</strong> <a href="tel:+918645628278">+91 86456 28278</a>
+            </div>
+            <div class="contact-item">
+                <strong>Email:</strong> <a href="mailto:support@tts.net.in">support@tts.net.in</a>
+            </div>
+            <div class="contact-item">
+                <strong>Website:</strong> <a href="https://tts.net.in" target="_blank">www.tts.net.in</a>
+            </div>
+        </div>
+
+        <p style="margin-top: 20px; font-size: 12px; opacity: 0.8;">
+            &copy; <span th:text="${year}">2025</span> TechnoKraft. All rights reserved.
+        </p>
+    </div>
+</div>
+</body>
+</html>

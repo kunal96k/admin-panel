@@ -106,4 +106,5 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
     @Query("SELECT c FROM Certificate c WHERE LOWER(c.certificateNo) = LOWER(:certificateNo) AND c.isActive = true")
     Optional<Certificate> findByCertificateNoAndIsActiveTrue(@Param("certificateNo") String certificateNo);
 
+    Long countByStatus(String status);
 }

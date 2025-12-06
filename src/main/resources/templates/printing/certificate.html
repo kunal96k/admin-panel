@@ -3,6 +3,10 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}"
       lang="en">
+
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,7 +26,7 @@
 <!-- Dashboard Content Fragment -->
 <main layout:fragment="content">
 
-<div class="container-fluid mt-4">
+<div class="container-fluid">
     <!-- Page Header -->
     <div class="page-header">
         <h2><i class="bi bi-award me-2"></i>Student Certificate Management</h2>
@@ -87,9 +91,14 @@
                     <p class="card-text text-muted small">
                         Create certificate manually for backup cases or missing records
                     </p>
-                    <button id="btnManualGenerate" class="btn btn-warning w-100">
-                        <i class="bi bi-plus-circle me-2"></i>Create Certificate Manually
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button id="btnManualGenerate" class="btn btn-warning flex-fill">
+                            <i class="bi bi-plus-circle me-1"></i>Create
+                        </button>
+                        <button id="btnViewManualLogs" class="btn btn-outline-warning flex-fill">
+                            <i class="bi bi-list-check me-1"></i>Logs
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -104,12 +113,12 @@
                     <p class="card-text text-muted small">
                         Bulk import old admission certificates or export current data
                     </p>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 mb-2">
                         <button id="btnImportCSV" class="btn btn-info flex-fill">
-                            <i class="bi bi-upload me-1"></i>Import CSV
+                            <i class="bi bi-upload me-1"></i>Import
                         </button>
-                        <button id="btnViewManualLogs" class="btn btn-outline-info flex-fill">
-                            <i class="bi bi-list-check me-1"></i>View Logs
+                        <button id="btnExportCSV" class="btn btn-info flex-fill">
+                            <i class="bi bi-download me-1"></i>Export
                         </button>
                     </div>
                 </div>
@@ -180,7 +189,7 @@
                     <th>ACTIONS</th>
                 </tr>
                 </thead>
-                <tbody>
+                <tbody style="font-size: 0.8rem;">
                 <tr>
                     <td colspan="9" class="text-center py-5">
                         <i class="bi bi-inbox" style="font-size: 3rem; color: #94a3b8;"></i>
@@ -229,7 +238,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Student Name</label>
-                            <input type="text" class="form-control" id="studentName" readonly>
+                            <input type="text" class="form-control" id="studentName">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Course</label>
@@ -346,6 +355,11 @@
 </div>
 
 <!-- Custom JS -->
+<script layout:fragment="page-scripts" th:if="${requiresBootstrapInit}">
+    if (typeof window.reinitBootstrapDropdowns === 'function') {
+        window.reinitBootstrapDropdowns();
+    }
+</script>
 <script th:src="@{/assets/js/certificate.js}" src="/assets/js/certificate.js" defer></script>
 <!-- Bootstrap JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>

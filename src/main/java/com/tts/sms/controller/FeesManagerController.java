@@ -26,6 +26,105 @@ public class FeesManagerController {
 
     // ==================== FEES SUMMARY (MISSING ENDPOINT) ====================
 
+    @PutMapping(value = "/status", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> updateStatus(
+            @Valid @RequestBody FeeStatusUpdateDTO statusDTO) {
+
+        log.info("PUT /api/fees-manager/status - regNo: {}, status: {}",
+                statusDTO.getRegistrationNumber(), statusDTO.getPaymentStatus());
+
+        try {
+            feesManagerService.updateFeeStatus(
+                    statusDTO.getRegistrationNumber(),
+                    statusDTO.getPaymentStatus()
+            );
+
+            return ResponseEntity.ok(Map.of(
+                    "success", "true",
+                    "message", "Fee status updated successfully"
+            ));
+        } catch (Exception e) {
+            log.error("Error updating fee status", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", "false",
+                            "message", e.getMessage()
+                    ));
+        }
+    }
+
+    /**
+     * Update existing fee receipt
+     */
+    @PutMapping(value = "/receipts/{receiptId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<FeeReceiptResponseDTO> updateFeeReceipt(
+            @PathVariable Long receiptId,
+            @Valid @RequestBody FeeReceiptRequestDTO requestDTO) {
+
+        log.info("PUT /api/fees-manager/receipts/{} - Updating receipt", receiptId);
+
+        FeeReceiptResponseDTO receipt = feesManagerService.updateFeeReceipt(receiptId, requestDTO);
+        return ResponseEntity.ok(receipt);
+    }
+
+    /**
+     * Update fee status
+     */
+    @PutMapping(value = "/update-status", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> updateFeeStatus(
+            @Valid @RequestBody FeeStatusUpdateDTO statusDTO) {
+
+        log.info("PUT /api/fees-manager/update-status - regNo: {}, status: {}",
+                statusDTO.getRegistrationNumber(), statusDTO.getPaymentStatus());
+
+        try {
+            feesManagerService.updateFeeStatus(
+                    statusDTO.getRegistrationNumber(),
+                    statusDTO.getPaymentStatus()
+            );
+
+            return ResponseEntity.ok(Map.of(
+                    "success", "true",
+                    "message", "Fee status updated successfully"
+            ));
+        } catch (Exception e) {
+            log.error("Error updating fee status", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", "false",
+                            "message", e.getMessage()
+                    ));
+        }
+    }
+
+    /**
+     * Update total paid fees for a student
+     */
+    @PutMapping(value = "/update-total-paid", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> updateTotalPaid(
+            @RequestBody Map<String, Object> request) {
+
+        String regNo = (String) request.get("regNo");
+        Double totalPaid = ((Number) request.get("totalPaid")).doubleValue();
+
+        log.info("PUT /api/fees-manager/update-total-paid - regNo: {}, totalPaid: {}", regNo, totalPaid);
+
+        try {
+            feesManagerService.updateTotalPaid(regNo, totalPaid);
+            return ResponseEntity.ok(Map.of(
+                    "success", "true",
+                    "message", "Total paid updated successfully"
+            ));
+        } catch (Exception e) {
+            log.error("Error updating total paid", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", "false",
+                            "message", e.getMessage()
+                    ));
+        }
+    }
+
     /**
      *  Get all fees with pagination
      */
@@ -187,5 +286,56 @@ public class FeesManagerController {
                         "success", "false",
                         "message", ex.getMessage()
                 ));
+    }
+
+    /**
+     *  Send receipt via email with PDF attachment generated from frontend
+     */
+    @PostMapping(value = "/receipts/{receiptNo}/send-email", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> sendReceiptEmail(
+            @PathVariable String receiptNo,
+            @RequestBody Map<String, Object> emailData) {
+
+        log.info("📧 POST /api/fees-manager/receipts/{}/send-email", receiptNo);
+
+        try {
+            String email = (String) emailData.get("email");
+            String message = (String) emailData.get("message");
+            String studentName = (String) emailData.get("studentName");
+            String pdfData = (String) emailData.get("pdfData");
+
+            // Validate required fields
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of(
+                                "success", "false",
+                                "message", "Email address is required"
+                        ));
+            }
+
+            if (pdfData == null || pdfData.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of(
+                                "success", "false",
+                                "message", "PDF data is missing"
+                        ));
+            }
+
+            // Send email with PDF
+            feesManagerService.sendReceiptEmail(receiptNo, email, studentName, message, pdfData);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", "true",
+                    "message", "Email sent successfully to " + email
+            ));
+
+        } catch (Exception e) {
+            log.error("❌ Error sending receipt email", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", "false",
+                            "message", "Failed to send email: " + e.getMessage()
+                    ));
+        }
     }
 }

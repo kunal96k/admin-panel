@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}"
+      lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fees Collection Report</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.css" rel="stylesheet">
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" th:href="@{/assets/css/fees-collection.css}" href="/assets/css/fees-collection.css">
+</head>
+<body>
+
+<!-- Dashboard Content Fragment -->
+<main layout:fragment="content">
+
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h2><i class="bi bi-cash-coin me-2"></i>Fees Collection</h2>
+            <p class="mb-0 opacity-90">Track and manage student fee payments</p>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+                <div class="stats-card">
+                    <div class="stats-icon total">
+                        <i class="bi bi-receipt"></i>
+                    </div>
+                    <div class="stats-number" id="totalReceipts">0</div>
+                    <div class="stats-label">Total Receipts</div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="stats-card">
+                    <div class="stats-icon revenue">
+                        <i class="bi bi-currency-rupee"></i>
+                    </div>
+                    <div class="stats-number" id="totalAmount">₹0</div>
+                    <div class="stats-label">Total Amount</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="action-card mb-4">
+            <form id="feesCollectionForm">
+                <div class="row g-3 align-items-end">
+                    <!-- Date Range -->
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label">
+                            <i class="bi bi-calendar-event me-1"></i>From Date <span class="required">*</span>
+                        </label>
+                        <input type="date" class="form-control" id="fromDate" required>
+                        <div class="invalid-feedback">Please select from date</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label">
+                            <i class="bi bi-calendar-check me-1"></i>To Date <span class="required">*</span>
+                        </label>
+                        <input type="date" class="form-control" id="toDate" required>
+                        <div class="invalid-feedback">Please select to date</div>
+                    </div>
+
+                    <!-- Data Source Filter -->
+                    <div class="col-lg-2 col-md-6">
+                        <label class="form-label">
+                            <i class="bi bi-database me-1"></i>Data Source
+                        </label>
+                        <select class="form-select" id="dataSourceFilter">
+                            <option value="">All Data</option>
+                            <option value="IMPORTED_OLD_DATA">Old Imported</option>
+                            <option value="NEW_ENTRY">New Entries</option>
+                        </select>
+                    </div>
+
+                    <!-- Payment Mode Filter -->
+                    <div class="col-lg-2 col-md-6">
+                        <label class="form-label">
+                            <i class="bi bi-funnel me-1"></i>Payment Mode
+                        </label>
+                        <select class="form-select" id="paymentModeFilter">
+                            <option value="">All Modes</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Online">Online</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Card">Card</option>
+                        </select>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="col-lg-2 col-md-6">
+                        <button type="submit" class="btn btn-primary w-100 mb-2" id="searchBtn">
+                            <i class="bi bi-search me-2"></i>Search
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary w-100" id="resetBtn">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Import Note -->
+                <div class="alert alert-info mt-3 mb-0" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Note:</strong> This report includes both old imported data and new entries. Use the "Data Source" filter to view specific records.
+                </div>
+            </form>
+        </div>
+
+        <!-- Import & Export Tools Section -->
+        <div class="action-card mb-4">
+            <div class="row align-items-center g-3">
+                <!-- Import Button (Always Visible) -->
+                <div class="col-12 col-md-6">
+                    <button type="button" class="btn btn-success" id="importCsvBtn">
+                        <i class="bi bi-file-earmark-arrow-up me-2"></i>Import CSV Data
+                    </button>
+                    <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+                </div>
+
+                <!-- Export Tools (Hidden Until Data Exists) -->
+                <div class="col-12 col-md-6" id="exportSection" style="display: none;">
+                    <div class="d-flex flex-wrap gap-2 justify-content-md-end" id="exportTools">
+                        <!-- Export buttons will be inserted here by DataTables -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="table table-hover" id="feesCollectionTable">
+                    <thead class="sticky-top">
+                    <tr>
+                        <th>RECEIPT NO</th>
+                        <th>STUDENT NAME</th>
+                        <th>MOBILE NO.</th>
+                        <th>RECEIPT DATE</th>
+                        <th>PAID FEES</th>
+                        <th>PAYMENT MODE</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <i class="bi bi-inbox" style="font-size: 3rem; color: #94a3b8;"></i>
+                            <p class="mt-3 mb-0 text-muted">No data available. Please select filters and search.</p>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot style="display: none;">
+                    <tr class="table-info fw-bold">
+                        <td colspan="4" class="text-end">TOTAL AMOUNT:</td>
+                        <td id="footerTotalAmount">₹0.00</td>
+                        <td></td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <!-- PapaParse for CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.all.min.js"></script>
+    <!-- Custom JS -->
+    <script layout:fragment="page-scripts" th:if="${requiresBootstrapInit}">
+        if (typeof window.reinitBootstrapDropdowns === 'function') {
+            window.reinitBootstrapDropdowns();
+        }
+    </script>
+    <script th:src="@{/assets/js/fees-collection.js}" src="/assets/js/fees-collection.js"></script>
+
+</main>
+
+</body>
+</html>

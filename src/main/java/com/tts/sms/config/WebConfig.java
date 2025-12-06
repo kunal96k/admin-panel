@@ -17,6 +17,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Production-ready web configuration with HTTPS support
+ * Handles resource serving, CORS, MIME types, and caching
+ */
 @Slf4j
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -27,19 +31,28 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${app.csv.upload-dir:./uploads/csv}")
     private String csvUploadDir;
 
+    @Value("${server.ssl.enabled:false}")
+    private boolean sslEnabled;
+
     @PostConstruct
     public void initializeUploadDirectories() {
         try {
-            Path coursesPath = Paths.get(coursesUploadDir);
+            Path coursesPath = Paths.get(coursesUploadDir).toAbsolutePath();
             if (!Files.exists(coursesPath)) {
                 Files.createDirectories(coursesPath);
-                log.info("✅ Created courses upload directory: {}", coursesPath.toAbsolutePath());
+                log.info(" Created courses upload directory: {}", coursesPath);
             }
 
-            Path csvPath = Paths.get(csvUploadDir);
+            Path csvPath = Paths.get(csvUploadDir).toAbsolutePath();
             if (!Files.exists(csvPath)) {
                 Files.createDirectories(csvPath);
-                log.info("✅ Created CSV upload directory: {}", csvPath.toAbsolutePath());
+                log.info(" Created CSV upload directory: {}", csvPath);
+            }
+
+            if (sslEnabled) {
+                log.info("🔒 HTTPS/SSL is ENABLED - Production mode");
+            } else {
+                log.warn("⚠️ HTTPS/SSL is DISABLED - Development mode");
             }
         } catch (IOException e) {
             log.error("❌ Failed to create upload directories", e);
@@ -55,101 +68,138 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        log.info("🌐 Configuring CORS for production");
+
         registry.addMapping("/api/**")
-                .allowedOrigins("*")
-                .allowedMethods("GET", "POST", "PUT", "DELETE")
-                .allowedHeaders("*");
+                .allowedOrigins("*") // In production, specify your domain
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+                .allowedHeaders("*")
+                .allowCredentials(false)
+                .maxAge(3600);
+
+        log.info(" CORS configured for /api/** endpoints");
     }
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        log.debug("Configuring resource handlers with proper MIME types");
+        log.info("📦 Configuring resource handlers for HTTPS production");
 
+        // JavaScript resources with long cache
         registry.addResourceHandler("/assets/js/**")
                 .addResourceLocations("classpath:/static/assets/js/")
-                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
-                .resourceChain(true);
-
-        registry.addResourceHandler("/.well-known/**")
-                .addResourceLocations("classpath:/static/.well-known/")
-                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
+                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS)
+                        .cachePublic()
+                        .immutable())
                 .resourceChain(true);
 
         registry.addResourceHandler("/js/**")
                 .addResourceLocations("classpath:/static/js/")
-                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
+                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS)
+                        .cachePublic()
+                        .immutable())
                 .resourceChain(true);
 
+        // CSS resources with long cache
         registry.addResourceHandler("/assets/css/**")
                 .addResourceLocations("classpath:/static/assets/css/")
-                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
+                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS)
+                        .cachePublic()
+                        .immutable())
                 .resourceChain(true);
 
         registry.addResourceHandler("/css/**")
                 .addResourceLocations("classpath:/static/css/")
-                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
+                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS)
+                        .cachePublic()
+                        .immutable())
                 .resourceChain(true);
 
+        // Image resources with long cache
         registry.addResourceHandler("/assets/images/**")
                 .addResourceLocations("classpath:/static/assets/images/")
-                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
+                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS)
+                        .cachePublic()
+                        .immutable())
                 .resourceChain(true);
 
         registry.addResourceHandler("/images/**")
                 .addResourceLocations("classpath:/static/images/")
-                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
+                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS)
+                        .cachePublic()
+                        .immutable())
                 .resourceChain(true);
 
+        // General assets with long cache
         registry.addResourceHandler("/assets/**")
                 .addResourceLocations("classpath:/static/assets/")
-                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
+                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS)
+                        .cachePublic()
+                        .immutable())
                 .resourceChain(true);
 
+        // Well-known resources (SSL certificates, etc.)
+        registry.addResourceHandler("/.well-known/**")
+                .addResourceLocations("classpath:/static/.well-known/")
+                .setCacheControl(CacheControl.maxAge(7, TimeUnit.DAYS)
+                        .cachePublic())
+                .resourceChain(true);
+
+        // User uploaded content - NO CACHE
         registry.addResourceHandler("/uploads/courses/**")
-                .addResourceLocations("file:" + coursesUploadDir + "/")
-                .setCacheControl(CacheControl.noCache().mustRevalidate())
+                .addResourceLocations("file:" + Paths.get(coursesUploadDir).toAbsolutePath() + "/")
+                .setCacheControl(CacheControl.noCache()
+                        .mustRevalidate()
+                        .cachePrivate())
                 .resourceChain(false);
 
         registry.addResourceHandler("/uploads/csv/**")
-                .addResourceLocations("file:" + csvUploadDir + "/")
-                .setCacheControl(CacheControl.noCache())
+                .addResourceLocations("file:" + Paths.get(csvUploadDir).toAbsolutePath() + "/")
+                .setCacheControl(CacheControl.noCache()
+                        .mustRevalidate()
+                        .cachePrivate())
                 .resourceChain(false);
 
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:./uploads/")
-                .setCacheControl(CacheControl.noCache())
+                .setCacheControl(CacheControl.noCache()
+                        .mustRevalidate()
+                        .cachePrivate())
                 .resourceChain(false);
 
-        log.info("✅ Resource handlers configured successfully");
-        log.info("📁 Course images directory: {}", Paths.get(coursesUploadDir).toAbsolutePath());
-        log.info("📁 CSV upload directory: {}", Paths.get(csvUploadDir).toAbsolutePath());
-    }
 
-    // REMOVE THIS METHOD - Content negotiation now handled by ContentNegotiationConfig
-    /*
-    @Override
-    public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
-        ...
+        log.info(" Resource handlers configured with Google Analytics support");
+
+        log.info(" Resource handlers configured for production");
+        log.info(" Course images: {}", Paths.get(coursesUploadDir).toAbsolutePath());
+        log.info(" CSV uploads: {}", Paths.get(csvUploadDir).toAbsolutePath());
     }
-    */
 
     @Bean
     public WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> webServerFactoryCustomizer() {
         return factory -> {
-            log.debug("Configuring custom MIME type mappings");
+            log.info("🔧 Configuring MIME type mappings for production");
 
             MimeMappings mappings = new MimeMappings(MimeMappings.DEFAULT);
 
-            mappings.add("js", "application/javascript");
-            mappings.add("mjs", "application/javascript");
-            mappings.add("css", "text/css");
-            mappings.add("json", "application/json");
-            mappings.add("map", "application/json");
+            // JavaScript
+            mappings.add("js", "application/javascript; charset=UTF-8");
+            mappings.add("mjs", "application/javascript; charset=UTF-8");
+            mappings.add("map", "application/json; charset=UTF-8");
+
+            // CSS
+            mappings.add("css", "text/css; charset=UTF-8");
+
+            // JSON
+            mappings.add("json", "application/json; charset=UTF-8");
+
+            // Fonts
             mappings.add("woff", "font/woff");
             mappings.add("woff2", "font/woff2");
             mappings.add("ttf", "font/ttf");
             mappings.add("otf", "font/otf");
             mappings.add("eot", "application/vnd.ms-fontobject");
+
+            // Images
             mappings.add("svg", "image/svg+xml");
             mappings.add("ico", "image/x-icon");
             mappings.add("png", "image/png");
@@ -159,11 +209,24 @@ public class WebConfig implements WebMvcConfigurer {
             mappings.add("webp", "image/webp");
             mappings.add("bmp", "image/bmp");
             mappings.add("tiff", "image/tiff");
-            mappings.add("csv", "text/csv");
+            mappings.add("avif", "image/avif");
+
+            // Documents
+            mappings.add("pdf", "application/pdf");
+            mappings.add("csv", "text/csv; charset=UTF-8");
+            mappings.add("xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            mappings.add("xls", "application/vnd.ms-excel");
+            mappings.add("doc", "application/msword");
+            mappings.add("docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+
+            // Other
+            mappings.add("xml", "application/xml; charset=UTF-8");
+            mappings.add("txt", "text/plain; charset=UTF-8");
+            mappings.add("html", "text/html; charset=UTF-8");
 
             factory.setMimeMappings(mappings);
 
-            log.info("✅ Custom MIME type mappings configured successfully");
+            log.info(" MIME type mappings configured for production with UTF-8");
         };
     }
 }

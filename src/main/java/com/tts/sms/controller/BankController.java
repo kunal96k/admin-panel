@@ -12,7 +12,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/bank")
@@ -49,6 +51,21 @@ public class BankController {
             errorResponse.put("success", false);
             errorResponse.put("message", "Error fetching banks: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    @GetMapping("/active")
+    @ResponseBody
+    public ResponseEntity<List<BankDTO>> getActiveBanks() {
+        try {
+            Page<BankDTO> banksPage = bankService.getAllBanks("", 0, 1000);
+            List<BankDTO> activeBanks = banksPage.getContent().stream()
+                    .filter(BankDTO::getIsActive)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(activeBanks);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

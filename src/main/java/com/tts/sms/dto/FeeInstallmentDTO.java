@@ -16,7 +16,6 @@ public class FeeInstallmentDTO {
 
     private Long id;
 
-    // CHANGED: Use registrationNumber instead of admissionId
     private String registrationNumber;
 
     private Integer installmentNumber;

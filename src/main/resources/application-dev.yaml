@@ -1,14 +1,10 @@
 # ============================================
 # application-dev.yml (Development Profile)
 # ============================================
-
 server:
   port: ${SERVER_PORT:8081}
   ssl:
-    enabled: ${SSL_ENABLED:false}
-    key-store: classpath:certificate/SSL/team.ttsnashik.com.pfx
-    key-store-password: ${SSL_PASSWORD:kunal11}
-    key-store-type: PKCS12
+    enabled: false
   error:
     include-message: always
     include-binding-errors: always
@@ -16,8 +12,11 @@ server:
     include-exception: true
 
 spring:
+  config:
+    activate:
+      on-profile: dev
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:tts_database}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata&useLegacyDatetimeCode=false
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:tts_database}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata&useLegacyDatetimeCode=false
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -27,75 +26,26 @@ spring:
       connection-timeout: 60000
       maximum-pool-size: 10
       minimum-idle: 2
-      idle-timeout: 600000
-      max-lifetime: 1800000
-
-  # JSON serialization
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
-    time-zone: Asia/Kolkata
 
   jpa:
-    hibernate:
-      ddl-auto: update
     show-sql: true
-    open-in-view: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MariaDB103Dialect
         format_sql: true
-        jdbc:
-          time_zone: Asia/Kolkata
-          batch_size: 20
-        order_inserts: true
-        order_updates: true
-        type:
-          json_format_mapper: jackson
-
-  servlet:
-    multipart:
-      enabled: true
-      max-file-size: 10MB
-      max-request-size: 10MB
 
   thymeleaf:
     cache: false
-    enabled: true
-    prefix: classpath:/templates/
-    suffix: .html
 
   web:
     resources:
-      static-locations: classpath:/static/
       cache:
-        period: 0  # No cache in dev
+        period: 0
 
-  mvc:
-    static-path-pattern: /**
-    contentnegotiation:
-      favor-path-extension: false
-      favor-parameter: false
-    pathmatch:
-      use-suffix-pattern: false
-      use-registered-suffix-pattern: false
-
-  security:
-    user:
-      name: admin
-      password: $2y$12$u6KyvwZwbvdizhP8SCLx8O1nU2YaHSRFVHHlHfmz.OP0V/UoChGeK
-      roles: ADMIN
-    filter:
-      dispatcher-types: REQUEST,FORWARD,ERROR
-
-# Development specific upload directories
 app:
-  upload:
-    courses:
-      dir: ${COURSES_UPLOAD_DIR:./uploads/courses}
-      max-file-size: 5MB  # More lenient in dev
-  csv:
-    upload-dir: ${CSV_UPLOAD_DIR:./uploads/csv}
+  base-url: http://localhost:8081
+  security:
+    cors:
+      allowed-origins: "*"
 
 logging:
   level:
@@ -104,4 +54,3 @@ logging:
     org.springframework.web: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    org.springframework.security: DEBUG

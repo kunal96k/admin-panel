@@ -7,10 +7,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!--    <meta name="_csrf" th:content="${_csrf.token}"/>-->
-<!--    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>-->
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 
     <title>Admission Management System</title>
+
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -26,7 +30,7 @@
 <!-- Dashboard Content Fragment -->
 <main layout:fragment="content">
 
-    <div class="container-fluid mt-4">
+    <div class="container-fluid">
         <!-- Page Header -->
         <div class="page-header">
             <h2><i class="bi bi-person-check me-2"></i>Admission Management</h2>
@@ -43,9 +47,43 @@
                     <button class="btn btn-success btn-action me-2" id="btnImportAdmissions">
                         <i class="bi bi-upload me-2"></i>Import CSV
                     </button>
-                    <button class="btn btn-info btn-action" id="btnExportAdmissions">
-                        <i class="bi bi-download me-2"></i>Export CSV
-                    </button>
+                    <div class="btn-group">
+                        <button class="btn btn-info btn-action dropdown-toggle"
+                                type="button"
+                                id="btnExportAdmissions"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false">
+                            <i class="bi bi-download me-2"></i>Export
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="btnExportAdmissions">
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="window.exportToCSV(); return false;">
+                                    <i class="bi bi-filetype-csv me-2"></i>Export as CSV
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="window.exportToExcel(); return false;">
+                                    <i class="bi bi-file-earmark-excel me-2"></i>Export as Excel
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="window.exportToPDF(); return false;">
+                                    <i class="bi bi-filetype-pdf me-2"></i>Export as PDF
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="window.copyTableData(); return false;">
+                                    <i class="bi bi-clipboard me-2"></i>Copy to Clipboard
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="window.printTable(); return false;">
+                                    <i class="bi bi-printer me-2"></i>Print
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="col-lg-6">
                     <div class="input-group">
@@ -65,7 +103,7 @@
 
         <!-- Admissions Table -->
         <div class="table-card">
-            <div class="table-responsive">
+            <div class="table-responsive" style="overflow: visible !important;">
                 <table class="table table-hover" id="admissionsTable">
                     <thead>
                     <tr>
@@ -272,9 +310,10 @@
                                         <input type="text" class="form-control" id="admPinCodePermanent" maxlength="6">
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Document <span class="required">*</span></label>
-                                        <select class="form-select" id="admDocument" required>
+                                        <label class="form-label">Document</label>
+                                        <select class="form-select" id="admDocument" >
                                             <option value="">-- Select Document --</option>
+                                            <option value="N/A">N/A</option>
                                             <option value="Aadhaar Card">Aadhaar Card</option>
                                             <option value="PAN Card">PAN Card</option>
                                             <option value="Driving License">Driving License</option>
@@ -322,13 +361,19 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Course</label>
-                                        <select class="form-select" id="admCourse">
-                                            <option value="">-- Select Course --</option>
-                                            <option value="JAVA">JAVA CORE AND ADVANCE</option>
-                                            <option value="PYTHON">PYTHON</option>
-                                            <option value="WEB DEV">WEB DEVELOPMENT</option>
-                                            <option value="DATA SCIENCE">DATA SCIENCE</option>
-                                        </select>
+                                        <div class="position-relative">
+                                            <input type="text"
+                                                   class="form-control"
+                                                   id="admCourseSearch"
+                                                   placeholder="Search and select courses..."
+                                                   autocomplete="off">
+                                            <div id="admCourseDropdown"
+                                                 class="dropdown-menu w-100"
+                                                 style="max-height: 300px; overflow-y: auto; display: none;">
+                                                <!-- Courses will be populated here -->
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">Type to search, click to select</small>
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Total Payable Fees <span class="required">*</span></label>
@@ -582,7 +627,7 @@
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-3 text-center mb-3">
-                            <img src="https://via.placeholder.com/150" alt="Student Photo" class="img-thumbnail" id="viewStudentPhoto">
+                            <img src="/assets/images/user-logo.png" alt="Student Photo" class="img-thumbnail" id="viewStudentPhoto" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22150%22%3E%3Crect fill=%22%23ddd%22 width=%22150%22 height=%22150%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22%3ENo Photo%3C/text%3E%3C/svg%3E'">
                         </div>
                         <div class="col-md-9">
                             <h4 id="viewAdmStudentName">Student Name</h4>
@@ -619,7 +664,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" id="btnPrintAdmission">
+                    <button  style="display:none !important;" type="button" class="btn btn-primary" id="btnPrintAdmission">
                         <i class="bi bi-printer me-2"></i>Print
                     </button>
                 </div>
@@ -760,8 +805,9 @@
                                     <p><strong style="font-size: 18px;">Admission Date:</strong> <span id="printAdmDate" style="font-size: 18px;"></span></p>
                                 </div>
                                 <div style="text-align: right;">
-                                    <img id="printStudentPhoto" src="https://via.placeholder.com/150"
-                                         alt="Student Photo" style="width: 110px; height: 150px; border: 1px solid #000;">
+                                    <img id="printStudentPhoto" src="/assets/images/user-logo.png"
+                                         alt="Student Photo" style="width: 110px; height: 150px; border: 1px solid #000;"
+                                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22110%22 height=%22150%22%3E%3Crect fill=%22%23ddd%22 width=%22110%22 height=%22150%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2212%22%3ENo Photo%3C/text%3E%3C/svg%3E'">
                                 </div>
                             </div>
 
@@ -1018,9 +1064,13 @@
                                     <label class="form-label">Academic Year <span class="required">*</span></label>
                                     <select class="form-select" id="transferAcademicYear" required>
                                         <option value="">-- Select Academic Year --</option>
+                                        <option value="Technokraft">Technokraft</option>
                                         <option value="2024-2025">2024-2025</option>
                                         <option value="2025-2026">2025-2026</option>
                                         <option value="2026-2027">2026-2027</option>
+                                        <option value="2027-2028">2027-2028</option>
+                                        <option value="2028-2029">2028-2029</option>
+                                        <option value="2029-2030">2029-2030</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
@@ -1051,18 +1101,27 @@
         </div>
     </div>
 
-    <script th:inline="javascript">
-        document.addEventListener('DOMContentLoaded', function() {
-       const admissionEnquiry = sessionStorage.getItem('admissionEnquiry');
-       if (admissionEnquiry) {
-           const enquiry = JSON.parse(admissionEnquiry);
-           prefillAdmissionForm(enquiry);
-           sessionStorage.removeItem('admissionEnquiry');
-       }
-    });
+    <script th:src="@{/assets/js/admission.js}" src="/assets/js/admission.js" defer></script>
+
+    <script layout:fragment="page-scripts" th:if="${requiresBootstrapInit}">
+        if (typeof window.reinitBootstrapDropdowns === 'function') {
+            window.reinitBootstrapDropdowns();
+        }
     </script>
 
-    <script th:src="@{/assets/js/admission.js}" src="/assets/js/admission.js" defer></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js"></script>
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.all.min.js"></script>

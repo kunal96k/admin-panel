@@ -1,109 +1,116 @@
-  # ============================================
-  # application-prod.yml (Production Profile)
-  # ============================================
+# ============================================
+# application-prod.yml (Production Profile)
+# ============================================
 
-  server:
-    port: ${SERVER_PORT:443}
-    ssl:
-      enabled: ${SSL_ENABLED:true}
-      key-store: classpath:certificate/SSL/team.ttsnashik.com.pfx
-      key-store-password: ${SSL_PASSWORD:kunal11}
-      key-store-type: PKCS12
-    error:
-      include-message: never
-      include-binding-errors: never
-      include-stacktrace: never
-      include-exception: false
-    compression:
-      enabled: true
-      mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
-      min-response-size: 1024
+server:
+  port: ${SERVER_PORT:8443}
 
-  spring:
-    datasource:
-      url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:tts_database}?createDatabaseIfNotExist=true&useSSL=true&requireSSL=true&serverTimezone=Asia/Kolkata&useLegacyDatetimeCode=false
-      username: ${DB_USER:root}
-      password: ${DB_PASSWORD:}
-      driver-class-name: com.mysql.cj.jdbc.Driver
-      hikari:
-        auto-commit: false
-        maximum-pool-size: 20
-        minimum-idle: 10
-        connection-test-query: SELECT 1
-        connection-timeout: 60000
-        idle-timeout: 600000
-        max-lifetime: 1800000
+  ssl:
+    enabled: true
+    key-store: classpath:certificate/SSL/team.ttsnashik.com.pfx
+    key-store-password: ${SSL_PASSWORD:kunal11}
+    key-store-type: PKCS12
+    key-alias: ${SSL_KEY_ALIAS:team.ttsnashik.com}
+    enabled-protocols: TLSv1.2,TLSv1.3
+    ciphers: >
+      TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+      TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
 
-    # JSON serialization
-    jackson:
-      serialization:
-        write-dates-as-timestamps: false
-      time-zone: Asia/Kolkata
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+    whitelabel:
+      enabled: false
 
-    jpa:
-      show-sql: false
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
+    min-response-size: 1024
+
+  http2:
+    enabled: true
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:tts_database}?useSSL=true&requireSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      auto-commit: false
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-timeout: 60000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
       hibernate:
-        ddl-auto: update
-      open-in-view: false
-      properties:
-        hibernate:
-          dialect: org.hibernate.dialect.MySQL8Dialect
-          format_sql: true
-          jdbc:
-            time_zone: Asia/Kolkata
-            batch_size: 20
-          order_inserts: true
-          order_updates: true
-          type:
-            json_format_mapper: jackson
+        # Use MySQL8Dialect for better JSON support
+        dialect: org.hibernate.dialect.MariaDB103Dialect
+        format_sql: false
+        jdbc:
+          time_zone: Asia/Kolkata
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        # CRITICAL: Enable JSON type handling
+        type:
+          json_format_mapper: jackson
+        generate_statistics: false
 
-    servlet:
-      multipart:
-        enabled: true
-        max-file-size: 10MB
-        max-request-size: 10MB
+  thymeleaf:
+    cache: true
 
-    thymeleaf:
-      cache: true
-      enabled: true
-      prefix: classpath:/templates/
-      suffix: .html
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          max-age: 31536000
+          cache-public: true
+          must-revalidate: true
 
-    web:
-      resources:
-        static-locations: classpath:/static/
-        cache:
-          period: 31536000  # 1 year
-          cachecontrol:
-            max-age: 31536000
-            cache-public: true
+  security:
+    require-ssl: true
 
-    mvc:
-      static-path-pattern: /**
-      contentnegotiation:
-        favor-path-extension: false
-        favor-parameter: false
+app:
+  upload:
+    courses:
+      dir: ${COURSES_UPLOAD_DIR:./uploads/courses}
+      max-file-size: 2MB
+  csv:
+    upload-dir: ${CSV_UPLOAD_DIR:./uploads/csv}
 
-    security:
-      require-ssl: true
-      filter:
-        dispatcher-types: REQUEST,FORWARD,ERROR
+  base-url: https://team.ttsnashik.com
 
-  # Production specific upload directories
-  app:
-    upload:
-      courses:
-        dir: ${COURSES_UPLOAD_DIR:/var/www/tts-sms/uploads/courses}
-        max-file-size: 2MB  # Strict in production
-    csv:
-      upload-dir: ${CSV_UPLOAD_DIR:/var/www/tts-sms/uploads/csv}
+  security:
+    cors:
+      allowed-origins: "https://team.ttsnashik.com,https://www.ttsnashik.com"
 
-  logging:
-    level:
-      root: WARN
-      com.tts.sms: INFO
-      org.springframework: INFO
-    file:
-      name: /var/log/tts-sms/application.log
-      max-size: 50MB
-      max-history: 90
+logging:
+  level:
+    root: WARN
+    com.tts.sms: INFO
+    org.springframework: INFO
+    org.springframework.web: WARN
+    org.springframework.security: INFO
+
+  file:
+    name: logs/sms-application.log
+    max-size: 50MB
+    max-history: 90
+  
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -53,4 +53,6 @@ public class FeeReceiptResponseDTO {
     private String receiptType;
     private String notes;
     private String status;
+    private String mobile;
+
 }

@@ -468,3 +468,25 @@
         margin-right: auto;
     }
 }
+
+/* ========================================
+       USER PROFILE DROPDOWN
+       ======================================== */
+
+    /*  dropdown positioning in mobile */
+    @media (max-width: 767px) {
+        .topbar-right .dropdown-menu {
+            position: ed !important;
+            top: 60px !important;
+            right: 10px !important;
+            left: auto !important;
+            transform: none !important;
+            min-width: 240px;
+            max-width: calc(100vw - 20px);
+            z-index: 9999;
+        }
+
+        .topbar-right .dropdown-menu.show {
+            display: block;
+        }
+    }

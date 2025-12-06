@@ -100,7 +100,7 @@
             background: white;
             border-radius: 0.75rem;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-            overflow: hidden;
+            overflow-x: auto;
         }
 
         .table thead th {
@@ -128,50 +128,6 @@
             padding: 0.375rem 0.75rem;
             font-weight: 500;
             font-size: 0.75rem;
-        }
-
-        .action-dropdown {
-            position: relative;
-        }
-
-        .action-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: 0.5rem;
-            background: white;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            display: none;
-            min-width: 200px;
-            z-index: 1000;
-        }
-
-        .action-menu.show {
-            display: block;
-        }
-
-        .action-menu-item {
-            padding: 0.75rem 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-            background: none;
-            width: 100%;
-            text-align: left;
-            color: #1e293b;
-        }
-
-        .action-menu-item:hover {
-            background-color: #f1f5f9;
-        }
-
-        .action-menu-item i {
-            width: 20px;
-            font-size: 1rem;
         }
 
         .modal-header {
@@ -248,21 +204,6 @@
             margin-bottom: 1rem;
         }
 
-        .import-area {
-            border: 2px dashed #cbd5e1;
-            border-radius: 12px;
-            padding: 3rem;
-            text-align: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .import-area:hover,
-        .import-area.dragover {
-            border-color: #667eea;
-            background-color: #f8f9ff;
-        }
-
         .custom-swal-popup {
             font-size: 0.95rem;
         }
@@ -292,3 +233,1171 @@
             z-index: 10;
             background-color: #f8f9fa;
         }
+
+        .action-dropdown {
+            position: relative;
+        }
+
+        .action-menu {
+            position: fixed !important;
+            right: 10% !important;
+            top: 50% !important;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            min-width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 99999 !important;
+            margin-top: 5px;
+        }
+
+        .action-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .action-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            color: #334155;
+        }
+
+
+        .action-menu-item:hover {
+            background-color: #f1f5f9;
+        }
+
+        .action-menu-item i {
+            width: 18px;
+            font-size: 16px;
+        }
+
+        .action-menu-item:first-child {
+            border-radius: 8px 8px 0 0;
+        }
+
+        .action-menu-item:last-child {
+            border-radius: 0 0 8px 8px;
+        }
+
+        /* Fix action menu trigger button */
+        .action-menu-trigger {
+            border: 1px solid #e2e8f0;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .action-menu-trigger:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        /* Override Bootstrap table overflow */
+        table {
+            overflow: visible !important;
+        }
+
+        tbody tr {
+            position: relative;
+        }
+
+        /* Ensure dropdown appears above everything */
+        body .action-menu {
+            z-index: 99999 !important;
+        }
+
+        /* Ensure table cell doesn't expand */
+        #certificateTable td:last-child {
+            width: 80px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .import-area {
+                    border: 2px dashed #cbd5e1;
+                    border-radius: 12px;
+                    padding: 3rem;
+                    text-align: center;
+                    transition: all 0.3s ease;
+                    cursor: pointer;
+                }
+
+                .import-area:hover,
+                .import-area.dragover {
+                    border-color: #667eea;
+                    background-color: #f8f9ff;
+                }
+
+                /* Fix import preview overflow */
+                #importCertPreview .table-responsive {
+                    max-height: 300px;
+                    overflow-y: auto;
+                    overflow-x: auto;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                }
+
+                #importCertPreview table {
+                    margin-bottom: 0;
+                    table-layout: fixed;
+                    width: 100%;
+                }
+
+                #importCertPreview table th,
+                #importCertPreview table td {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    padding: 8px;
+                    font-size: 0.85rem;
+                }
+
+                #importCertPreview table th:nth-child(1),
+                #importCertPreview table td:nth-child(1) { width: 15%; }
+                #importCertPreview table th:nth-child(2),
+                #importCertPreview table td:nth-child(2) { width: 15%; }
+                #importCertPreview table th:nth-child(3),
+                #importCertPreview table td:nth-child(3) { width: 30%; }
+                #importCertPreview table th:nth-child(4),
+                #importCertPreview table td:nth-child(4) { width: 25%; }
+                #importCertPreview table th:nth-child(5),
+                #importCertPreview table td:nth-child(5) { width: 15%; }
+
+                /* Ensure modal body doesn't overflow */
+                #importCertificateModal .modal-body {
+                    max-height: 70vh;
+                    overflow-y: auto;
+                }
+
+
+        /* ========================================
+          USER PROFILE DROPDOWN
+          ======================================== */
+
+               @media (max-width: 767px) {
+                   .topbar-right .dropdown-menu {
+                       position: ed !important;
+                       top: 60px !important;
+                       right: 10px !important;
+                       left: auto !important;
+                       transform: none !important;
+                       min-width: 240px;
+                       max-width: calc(100vw - 20px);
+                       z-index: 9999;
+                   }
+
+                   .topbar-right .dropdown-menu.show {
+                       display: block;
+                   }
+               }
+
+               /* ========================================
+                  CERTIFICATE MODULE - RESPONSIVE DESIGN
+                  Optimized for SM, MD, LG screens
+                  ======================================== */
+
+               :root {
+                   --primary-color: #3b82f6;
+                   --secondary-color: #64748b;
+                   --success-color: #10b981;
+                   --danger-color: #ef4444;
+                   --warning-color: #f59e0b;
+               }
+
+               /* ========================================
+                  CUSTOM SCROLLBAR - ALL SCREENS
+                  ======================================== */
+
+               /* Webkit browsers (Chrome, Safari, Edge) */
+               ::-webkit-scrollbar {
+                   width: 8px;
+                   height: 8px;
+               }
+
+               ::-webkit-scrollbar-track {
+                   background: #f1f5f9;
+                   border-radius: 10px;
+               }
+
+               ::-webkit-scrollbar-thumb {
+                   background: #cbd5e1;
+                   border-radius: 10px;
+                   transition: background 0.3s ease;
+               }
+
+               ::-webkit-scrollbar-thumb:hover {
+                   background: #94a3b8;
+               }
+
+               /* Firefox */
+               * {
+                   scrollbar-width: thin;
+                   scrollbar-color: #cbd5e1 #f1f5f9;
+               }
+
+               /* ========================================
+                  TABLE RESPONSIVE ENHANCEMENTS
+                  ======================================== */
+
+               .table-card {
+                   background: white;
+                   border-radius: 0.75rem;
+                   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                   overflow-x: auto;
+               }
+
+               .table-responsive {
+                   overflow-x: auto;
+                   overflow-y: visible;
+                   -webkit-overflow-scrolling: touch;
+               }
+
+               /* Table styling */
+               .table {
+                   margin-bottom: 0;
+                   min-width: 900px;
+               }
+
+               .table thead th {
+                   background-color: #f8fafc;
+                   color: #1e293b;
+                   font-weight: 600;
+                   text-transform: uppercase;
+                   font-size: 0.75rem;
+                   letter-spacing: 0.05em;
+                   border-bottom: 2px solid #e2e8f0;
+                   padding: 1rem 0.75rem;
+                   white-space: nowrap;
+                   position: sticky;
+                   top: 0;
+                   z-index: 10;
+               }
+
+               .table tbody td {
+                   padding: 0.875rem 0.75rem;
+                   vertical-align: middle;
+                   color: #475569;
+                   font-size: 0.875rem;
+               }
+
+               .table tbody tr:hover {
+                   background-color: #f8fafc;
+               }
+
+               /* ========================================
+                  LARGE SCREENS (≥ 992px) - Already optimized
+                  ======================================== */
+
+               @media (min-width: 992px) {
+                   .container-fluid {
+                       padding-left: 1.5rem;
+                       padding-right: 1.5rem;
+                   }
+
+                   .page-header {
+                       padding: 2rem;
+                       margin-bottom: 2rem;
+                   }
+
+                   .stats-card {
+                       padding: 1.5rem;
+                   }
+
+                   .action-card {
+                       padding: 1.5rem;
+                   }
+               }
+
+               /* ========================================
+                  MEDIUM SCREENS (768px - 991px) - TABLETS
+                  ======================================== */
+
+               @media (max-width: 991px) and (min-width: 768px) {
+                   .container-fluid {
+                       padding-left: 1rem;
+                       padding-right: 1rem;
+                   }
+
+                   /* Page Header */
+                   .page-header {
+                       padding: 1.5rem;
+                       margin-bottom: 1.5rem;
+                   }
+
+                   .page-header h2 {
+                       font-size: 1.625rem;
+                   }
+
+                   /* Statistics Cards */
+                   .stats-card {
+                       padding: 1.25rem;
+                       margin-bottom: 1rem;
+                   }
+
+                   .stats-icon {
+                       width: 50px;
+                       height: 50px;
+                       font-size: 1.5rem;
+                       margin-bottom: 0.75rem;
+                   }
+
+                   .stats-number {
+                       font-size: 1.75rem;
+                   }
+
+                   .stats-label {
+                       font-size: 0.8125rem;
+                   }
+
+                   /* Action Cards */
+                   .action-card {
+                       padding: 1.25rem;
+                       margin-bottom: 1.25rem;
+                   }
+
+                   .action-card .card-body {
+                       padding: 1rem;
+                   }
+
+                   .action-card .card-title {
+                       font-size: 1rem;
+                   }
+
+                   .action-card .card-text {
+                       font-size: 0.8125rem;
+                   }
+
+                   /* Filter Section */
+                   .action-card .row {
+                       row-gap: 1rem;
+                   }
+
+                   .action-card .col-lg-3,
+                   .action-card .col-lg-6 {
+                       margin-bottom: 1rem;
+                   }
+
+                   /* Table Adjustments */
+                   .table {
+                       min-width: 850px;
+                       font-size: 0.8125rem;
+                   }
+
+                   .table thead th {
+                       padding: 0.875rem 0.625rem;
+                       font-size: 0.7rem;
+                   }
+
+                   .table tbody td {
+                       padding: 0.75rem 0.625rem;
+                       font-size: 0.8125rem;
+                   }
+
+                   /* Pagination */
+                   .pagination .page-link {
+                       padding: 0.4rem 0.65rem;
+                       font-size: 0.875rem;
+                   }
+
+                   /* Modal Adjustments */
+                   .modal-dialog {
+                       margin: 1rem;
+                   }
+
+                   .modal-body {
+                       padding: 1.25rem;
+                   }
+
+                   /* Buttons */
+                   .btn {
+                       padding: 0.5rem 1rem;
+                       font-size: 0.875rem;
+                   }
+
+                   /* Course Search Dropdown */
+                   #courseFilter {
+                       font-size: 0.875rem;
+                   }
+               }
+
+               /* ========================================
+                  SMALL SCREENS (576px - 767px) - LARGE PHONES
+                  ======================================== */
+
+               @media (max-width: 767px) and (min-width: 576px) {
+                   .container-fluid {
+                       padding-left: 0.875rem;
+                       padding-right: 0.875rem;
+                   }
+
+                   /* Page Header */
+                   .page-header {
+                       padding: 1.25rem;
+                       margin-bottom: 1.25rem;
+                       border-radius: 0.75rem;
+                   }
+
+                   .page-header h2 {
+                       font-size: 1.5rem;
+                       margin-bottom: 0.375rem;
+                   }
+
+                   .page-header p {
+                       font-size: 0.875rem;
+                   }
+
+                   /* Statistics Cards - Stack Vertically */
+                   .row.mb-4 [class*="col-md"] {
+                       margin-bottom: 1rem;
+                   }
+
+                   .stats-card {
+                       padding: 1.25rem;
+                       margin-bottom: 0;
+                       display: flex;
+                       align-items: center;
+                       gap: 1rem;
+                   }
+
+                   .stats-icon {
+                       width: 56px;
+                       height: 56px;
+                       font-size: 1.5rem;
+                       margin-bottom: 0;
+                       flex-shrink: 0;
+                   }
+
+                   .stats-info {
+                       flex: 1;
+                   }
+
+                   .stats-number {
+                       font-size: 1.75rem;
+                       margin-bottom: 0.125rem;
+                   }
+
+                   .stats-label {
+                       font-size: 0.8125rem;
+                   }
+
+                   /* Action Cards - Full Width */
+                   .action-card {
+                       padding: 1rem;
+                       margin-bottom: 1rem;
+                   }
+
+                   .action-card .card-body {
+                       padding: 1rem;
+                   }
+
+                   .action-card .card-title {
+                       font-size: 1rem;
+                       margin-bottom: 0.625rem;
+                   }
+
+                   .action-card .card-text {
+                       font-size: 0.8125rem;
+                       margin-bottom: 0.875rem;
+                   }
+
+                   .action-card .btn {
+                       padding: 0.5rem 0.875rem;
+                       font-size: 0.875rem;
+                   }
+
+                   /* Filter Section */
+                   .action-card .form-label {
+                       font-size: 0.875rem;
+                       margin-bottom: 0.375rem;
+                   }
+
+                   .action-card .form-control,
+                   .action-card .form-select {
+                       font-size: 0.875rem;
+                       padding: 0.5rem 0.75rem;
+                   }
+
+                   #courseFilter {
+                       font-size: 0.875rem;
+                       max-height: 180px;
+                   }
+
+                   #courseSearchInput {
+                       font-size: 0.875rem;
+                   }
+
+                   /* Table Optimizations */
+                   .table-card {
+                       border-radius: 0.625rem;
+                       margin-left: -0.5rem;
+                       margin-right: -0.5rem;
+                   }
+
+                   .table {
+                       min-width: 800px;
+                       font-size: 0.8125rem;
+                   }
+
+                   .table thead th {
+                       padding: 0.75rem 0.5rem;
+                       font-size: 0.6875rem;
+                   }
+
+                   .table tbody td {
+                       padding: 0.75rem 0.5rem;
+                       font-size: 0.8125rem;
+                   }
+
+                   /* Compact Badge */
+                   .badge {
+                       padding: 0.3rem 0.625rem;
+                       font-size: 0.7rem;
+                   }
+
+                   /* Action Dropdown */
+                   .action-menu-trigger {
+                       padding: 0.25rem 0.5rem;
+                       font-size: 0.875rem;
+                   }
+
+                   .action-menu {
+                       min-width: 180px;
+                       font-size: 0.875rem;
+                   }
+
+                   .action-menu-item {
+                       padding: 0.625rem 0.875rem;
+                       font-size: 0.875rem;
+                   }
+
+                   /* Pagination */
+                   .pagination {
+                       flex-wrap: wrap;
+                       gap: 0.25rem;
+                       justify-content: center;
+                   }
+
+                   .pagination .page-link {
+                       padding: 0.375rem 0.625rem;
+                       font-size: 0.8125rem;
+                   }
+
+                   .table-card .d-flex {
+                       flex-direction: column;
+                       gap: 1rem;
+                       padding: 1rem;
+                   }
+
+                   .table-card .text-muted {
+                       font-size: 0.8125rem;
+                       text-align: center;
+                   }
+
+                   /* Modal */
+                   .modal-dialog {
+                       margin: 0.5rem;
+                   }
+
+                   .modal-header {
+                       padding: 1rem;
+                   }
+
+                   .modal-title {
+                       font-size: 1.125rem;
+                   }
+
+                   .modal-body {
+                       padding: 1rem;
+                   }
+
+                   .modal-footer {
+                       padding: 0.875rem 1rem;
+                   }
+
+                   .modal-body .form-label {
+                       font-size: 0.875rem;
+                   }
+
+                   .modal-body .form-control,
+                   .modal-body .form-select {
+                       font-size: 0.875rem;
+                       padding: 0.5rem 0.75rem;
+                   }
+
+                   /* Import Modal */
+                   .import-area {
+                       padding: 2rem 1rem;
+                   }
+
+                   .import-area h5 {
+                       font-size: 1rem;
+                       margin-top: 1rem;
+                   }
+
+                   .import-area p {
+                       font-size: 0.875rem;
+                   }
+
+                   #importCertPreview .table-responsive {
+                       max-height: 250px;
+                   }
+               }
+
+               /* ========================================
+                  EXTRA SMALL SCREENS (< 576px) - MOBILE
+                  ======================================== */
+
+               @media (max-width: 575px) {
+                   .container-fluid {
+                       padding-left: 0.75rem;
+                       padding-right: 0.75rem;
+                   }
+
+                   /* Page Header - Compact */
+                   .page-header {
+                       padding: 1rem;
+                       margin-bottom: 1rem;
+                       border-radius: 0.625rem;
+                   }
+
+                   .page-header h2 {
+                       font-size: 1.25rem;
+                       margin-bottom: 0.25rem;
+                   }
+
+                   .page-header h2 i {
+                       font-size: 1rem;
+                   }
+
+                   .page-header p {
+                       font-size: 0.8125rem;
+                   }
+
+                   /* Statistics Cards - Horizontal Layout */
+                   .row.mb-4 [class*="col-md"] {
+                       padding-left: 0.5rem;
+                       padding-right: 0.5rem;
+                       margin-bottom: 0.875rem;
+                   }
+
+                   .stats-card {
+                       padding: 1rem;
+                       display: flex;
+                       align-items: center;
+                       gap: 0.875rem;
+                       border-radius: 0.625rem;
+                   }
+
+                   .stats-icon {
+                       width: 48px;
+                       height: 48px;
+                       font-size: 1.25rem;
+                       margin-bottom: 0;
+                       flex-shrink: 0;
+                   }
+
+                   .stats-info {
+                       flex: 1;
+                       text-align: left;
+                   }
+
+                   .stats-number {
+                       font-size: 1.5rem;
+                       margin-bottom: 0;
+                       line-height: 1;
+                   }
+
+                   .stats-label {
+                       font-size: 0.75rem;
+                       margin-top: 0.25rem;
+                   }
+
+                   /* Action Cards - Stacked & Compact */
+                   .row.mb-4:nth-of-type(2) [class*="col-md"] {
+                       padding-left: 0.5rem;
+                       padding-right: 0.5rem;
+                       margin-bottom: 0.875rem;
+                   }
+
+                   .action-card {
+                       padding: 0.875rem;
+                       margin-bottom: 0.875rem;
+                       border-radius: 0.625rem;
+                   }
+
+                   .action-card .card-body {
+                       padding: 0.875rem;
+                   }
+
+                   .action-card .card-title {
+                       font-size: 0.9375rem;
+                       margin-bottom: 0.5rem;
+                   }
+
+                   .action-card .card-title i {
+                       font-size: 0.875rem;
+                   }
+
+                   .action-card .card-text {
+                       font-size: 0.75rem;
+                       margin-bottom: 0.75rem;
+                       line-height: 1.4;
+                   }
+
+                   .action-card .btn {
+                       padding: 0.5rem 0.75rem;
+                       font-size: 0.8125rem;
+                       width: 100%;
+                   }
+
+                   .action-card .d-flex {
+                       flex-direction: column;
+                       gap: 0.5rem;
+                   }
+
+                   .action-card .d-flex .btn {
+                       width: 100%;
+                   }
+
+                   /* Filter Section - Stacked */
+                   .action-card .row {
+                       row-gap: 0.875rem;
+                   }
+
+                   .action-card .form-label {
+                       font-size: 0.8125rem;
+                       margin-bottom: 0.375rem;
+                       font-weight: 600;
+                   }
+
+                   .action-card .form-control,
+                   .action-card .form-select {
+                       font-size: 0.8125rem;
+                       padding: 0.5rem 0.65rem;
+                       border-radius: 0.375rem;
+                   }
+
+                   .action-card .input-group-text {
+                       padding: 0.5rem 0.75rem;
+                       font-size: 0.875rem;
+                   }
+
+                   #courseFilter {
+                       font-size: 0.8125rem;
+                       max-height: 160px;
+                   }
+
+                   #courseSearchInput {
+                       font-size: 0.8125rem;
+                       margin-bottom: 0.5rem;
+                   }
+
+                   #pageSizeSelect {
+                       max-width: 100px;
+                       font-size: 0.8125rem;
+                   }
+
+                   /* Table - Optimized for Mobile */
+                   .table-card {
+                       border-radius: 0.625rem;
+                       margin-left: -0.375rem;
+                       margin-right: -0.375rem;
+                   }
+
+                   .table-responsive {
+                       margin: 0;
+                       border-radius: 0.625rem;
+                   }
+
+                   .table {
+                       min-width: 750px;
+                       font-size: 0.75rem;
+                   }
+
+                   .table thead th {
+                       padding: 0.625rem 0.375rem;
+                       font-size: 0.625rem;
+                       line-height: 1.2;
+                   }
+
+                   .table tbody td {
+                       padding: 0.625rem 0.375rem;
+                       font-size: 0.75rem;
+                       line-height: 1.3;
+                   }
+
+                   /* Compact table content */
+                   .table tbody td strong {
+                       font-size: 0.8125rem;
+                   }
+
+                   .badge {
+                       padding: 0.25rem 0.5rem;
+                       font-size: 0.625rem;
+                       white-space: nowrap;
+                   }
+
+                   /* Action Dropdown - Smaller */
+                   .action-dropdown {
+                       position: relative;
+                   }
+
+                   .action-menu-trigger {
+                       padding: 0.25rem 0.4rem;
+                       font-size: 0.875rem;
+                       border-radius: 0.25rem;
+                   }
+
+                   .action-menu {
+                       min-width: 160px;
+                       font-size: 0.8125rem;
+                       right: 0;
+                       left: auto;
+                   }
+
+                   .action-menu-item {
+                       padding: 0.5rem 0.75rem;
+                       font-size: 0.8125rem;
+                       gap: 0.5rem;
+                   }
+
+                   .action-menu-item i {
+                       font-size: 0.875rem;
+                   }
+
+                   /* Pagination - Mobile Optimized */
+                   .table-card > div:last-child {
+                       padding: 0.875rem 0.75rem;
+                   }
+
+                   .table-card .d-flex {
+                       flex-direction: column;
+                       gap: 0.875rem;
+                       align-items: center;
+                   }
+
+                   .table-card .text-muted {
+                       font-size: 0.75rem;
+                       text-align: center;
+                   }
+
+                   .pagination {
+                       flex-wrap: wrap;
+                       gap: 0.25rem;
+                       justify-content: center;
+                   }
+
+                   .pagination .page-item {
+                       margin: 0;
+                   }
+
+                   .pagination .page-link {
+                       padding: 0.375rem 0.5rem;
+                       font-size: 0.75rem;
+                       min-width: 32px;
+                       text-align: center;
+                   }
+
+                   /* Hide some pagination numbers on very small screens */
+                   .pagination .page-item:not(.active):not(:first-child):not(:last-child):nth-child(n+6) {
+                       display: none;
+                   }
+
+                   /* Modal - Full Screen on Mobile */
+                   .modal-dialog {
+                       margin: 0;
+                       max-width: 100%;
+                       height: 100vh;
+                   }
+
+                   .modal-content {
+                       height: 100vh;
+                       border-radius: 0;
+                   }
+
+                   .modal-header {
+                       padding: 0.875rem 1rem;
+                       border-radius: 0;
+                   }
+
+                   .modal-title {
+                       font-size: 1rem;
+                   }
+
+                   .modal-title i {
+                       font-size: 0.875rem;
+                   }
+
+                   .modal-body {
+                       padding: 1rem;
+                       overflow-y: auto;
+                       max-height: calc(100vh - 120px);
+                   }
+
+                   .modal-footer {
+                       padding: 0.75rem 1rem;
+                   }
+
+                   .modal-footer .btn {
+                       padding: 0.5rem 0.875rem;
+                       font-size: 0.875rem;
+                   }
+
+                   /* Form in Modal */
+                   .modal-body .row {
+                       margin-left: -0.5rem;
+                       margin-right: -0.5rem;
+                   }
+
+                   .modal-body .row > [class*="col-"] {
+                       padding-left: 0.5rem;
+                       padding-right: 0.5rem;
+                   }
+
+                   .modal-body .form-label {
+                       font-size: 0.8125rem;
+                       margin-bottom: 0.375rem;
+                   }
+
+                   .modal-body .form-control,
+                   .modal-body .form-select,
+                   .modal-body textarea {
+                       font-size: 0.8125rem;
+                       padding: 0.5rem 0.65rem;
+                   }
+
+                   .modal-body .required {
+                       font-size: 0.875rem;
+                   }
+
+                   /* Import Modal */
+                   .import-area {
+                       padding: 1.5rem 0.75rem;
+                       border-width: 2px;
+                   }
+
+                   .import-area i {
+                       font-size: 2.5rem;
+                   }
+
+                   .import-area h5 {
+                       font-size: 0.9375rem;
+                       margin-top: 0.875rem;
+                   }
+
+                   .import-area p {
+                       font-size: 0.75rem;
+                       margin-bottom: 0.75rem;
+                   }
+
+                   .import-area .btn {
+                       padding: 0.5rem 1rem;
+                       font-size: 0.8125rem;
+                   }
+
+                   #importCertPreview .table-responsive {
+                       max-height: 200px;
+                       margin-left: -1rem;
+                       margin-right: -1rem;
+                       border-radius: 0;
+                   }
+
+                   #importCertPreview table th,
+                   #importCertPreview table td {
+                       font-size: 0.7rem;
+                       padding: 0.5rem 0.375rem;
+                   }
+
+                   #importCertPreview .alert {
+                       font-size: 0.8125rem;
+                       padding: 0.75rem;
+                       margin-top: 0.875rem;
+                   }
+
+                   /* Alert Messages */
+                   .alert {
+                       padding: 0.75rem;
+                       font-size: 0.8125rem;
+                       border-radius: 0.5rem;
+                   }
+
+                   .alert i {
+                       font-size: 0.875rem;
+                   }
+
+                   /* SweetAlert Mobile Adjustments */
+                   .swal2-popup {
+                       font-size: 0.875rem;
+                       padding: 1.25rem;
+                       width: calc(100% - 1rem) !important;
+                   }
+
+                   .swal2-title {
+                       font-size: 1.125rem;
+                   }
+
+                   .swal2-html-container {
+                       font-size: 0.875rem;
+                   }
+
+                   .swal2-actions button {
+                       font-size: 0.875rem;
+                       padding: 0.5rem 1rem;
+                   }
+               }
+
+               /* ========================================
+                  LANDSCAPE ORIENTATION - MOBILE
+                  ======================================== */
+
+               @media (max-width: 767px) and (orientation: landscape) {
+                   .page-header {
+                       padding: 0.875rem 1rem;
+                       margin-bottom: 0.875rem;
+                   }
+
+                   .page-header h2 {
+                       font-size: 1.125rem;
+                   }
+
+                   .stats-card {
+                       padding: 0.875rem;
+                   }
+
+                   .stats-icon {
+                       width: 40px;
+                       height: 40px;
+                       font-size: 1.125rem;
+                   }
+
+                   .stats-number {
+                       font-size: 1.375rem;
+                   }
+
+                   .action-card {
+                       padding: 0.75rem;
+                   }
+
+                   .modal-dialog {
+                       margin: 0.5rem;
+                       max-width: calc(100vw - 1rem);
+                       height: calc(100vh - 1rem);
+                   }
+
+                   .modal-content {
+                       height: 100%;
+                   }
+
+                   .modal-body {
+                       max-height: calc(100vh - 100px);
+                   }
+               }
+
+               /* ========================================
+                  PRINT OPTIMIZATION
+                  ======================================== */
+
+               @media print {
+                   .page-header,
+                   .action-card,
+                   .pagination,
+                   .modal,
+                   .action-dropdown {
+                       display: none !important;
+                   }
+
+                   .table-card {
+                       box-shadow: none;
+                       border: 1px solid #e2e8f0;
+                   }
+
+                   .table {
+                       font-size: 10pt;
+                   }
+
+                   .table thead th {
+                       background-color: #f8fafc !important;
+                       color: #000 !important;
+                   }
+               }
+
+               /* ========================================
+                  ACCESSIBILITY IMPROVEMENTS
+                  ======================================== */
+
+               /* Focus states */
+               .btn:focus,
+               .form-control:focus,
+               .form-select:focus,
+               .page-link:focus {
+                   outline: 2px solid #667eea;
+                   outline-offset: 2px;
+               }
+
+               /* Reduced motion */
+               @media (prefers-reduced-motion: reduce) {
+                   * {
+                       animation-duration: 0.01ms !important;
+                       animation-iteration-count: 1 !important;
+                       transition-duration: 0.01ms !important;
+                   }
+               }
+
+               /* High contrast mode */
+               @media (prefers-contrast: high) {
+                   .table thead th {
+                       border-bottom-width: 3px;
+                   }
+
+                   .badge {
+                       border: 1px solid currentColor;
+                   }
+
+                   .action-menu {
+                       border-width: 2px;
+                   }
+               }
+
+               @media (max-width: 767px) {
+                   .table tbody tr {
+                       position: relative;
+                   }
+
+                   #certificateTable td:last-child {
+                       width: 80px;
+                       text-align: center;
+                       vertical-align: middle;
+                       position: relative; /* Ensure dropdown positioning works */
+                   }
+
+                   .action-dropdown {
+                       position: static; /* Change to static on mobile */
+                   }
+
+                   .action-menu {
+                       position: fixed; /* Use fixed positioning on mobile */
+                       right: 10px;
+                       top: auto;
+                       transform: translateY(0);
+                       margin-top: 5px;
+                   }
+
+                   .action-menu.show {
+                       z-index: 99999 !important;
+                   }
+               }

@@ -119,6 +119,23 @@
       "NETWORKING (N+)"
     ];
 
+    function getCsrfToken() {
+        // Try cookie first (for XSRF-TOKEN)
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('XSRF-TOKEN='))
+            ?.split('=')[1];
+
+        if (cookieValue) return cookieValue;
+
+        // Fallback to meta tag
+        const metaTag = document.querySelector('meta[name="_csrf"]');
+        return metaTag ? metaTag.getAttribute('content') : null;
+    }
+
+    function getCsrfHeader() {
+        return 'X-CSRF-TOKEN';
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         initializeEventListeners();
@@ -294,13 +311,13 @@
         try {
             currentPage = page;
             pageSize = size;
-
             const response = await fetch(`/api/enquiries?page=${page}&size=${size}`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
-                }
+                },
+                credentials: 'include'
             });
 
             if (!response.ok) {
@@ -374,11 +391,24 @@
 
             const method = currentEnquiryId ? 'PUT' : 'POST';
 
+            // Get CSRF token
+            const csrfToken = getCsrfToken();
+            const csrfHeader = getCsrfHeader();
+
+            const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            };
+
+            // Add CSRF token to headers
+            if (csrfToken) {
+                headers[csrfHeader] = csrfToken;
+            }
+
             const response = await fetch(url, {
                 method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: headers,
+                credentials: 'include',
                 body: JSON.stringify(enquiryData)
             });
 
@@ -471,12 +501,17 @@
         try {
             showLoading(`Importing ${dtoList.length} records...`);
 
+            const csrfToken = getCsrfToken();
+            const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            };
+            if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
             const response = await fetch(`/api/enquiries/bulk-import-json?importSource=${typeEnum}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
+                headers: headers,
+                credentials: 'include',
                 body: JSON.stringify(dtoList)
             });
 
@@ -727,7 +762,9 @@ function updateEntriesInfo() {
     // Load Enquiry for Edit - Handle multiple courses
     async function loadEnquiryForEdit(id) {
         try {
-            const response = await fetch(`/api/enquiries/${id}`);
+            const response = await fetch(`/api/enquiries/${id}`, {
+                credentials: 'include'
+            });
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.message || 'Failed to load enquiry');
@@ -854,8 +891,16 @@ function updateEntriesInfo() {
 
         if (result.isConfirmed) {
             try {
+                const csrfToken = getCsrfToken();
+                const headers = {
+                    'Accept': 'application/json'
+                };
+                if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
                 const response = await fetch(`/api/enquiries/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: headers,
+                    credentials: 'include'
                 });
 
                 if (!response.ok) throw new Error('Delete failed');
@@ -908,11 +953,17 @@ function updateEntriesInfo() {
     // Update Enquiry Status
     async function updateEnquiryStatus(id, status) {
         try {
+            const csrfToken = getCsrfToken();
+            const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            };
+            if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
             const response = await fetch(`/api/enquiries/${id}/status`, {
                 method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: headers,
+                credentials: 'include',
                 body: JSON.stringify({ status: status })
             });
 
@@ -1037,33 +1088,41 @@ function updateEntriesInfo() {
     }
 
     // Delete Follow-Up
-    async function deleteFollowUp(followUpId, enquiryId) {
-        const result = await Swal.fire({
-            title: 'Delete Follow-up?',
-            text: 'Are you sure you want to delete this follow-up record?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, Delete',
-            cancelButtonText: 'Cancel',
-            confirmButtonColor: '#ef4444'
-        });
+async function deleteFollowUp(followUpId, enquiryId) {
+    const result = await Swal.fire({
+        title: 'Delete Follow-up?',
+        text: 'Are you sure you want to delete this follow-up record?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Delete',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#ef4444'
+    });
 
-        if (result.isConfirmed) {
-            try {
-                const response = await fetch(`/api/enquiries/followups/${followUpId}`, {
-                    method: 'DELETE'
-                });
+    if (result.isConfirmed) {
+        try {
+            const csrfToken = getCsrfToken();
+            const headers = {
+                'Accept': 'application/json'
+            };
+            if (csrfToken) headers[getCsrfHeader()] = csrfToken;
 
-                if (!response.ok) throw new Error('Failed to delete follow-up');
+            const response = await fetch(`/api/enquiries/followups/${followUpId}`, {
+                method: 'DELETE',
+                headers: headers,
+                credentials: 'include'
+            });
 
-                showSuccess('Follow-up deleted successfully');
-                await loadFollowUpHistory(enquiryId);
-            } catch (error) {
-                console.error('Error deleting follow-up:', error);
-                showError('Failed to delete follow-up');
-            }
+            if (!response.ok) throw new Error('Failed to delete follow-up');
+
+            showSuccess('Follow-up deleted successfully');
+            await loadFollowUpHistory(enquiryId);
+        } catch (error) {
+            console.error('Error deleting follow-up:', error);
+            showError('Failed to delete follow-up');
         }
     }
+}
 
     // Save Follow-Up
     async function saveFollowUp() {
@@ -1083,11 +1142,17 @@ function updateEntriesInfo() {
         };
 
         try {
+            const csrfToken = getCsrfToken();
+            const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            };
+            if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
             const response = await fetch(`/api/enquiries/${currentFollowUpEnquiry.id}/followups`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: headers,
+                credentials: 'include',
                 body: JSON.stringify(followUpData)
             });
 

@@ -38,6 +38,16 @@ public class AdmissionController {
     }
 
     /**
+     * Get all admissions for export (with fees data)
+     */
+    @GetMapping(value = "/export", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<AdmissionExportDTO>> getAllAdmissionsForExport() {
+        log.info("GET /api/admissions/export");
+        List<AdmissionExportDTO> admissions = admissionService.getAllAdmissionsForExport();
+        return ResponseEntity.ok(admissions);
+    }
+
+    /**
      * Check if admission can be created for mobile number
      */
     @GetMapping("/can-create/{mobileNumber}")
@@ -196,7 +206,7 @@ public class AdmissionController {
     }
 
     /**
-     * ✅ FIXED: Get installments by admission ID
+     *  : Get installments by admission ID
      * - First fetch admission to get registrationNumber
      * - Then fetch installments using registrationNumber
      */
@@ -208,7 +218,18 @@ public class AdmissionController {
     }
 
     /**
-     * ✅ FIXED: Generate installments for admission
+     * Get admission by registration number
+     */
+    @GetMapping(value = "/by-regno/{regNo}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<AdmissionResponseDTO> getByRegNo(@PathVariable String regNo) {
+        log.debug("GET /api/admissions/by-regno/{}", regNo);
+
+        AdmissionResponseDTO admission = admissionService.getByRegistrationNumber(regNo);
+        return ResponseEntity.ok(admission);
+    }
+
+    /**
+     *  : Generate installments for admission
      * - Uses registrationNumber instead of admissionId
      */
     @PostMapping(value = "/{id}/installments",
@@ -220,12 +241,12 @@ public class AdmissionController {
 
         log.debug("POST /api/admissions/{}/installments", id);
 
-        // ✅ Get admission first to retrieve registrationNumber
+        //  Get admission first to retrieve registrationNumber
         AdmissionResponseDTO admission = admissionService.getAdmissionById(id);
 
-        // ✅ Use registrationNumber instead of id
+        //  Use registrationNumber instead of id
         List<FeeInstallmentDTO> installments = admissionService.generateInstallments(
-                admission.getRegistrationNumber(), // ✅ CHANGED FROM id
+                admission.getRegistrationNumber(), //  CHANGED FROM id
                 config,
                 admission.getTotalReceivableFees()
         );

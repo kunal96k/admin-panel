@@ -27,7 +27,7 @@ public class BirthdayEmailScheduler {
      * Scheduled task that runs every day at 9:00 AM
      * Checks for employees with birthdays today and sends them birthday wishes
      */
-    @Scheduled(cron = "0 0 9 * * ?") // Runs at 9:00 AM every day
+    @Scheduled(cron = "0 39 23 * * ?", zone = "Asia/Kolkata")  // Runs at 9:00 AM every day
     public void sendBirthdayWishes() {
         log.info(" Starting birthday email scheduler...");
 

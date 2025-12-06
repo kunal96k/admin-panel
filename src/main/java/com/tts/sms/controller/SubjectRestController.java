@@ -23,21 +23,6 @@ public class SubjectRestController {
     private final SubjectService subjectService;
 
     /**
-     * Get all subjects by course ID
-     */
-    @GetMapping("/course/{courseId}")
-    public ResponseEntity<?> getSubjectsByCourseId(@PathVariable Long courseId) {
-        try {
-            List<SubjectDTO> subjects = subjectService.getSubjectsByCourseId(courseId);
-            return ResponseEntity.ok(subjects);
-        } catch (Exception e) {
-            log.error("Error fetching subjects for course: {}", courseId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
      * Get subject by ID
      */
     @GetMapping("/{id}")

@@ -1,4 +1,5 @@
-// Batch Management JavaScript - Backend Integrated
+// Batch Management JavaScript
+
 // Global variables
 let batches = [];
 let filteredBatches = [];
@@ -9,9 +10,20 @@ let totalPages = 0;
 let totalElements = 0;
 let currentStep = 1;
 let editingBatchId = null;
+// CSRF Token Management
+let csrfToken = null;
+let csrfHeader = null;
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
+
+     csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+        csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+    if (!csrfToken || !csrfHeader) {
+        console.warn('CSRF token not found in page meta tags');
+    }
+
     initializeEventListeners();
     loadCourses();
     loadBatches();
@@ -227,7 +239,8 @@ async function handleSearch() {
         const response = await fetch('/api/batches/search', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                [csrfHeader]: csrfToken
             },
             body: JSON.stringify({
                 searchTerm: searchTerm || null,
@@ -441,7 +454,10 @@ async function confirmDelete() {
     try {
         showLoading();
         const response = await fetch(`/api/batches/${editingBatchId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+                [csrfHeader]: csrfToken
+            }
         });
 
         const data = await response.json();
@@ -586,7 +602,8 @@ async function saveBatch() {
         const response = await fetch(url, {
             method: method,
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                [csrfHeader]: csrfToken
             },
             body: JSON.stringify(batchData)
         });

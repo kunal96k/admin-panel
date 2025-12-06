@@ -5,6 +5,9 @@ let filteredPaymentModes = [];
 let currentPage = 1;
 let entriesPerPage = 25;
 let editingPaymentModeId = null;
+// CSRF Token Management
+let csrfToken = null;
+let csrfHeader = null;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -14,6 +17,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize all event listeners
 function initializeEventListeners() {
+    // Get CSRF token from meta tags
+    csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+    csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+    if (!csrfToken || !csrfHeader) {
+        console.warn('CSRF token not found in page meta tags');
+    }
+
     // Add Payment Mode button
     document.getElementById('btnAddPaymentMode').addEventListener('click', function() {
         openAddModal();
@@ -106,10 +117,10 @@ function renderTable() {
             <td>${startIndex + index + 1}</td>
             <td>${escapeHtml(mode.paymentModeTitle)}</td>
             <td>
-                <button class="btn action-btn btn-edit" onclick="editPaymentMode(${mode.id})" title="Edit">
+                <button class="btn btn-outline-secondary btn-edit" onclick="editPaymentMode(${mode.id})" title="Edit">
                     <i class="bi bi-pencil-square"></i>
                 </button>
-                <button class="btn action-btn btn-delete" onclick="deletePaymentMode(${mode.id})" title="Delete">
+                <button class="btn btn-outline-secondary btn-delete" onclick="deletePaymentMode(${mode.id})" title="Delete">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>
@@ -183,6 +194,7 @@ function savePaymentMode() {
         method: method,
         headers: {
             'Content-Type': 'application/json',
+            [csrfHeader]: csrfToken
         },
         body: JSON.stringify(requestBody)
     })
@@ -229,7 +241,10 @@ function confirmDelete() {
     deleteBtn.disabled = true;
 
     fetch(`/api/payment-modes/${editingPaymentModeId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+            [csrfHeader]: csrfToken
+        }
     })
     .then(response => {
         if (!response.ok) {

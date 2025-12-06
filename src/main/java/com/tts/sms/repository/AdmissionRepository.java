@@ -16,11 +16,6 @@ import java.util.Optional;
 public interface AdmissionRepository extends JpaRepository<Admission, Long> {
 
     /**
-     * Find all non-deleted admissions with pagination
-     */
-    Page<Admission> findByIsDeletedFalse(Pageable pageable);
-
-    /**
      * Check if admission exists for enquiry ID
      */
     boolean existsByEnquiryIdAndIsDeletedFalse(Long enquiryId);
@@ -33,7 +28,8 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
     /**
      * Find admissions by mobile number - Returns ALL matches (allows duplicates)
      */
-    List<Admission> findByMobilePrimaryAndIsDeletedFalse(String mobilePrimary);
+    @Query("SELECT a FROM Admission a WHERE a.mobilePrimary = :mobile AND a.isDeleted = false ORDER BY a.admissionDate DESC")
+    List<Admission> findByMobilePrimaryAndIsDeletedFalse(@Param("mobile") String mobilePrimary);
 
     /**
      * Find FIRST admission by mobile number (for backward compatibility)
@@ -47,12 +43,23 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
     List<Admission> findAllByMobilePrimaryAndIsDeletedFalse(String mobilePrimary);
 
     /**
-     * Find admission by registration number
+     * : Find admission by registration number - Use created_at in native query
      */
-    Admission findByRegistrationNumberAndIsDeletedFalse(String registrationNumber);
+    @Query(value = "SELECT * FROM admissions a WHERE a.registration_number = :regNo " +
+            "AND a.is_deleted = false ORDER BY a.created_at DESC LIMIT 1",
+            nativeQuery = true)
+    Admission findByRegistrationNumberAndIsDeletedFalse(@Param("regNo") String registrationNumber);
 
     /**
-     * Advanced search - FIXED: Correct parameter passing for native query
+     * : Find all admissions by registration number - Use created_at in native query
+     */
+    @Query(value = "SELECT * FROM admissions a WHERE a.registration_number = :regNo " +
+            "AND a.is_deleted = false ORDER BY a.created_at DESC",
+            nativeQuery = true)
+    List<Admission> findAllByRegistrationNumberAndIsDeletedFalse(@Param("regNo") String registrationNumber);
+
+    /**
+     * : Advanced search - Use created_at instead of createdAt
      */
     @Query(value = """
         SELECT a.* FROM admissions a
@@ -71,8 +78,8 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
         AND (?13 IS NULL OR a.academic_year = ?14)
         AND (?15 IS NULL OR a.admission_date >= ?16)
         AND (?17 IS NULL OR a.admission_date <= ?18)
-        ORDER BY a.admission_date DESC
-        """,
+        ORDER BY a.admission_date DESC, a.created_at DESC
+            """,
             countQuery = """
         SELECT COUNT(*) FROM admissions a
         WHERE a.is_deleted = false
@@ -129,7 +136,8 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
      * Find admissions by course - Using native query with JSON function
      */
     @Query(value = "SELECT * FROM admissions a WHERE a.is_deleted = false " +
-            "AND JSON_CONTAINS(a.courses, JSON_QUOTE(:course))",
+            "AND JSON_CONTAINS(a.courses, JSON_QUOTE(:course)) " +
+            "ORDER BY a.admission_date DESC",
             nativeQuery = true)
     List<Admission> findByCourse(@Param("course") String course);
 
@@ -137,14 +145,16 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
      * Find admissions by batch - Using native query with JSON function
      */
     @Query(value = "SELECT * FROM admissions a WHERE a.is_deleted = false " +
-            "AND JSON_CONTAINS(a.batches, JSON_QUOTE(:batch))",
+            "AND JSON_CONTAINS(a.batches, JSON_QUOTE(:batch)) " +
+            "ORDER BY a.admission_date DESC",
             nativeQuery = true)
     List<Admission> findByBatch(@Param("batch") String batch);
 
     /**
      * Find admissions by academic year
      */
-    List<Admission> findByAcademicYearAndIsDeletedFalse(String academicYear);
+    @Query("SELECT a FROM Admission a WHERE a.academicYear = :year AND a.isDeleted = false ORDER BY a.admissionDate DESC")
+    List<Admission> findByAcademicYearAndIsDeletedFalse(@Param("year") String academicYear);
 
     /**
      * Count total admissions
@@ -153,10 +163,26 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
     Long countTotalAdmissions();
 
     /**
-     * Find recent admissions
+     * : Find recent admissions - Use created_at
      */
-    @Query("SELECT a FROM Admission a WHERE a.isDeleted = false " +
-            "ORDER BY a.admissionDate DESC")
+    @Query(value = "SELECT * FROM admissions a WHERE a.is_deleted = false " +
+            "ORDER BY a.admission_date DESC, a.created_at DESC",
+            nativeQuery = true)
     List<Admission> findRecentAdmissions(Pageable pageable);
 
+    /**
+     * : Find all with pagination - Use created_at
+     */
+    @Query(value = "SELECT * FROM admissions a WHERE a.is_deleted = false " +
+            "ORDER BY a.created_at DESC",
+            countQuery = "SELECT COUNT(*) FROM admissions a WHERE a.is_deleted = false",
+            nativeQuery = true)
+    Page<Admission> findByIsDeletedFalse(Pageable pageable);
+
+    /**
+     * Find all non-deleted admissions
+     */
+    List<Admission> findByIsDeletedFalse();
+
+    List<Admission> findAllByOrderByCreatedAtDesc();
 }

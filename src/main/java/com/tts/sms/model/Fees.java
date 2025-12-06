@@ -46,7 +46,6 @@ public class Fees {
     @Builder.Default
     private Double totalPaid = 0.0;
 
-    // ALLOW NULL - DO NOT SET CURRENT DATE
     @Column(name = "due_date")
     private LocalDate dueDate;
 
@@ -61,9 +60,32 @@ public class Fees {
     @Column(name = "course", length = 200)
     private String course;
 
-    // Keep admission_id for reference if needed, but registration_number is primary
     @Column(name = "admission_id")
     private Long admissionId;
+
+    /**
+     * Installment start date
+     */
+    @Column(name = "installment_start_date", nullable = true)
+    private LocalDate installmentStartDate;
+
+    /**
+     * Number of installments
+     */
+    @Column(name = "number_of_installments", nullable = true)
+    private Integer numberOfInstallments;
+
+    /**
+     * Days gap between installments
+     */
+    @Column(name = "days_between_installments", nullable = true)
+    private Integer daysBetweenInstallments;
+
+    /**
+     * Total installment amount (may differ from totalFees)
+     */
+    @Column(name = "total_installment_amount", nullable = true)
+    private Double totalInstallmentAmount;
 
     // Metadata
     @CreationTimestamp

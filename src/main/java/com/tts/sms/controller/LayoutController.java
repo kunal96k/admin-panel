@@ -6,6 +6,8 @@ import com.tts.sms.model.RoleMenuPermission;
 import com.tts.sms.model.User;
 import com.tts.sms.repository.EmployeeMenuPermissionRepository;
 import com.tts.sms.repository.RoleMenuPermissionRepository;
+import com.tts.sms.service.DashboardService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -15,7 +17,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Controller
@@ -24,12 +25,36 @@ public class LayoutController {
 
     private final RoleMenuPermissionRepository roleMenuPermissionRepository;
     private final EmployeeMenuPermissionRepository employeeMenuPermissionRepository;
+    private final DashboardService dashboardService;
+
+    /**
+     * Common method to add base attributes for all pages
+     */
+    private void addBaseAttributes(Model model, String pageTitle, String activePage) {
+        model.addAttribute("pageTitle", pageTitle);
+        model.addAttribute("activePage", activePage);
+        // Flag to trigger Bootstrap reinitialization
+        model.addAttribute("requiresBootstrapInit", true);
+    }
 
     @GetMapping("/dashboard")
     public String dashboard(Model model) {
-        model.addAttribute("pageTitle", "Dashboard");
-        model.addAttribute("activePage", "dashboard");
+        addBaseAttributes(model, "Dashboard", "dashboard");
+        Map<String, Object> stats = dashboardService.getDashboardStats();
+        model.addAttribute("stats", stats);
         return "dashboard/dashboard";
+    }
+
+    @GetMapping("/access-denied")
+    public String accessDenied(Model model, HttpSession session) {
+        addBaseAttributes(model, "Access Denied", "access-denied");
+
+        String customMessage = (String) session.getAttribute("accessDeniedMessage");
+        if (customMessage != null) {
+            model.addAttribute("customMessage", customMessage);
+            session.removeAttribute("accessDeniedMessage");
+        }
+        return "auth/access-denied";
     }
 
     @ModelAttribute("currentUser")
@@ -68,7 +93,7 @@ public class LayoutController {
                         .forEach(perm -> menuIds.add(perm.getMenu().getId()));
             }
 
-            // 2. Get role-based permissions (fallback if no employee-specific permissions)
+            // 2. Get role-based permissions (fallback)
             List<RoleMenuPermission> rolePermissions =
                     roleMenuPermissionRepository.findByRoleAndHasAccessTrue(employee.getRole());
 
@@ -77,14 +102,13 @@ public class LayoutController {
                 rolePermissions.forEach(perm -> menuIds.add(perm.getMenu().getId()));
             }
 
-            // Always include Dashboard (menu_id = 1) for all authenticated users
+            // Always include Dashboard (menu_id = 1)
             menuIds.add(1L);
 
             List<Long> sortedMenuIds = new ArrayList<>(menuIds);
             Collections.sort(sortedMenuIds);
 
             log.info("✅ User has access to {} menus: {}", sortedMenuIds.size(), sortedMenuIds);
-
             return sortedMenuIds;
 
         } catch (Exception e) {
@@ -93,101 +117,107 @@ public class LayoutController {
         }
     }
 
+    // ========================================
+    // STUDENT MANAGEMENT
+    // ========================================
+
     @GetMapping("/students/enquiry")
     public String enquiry(Model model) {
-        model.addAttribute("pageTitle", "Student Enquiry");
-        model.addAttribute("activePage", "enquiry");
+        addBaseAttributes(model, "Student Enquiry", "enquiry");
         return "student/enquiry";
     }
 
     @GetMapping("/students/admission")
     public String admission(Model model) {
-        model.addAttribute("pageTitle", "Student Admission");
-        model.addAttribute("activePage", "admission");
+        addBaseAttributes(model, "Student Admission", "admission");
         return "student/admission";
     }
 
+    // ========================================
+    // ACCOUNTS
+    // ========================================
+
     @GetMapping("/accounts/fees-manager")
     public String feesManager(Model model) {
-        model.addAttribute("pageTitle", "Fees Manager");
-        model.addAttribute("activePage", "fees-manager");
+        addBaseAttributes(model, "Fees Manager", "fees-manager");
         return "accounts/fees-manager";
     }
 
+    // ========================================
+    // PRINTING
+    // ========================================
+
     @GetMapping("/printing/certificate")
     public String certificate(Model model) {
-        model.addAttribute("pageTitle", "Certificate");
-        model.addAttribute("activePage", "certificate");
+        addBaseAttributes(model, "Certificate", "certificate");
         return "printing/certificate";
     }
 
+    // ========================================
+    // MASTER DATA
+    // ========================================
+
     @GetMapping("/master/course")
     public String course(Model model) {
-        model.addAttribute("pageTitle", "Course");
-        model.addAttribute("activePage", "course");
+        addBaseAttributes(model, "Course Master", "course");
         return "master/course";
     }
 
     @GetMapping("/master/batch")
     public String batch(Model model) {
-        model.addAttribute("pageTitle", "Batch");
-        model.addAttribute("activePage", "batch");
+        addBaseAttributes(model, "Batch Master", "batch");
         return "master/batch";
     }
 
     @GetMapping("/master/employee")
     public String employee(Model model) {
-        model.addAttribute("pageTitle", "Employee");
-        model.addAttribute("activePage", "employee");
+        addBaseAttributes(model, "Employee Master", "employee");
         return "master/employee";
     }
 
     @GetMapping("/master/role")
     public String role(Model model) {
-        model.addAttribute("pageTitle", "Role Management");
-        model.addAttribute("activePage", "role");
+        addBaseAttributes(model, "Role Management", "role");
         return "master/role";
     }
 
     @GetMapping("/master/bank")
     public String bank(Model model) {
-        model.addAttribute("pageTitle", "Bank Master");
-        model.addAttribute("activePage", "bank");
+        addBaseAttributes(model, "Bank Master", "bank");
         return "master/bank";
     }
 
     @GetMapping("/master/lead-source")
     public String leadSource(Model model) {
-        model.addAttribute("pageTitle", "Lead Source");
-        model.addAttribute("activePage", "lead-source");
+        addBaseAttributes(model, "Lead Source", "lead-source");
         return "master/lead-source";
     }
 
     @GetMapping("/master/package")
     public String createPackage(Model model) {
-        model.addAttribute("pageTitle", "Create Package");
-        model.addAttribute("activePage", "create-package");
+        addBaseAttributes(model, "Create Package", "create-package");
         return "master/package";
     }
 
     @GetMapping("/master/online-payment")
     public String onlinePayment(Model model) {
-        model.addAttribute("pageTitle", "Online Payment Mode");
-        model.addAttribute("activePage", "online-payment");
+        addBaseAttributes(model, "Online Payment Mode", "online-payment");
         return "master/payment-mode";
     }
 
-    @GetMapping("/reports/course-wise-sales")
+    // ========================================
+    // REPORTS
+    // ========================================
+
+    @GetMapping("/reports/course-sales-report")
     public String courseWiseSales(Model model) {
-        model.addAttribute("pageTitle", "Course-wise Sales Report");
-        model.addAttribute("activePage", "course-wise-sales");
-        return "reports/course-wise-sales";
+        addBaseAttributes(model, "Course-wise Sales", "course-wise-sales");
+        return "reports/course-sales-report";
     }
 
     @GetMapping("/reports/fees-collection")
     public String feesCollection(Model model) {
-        model.addAttribute("pageTitle", "Fees Collection Report");
-        model.addAttribute("activePage", "fees-collection");
+        addBaseAttributes(model, "Fees Collection Report", "fees-collection");
         return "reports/fees-collection";
     }
 }

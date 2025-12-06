@@ -1,6 +1,7 @@
 package com.tts.sms.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,17 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * Handle client abort exceptions (browser closed connection)
+     * Common with Google Analytics, page navigation, etc.
+     */
+    @ExceptionHandler(ClientAbortException.class)
+    public void handleClientAbort(ClientAbortException ex) {
+        // Log at DEBUG level only - this is expected behavior
+        log.debug("Client aborted connection: {}", ex.getMessage());
+        // Don't return any response - connection is already closed
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(
@@ -169,8 +181,12 @@ public class GlobalExceptionHandler {
             NoResourceFoundException ex, WebRequest request) {
         String path = extractPath(request);
 
-        // Ignore Chrome DevTools requests
-        if (path.contains("com.chrome.devtools") || path.contains("appspecific")) {
+        // Ignore Chrome DevTools, Google Analytics, and other tracking scripts
+        if (path.contains("com.chrome.devtools") ||
+                path.contains("appspecific") ||
+                path.contains("gtag") ||
+                path.contains("googletagmanager") ||
+                path.contains("google-analytics")) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
@@ -192,6 +208,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.web.HttpMediaTypeNotAcceptableException.class)
     public ResponseEntity<Map<String, Object>> handleHttpMediaTypeNotAcceptable(
             org.springframework.web.HttpMediaTypeNotAcceptableException ex, WebRequest request) {
+        String path = extractPath(request);
+
+        // Ignore 406 errors from Google Analytics and tracking scripts
+        if (path.contains("gtag") ||
+                path.contains("googletagmanager") ||
+                path.contains("google-analytics")) {
+            log.debug("Ignoring 406 from analytics script: {}", path);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
         log.error("Media type not acceptable: {}", ex.getMessage());
 
         Map<String, Object> response = new HashMap<>();
@@ -199,7 +225,7 @@ public class GlobalExceptionHandler {
         response.put("status", HttpStatus.NOT_ACCEPTABLE.value());
         response.put("error", "Not Acceptable");
         response.put("message", "The requested media type is not supported");
-        response.put("path", extractPath(request));
+        response.put("path", path);
 
         return ResponseEntity
                 .status(HttpStatus.NOT_ACCEPTABLE)
@@ -210,6 +236,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGlobalException(
             Exception ex, WebRequest request) {
+
+        // Check if it's a ClientAbortException wrapped in another exception
+        if (isCausedByClientAbort(ex)) {
+            log.debug("Client aborted connection (wrapped exception): {}", ex.getMessage());
+            return null;
+        }
+
         log.error("Unexpected error occurred", ex);
 
         Map<String, Object> response = new HashMap<>();
@@ -223,6 +256,22 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(response);
+    }
+
+    /**
+     * Check if exception is caused by client abort (browser closed connection)
+     */
+    private boolean isCausedByClientAbort(Throwable ex) {
+        while (ex != null) {
+            if (ex instanceof ClientAbortException
+                    || ex.getClass().getName().contains("ClientAbortException")
+                    || (ex.getMessage() != null && ex.getMessage().contains("CLOSED_RST_RX"))
+                    || (ex.getMessage() != null && ex.getMessage().contains("Broken pipe"))) {
+                return true;
+            }
+            ex = ex.getCause();
+        }
+        return false;
     }
 
     private String extractPath(WebRequest request) {

@@ -16,6 +16,44 @@ import java.util.Optional;
 public interface FeeReceiptRepository extends JpaRepository<FeeReceipt, Long> {
 
     /**
+     * Find receipts by date range and payment mode for fee collection display
+     */
+    @Query("SELECT r FROM FeeReceipt r WHERE r.isDeleted = false " +
+            "AND r.receiptDate BETWEEN :startDate AND :endDate " +
+            "AND (:paymentMode IS NULL OR r.paymentMode = :paymentMode) " +
+            "ORDER BY r.receiptDate DESC")
+    List<FeeReceipt> findByFiltersForCollection(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("paymentMode") String paymentMode
+    );
+
+    /**
+     * Count receipts by date range and payment mode
+     */
+    @Query("SELECT COUNT(r) FROM FeeReceipt r WHERE r.isDeleted = false " +
+            "AND r.receiptDate BETWEEN :startDate AND :endDate " +
+            "AND (:paymentMode IS NULL OR r.paymentMode = :paymentMode)")
+    Long countByDateRangeAndPaymentMode(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("paymentMode") String paymentMode
+    );
+
+    /**
+     * Get total amount by date range and payment mode
+     */
+    @Query("SELECT COALESCE(SUM(r.amountReceived), 0.0) FROM FeeReceipt r " +
+            "WHERE r.isDeleted = false " +
+            "AND r.receiptDate BETWEEN :startDate AND :endDate " +
+            "AND (:paymentMode IS NULL OR r.paymentMode = :paymentMode)")
+    Double getTotalReceivedByDateRangeAndPaymentMode(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("paymentMode") String paymentMode
+    );
+
+    /**
      * Find all non-deleted receipts with pagination
      */
     Page<FeeReceipt> findByIsDeletedFalse(Pageable pageable);

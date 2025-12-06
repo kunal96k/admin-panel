@@ -1,5 +1,6 @@
 package com.tts.sms.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -15,6 +16,8 @@ public class AdmissionResponseDTO {
     private Long id;
     private String registrationNumber;
     private String rollNumber;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate admissionDate;
     private Long enquiryId;
 
@@ -26,6 +29,8 @@ public class AdmissionResponseDTO {
     private String college;
     private String qualification;
     private String aadhaar;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthDate;
     private String gender;
     private String cast;
@@ -73,6 +78,16 @@ public class AdmissionResponseDTO {
     private Double totalDueAmount;
 
     // Metadata
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updatedAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate installmentStartDate;
+    private Integer numberOfInstallments;
+    private Integer daysBetweenInstallments;
+    private Double totalInstallmentAmount;
+
 }

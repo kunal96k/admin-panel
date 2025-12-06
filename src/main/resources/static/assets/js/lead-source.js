@@ -11,6 +11,21 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
 });
 
+let editingLeadSourceId = null;
+
+// CSRF Token Management
+function getCsrfToken() {
+    const csrfCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('XSRF-TOKEN='));
+    return csrfCookie ? decodeURIComponent(csrfCookie.split('=')[1]) : null;
+}
+
+function getCsrfHeaders() {
+    const token = getCsrfToken();
+    return token ? { 'X-CSRF-TOKEN': token } : {};
+}
+
 function setupEventListeners() {
     // Add Lead Source button
     document.getElementById('btnAddLeadSource').addEventListener('click', function() {
@@ -53,8 +68,13 @@ function setupEventListeners() {
 
 async function loadLeadSources() {
     try {
-        const response = await fetch(`/lead-source/list?search=${encodeURIComponent(currentSearch)}&page=${currentPage}&size=${entriesPerPage}`);
-        const result = await response.json();
+            const response = await fetch(`/lead-source/list?search=${encodeURIComponent(currentSearch)}&page=${currentPage}&size=${entriesPerPage}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                }
+            });
+            const result = await response.json();
 
         if (result.success) {
             totalElements = result.totalElements;
@@ -149,7 +169,12 @@ function changePage(page) {
 
 async function editLeadSource(id) {
     try {
-        const response = await fetch(`/lead-source/${id}`);
+       const response = await fetch(`/lead-source/${id}`, {
+           headers: {
+               'Accept': 'application/json',
+               ...getCsrfHeaders()
+           }
+       });
         const result = await response.json();
 
         if (result.success) {
@@ -193,13 +218,14 @@ async function saveLeadSource() {
         const url = editingLeadSourceId ? `/lead-source/update/${editingLeadSourceId}` : '/lead-source/create';
         const method = editingLeadSourceId ? 'PUT' : 'POST';
 
-        const response = await fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(leadSourceDTO)
-        });
+       const response = await fetch(url, {
+           method: method,
+           headers: {
+               'Content-Type': 'application/json',
+               ...getCsrfHeaders()
+           },
+           body: JSON.stringify(leadSourceDTO)
+       });
 
         const result = await response.json();
 
@@ -231,7 +257,11 @@ function deleteLeadSource(id) {
     document.getElementById('btnConfirmDelete').onclick = async function() {
         try {
             const response = await fetch(`/lead-source/delete/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                }
             });
 
             const result = await response.json();
@@ -278,8 +308,13 @@ async function exportToCSV() {
             }
         });
 
-        const url = `/lead-source/export?search=${encodeURIComponent(currentSearch)}`;
-        const response = await fetch(url);
+       const url = `/lead-source/export?search=${encodeURIComponent(currentSearch)}`;
+       const response = await fetch(url, {
+           headers: {
+               'Accept': 'application/json',
+               ...getCsrfHeaders()
+           }
+       });
 
         if (response.ok) {
             const blob = await response.blob();

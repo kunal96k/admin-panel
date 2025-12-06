@@ -6,6 +6,196 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">TechnoKraft Admin Console</title>
 
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+
+    <style>
+        /* ========================================
+           USER MENU DROPDOWN FIX
+           ======================================== */
+
+        .user-menu {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .dropdown-menu {
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            opacity: 0;
+            transform: translateY(-10px);
+            pointer-events: none;
+        }
+
+        .dropdown-menu.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+
+        /* ========================================
+           PROFILE & SETTINGS MODAL STYLING
+           ======================================== */
+
+        #profileModal .modal-header,
+        #settingsModal .modal-header {
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+        }
+
+        #profileModal .modal-content,
+        #settingsModal .modal-content {
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Profile Image Styling */
+        #profileModal img {
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        #profileModal img:hover {
+            transform: scale(1.05);
+        }
+
+        /* Table Styling */
+        #profileModal .table td {
+            padding: 0.75rem 0.5rem;
+            vertical-align: middle;
+        }
+
+        #profileModal .table td.text-muted {
+            font-size: 0.9rem;
+        }
+
+        #profileModal .table td.fw-semibold {
+            color: #1e293b;
+        }
+
+        /* Settings Content */
+        .settings-content {
+            padding: 1rem;
+        }
+
+        .settings-content h6 {
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .settings-content ul li {
+            padding: 0.5rem 0;
+        }
+
+        .settings-content .badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            #profileModal .modal-dialog,
+            #settingsModal .modal-dialog {
+                margin: 0.5rem;
+            }
+
+            #profileModal img {
+                width: 120px !important;
+                height: 120px !important;
+            }
+
+            #profileModal .table td {
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Animation for modal appearance */
+        .modal.fade .modal-dialog {
+            transition: transform 0.3s ease-out;
+        }
+
+        .modal.show .modal-dialog {
+            transform: none;
+        }
+
+        /* Badge styling */
+        .badge {
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        /* Alert styling in modals */
+        .modal-body .alert {
+            border-radius: 0.5rem;
+            border: none;
+        }
+
+        .alert-info {
+            background-color: #e0f2fe;
+            color: #0369a1;
+        }
+
+        /* Icon styling */
+        .modal-body i.bi {
+            font-size: 1.1em;
+        }
+
+        /* Link styling */
+        #profileModal a,
+        #settingsModal a {
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        #profileModal a:hover,
+        #settingsModal a:hover {
+            color: #2563eb !important;
+        }
+
+
+
+/* ========================================
+   CONTAINER
+   ======================================== */
+
+
+@media (max-width: 767px) {
+    /* Sidebar full overlay on mobile */
+    .sidebar {
+        width: 260px !important;
+        max-width: 85vw !important;
+    }
+
+    /* Main wrapper no margin on mobile */
+    .main-wrapper {
+        margin-left: 0 !important;
+        width: 100vw;
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+
+    /* Topbar full width */
+    .topbar {
+        width: 100%;
+        max-width: 100vw;
+        left: 0;
+        right: 0;
+    }
+
+    /* User menu dropdown positioning */
+    .user-menu {
+        padding: 0.375rem 0.625rem;
+    }
+
+    .user-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 0.8125rem;
+    }
+}
+    </style>
+
     <!-- Favicon -->
     <link rel="icon" th:href="@{/assets/images/tts-logo-ev.png}">
 
@@ -56,7 +246,7 @@
                 <span class="app-subtitle">Training &amp; Solution</span>
             </div>
         </div>
-        <button class="sidebar-toggle-btn d-none" id="sidebarToggle" aria-label="Toggle sidebar">
+        <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
             <i class="bi bi-chevron-left"></i>
         </button>
     </div>
@@ -79,7 +269,6 @@
             <div class="menu-link" data-toggle="submenu">
                 <i class="bi bi-people"></i>
                 <span class="menu-text">Student Manager</span>
-                <i class="bi bi-chevron-down dropdown-icon"></i>
             </div>
             <div class="submenu">
                 <a th:href="@{/students/enquiry}"
@@ -96,12 +285,11 @@
             </div>
         </div>
 
-        <!-- Acc (Accounts/Fees) -->
+        <!-- Account -->
         <div class="menu-item">
             <div class="menu-link" data-toggle="submenu">
                 <i class="bi bi-cash-coin"></i>
                 <span class="menu-text">Account</span>
-                <i class="bi bi-chevron-down dropdown-icon"></i>
             </div>
             <div class="submenu">
                 <a th:href="@{/accounts/fees-manager}"
@@ -117,7 +305,6 @@
             <div class="menu-link" data-toggle="submenu">
                 <i class="bi bi-printer"></i>
                 <span class="menu-text">Printing</span>
-                <i class="bi bi-chevron-down dropdown-icon"></i>
             </div>
             <div class="submenu">
                 <a th:href="@{/printing/certificate}"
@@ -133,7 +320,6 @@
             <div class="menu-link" data-toggle="submenu">
                 <i class="bi bi-gear"></i>
                 <span class="menu-text">Master</span>
-                <i class="bi bi-chevron-down dropdown-icon"></i>
             </div>
             <div class="submenu">
                 <a th:href="@{/master/course}" class="submenu-link"
@@ -147,32 +333,27 @@
                 <a th:href="@{/master/employee}" class="submenu-link"
                    data-menu-id="8"
                    th:classappend="${activePage == 'employee'} ? 'active' : ''"
-                   data-page="employee">Employee</a> 
-
+                   data-page="employee">Employee</a>
                 <a th:href="@{/master/role}" class="submenu-link"
                    data-menu-id="9"
                    th:classappend="${activePage == 'role'} ? 'active' : ''"
-                   data-page="role">Role</a> 
-
+                   data-page="role">Role</a>
                 <a th:href="@{/master/bank}" class="submenu-link"
                    data-menu-id="10"
                    th:classappend="${activePage == 'bank'} ? 'active' : ''"
-                   data-page="bank">Bank</a> 
-
+                   data-page="bank">Bank</a>
                 <a th:href="@{/master/lead-source}" class="submenu-link"
                    data-menu-id="11"
                    th:classappend="${activePage == 'lead-source'} ? 'active' : ''"
-                   data-page="lead-source">Lead Source</a> 
-
+                   data-page="lead-source">Lead Source</a>
                 <a th:href="@{/master/package}" class="submenu-link"
                    data-menu-id="12"
                    th:classappend="${activePage == 'create-package'} ? 'active' : ''"
-                   data-page="create-package">Create Package</a> 
-
+                   data-page="create-package">Create Package</a>
                 <a th:href="@{/master/online-payment}" class="submenu-link"
                    data-menu-id="13"
                    th:classappend="${activePage == 'online-payment'} ? 'active' : ''"
-                   data-page="online-payment">Online Payment Mode</a> 
+                   data-page="online-payment">Online Payment Mode</a>
             </div>
         </div>
 
@@ -181,10 +362,9 @@
             <div class="menu-link" data-toggle="submenu">
                 <i class="bi bi-file-earmark-bar-graph"></i>
                 <span class="menu-text">Reports</span>
-                <i class="bi bi-chevron-down dropdown-icon"></i>
             </div>
             <div class="submenu">
-                <a th:href="@{/reports/course-wise-sales}"
+                <a th:href="@{/reports/course-sales-report}"
                    class="submenu-link"
                    data-menu-id="14"
                    th:classappend="${activePage == 'course-wise-sales'} ? 'active' : ''"
@@ -223,11 +403,9 @@
             <h1 class="page-title" id="pageTitle" th:text="${pageTitle}">Dashboard</h1>
         </div>
 
-        <!-- Topbar Right Section - Update this part -->
         <div class="topbar-right">
-            <button class="notification-btn" aria-label="Notifications">
+            <button class="notification-btn" style="display:none;" aria-label="Notifications">
                 <i class="bi bi-bell"></i>
-                <span class="notification-badge">3</span>
             </button>
 
             <div class="dropdown">
@@ -251,9 +429,7 @@
                     <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i> Settings</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <form th:action="@{/logout}" method="post" id="logoutForm" style="display: none;">
-<!--                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>-->
-                        </form>
+                        <form th:action="@{/logout}" method="post" id="logoutForm" style="display: none;"></form>
                         <a class="dropdown-item text-danger" href="#" id="logoutBtn">
                             <i class="bi bi-box-arrow-right me-2"></i> Logout
                         </a>
@@ -265,7 +441,6 @@
 
     <!-- MAIN CONTENT AREA -->
     <main class="main-content" id="mainContent" layout:fragment="content">
-        <!-- Default content (will be replaced by page content) -->
         <div class="alert alert-info">
             <h4>No content loaded</h4>
             <p>Please select a page from the sidebar.</p>
@@ -279,7 +454,7 @@
                 <p>
                     &copy; <span th:text="${#dates.year(#dates.createNow())}">2024</span>
                     <a href="https://tts.net.in/" target="_blank">TechnoKraft Training &amp; Solution PVT LTD</a>.
-                    All rights reserved. | Powered by TechnoKraft Service LLP
+                    All rights reserved. | Powered by TechnoKraft Service Team.
                 </p>
             </div>
         </div>
@@ -289,18 +464,6 @@
 
 <script th:inline="javascript">
     const userPermissions = /*[[${userMenuPermissions}]]*/ [];
-
-    document.addEventListener('DOMContentLoaded', function() {
-        // Hide menu items user doesn't have access to
-        document.querySelectorAll('[data-menu-id]').forEach(item => {
-            const menuId = parseInt(item.getAttribute('data-menu-id'));
-            const hasAccess = userPermissions.includes(menuId);
-
-            if (!hasAccess) {
-                item.style.display = 'none';
-            }
-        });
-    });
 </script>
 
 <!-- Bootstrap JS Bundle -->
@@ -310,7 +473,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.all.min.js"></script>
 
 <!-- Custom JS -->
-<script th:src="@{/assets/js/script.js}" src="/assets/js/script.js" defer></script>
+<script th:src="@{/assets/js/script.js}"></script>
 
 </body>
 </html>

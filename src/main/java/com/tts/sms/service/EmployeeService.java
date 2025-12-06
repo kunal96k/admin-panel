@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -120,7 +121,7 @@ public class EmployeeService {
             );
         }
 
-        log.info("✅ Permission check passed for {} operation", operation);
+        log.info(" Permission check passed for {} operation", operation);
     }
 
     /**
@@ -133,16 +134,27 @@ public class EmployeeService {
             Employee targetEmployee = employeeRepository.findById(employeeId)
                     .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
+            // Log security check
+            User currentUser = getCurrentUser();
+            log.info("🔒 Security Check: User {} attempting to access employee {} (ID: {})",
+                    currentUser.getUsername(),
+                    targetEmployee.getEmployeeName(),
+                    employeeId);
+
             validateModificationPermission(targetEmployee, "view");
 
             result.put("canModify", true);
             result.put("canDelete", true);
-            result.put("message", "Access granted");
+            result.put("message", " Access granted");
+
+            log.info(" Permission granted for {} operation", "view/modify");
 
         } catch (UnauthorizedException e) {
             result.put("canModify", false);
             result.put("canDelete", false);
             result.put("message", e.getMessage());
+
+            log.warn("⚠️ Permission denied: {}", e.getMessage());
         }
 
         return result;
@@ -189,7 +201,7 @@ public class EmployeeService {
         Employee employee = new Employee();
         mapDTOToEntity(requestDTO, employee, photoFile);
         Employee savedEmployee = employeeRepository.save(employee);
-        log.info("✅ Employee saved with ID: {}", savedEmployee.getId());
+        log.info(" Employee saved with ID: {}", savedEmployee.getId());
 
         if (requestDTO.getUsername() != null && !requestDTO.getUsername().trim().isEmpty()) {
             createUserCredentials(savedEmployee, requestDTO);
@@ -248,16 +260,20 @@ public class EmployeeService {
             throw new DuplicateResourceException("Email already exists: " + requestDTO.getEmailId());
         }
 
+        // Handle user credentials ONLY if username is provided
         if (requestDTO.getUsername() != null && !requestDTO.getUsername().trim().isEmpty()) {
             userRepository.findByEmployee(employee).ifPresentOrElse(
                     existingUser -> {
+                        // Update username only if it's different
                         if (!existingUser.getUsername().equals(requestDTO.getUsername())) {
                             if (userRepository.existsByUsername(requestDTO.getUsername())) {
                                 throw new DuplicateResourceException("Username already exists: " + requestDTO.getUsername());
                             }
                             existingUser.setUsername(requestDTO.getUsername());
+                            log.info("📝 Username updated for employee: {}", id);
                         }
 
+                        // Update password ONLY if provided
                         if (requestDTO.getPassword() != null && !requestDTO.getPassword().trim().isEmpty()) {
                             if (!requestDTO.getPassword().equals(requestDTO.getConfirmPassword())) {
                                 throw new IllegalArgumentException("Password and Confirm Password do not match");
@@ -268,28 +284,53 @@ public class EmployeeService {
                             }
 
                             existingUser.setPassword(passwordEncoder.encode(requestDTO.getPassword()));
+                            log.info("🔐 Password updated for employee: {}", id);
 
-                            emailTemplateService.sendPasswordChangedEmail(
-                                    employee.getEmailId(),
-                                    employee.getEmployeeName()
-                            );
+                            // Send email notification
+                            try {
+                                emailTemplateService.sendPasswordChangedEmail(
+                                        employee.getEmailId(),
+                                        employee.getEmployeeName()
+                                );
+                            } catch (Exception e) {
+                                log.warn("⚠️ Failed to send password change email: {}", e.getMessage());
+                            }
                         }
 
+                        // Always update role
                         existingUser.setRole(targetRole);
                         userRepository.save(existingUser);
+                        log.info(" User credentials updated successfully");
                     },
-                    () -> createUserCredentials(employee, requestDTO)
+                    () -> {
+                        // Create new credentials only if password is also provided
+                        if (requestDTO.getPassword() != null && !requestDTO.getPassword().trim().isEmpty()) {
+                            createUserCredentials(employee, requestDTO);
+                            log.info(" New user credentials created");
+                        }
+                    }
             );
+        } else {
+            // If checkbox is unchecked, only update role if user exists
+            userRepository.findByEmployee(employee).ifPresent(existingUser -> {
+                existingUser.setRole(targetRole);
+                userRepository.save(existingUser);
+                log.info(" User role updated (credentials unchanged)");
+            });
         }
 
+        // Update employee basic details
         mapDTOToEntity(requestDTO, employee, photoFile);
         Employee updatedEmployee = employeeRepository.save(employee);
 
+        // Update menu permissions
         if (requestDTO.getMenuPermissions() != null && !requestDTO.getMenuPermissions().isEmpty()) {
             employeeMenuPermissionRepository.deleteByEmployeeId(updatedEmployee.getId());
             saveMenuPermissions(updatedEmployee, requestDTO.getMenuPermissions());
+            log.info(" Menu permissions updated");
         }
 
+        log.info(" Employee updated successfully: {}", id);
         return convertToResponseDTO(updatedEmployee);
     }
 
@@ -329,7 +370,7 @@ public class EmployeeService {
         }
 
         employeeRepository.delete(employee);
-        log.info("✅ Employee deleted successfully: {}", id);
+        log.info(" Employee deleted successfully: {}", id);
     }
 
     private void mapDTOToEntity(EmployeeRequestDTO dto, Employee employee, MultipartFile photoFile) {
@@ -354,7 +395,7 @@ public class EmployeeService {
 
                 String filename = fileStorageService.storeFile(photoFile, "employees");
                 employee.setPhoto(filename);
-                log.info("✅ Photo saved: {}", filename);
+                log.info(" Photo saved: {}", filename);
             } catch (Exception e) {
                 log.error("❌ Error saving photo: {}", e.getMessage());
                 throw new RuntimeException("Failed to save employee photo: " + e.getMessage());
@@ -368,6 +409,19 @@ public class EmployeeService {
         employee.setFeeManager(dto.getFeeManager() != null && dto.getFeeManager());
         employee.setManageCourse(dto.getManageCourse() != null && dto.getManageCourse());
         employee.setManageBatch(dto.getManageBatch() != null && dto.getManageBatch());
+        employee.setAccDashboard(dto.getAccDashboard() != null && dto.getAccDashboard());
+        employee.setCounsellorDash(dto.getCounsellorDash() != null && dto.getCounsellorDash());
+        employee.setTodaysFollowup(dto.getTodaysFollowup() != null && dto.getTodaysFollowup());
+        employee.setOverdueFollowup(dto.getOverdueFollowup() != null && dto.getOverdueFollowup());
+        employee.setBatchWiseFee(dto.getBatchWiseFee() != null && dto.getBatchWiseFee());
+        employee.setPaymentLink(dto.getPaymentLink() != null && dto.getPaymentLink());
+        employee.setTimeTable(dto.getTimeTable() != null && dto.getTimeTable());
+        employee.setTimeTableAttendance(dto.getTimeTableAttendance() != null && dto.getTimeTableAttendance());
+        employee.setSendAppMsg(dto.getSendAppMsg() != null && dto.getSendAppMsg());
+        employee.setShareVideo(dto.getShareVideo() != null && dto.getShareVideo());
+        employee.setLiveLecture(dto.getLiveLecture() != null && dto.getLiveLecture());
+        employee.setOfflineExam(dto.getOfflineExam() != null && dto.getOfflineExam());
+        employee.setStudyNote(dto.getStudyNote() != null && dto.getStudyNote());
     }
 
     private void createUserCredentials(Employee employee, EmployeeRequestDTO requestDTO) {
@@ -383,7 +437,7 @@ public class EmployeeService {
         user.setFailedAttempts(0);
 
         userRepository.save(user);
-        log.info("✅ User credentials created successfully");
+        log.info(" User credentials created successfully");
     }
 
     private boolean validatePasswordStrength(String password) {
@@ -483,4 +537,45 @@ public class EmployeeService {
         response.put("totalPages", page.getTotalPages());
         return response;
     }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getEmployeePermissions(Long employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+
+        List<EmployeeMenuPermission> permissions =
+                employeeMenuPermissionRepository.findByEmployee(employee);
+
+        return permissions.stream()
+                .map(perm -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("menuId", perm.getMenu().getId());
+                    map.put("hasAccess", perm.getHasAccess());
+                    return map;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get current logged-in user's employee profile
+     */
+    @Transactional(readOnly = true)
+    public EmployeeResponseDTO getCurrentUserProfile() {
+        try {
+            User currentUser = getCurrentUser();
+            Employee employee = currentUser.getEmployee();
+
+            if (employee == null) {
+                throw new ResourceNotFoundException("Employee profile not found for current user");
+            }
+
+            log.info("📋 Fetching profile for user: {}", currentUser.getUsername());
+            return convertToResponseDTO(employee);
+
+        } catch (Exception e) {
+            log.error("❌ Error fetching current user profile: {}", e.getMessage());
+            throw new RuntimeException("Failed to load profile: " + e.getMessage());
+        }
+    }
+
 }

@@ -1,3 +1,5 @@
+// ==================== UPDATE EmailTemplateService.java ====================
+
 package com.tts.sms.service;
 
 import lombok.RequiredArgsConstructor;
@@ -6,14 +8,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import org.thymeleaf.TemplateEngine;
 import org.springframework.core.io.ByteArrayResource;
+import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 import java.time.LocalDate;
+import java.util.Base64;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +31,92 @@ public class EmailTemplateService {
 
     @Value("${spring.mail.username}")
     private String fromEmail;
+
+    /**
+     *  Send fee receipt email with PDF generated from frontend
+     */
+    public void sendFeeReceiptWithPDF(
+            String toEmail,
+            String studentName,
+            String receiptNo,
+            Double amount,
+            LocalDate receiptDate,
+            String paymentMode,
+            String message,
+            String pdfBase64) {
+
+        try {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            // Prepare email context
+            Context context = new Context();
+            context.setVariable("studentName", studentName);
+            context.setVariable("receiptNo", receiptNo);
+            context.setVariable("amount", String.format("₹%.2f", amount));
+            context.setVariable("receiptDate", receiptDate != null ?
+                    receiptDate.format(java.time.format.DateTimeFormatter.ofPattern("MMMM dd, yyyy")) : "N/A");
+            context.setVariable("paymentMode", paymentMode);
+            context.setVariable("message", message);
+            context.setVariable("year", java.time.Year.now().getValue());
+
+            String htmlContent = templateEngine.process("email/receipt-email", context);
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Fee Receipt - " + receiptNo + " - TTS");
+            helper.setText(htmlContent, true);
+
+            // Decode base64 PDF and attach
+            if (pdfBase64 != null && !pdfBase64.isEmpty()) {
+                try {
+                    byte[] pdfBytes = Base64.getDecoder().decode(pdfBase64);
+
+                    helper.addAttachment(
+                            "Fee-Receipt-" + receiptNo + ".pdf",
+                            new ByteArrayResource(pdfBytes),
+                            "application/pdf"
+                    );
+
+                    log.info(" PDF attachment added: Fee-Receipt-{}.pdf ({} bytes)", receiptNo, pdfBytes.length);
+                } catch (Exception e) {
+                    log.error("❌ Failed to decode/attach PDF", e);
+                    throw new RuntimeException("Failed to attach PDF: " + e.getMessage());
+                }
+            } else {
+                log.warn("⚠️ No PDF data provided - sending email without attachment");
+            }
+
+            mailSender.send(mimeMessage);
+
+            log.info(" Fee receipt email sent successfully to: {}", toEmail);
+
+        } catch (MessagingException e) {
+            log.error("❌ Failed to send fee receipt email to: {}", toEmail, e);
+            throw new RuntimeException("Failed to send fee receipt email: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Send HTML email
+     */
+    public void sendHtmlEmail(String to, String subject, String htmlContent) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+            log.info("✅ HTML email sent successfully to: {}", to);
+        } catch (MessagingException e) {
+            log.error("❌ Failed to send HTML email to {}: {}", to, e.getMessage(), e);
+            throw new RuntimeException("Failed to send email", e);
+        }
+    }
 
     /**
      * Send certificate email with attachment
@@ -61,7 +150,6 @@ public class EmailTemplateService {
             helper.setSubject("Your Course Completion Certificate - " + courseName);
             helper.setText(htmlContent, true);
 
-            // ✅ Attach certificate image
             if (certificateImage != null && certificateImage.length > 0) {
                 helper.addAttachment(
                         "Certificate-TTS-" + certificateNo + ".jpg",
@@ -72,7 +160,7 @@ public class EmailTemplateService {
 
             mailSender.send(message);
 
-            log.info("✅ Certificate email sent successfully to: {}", toEmail);
+            log.info(" Certificate email sent successfully to: {}", toEmail);
 
         } catch (MessagingException e) {
             log.error("❌ Failed to send certificate email to: {}", toEmail, e);
@@ -160,7 +248,7 @@ public class EmailTemplateService {
 
             helper.setFrom(fromEmail);
             helper.setTo(toEmail);
-            helper.setSubject(" Happy Birthday from TechnoKraft Team!");
+            helper.setSubject("🎂 Happy Birthday from TechnoKraft Team!");
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
@@ -168,7 +256,7 @@ public class EmailTemplateService {
             log.info(" Birthday wishes sent successfully to: {}", toEmail);
 
         } catch (MessagingException e) {
-            log.error(" Failed to send birthday wishes to: {}", toEmail, e);
+            log.error("❌ Failed to send birthday wishes to: {}", toEmail, e);
             throw new RuntimeException("Failed to send birthday email: " + e.getMessage());
         }
     }

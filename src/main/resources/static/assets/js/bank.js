@@ -11,6 +11,19 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
 });
 
+// CSRF Token Management
+function getCsrfToken() {
+    const csrfCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('XSRF-TOKEN='));
+    return csrfCookie ? decodeURIComponent(csrfCookie.split('=')[1]) : null;
+}
+
+function getCsrfHeaders() {
+    const token = getCsrfToken();
+    return token ? { 'X-CSRF-TOKEN': token } : {};
+}
+
 function setupEventListeners() {
     // Add Bank button
     document.getElementById('btnAddBank').addEventListener('click', function() {
@@ -53,7 +66,12 @@ function setupEventListeners() {
 
 async function loadBanks() {
     try {
-        const response = await fetch(`/bank/list?search=${encodeURIComponent(currentSearch)}&page=${currentPage}&size=${entriesPerPage}`);
+        const response = await fetch(`/bank/list?search=${encodeURIComponent(currentSearch)}&page=${currentPage}&size=${entriesPerPage}`, {
+            headers: {
+                'Accept': 'application/json',
+                ...getCsrfHeaders()
+            }
+        });
         const result = await response.json();
 
         if (result.success) {
@@ -149,7 +167,12 @@ function changePage(page) {
 
 async function editBank(id) {
     try {
-        const response = await fetch(`/bank/${id}`);
+       const response = await fetch(`/bank/${id}`, {
+           headers: {
+               'Accept': 'application/json',
+               ...getCsrfHeaders()
+           }
+       });
         const result = await response.json();
 
         if (result.success) {
@@ -197,6 +220,7 @@ async function saveBank() {
             method: method,
             headers: {
                 'Content-Type': 'application/json',
+                ...getCsrfHeaders()
             },
             body: JSON.stringify(bankDTO)
         });
@@ -231,7 +255,11 @@ function deleteBank(id) {
     document.getElementById('btnConfirmDelete').onclick = async function() {
         try {
             const response = await fetch(`/bank/delete/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                }
             });
 
             const result = await response.json();
@@ -279,7 +307,12 @@ async function exportToCSV() {
         });
 
         const url = `/bank/export?search=${encodeURIComponent(currentSearch)}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            headers: {
+                'Accept': 'application/json',
+                ...getCsrfHeaders()
+            }
+        });
 
         if (response.ok) {
             const blob = await response.blob();

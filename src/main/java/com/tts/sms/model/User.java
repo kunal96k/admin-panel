@@ -55,6 +55,15 @@ public class User implements UserDetails {
     @Column(name = "updated_date")
     private LocalDateTime updatedDate;
 
+    @Column(name = "captcha_attempts")
+    private Integer captchaAttempts = 0;
+
+    @Column(name = "last_captcha_fail")
+    private LocalDateTime lastCaptchaFail;
+
+    @Column(name = "captcha_locked_until")
+    private LocalDateTime captchaLockedUntil;
+
     // UserDetails Implementation
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -15,7 +15,7 @@ import java.util.ArrayList;
 
 @Entity
 @Table(name = "admissions", indexes = {
-        @Index(name = "idx_reg_no", columnList = "registration_number", unique = true),
+        @Index(name = "idx_reg_no", columnList = "registration_number"),
         @Index(name = "idx_mobile", columnList = "mobile_primary"),
         @Index(name = "idx_enquiry_id", columnList = "enquiry_id"),
         @Index(name = "idx_admission_date", columnList = "admission_date")
@@ -31,7 +31,7 @@ public class Admission {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "registration_number", unique = true, length = 50)
+    @Column(name = "registration_number", length = 50)
     private String registrationNumber;
 
     @Column(name = "roll_number", length = 50)

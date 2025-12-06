@@ -3,60 +3,252 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}"
       lang="en">
-
 <head>
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XJW830CMEM"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XJW830CMEM', {
+            'send_page_view': true,
+            'anonymize_ip': true
+        });
+    </script>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Dashboard - TechnoKraft Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- optional: bootstrap icons CDN (you used bi-* classes) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <style>
+        :root{
+            --bg:#f4f6fb;
+            --card:#ffffff;
+            --muted:#6c757d;
+            --accent:#007bff;
+            --shadow: 0 2px 10px rgba(0,0,0,0.08);
+            --radius:12px;
+        }
+
+        body{
+            margin:0;
+            font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            background:var(--bg);
+            color:#333;
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+        }
+
+        main[layout\\:fragment="content"]{
+            max-width:1200px;
+            margin:28px auto;
+            padding:18px;
+        }
+
+        .welcome-section h2{
+            margin:0 0 6px 0;
+            font-size:20px;
+            letter-spacing:0.2px;
+        }
+        .welcome-section p{
+            margin:0;
+            color:#c8d5d5;
+            font-size:13px;
+        }
+
+        /* QUICK STATS */
+        .quick-stats{
+            display:flex;
+            gap:14px;
+            margin-top:18px;
+            flex-wrap:wrap;
+        }
+        .stat-card{
+            background:var(--card);
+            border-radius:10px;
+            box-shadow:var(--shadow);
+            padding:12px 14px;
+            display:flex;
+            gap:12px;
+            align-items:center;
+            min-width:170px;
+            flex:1 1 220px;
+        }
+        .stat-icon{
+            width:48px;
+            height:48px;
+            border-radius:10px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:#fff;
+            font-size:20px;
+        }
+        .stat-icon.bg-primary{ background:#0d6efd; }
+        .stat-icon.bg-success{ background:#198754; }
+        .stat-icon.bg-warning{ background:#ffc107; color:#212529;}
+        .stat-icon.bg-info{ background:#0dcaf0; color:#212529;}
+
+        .stat-info h3{
+            margin:0;
+            font-size:18px;
+            line-height:1;
+        }
+        .stat-info p{
+            margin:0;
+            color:var(--muted);
+            font-size:12px;
+        }
+
+        /* Charts section */
+        .charts-section{
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            gap:20px;
+            margin-top:26px;
+        }
+        .chart-card{
+            background:var(--card);
+            border-radius:var(--radius);
+            box-shadow:var(--shadow);
+            padding:18px;
+            transition:transform .15s, box-shadow .15s;
+            display:flex;
+            flex-direction:column;
+        }
+        .chart-card:hover{ transform: translateY(-4px); box-shadow:0 8px 30px rgba(0,0,0,0.12); }
+
+        .chart-card h3{
+            margin:0 0 12px 0;
+            font-size:16px;
+            display:flex;
+            align-items:center;
+            gap:8px;
+            color:#222;
+        }
+        .chart-controls{
+            display:flex;
+            gap:12px;
+            align-items:center;
+            flex-wrap:wrap;
+            margin-bottom:12px;
+        }
+        .period-select{
+            padding:8px 12px;
+            border:1px solid #e6e9ef;
+            background:#fff;
+            border-radius:8px;
+            cursor:pointer;
+            font-size:14px;
+            min-width:150px;
+        }
+
+        .chart-info{
+            display:none;
+            gap:12px;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:12px;
+            padding:10px;
+            background:#fbfcfe;
+            border-radius:8px;
+            font-size:13px;
+            color:var(--muted);
+        }
+
+        /* ========================================
+       USER PROFILE DROPDOWN
+       ======================================== */
+
+        /*  dropdown positioning in mobile */
+        @media (max-width: 767px) {
+            .topbar-right .dropdown-menu {
+                position: ed !important;
+                top: 60px !important;
+                right: 10px !important;
+                left: auto !important;
+                transform: none !important;
+                min-width: 240px;
+                max-width: calc(100vw - 20px);
+                z-index: 9999;
+            }
+
+            .topbar-right .dropdown-menu.show {
+                display: block;
+            }
+        }
+
+        .chart-container{
+            position:relative;
+            height:360px; /* desktop height */
+            padding:6px 6px 0 6px;
+        }
+
+        .chart-card .chart-container canvas{ width:100% !important; height:100% !important; }
+
+        /* Responsive behaviour */
+        @media (max-width: 1000px) {
+            .charts-section{ grid-template-columns: 1fr; }
+            .chart-container{ height:340px; }
+        }
+
+        @media (max-width: 640px) {
+            main[layout\\:fragment="content"]{ padding:12px; margin:14px; }
+            .stat-card{ padding:10px; min-width:140px; }
+            .chart-controls{ flex-direction:column; align-items:stretch; gap:8px; }
+            .period-select{ width:100%; min-width:unset; }
+            .chart-container{ height:300px; padding:0; }
+        }
+
+        /* small helper */
+        .muted { color:var(--muted); font-size:13px; }
+    </style>
 </head>
-
 <body>
-
-<!-- Dashboard Content Fragment -->
 <main layout:fragment="content">
-
-    <!-- Welcome Section -->
     <div class="welcome-section">
         <h2>Welcome to TechnoKraft Admin Console</h2>
         <p>Comprehensive student management system by TechnoKraft Training &amp; Solution</p>
     </div>
 
     <!-- Quick Stats -->
-    <div class="quick-stats">
-        <div class="stat-card">
-            <div class="stat-icon bg-primary">
+    <div class="quick-stats" aria-live="polite">
+        <div class="stat-card" role="article" aria-label="Total students">
+            <div class="stat-icon bg-primary" aria-hidden="true">
                 <i class="bi bi-people-fill"></i>
             </div>
             <div class="stat-info">
-                <h3>1,234</h3>
+                <h3 id="totalStudents">0</h3>
                 <p>Total Students</p>
             </div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon bg-success">
+        <div class="stat-card" role="article" aria-label="Fees collected">
+            <div class="stat-icon bg-success" aria-hidden="true">
                 <i class="bi bi-cash-stack"></i>
             </div>
             <div class="stat-info">
-                <h3>₹45.6L</h3>
+                <h3 id="totalFeesCollected">₹0</h3>
                 <p>Fees Collected</p>
             </div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon bg-warning">
+        <div class="stat-card" role="article" aria-label="Total enquiries">
+            <div class="stat-icon bg-warning" aria-hidden="true">
                 <i class="bi bi-file-earmark-text"></i>
             </div>
             <div class="stat-info">
-                <h3>89</h3>
-                <p>Pending Enquiries</p>
+                <h3 id="totalEnquiries">0</h3>
+                <p>Total Enquiries</p>
             </div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon bg-info">
+        <div class="stat-card" role="article" aria-label="Certificates issued">
+            <div class="stat-icon bg-info" aria-hidden="true">
                 <i class="bi bi-award-fill"></i>
             </div>
             <div class="stat-info">
-                <h3>567</h3>
+                <h3 id="certificatesIssued">0</h3>
                 <p>Certificates Issued</p>
             </div>
         </div>
@@ -64,22 +256,223 @@
 
     <!-- Charts Section -->
     <div class="charts-section">
-        <div class="chart-card">
-            <h3><i class="bi bi-graph-up me-2"></i>Monthly Revenue Trend</h3>
+        <!-- Revenue Chart -->
+        <div class="chart-card" aria-labelledby="revenueHeading">
+            <h3 id="revenueHeading">
+                <i class="bi bi-graph-up"></i>
+                Revenue Trend
+            </h3>
+
+            <div class="chart-controls" role="toolbar" aria-label="Chart controls">
+                <label for="periodSelect" style="font-weight:500; color:#495057;">Time Period:</label>
+                <select id="periodSelect" class="period-select" aria-controls="revenueChart">
+                    <option value="1M">Last 1 Month</option>
+                    <option value="2M">Last 2 Months</option>
+                    <option value="3M">Last 3 Months</option>
+                    <option value="4M">Last 4 Months</option>
+                    <option value="5M">Last 5 Months</option>
+                    <option value="6M" selected>Last 6 Months</option>
+                    <option value="1Y">Last 1 Year</option>
+                    <option value="2Y">Last 2 Years</option>
+                    <option value="3Y">Last 3 Years</option>
+                    <option value="5Y">Last 5 Years</option>
+                </select>
+            </div>
+
             <div class="chart-container">
-                <canvas id="lineChart"></canvas>
+                <canvas id="revenueChart" aria-label="Revenue chart" role="img"></canvas>
             </div>
         </div>
 
-        <div class="chart-card">
-            <h3><i class="bi bi-pie-chart me-2"></i>Course Distribution</h3>
+        <!-- Course Distribution Chart -->
+        <div class="chart-card" aria-labelledby="courseHeading">
+            <h3 id="courseHeading">
+                <i class="bi bi-pie-chart"></i>
+                Course Distribution
+            </h3>
+
+            <div class="chart-info" aria-hidden="true">
+                <div>
+                    <div class="muted">Total Students</div>
+                    <div class="muted" id="courseStudents">0</div>
+                </div>
+                <div>
+                    <div class="muted">Total Courses</div>
+                    <div class="muted" id="totalCourses">0</div>
+                </div>
+            </div>
+
             <div class="chart-container">
-                <canvas id="pieChart"></canvas>
+                <canvas id="courseChart" aria-label="Course distribution chart" role="img"></canvas>
             </div>
         </div>
     </div>
 
-</main>
 
+
+    <script th:inline="javascript">
+        let revenueChart = null;
+        let courseChart = null;
+
+        // helper to set text only if element exists
+        function setTextIfExists(id, txt) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = txt;
+        }
+
+        async function loadDashboardStats() {
+            try {
+                const response = await fetch('/api/dashboard/stats');
+                const stats = await response.json();
+
+                setTextIfExists('totalStudents', stats.totalStudents || 0);
+                setTextIfExists('totalFeesCollected', stats.totalFeesCollectedFormatted || '₹0');
+                setTextIfExists('totalEnquiries', stats.totalEnquiries || 0);
+                setTextIfExists('certificatesIssued', stats.certificatesIssued || 0);
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Removed writing to #totalRevenue and #dataPoints because these elements are not required.
+        async function loadRevenueChart(period = '6M') {
+            try {
+                const response = await fetch(`/api/dashboard/revenue-chart?period=${period}`);
+                const data = await response.json();
+
+                const ctx = document.getElementById('revenueChart').getContext('2d');
+
+                if (revenueChart) {
+                    revenueChart.destroy();
+                }
+
+                revenueChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Revenue (₹)',
+                            data: data.data,
+                            borderColor: '#007bff',
+                            backgroundColor: 'rgba(0, 123, 255, 0.08)',
+                            tension: 0.35,
+                            fill: true,
+                            pointRadius: 3,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#007bff',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true, position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return '₹' + Number(context.parsed.y || 0).toLocaleString('en-IN');
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₹' + Number(value).toLocaleString('en-IN');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                console.log('Revenue chart loaded:', (data.labels || []).length, 'points');
+            } catch (error) {
+                console.error('Error loading revenue chart:', error);
+            }
+        }
+
+        async function loadCourseChart() {
+            try {
+                const response = await fetch('/api/dashboard/course-distribution');
+                const data = await response.json();
+
+                // guarded updates for info badges
+                setTextIfExists('totalCourses', (data.labels || []).length);
+                setTextIfExists('courseStudents', (data.data || []).reduce((a, b) => a + b, 0));
+
+                const ctx = document.getElementById('courseChart').getContext('2d');
+
+                if (courseChart) {
+                    courseChart.destroy();
+                }
+
+                // If backend supplies colors, use them, otherwise fallback to Chart.js default palette
+                const colors = Array.isArray(data.colors) && data.colors.length === data.data.length ? data.colors : undefined;
+
+                courseChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            data: data.data,
+                            backgroundColor: colors,
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true, position: 'right' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = total ? ((value / total) * 100).toFixed(1) : '0.0';
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                console.log('Course chart loaded:', (data.labels || []).length, 'courses');
+            } catch (error) {
+                console.error('Error loading course chart:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const periodSelect = document.getElementById('periodSelect');
+            if (periodSelect) {
+                periodSelect.addEventListener('change', function() {
+                    loadRevenueChart(this.value);
+                });
+            }
+
+            // initial load
+            loadDashboardStats();
+            loadRevenueChart('6M');
+            loadCourseChart();
+
+            // make charts resize cleanly when orientation changes on mobile
+            window.addEventListener('orientationchange', () => {
+                setTimeout(() => {
+                    if (revenueChart) revenueChart.resize();
+                    if (courseChart) courseChart.resize();
+                }, 250);
+            });
+        });
+    </script>
+</main>
 </body>
 </html>

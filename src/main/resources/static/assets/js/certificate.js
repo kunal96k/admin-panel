@@ -6,6 +6,9 @@ let totalElements = 0;
 let selectedCertificateId = null;
 let importedCertData = [];
 let allCourses = [];
+// CSRF Token handling
+let csrfToken = null;
+let csrfHeader = null;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -16,7 +19,30 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     loadCertificates();
     updateStatsForCurrentView();
+    initializeCsrfToken();
 });
+
+// Initialize CSRF token from cookie
+function initializeCsrfToken() {
+    const token = getCookie('XSRF-TOKEN');
+    if (token) {
+        csrfToken = token;
+        csrfHeader = 'X-CSRF-TOKEN';
+        console.log('CSRF token initialized');
+    } else {
+        console.warn('CSRF token not found in cookies');
+    }
+}
+
+// Get cookie by name
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+        return parts.pop().split(';').shift();
+    }
+    return null;
+}
 
 async function updateStatsForCurrentView() {
     const course = document.getElementById('courseFilter')?.value || '';
@@ -30,7 +56,15 @@ async function updateStatsForCurrentView() {
             ...(search && { search })
         });
 
-        const response = await fetch(`/api/certificates/stats-filtered?${params}`);
+        // Refresh CSRF token before request
+        initializeCsrfToken();
+
+        const response = await fetch(`/api/certificates/stats-filtered?${params}`, {
+            headers: {
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            }
+        });
+
         if (!response.ok) throw new Error('Failed to load filtered stats');
 
         const stats = await response.json();
@@ -81,10 +115,14 @@ async function autoGenerateCertificates() {
             didOpen: () => Swal.showLoading()
         });
 
+        // Refresh CSRF token before request
+        initializeCsrfToken();
+
         const response = await fetch('/api/certificates/auto-generate', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
             }
         });
 
@@ -102,7 +140,6 @@ async function autoGenerateCertificates() {
                 `,
                 confirmButtonColor: '#10b981'
             }).then(() => {
-                // Reload certificates table
                 loadCertificates();
                 updateStats();
             });
@@ -268,7 +305,15 @@ function initializeCourseSearch() {
 // Load courses from backend
 async function loadCourses() {
     try {
-        const response = await fetch('/api/courses?page=0&size=1000');
+        // Refresh CSRF token before request
+        initializeCsrfToken();
+
+        const response = await fetch('/api/courses?page=0&size=1000', {
+            headers: {
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            }
+        });
+
         if (!response.ok) throw new Error('Failed to load courses');
 
         const data = await response.json();
@@ -310,7 +355,15 @@ async function loadCertificates() {
             ...(search && { search })
         });
 
-        const response = await fetch(`/api/certificates?${params}`);
+         // Refresh CSRF token before request
+        initializeCsrfToken();
+
+        const response = await fetch(`/api/certificates?${params}`, {
+            headers: {
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            }
+        });
+
         if (!response.ok) throw new Error('Failed to load certificates');
 
         const data = await response.json();
@@ -405,7 +458,15 @@ async function loadCertificates() {
 // Update statistics
 async function updateStats() {
     try {
-        const response = await fetch('/api/certificates/stats');
+        // Refresh CSRF token before request
+        initializeCsrfToken();
+
+        const response = await fetch('/api/certificates/stats', {
+            headers: {
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            }
+        });
+
         if (!response.ok) throw new Error('Failed to load stats');
 
         const stats = await response.json();
@@ -428,13 +489,20 @@ async function issueCertificate(id) {
     });
 
     try {
-        const response = await fetch(`/api/certificates/${id}`);
+        // Refresh CSRF token before request
+        initializeCsrfToken();
+
+        const response = await fetch(`/api/certificates/${id}`, {
+            headers: {
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            }
+        });
+
         if (!response.ok) throw new Error('Failed to load certificate');
 
         const certificate = await response.json();
         selectedCertificateId = id;
 
-        // Populate modal
         document.getElementById('studentName').value = certificate.studentName;
         document.getElementById('courseName').value = certificate.courseName;
         document.getElementById('grade').value = certificate.grade || '';
@@ -482,8 +550,14 @@ async function deleteCertificate(id) {
 
     if (result.isConfirmed) {
         try {
+            // Refresh CSRF token before request
+            initializeCsrfToken();
+
             const response = await fetch(`/api/certificates/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+                }
             });
 
             if (!response.ok) throw new Error('Failed to delete certificate');
@@ -561,41 +635,189 @@ async function promptAndSendEmail(certificateId, studentEmail) {
         menu.classList.remove('show');
     });
 
-    const { value: email } = await Swal.fire({
-        title: 'Send Certificate via Email',
-        input: 'email',
-        inputLabel: 'Email Address',
-        inputValue: studentEmail || '',
-        inputPlaceholder: 'Enter email address',
-        showCancelButton: true,
-        inputValidator: (value) => {
-            if (!value) {
-                return 'Please enter an email address';
+    try {
+        // Refresh CSRF token before request
+        initializeCsrfToken();
+
+        const certResponse = await fetch(`/api/certificates/${certificateId}`, {
+            headers: {
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
             }
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-                return 'Please enter a valid email address';
+        });
+
+        if (!certResponse.ok) throw new Error('Failed to load certificate');
+
+        const certificate = await certResponse.json();
+
+        let finalEmail = studentEmail || '';
+        let studentName = certificate.studentName || '';
+        const actualRegNo = certificate.registrationNo;
+
+        if (!finalEmail && actualRegNo) {
+            try {
+                console.log('Fetching admission data for:', actualRegNo);
+
+                const admResponse = await fetch(`/api/admissions/by-regno/${actualRegNo}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+                    }
+                });
+
+                if (admResponse.ok) {
+                    const admission = await admResponse.json();
+                    console.log('Admission data received:', admission);
+
+                    // Use emailPrimary first, fallback to emailSecondary
+                    finalEmail = admission.emailPrimary || admission.emailSecondary || '';
+
+                    // Update student name if available in admission
+                    if (admission.studentName) {
+                        studentName = admission.studentName;
+                    }
+
+                    console.log('Final email:', finalEmail);
+                } else {
+                    console.warn('Admission not found for registration number:', actualRegNo);
+                }
+            } catch (error) {
+                console.error('Error fetching admission email:', error);
             }
         }
-    });
 
-    if (email) {
-        await sendCertificateEmail(certificateId, email);
+        const { value: formValues } = await Swal.fire({
+            title: '<i class="bi bi-envelope-paper me-2"></i>Send Certificate via Email',
+            html: `
+                <div class="text-start">
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Certificate will be sent as a high-quality image attachment</strong>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Certificate Number
+                            <i class="bi bi-lock-fill text-muted ms-1" style="font-size: 0.8rem;"></i>
+                        </label>
+                        <input
+                            type="text"
+                            id="emailCertNo"
+                            class="form-control bg-light"
+                            value="${certificate.certificateNo || 'Not Issued'}"
+                            disabled
+                            style="cursor: not-allowed;"
+                        >
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Student Name
+                            <i class="bi bi-lock-fill text-muted ms-1" style="font-size: 0.8rem;"></i>
+                        </label>
+                        <input
+                            type="text"
+                            id="emailStudentName"
+                            class="form-control bg-light"
+                            value="${studentName}"
+                        >
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Email Address <span class="text-danger">*</span>
+                        </label>
+                        <input
+                            type="email"
+                            id="emailRecipient"
+                            class="form-control"
+                            value="${finalEmail}"
+                            placeholder="Enter recipient email address"
+                            required
+                        >
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            ${finalEmail ? 'Email auto-filled from admission records' : 'Please enter email address manually'}
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Additional Message (Optional)</label>
+                        <textarea
+                            id="emailMessage"
+                            class="form-control"
+                            rows="3"
+                            placeholder="Add a personal message to include in the email..."
+                        ></textarea>
+                    </div>
+
+                    <div class="alert alert-warning mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <small><strong>Note:</strong> Make sure the email address is correct. The certificate will be sent immediately.</small>
+                    </div>
+                </div>
+            `,
+            width: '600px',
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-send-fill me-2"></i>Send Email',
+            cancelButtonText: '<i class="bi bi-x-circle me-2"></i>Cancel',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6c757d',
+            focusConfirm: false,
+            preConfirm: () => {
+                const email = document.getElementById('emailRecipient').value.trim();
+                const message = document.getElementById('emailMessage').value.trim();
+
+                if (!email) {
+                    Swal.showValidationMessage('Please enter an email address');
+                    return false;
+                }
+
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    Swal.showValidationMessage('Please enter a valid email address');
+                    return false;
+                }
+
+                return { email, message };
+            }
+        });
+
+        if (formValues) {
+            await sendCertificateEmail(certificateId, formValues.email, formValues.message);
+        }
+
+    } catch (error) {
+        console.error('Error preparing email modal:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to load certificate details',
+            confirmButtonColor: '#ef4444'
+        });
     }
 }
 
 /**
  * Send certificate email with canvas image
  */
-async function sendCertificateEmail(certificateId, email) {
+async function sendCertificateEmail(certificateId, email, additionalMessage) {
     try {
-        // Show loading
+        // Show loading with better UI
         Swal.fire({
             title: 'Sending Email...',
-            html: 'Please wait while we send the certificate',
+            html: `
+                <div class="text-center">
+                    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mb-2">Generating certificate image...</p>
+                    <p class="text-muted small">This may take a few moments</p>
+                </div>
+            `,
             allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
+            showConfirmButton: false
         });
 
         // Fetch certificate view to get canvas data
@@ -630,15 +852,33 @@ async function sendCertificateEmail(certificateId, email) {
         // Remove iframe
         document.body.removeChild(iframe);
 
+        // Update loading message
+        Swal.update({
+            html: `
+                <div class="text-center">
+                    <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mb-2">Sending email to ${email}...</p>
+                    <p class="text-muted small">Almost done!</p>
+                </div>
+            `
+        });
+
+         // Refresh CSRF token before request
+        initializeCsrfToken();
+
         // Send to backend
         const sendResponse = await fetch(`/api/certificates/${certificateId}/send-email-with-image`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
             },
             body: JSON.stringify({
                 email: email,
-                imageData: imageData
+                imageData: imageData,
+                additionalMessage: additionalMessage || null
             })
         });
 
@@ -650,17 +890,34 @@ async function sendCertificateEmail(certificateId, email) {
 
         Swal.fire({
             icon: 'success',
-            title: 'Email Sent!',
-            text: `Certificate has been sent to ${email}`,
-            timer: 3000
+            title: 'Email Sent Successfully!',
+            html: `
+                <div class="text-center">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                    <p class="mt-3 mb-2">Certificate has been sent to:</p>
+                    <p class="fw-bold text-primary">${email}</p>
+                    <small class="text-muted">The recipient should receive it within a few minutes</small>
+                </div>
+            `,
+            confirmButtonColor: '#10b981',
+            timer: 5000
         });
 
     } catch (error) {
         console.error('Error sending email:', error);
         Swal.fire({
             icon: 'error',
-            title: 'Failed to Send',
-            text: error.message || 'Could not send certificate email'
+            title: 'Failed to Send Email',
+            html: `
+                <div class="alert alert-danger text-start">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Error:</strong> ${error.message || 'Could not send certificate email'}
+                </div>
+                <p class="text-muted mt-3">
+                    <small>Please check the email address and try again. If the problem persists, contact support.</small>
+                </p>
+            `,
+            confirmButtonColor: '#ef4444'
         });
     }
 }
@@ -773,9 +1030,15 @@ async function importCertificatesCSV() {
         const blob = new Blob([csvContent], { type: 'text/csv' });
         formData.append('file', blob, 'certificates.csv');
 
+        // Refresh CSRF token before request
+        initializeCsrfToken();
+
         const response = await fetch('/api/certificates/import', {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            }
         });
 
         if (!response.ok) {
@@ -827,6 +1090,27 @@ function convertToCSV(data) {
 
 async function exportCertificatesCSV() {
     try {
+        // Refresh CSRF token before request
+        initializeCsrfToken();
+
+        const checkResponse = await fetch('/api/certificates/stats', {
+            headers: {
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            }
+        });
+
+        const stats = await checkResponse.json();
+
+        if (!stats || stats.total === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'No Data Found',
+                text: 'The certificate table is empty. There is no data to export.',
+                confirmButtonColor: '#667eea'
+            });
+            return;
+        }
+
         Swal.fire({
             title: 'Exporting...',
             text: 'Preparing CSV file',
@@ -834,7 +1118,11 @@ async function exportCertificatesCSV() {
             didOpen: () => Swal.showLoading()
         });
 
-        const response = await fetch('/api/certificates/export/csv');
+        const response = await fetch('/api/certificates/export/csv', {
+            headers: {
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            }
+        });
 
         if (!response.ok) {
             const error = await response.json();
@@ -845,24 +1133,24 @@ async function exportCertificatesCSV() {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `certificates_${Date.now()}.csv`;
+        link.download = `certificates_${new Date().toISOString().split('T')[0]}.csv`;
         link.click();
         window.URL.revokeObjectURL(url);
 
         Swal.fire({
-            title: 'Success!',
-            text: 'CSV exported successfully!',
             icon: 'success',
+            title: 'Export Successful!',
+            text: `${stats.total} certificate(s) exported successfully!`,
             timer: 2000,
             showConfirmButton: false
         });
     } catch (error) {
         console.error('Export error:', error);
         Swal.fire({
-            title: 'Error',
-            text: error.message || 'Failed to export CSV',
             icon: 'error',
-            confirmButtonColor: '#667eea'
+            title: 'Export Failed',
+            text: error.message || 'Failed to export CSV',
+            confirmButtonColor: '#ef4444'
         });
     }
 }
@@ -1129,9 +1417,15 @@ async function createManualCertificate(data) {
             didOpen: () => Swal.showLoading()
         });
 
+        // Refresh CSRF token before request
+        initializeCsrfToken();
+
         const response = await fetch('/api/certificates/manual-generate', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            },
             body: JSON.stringify({
                 registrationNo: data.regNo,
                 studentName: data.studentName,
@@ -1201,7 +1495,15 @@ async function viewManualCertificateLogs() {
             didOpen: () => Swal.showLoading()
         });
 
-        const response = await fetch('/api/certificates/manual-logs');
+        // Refresh CSRF token before request
+        initializeCsrfToken();
+
+        const response = await fetch('/api/certificates/manual-logs', {
+            headers: {
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            }
+        });
+
         const logs = await response.json();
 
         if (logs.length === 0) {
@@ -1214,18 +1516,29 @@ async function viewManualCertificateLogs() {
             return;
         }
         const tableRows = logs.map(log => {
-            // Parse and format date properly
-            const createdDate = log.createdAt ? new Date(log.createdAt) : null;
-            const formattedDate = createdDate && !isNaN(createdDate.getTime())
-                ? createdDate.toLocaleString('en-IN', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                })
-                : 'N/A';
+
+                let formattedDate = 'N/A';
+
+                if (log.createdAt) {
+                    try {
+                        const dateStr = log.createdAt.replace('T', ' ').split('.')[0];
+                        const createdDate = new Date(dateStr);
+
+                        if (!isNaN(createdDate.getTime())) {
+                            formattedDate = createdDate.toLocaleString('en-IN', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true,
+                                timeZone: 'Asia/Kolkata'
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Date parsing error:', e, log.createdAt);
+                    }
+                }
 
             return `
                 <tr>
@@ -1312,7 +1625,6 @@ async function saveCertificate() {
     };
 
     try {
-        // Show loading
         Swal.fire({
             title: 'Issuing Certificate...',
             html: 'Please wait while we process your request',
@@ -1320,10 +1632,14 @@ async function saveCertificate() {
             didOpen: () => Swal.showLoading()
         });
 
+        // Refresh CSRF token before request
+        initializeCsrfToken();
+
         const response = await fetch(`/api/certificates/${selectedCertificateId}/issue`, {
             method: 'PUT',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
             },
             body: JSON.stringify(certificateData)
         });
@@ -1339,7 +1655,6 @@ async function saveCertificate() {
                 errorData = { error: textError || 'Unknown error occurred' };
             }
 
-            // Check for duplicate certificate number
             if (errorData.error && errorData.error.includes('Duplicate entry')) {
                 throw new Error('This certificate number already exists. Please try again - a unique number will be generated automatically.');
             } else if (errorData.error && errorData.error.includes('already exists')) {

@@ -3,506 +3,598 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - SMS System</title>
+    <title>Login - TechnoKraft CRM</title>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Michroma&family=Orbitron:wght@400..900&display=swap');
-    </style>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XJW830CMEM"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XJW830CMEM', {
+            'send_page_view': true,
+            'anonymize_ip': true
+        });
+    </script>
 
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
-
     <link rel="icon" th:href="@{/assets/images/tts-logo-ev.png}">
-
-    <!-- Bootstrap Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 
     <style>
-        /* ================================
-   Fonts
-   ================================ */
-@import url('https://fonts.googleapis.com/css2?family=Michroma&family=Inter:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Michroma&family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* ================================
-   Root + Global
-   ================================ */
-:root {
-    --background: #1a1a2e;
-    --color: #ffffff;
-    --primary-color: #0f3460;
-    --accent: #e94560;
-}
+        :root {
+            --primary-color: #dc2626;
+            --primary-hover: #b91c1c;
+            --accent-blue: #3b82f6;
+            --bg-white: #ffffff;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --input-bg: #f8fafc;
+        }
 
-* {
-    box-sizing: border-box;
-}
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
 
-html {
-    scroll-behavior: smooth;
-}
+        body {
+            font-family: "Inter", sans-serif;
+            background-color: var(--bg-white);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
 
-body {
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: radial-gradient(circle at top left, #30336b 0, #1a1a2e 40%, #0b1020 100%);
-    color: var(--color);
-    letter-spacing: 0.5px;
-}
+        .login-wrapper {
+            height: 100vh;
+            width: 100%;
+        }
 
-a {
-    color: var(--accent);
-    text-decoration: none;
-}
+        .brand-sidebar {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            justify-content: flex-start;
+        }
 
-a:hover {
-    text-decoration: underline;
-}
+        .brand-sidebar::before {
+            content: "";
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.1), transparent 60%);
+            top: -20%;
+            right: -20%;
+            pointer-events: none;
+        }
 
-/* ================================
-   Container & Card
-   ================================ */
-.login-container {
-    width: 100%;              /* fixed width behaviour – no jumping on error/success */
-    max-width: 500px;
-    padding: 1.5rem;
-    margin: 0 auto;
-}
+        .brand-top {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 2rem;
+            z-index: 2;
+        }
 
-.login-card {
-    position: relative;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 0 36px 1px rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(22px);
-    background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.06),
-        rgba(15, 52, 96, 0.3)
-    );
-    overflow: hidden;
-}
+        .brand-logo-small {
+            width: 100px;
+            height: auto;
+            margin-bottom: 0.5rem;
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.3));
+        }
 
-/* Decorative circles (like original glassmorphism design) */
-.login-card::before,
-.login-card::after {
-    content: "";
-    position: absolute;
-    width: 7rem;
-    height: 7rem;
-    border-radius: 50%;
-    background: radial-gradient(circle, #0f3460, #1a1a2e);
-    opacity: 0.8;
-    z-index: -1;
-}
+        .brand-title {
+            font-family: "Michroma", sans-serif;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            color: white;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
 
-.login-card::before {
-    top: -2rem;
-    left: -2rem;
-    transform: translate(-15%, -15%);
-}
+        .brand-subtitle {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
 
-.login-card::after {
-    bottom: -2rem;
-    right: -2rem;
-    transform: translate(15%, 15%);
-}
+        /* Developer Credits - Simple Bottom Bar */
+        .developer-credits {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 3;
+            padding: 0.75rem 1.5rem;
+            background: rgba(15, 23, 42, 0.95);
+            border-top: 1px solid rgba(220, 38, 38, 0.3);
+            text-align: center;
+        }
 
-/* ================================
-   Header & Logo
-   ================================ */
-.login-header {
-    padding: 2.5rem 2rem 1rem;
-    text-align: center;
-    color: var(--color);
-    background: transparent;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
+        .credits-text {
+            font-family: "Inter", sans-serif;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+            font-weight: 400;
+            margin: 0;
+        }
 
-.logo-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.8rem;
-    margin-bottom: 1rem;
-}
+        .credits-text .divider {
+            margin: 0 0.3rem;
+            color: #475569;
+            font-weight: 300;
+            font-size: 0.8rem;
+        }
 
-.logo-icon {
-    width: 70px;
-    height: auto;
-    object-fit: contain;
-    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.6));
-}
+        .credits-text .dev-name {
+            color: #e2e8f0;
+            font-weight: 500;
+        }
 
-.logo-text {
-    text-align: left;
-}
+        .brand-center {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+            padding-bottom: 6rem;
+            margin-top: 2rem;
+        }
 
-.logo-title {
-    font-family: "Michroma", sans-serif;
-    font-size: 22px;
-    letter-spacing: 1px;
-    color: #ffffff;
-    font-weight: 600;
-}
+        .security-icon {
+            font-size: 8rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 0.5rem;
+            margin-bottom: -1.2rem;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
+            animation: pulse 3s infinite;
+        }
 
-.logo-subtitle {
-    font-family: "Inter", sans-serif;
-    font-size: 11.2px;
-    letter-spacing: 0.3px;
-    color: rgba(255, 255, 255, 0.9);
-    margin-left: 3%;
-}
+        .security-text {
+            font-family: "Michroma", sans-serif;
+            font-size: 1.25rem;
+            color: white;
+            letter-spacing: 1px;
+            text-align: center;
+        }
 
+        .security-subtext {
+            font-size: 0.75rem;
+            margin-top: 6px;
+            color: #cbd5e1;
+            letter-spacing: 0.5px;
+        }
 
-/* If you use text beside/under logo */
-.logo-text {
-    text-align: center;
-}
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
 
-.logo-title {
-    font-family: "Michroma", sans-serif;   /* TechnoKraft */
-    font-size: 22px;
-    letter-spacing: 1px;
-}
+        .login-section {
+            background-color: var(--bg-white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 2rem;
+            height: 100vh;
+            overflow-y: auto;
+        }
 
-.logo-subtitle {
-    font-family: "Inter", sans-serif;      /* Training and Solutions */
-    font-size: 11.2px;
-    letter-spacing: 0.3px;
-    opacity: 0.9;
-}
+        .login-card-content {
+            width: 100%;
+            max-width: 420px;
+            padding: 0.5rem;
+        }
 
-.login-header h1 {
-    font-size: 1.4rem;
-    font-weight: 600;
-    margin: 0.5rem 0 0.25rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
+        .login-header {
+            margin-bottom: 1.5rem;
+        }
 
-.login-header p {
-    margin: 0;
-    font-size: 0.85rem;
-    opacity: 0.75;
-}
+        .welcome-text {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
 
-/* ================================
-   Body & Form
-   ================================ */
-.login-body {
-    padding: 1.75rem 2rem 1.5rem;
-}
+        .welcome-sub {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
 
-.form-label {
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.85);
-    margin-bottom: 6px;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
+        .form-label {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.85rem;
+            margin-bottom: 0.3rem;
+        }
 
-.required {
-    color: #f87171;
-}
+        .required { color: var(--primary-color); }
 
-/* Input + Select */
-.form-control,
-.form-select {
-    background-color: rgba(145, 145, 145, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    color: var(--color);
-    border-radius: 8px;
-    padding: 0.75rem 0.9rem;
-    font-size: 0.9rem;
-    outline: none;
-    backdrop-filter: blur(15px);
-}
+        .form-control {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-dark);
+            padding: 0.7rem 1rem;
+            font-size: 0.95rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
 
-.form-control::placeholder {
-    color: rgba(255, 255, 255, 0.45);
-}
+        .form-control:focus {
+            background-color: #fff;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            outline: none;
+        }
 
-.form-control:focus,
-.form-select:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 16px 1px rgba(0, 0, 0, 0.35);
-    background-color: rgba(145, 145, 145, 0.18);
-    color: var(--color);
-    animation: wobble 0.25s ease-in;
-}
+        .input-group-text {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-right: none;
+            color: var(--text-muted);
+            border-radius: 8px 0 0 8px;
+        }
+        .input-group .form-control {
+            border-left: none;
+            border-radius: 0 8px 8px 0;
+        }
+        .input-group:focus-within .input-group-text {
+            border-color: var(--accent-blue);
+            background-color: #fff;
+        }
 
-/* Input group with icons */
-.input-group-text {
-    background: rgba(145, 145, 145, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 8px 0 0 8px;
-    color: rgba(255, 255, 255, 0.8);
-}
+        .password-wrapper { position: relative; width: 100%; }
+        .password-wrapper .form-control {
+            padding-right: 48px;
+            border-radius: 0 8px 8px 0;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            z-index: 10;
+            padding: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .password-toggle:focus { outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); border-radius: 6px; }
 
-.input-group .form-control {
-    border-radius: 0 8px 8px 0;
-    border-left: none;
-}
+        .btn-login {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            font-weight: 600;
+            border-radius: 8px;
+            width: 100%;
+            margin-top: 0.5rem;
+            box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2);
+            transition: all 0.2s;
+        }
+        .btn-login:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 6px 12px rgba(220, 38, 38, 0.3);
+        }
 
-/* Select options (dropdown) */
-.form-select {
-    cursor: pointer;
-}
+        .forgot-link {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            float: right;
+            margin-top: 4px;
+            cursor: pointer;
+        }
+        .forgot-link:hover { color: var(--primary-color); }
 
-.form-select option {
-    color: #111827; /* normal dark text inside dropdown list */
-}
+        .footer-copy {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
 
-/* ================================
-   Buttons
-   ================================ */
-.btn-login {
-    background: linear-gradient(135deg, var(--primary-color), var(--accent));
-    border: none;
-    padding: 0.8rem;
-    font-size: 0.95rem;
-    font-weight: 600;
-    border-radius: 10px;
-    color: white;
-    width: 100%;
-    margin-top: 0.5rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-}
+        @media (max-width: 991px) {
+            .brand-sidebar { display: none; }
+            .login-section { padding: 1.5rem; }
+            body { overflow: auto; }
+        }
 
-.btn-login:hover {
-    opacity: 0.96;
-}
+  /* Developer Credits - Enhanced Bottom Bar */
+        .developer-credits {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 3;
+            padding: 1rem 1.5rem;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.98) 100%);
+            border-top: 1px solid rgba(220, 38, 38, 0.4);
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
 
-.btn-login:active {
-    transform: scale(0.99);
-}
+        .credits-text {
+            font-family: "Inter", sans-serif;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            letter-spacing: 0.8px;
+            font-weight: 400;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            line-height: 1;
+        }
 
-/* ================================
-   Alerts (Error / Success)
-   ================================ */
-.alert {
-    border-radius: 10px;
-    border: 1px solid transparent;
-    padding: 0.75rem 0.85rem;
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
+        .credits-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #64748b;
+            font-weight: 600;
+        }
 
-.alert-danger {
-    background-color: rgba(248, 113, 113, 0.14);
-    border-color: rgba(248, 113, 113, 0.5);
-    color: #fecaca;
-}
+        .credits-icon {
+            color: #dc2626;
+            font-size: 0.9rem;
+        }
 
-.alert-success {
-    background-color: rgba(52, 211, 153, 0.12);
-    border-color: rgba(52, 211, 153, 0.5);
-    color: #bbf7d0;
-}
+        .credits-text .divider {
+            margin: 0 -0.05rem;
+            color: #475569;
+            font-weight: 400;
+            font-size: 0.85rem;
+        }
 
-.alert i {
-    font-size: 1rem;
-}
+        .credits-text .dev-name {
+            color: #e2e8f0;
+            font-weight: 600;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
 
-/* ================================
-   Checkbox (Remember me)
-   ================================ */
-.form-check-input {
-    background-color: transparent;
-    border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-.form-check-input:checked {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-.form-check-label {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 0.85rem;
-}
-
-/* ================================
-   Footer
-   ================================ */
-.login-footer {
-    text-align: center;
-    padding: 0.9rem 0.75rem 1.1rem;
-    background: rgba(15, 23, 42, 0.75);
-    color: rgba(226, 232, 240, 0.85);
-    font-size: 0.8rem;
-    border-top: 1px solid rgba(148, 163, 184, 0.35);
-}
-
-.login-footer a {
-    color: rgba(239, 246, 255, 0.96);
-    font-weight: 500;
-}
-
-.login-footer a:hover {
-    color: var(--accent);
-}
-
-/* ================================
-   Animation
-   ================================ */
-@keyframes wobble {
-    0% { transform: scale(1.02); }
-    25% { transform: scale(1); }
-    75% { transform: scale(1.02); }
-    100% { transform: scale(1); }
-}
-
-/* ================================
-   Responsive
-   ================================ */
-@media (max-width: 576px) {
-    .login-container {
-        max-width: 100%;
-        padding: 1rem;
-    }
-
-    .login-card {
-        border-radius: 14px;
-    }
-
-    .login-header {
-        padding: 2rem 1.5rem 0.75rem;
-    }
-
-    .login-body {
-        padding: 1.5rem 1.5rem 1.25rem;
-    }
-}
+        .dev-icon {
+            color: #3b82f6;
+            font-size: 0.85rem;
+        }
 
     </style>
 </head>
 <body>
-<div class="login-container">
-    <div class="login-card">
-        <div class="login-header">
-            <!-- Logo -->
-            <div class="logo-container d-flex align-items-center justify-content-center gap-3">
 
-                <!-- Logo Icon -->
+<div class="container-fluid g-0 login-wrapper">
+    <div class="row g-0 h-100">
+
+        <div class="col-lg-6 d-none d-lg-flex brand-sidebar">
+
+            <div class="brand-top">
                 <img src="/assets/images/tts-logo-ev.png"
-                     alt="TechnoKraft Logo"
-                     onerror="this.src='https://via.placeholder.com/80?text=TTS'"
-                     class="logo-icon">
+                     onerror="this.src='https://via.placeholder.com/60?text=TTS'"
+                     class="brand-logo-small"
+                     alt="TechnoKraft Logo">
+                <h2 class="brand-title">TechnoKraft CRM</h2>
+                <div class="brand-subtitle">Training & Solution Pvt. Ltd.</div>
+            </div>
 
-                <!-- Logo Text -->
-                <div class="logo-text text-start">
-                    <div class="logo-title">TechnoKraft</div>
-                    <div class="logo-subtitle">Training and Solutions</div>
+            <div class="brand-center">
+                <i class="bi bi-people-fill security-icon" aria-hidden="true"></i>
+
+                <div class="security-text">
+                    TechnoKraft CRM
+                    <div class="security-subtext">by TechnoKraft Services Team</div>
                 </div>
+            </div>
+            <!-- Developer Credits -->
+            <div class="developer-credits d-none">
+                <p class="credits-text">
+                    <i class="bi bi-code-slash credits-icon"></i>
+                    <span class="credits-label">Developed by</span>
+                    <span class="dev-name">
+                        Sneha Ghatol
+                    </span>
+                    <span class="divider">|</span>
+                    <span class="dev-name">
+                        Kunal Patil
+                    </span>
+                </p>
             </div>
 
         </div>
 
-        <div class="login-body">
-            <!-- Error Message -->
-            <div th:if="${param.error}" class="alert alert-danger mb-3" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <span th:text="${error}">Invalid username or password</span>
-            </div>
+        <div class="col-lg-6 login-section">
+            <div class="login-card-content">
 
-            <!-- Logout Message -->
-            <div th:if="${param.logout}" class="alert alert-success mb-3" role="alert">
-                <i class="bi bi-check-circle-fill me-2"></i>
-                <span th:text="${logoutMessage}">You have been logged out successfully</span>
-            </div>
-
-            <!-- Login Form -->
-            <form th:action="@{/login}" method="post">
-                <!--                &lt;!&ndash; Role Selection &ndash;&gt;-->
-                <!--                <div class="mb-3">-->
-                <!--                    <label for="role" class="form-label">-->
-                <!--                        <i class="bi bi-person-badge me-1"></i>Select Role <span class="required">*</span>-->
-                <!--                    </label>-->
-                <!--                    <select class="form-select" id="role" name="role" required>-->
-                <!--                        <option value="">&#45;&#45; Select Role &#45;&#45;</option>-->
-                <!--                        <option th:each="role : ${roles}"-->
-                <!--                                th:value="${role.id}"-->
-                <!--                                th:text="${role.roleTitle}">-->
-                <!--                        </option>-->
-                <!--                    </select>-->
-                <!--                </div>-->
-
-                <!-- Username -->
-                <div class="mb-3">
-                    <label for="username" class="form-label">
-                        <i class="bi bi-person me-1"></i>Username <span class="required">*</span>
-                    </label>
-                    <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="bi bi-person-fill"></i>
-                        </span>
-                        <input type="text"
-                               class="form-control"
-                               id="username"
-                               name="username"
-                               placeholder="Enter your username"
-                               required
-                               autofocus>
+                <div class="login-header">
+                    <div class="d-lg-none mb-3 text-center">
+                        <img src="/assets/images/tts-logo-ev.png" width="50" alt="Logo">
                     </div>
+                    <h2 class="welcome-text">Welcome back</h2>
+                    <p class="welcome-sub">Please enter your details to sign in.</p>
                 </div>
 
-                <!-- Password -->
-                <div class="mb-3">
-                    <label for="password" class="form-label">
-                        <i class="bi bi-lock me-1"></i>Password <span class="required">*</span>
-                    </label>
-                    <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="bi bi-lock-fill"></i>
-                        </span>
-                        <input type="password"
-                               class="form-control"
-                               id="password"
-                               name="password"
-                               placeholder="Enter your password"
-                               required>
+                <form th:action="@{/login}" method="post" id="loginForm">
+
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username <span class="required">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" class="form-control" id="username" name="username" placeholder="Enter username" required autofocus>
+                        </div>
                     </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password <span class="required">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <div class="password-wrapper" style="flex:1;">
+                                <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+                                <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password">
+                                    <i class="bi bi-eye" id="toggleIcon"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="clearfix">
+                            <span class="forgot-link" onclick="openForgotPasswordModal()">Forgot password?</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-login">
+                        Sign In
+                    </button>
+                </form>
+
+                <div class="footer-copy">
+                    &copy; <span th:text="${#dates.year(#dates.createNow())}">2024</span>
+                    <a href="https://tts.net.in/" target="_blank" style="text-decoration: none; color: inherit; font-weight: 600;">TechnoKraft Training & Solution</a>
                 </div>
-
-                <!-- Remember Me -->
-                <!--                <div class="mb-4">-->
-                <!--                    <div class="form-check">-->
-                <!--                        <input class="form-check-input" type="checkbox" id="remember-me" name="remember-me">-->
-                <!--                        <label class="form-check-label" for="remember-me">-->
-                <!--                            Remember me-->
-                <!--                        </label>-->
-                <!--                    </div>-->
-                <!--                </div>-->
-
-                <!-- Login Button -->
-                <button type="submit" class="btn btn-login">
-                    <i class="bi bi-box-arrow-in-right me-2"></i>Login
-                </button>
-            </form>
-        </div>
-
-        <div class="login-footer">
-            <p>
-                &copy; <span th:text="${#dates.year(#dates.createNow())}">2024</span>
-                <a href="https://tts.net.in/" target="_blank">TechnoKraft Training &amp; Solution PVT LTD</a>.
-                All rights reserved. | Powered by TechnoKraft Service LLP
-            </p>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Bootstrap 5 JS -->
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fs-6 fw-bold">Reset Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">Enter your email to receive a reset link.</p>
+                <input type="email" class="form-control" id="forgotEmail" placeholder="name@company.com">
+                <div id="forgotPasswordMessage" class="mt-2"></div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0">
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-sm btn-danger" onclick="sendPasswordReset()">Send Link</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    document.addEventListener('DOMContentLoaded', function() {
+        tryAutoFullscreen();
+
+        const hasError = /*[[${param.error != null}]]*/ false;
+        const errorMsg = /*[[${error}]]*/ 'Invalid credentials';
+
+        const hasLogout = /*[[${param.logout != null}]]*/ false;
+        const logoutMsg = /*[[${logoutMessage}]]*/ 'Logged out successfully';
+
+        if (hasError) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Login Failed',
+                text: errorMsg,
+                confirmButtonColor: '#dc2626'
+            });
+        }
+
+        if (hasLogout) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: logoutMsg,
+                timer: 3000,
+                showConfirmButton: false
+            });
+        }
+    });
+
+    function tryAutoFullscreen() {
+        const el = document.documentElement;
+        if (el.requestFullscreen) {
+            el.requestFullscreen().catch(() => {});
+        } else if (el.webkitRequestFullscreen) {
+            el.webkitRequestFullscreen();
+        } else if (el.msRequestFullscreen) {
+            el.msRequestFullscreen();
+        }
+    }
+
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const toggleIcon = document.getElementById('toggleIcon');
+
+    if (togglePassword) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            toggleIcon.classList.toggle('bi-eye');
+            toggleIcon.classList.toggle('bi-eye-slash');
+        });
+    }
+
+    function openForgotPasswordModal() {
+        new bootstrap.Modal(document.getElementById('forgotPasswordModal')).show();
+        document.getElementById('forgotEmail').value = '';
+        document.getElementById('forgotPasswordMessage').innerHTML = '';
+    }
+
+    async function sendPasswordReset() {
+        const email = document.getElementById('forgotEmail').value.trim();
+        const msgDiv = document.getElementById('forgotPasswordMessage');
+
+        if(!email) {
+            msgDiv.innerHTML = '<span class="text-danger small">Email is required</span>';
+            return;
+        }
+
+        try {
+            msgDiv.innerHTML = '<span class="text-info small">Sending...</span>';
+            const response = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email })
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal')).hide();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Email Sent',
+                    text: result.message,
+                    confirmButtonColor: '#dc2626'
+                });
+            } else {
+                msgDiv.innerHTML = `<span class="text-danger small">${result.message}</span>`;
+            }
+        } catch (e) {
+            msgDiv.innerHTML = '<span class="text-danger small">Network error</span>';
+        }
+    }
+    /*]]>*/
+</script>
 </body>
 </html>

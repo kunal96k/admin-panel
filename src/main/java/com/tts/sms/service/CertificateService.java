@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Year;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -438,7 +439,7 @@ public class CertificateService {
                 template = ImageIO.read(templateFile);
                 log.info(" Template loaded: {}x{}", template.getWidth(), template.getHeight());
             } else {
-                log.warn("⚠️ Template not found, using blank canvas");
+                log.warn(" Template not found, using blank canvas");
                 template = new BufferedImage(1754, 1240, BufferedImage.TYPE_INT_RGB);
                 Graphics2D g = template.createGraphics();
                 g.setColor(Color.WHITE);
@@ -529,10 +530,10 @@ public class CertificateService {
                         g2d.drawImage(scaledLogo, LOGO_X, LOGO_Y, null);
                         log.debug(" Course logo drawn");
                     } else {
-                        log.warn("⚠️ Course logo not found: {}", logoPath);
+                        log.warn(" Course logo not found: {}", logoPath);
                     }
                 } catch (Exception e) {
-                    log.warn("⚠️ Could not load course logo", e);
+                    log.warn(" Could not load course logo", e);
                 }
             }
 
@@ -694,30 +695,33 @@ public class CertificateService {
     }
 
     /**
-     *  Generate UNIQUE certificate number with collision check
+     * Generate UNIQUE certificate number with date-time format: CERT20241205143025001
      */
     private String generateUniqueCertificateNumber() {
-        String year = String.valueOf(Year.now().getValue());
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+        String dateTimePart = now.format(formatter);
+
         int maxAttempts = 100;
         int attempt = 0;
 
         while (attempt < maxAttempts) {
-            long count = certificateRepository.countByIsActiveTrue() + attempt + 1;
-            String certNo = String.format("CERT%s%04d", year, count);
+            // Format: CERT20241205143025001
+            String certNo = String.format("CERT%s%03d", dateTimePart, attempt + 1);
 
             // Check if this number already exists
             if (!certificateRepository.existsByCertificateNoAndIsActiveTrue(certNo)) {
-                log.info("✅ Generated unique certificate number: {}", certNo);
+                log.info(" Generated unique certificate number: {}", certNo);
                 return certNo;
             }
 
             attempt++;
-            log.warn("⚠️ Certificate number {} already exists, trying next...", certNo);
+            log.warn(" Certificate number {} already exists, trying next...", certNo);
         }
 
-        // Fallback: Use timestamp
-        String fallbackCertNo = String.format("CERT%s%d", year, System.currentTimeMillis() % 10000);
-        log.warn("⚠️ Using timestamp-based certificate number: {}", fallbackCertNo);
+        // Fallback: Add milliseconds
+        String fallbackCertNo = String.format("CERT%s%d", dateTimePart, System.currentTimeMillis() % 1000);
+        log.warn(" Using millisecond-based certificate number: {}", fallbackCertNo);
         return fallbackCertNo;
     }
 

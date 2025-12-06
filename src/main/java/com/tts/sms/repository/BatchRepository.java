@@ -20,6 +20,9 @@ public interface BatchRepository extends JpaRepository<Batch, Long> {
     // Check if batch number exists
     boolean existsByBatchNo(String batchNo);
 
+    List<Batch> findByIsActiveTrueOrderByBatchNameAsc();
+
+
     // Find all active batches
     Page<Batch> findByIsActiveTrueOrderByCreatedDateDesc(Pageable pageable);
 

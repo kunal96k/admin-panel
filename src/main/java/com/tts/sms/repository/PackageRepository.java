@@ -18,6 +18,9 @@ public interface PackageRepository extends JpaRepository<Package, Long> {
 
     Page<Package> findByIsActiveTrue(Pageable pageable);
 
+    @Query("SELECT p FROM Package p LEFT JOIN FETCH p.courses WHERE p.isActive = true ORDER BY p.packageName ASC")
+    List<Package> findByIsActiveTrueOrderByPackageNameAsc();
+
     Optional<Package> findByIdAndIsActiveTrue(Long id);
 
     boolean existsByPackageNameIgnoreCaseAndIsActiveTrue(String packageName);

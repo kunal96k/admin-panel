@@ -1,6 +1,7 @@
 package com.tts.sms.config;
 
 import com.tts.sms.service.CustomUserDetailsService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,44 +46,46 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        log.info("Configuring security for profile: {}", activeProfile);
 
-        // CSRF configuration handler
+        log.info("Configuring security with FULL CSRF protection…");
+
+        // CSRF Token handler and cookie repository
         CsrfTokenRequestAttributeHandler csrfHandler = new CsrfTokenRequestAttributeHandler();
         csrfHandler.setCsrfRequestAttributeName("_csrf");
 
-        http
-                // Use our custom DaoAuthenticationProvider
-                .authenticationProvider(authenticationProvider())
+        CookieCsrfTokenRepository csrfRepo = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        csrfRepo.setCookieName("XSRF-TOKEN");
+        csrfRepo.setHeaderName("X-CSRF-TOKEN");
 
-                // CORS
+        boolean isProd = "prod".equalsIgnoreCase(activeProfile);
+
+        try {
+            csrfRepo.setSecure(isProd);  // secure cookie only in HTTPS production
+        } catch (Exception ignored) { }
+
+        http
+                .authenticationProvider(authenticationProvider())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // CSRF
-                .csrf(csrf -> {
-                    if ("dev".equalsIgnoreCase(activeProfile)) {
-                        // Disable CSRF in dev for easier testing
-                        log.warn("CSRF protection DISABLED for development");
-                        csrf.disable();
-                    } else {
-                        // Enable CSRF in production with cookie-based tokens
-                        log.info("CSRF protection ENABLED for production");
-                        csrf
-                                // keep APIs CSRF-free like in your original config
-                                .ignoringRequestMatchers("/api/**")
-                                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                                .csrfTokenRequestHandler(csrfHandler);
-                    }
-                })
+                /* --------------------
+                 *  ENABLE CSRF SECURELY
+                 * -------------------- */
+                .csrf(csrf -> csrf
+                        // Allow public auth endpoints (login, captcha)
+                        .ignoringRequestMatchers(
+                                "/api/auth/**",   // captcha, forgot-password etc.
+                                "/error"
+                        )
+                        .csrfTokenRepository(csrfRepo)
+                        .csrfTokenRequestHandler(csrfHandler)
+                )
 
-                // Authorization rules
+                /* AUTH RULES */
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
                         .requestMatchers(
                                 "/",
                                 "/login",
-                                "/error",
-                                "/api/enquiries/health",
+                                "/api/auth/**",
                                 "/assets/**",
                                 "/css/**",
                                 "/js/**",
@@ -90,20 +93,17 @@ public class SecurityConfig {
                                 "/uploads/**",
                                 "/webjars/**"
                         ).permitAll()
-                        // Admin endpoints
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-                        // API endpoints
-                        .requestMatchers("/api/**").authenticated()
-                        // All other requests
+                        .requestMatchers("/api/**").authenticated()    // CSRF PROTECTED
                         .anyRequest().authenticated()
                 )
 
-                // Session management
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                /* SESSIONS */
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 )
 
-                // Form login with custom success/failure handlers
+                /* LOGIN FORM */
                 .formLogin(form -> form
                         .loginPage("/login")
                         .loginProcessingUrl("/login")
@@ -113,24 +113,30 @@ public class SecurityConfig {
                         .failureHandler(authenticationFailureHandler())
                         .permitAll()
                 )
+
+                /* LOGOUT */
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login?logout")
                         .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID")
+                        .deleteCookies("JSESSIONID", "XSRF-TOKEN")
                         .clearAuthentication(true)
                 )
-                // Access denied handling
+
+                /* ACCESS DENIED HANDLER */
                 .exceptionHandling(exception -> exception
-                        .accessDeniedPage("/access-denied")
+                        .accessDeniedHandler((request, response, ex) -> {
+                            HttpSession session = request.getSession();
+                            session.setAttribute("accessDeniedMessage",
+                                    "You attempted to access: " + request.getRequestURI());
+                            log.warn("Access denied for: {}", request.getRequestURI());
+                            response.sendRedirect("/access-denied");
+                        })
                 );
 
-        // HTTPS/SSL in production
-        if ("prod".equalsIgnoreCase(activeProfile)) {
-            log.info("Enabling HTTPS redirect for production");
-            http.requiresChannel(channel ->
-                    channel.anyRequest().requiresSecure()
-            );
+        // FORCE HTTPS ONLY IN PROD
+        if (isProd) {
+            http.requiresChannel(channel -> channel.anyRequest().requiresSecure());
         }
 
         return http.build();

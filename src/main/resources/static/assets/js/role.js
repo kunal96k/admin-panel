@@ -4,6 +4,19 @@
 (function() {
     'use strict';
 
+    // CSRF Token Management
+    function getCsrfToken() {
+        const csrfCookie = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('XSRF-TOKEN='));
+        return csrfCookie ? decodeURIComponent(csrfCookie.split('=')[1]) : null;
+    }
+
+    function getCsrfHeaders() {
+        const token = getCsrfToken();
+        return token ? { 'X-CSRF-TOKEN': token } : {};
+    }
+
     const API_BASE_URL = '/api/roles';
     const MENU_API_URL = '/api/menus';
 
@@ -26,7 +39,8 @@
         try {
           const response = await fetch(API_BASE_URL, {
               headers: {
-                  'Accept': 'application/json'
+                  'Accept': 'application/json',
+                  ...getCsrfHeaders()
               }
           });
 
@@ -86,11 +100,14 @@
             const url = currentRoleId ? `${API_BASE_URL}/${currentRoleId}` : API_BASE_URL;
             const method = currentRoleId ? 'PUT' : 'POST';
 
-            const response = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ roleTitle })
-            });
+           const response = await fetch(url, {
+               method: method,
+               headers: {
+                   'Content-Type': 'application/json',
+                   ...getCsrfHeaders()
+               },
+               body: JSON.stringify({ roleTitle })
+           });
 
             if (!response.ok) throw new Error('Failed to save role');
 
@@ -111,7 +128,12 @@
 
     async function loadMenuPermissions(roleId) {
         try {
-            const response = await fetch(`${MENU_API_URL}?roleId=${roleId}`);
+            const response = await fetch(`${MENU_API_URL}?roleId=${roleId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                }
+            });
             menus = await response.json();
             renderPermissionsTable();
         } catch (error) {
@@ -158,11 +180,14 @@
 
     window.updateMenuPermission = async function(menuId, hasAccess) {
         try {
-            const response = await fetch(`${API_BASE_URL}/${currentRoleId}/permissions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ menuId, hasAccess })
-            });
+           const response = await fetch(`${API_BASE_URL}/${currentRoleId}/permissions`, {
+               method: 'POST',
+               headers: {
+                   'Content-Type': 'application/json',
+                   ...getCsrfHeaders()
+               },
+               body: JSON.stringify({ menuId, hasAccess })
+           });
 
             if (!response.ok) throw new Error('Failed to update permission');
         } catch (error) {
@@ -181,7 +206,12 @@
 
     window.editRole = async function(id) {
         try {
-            const response = await fetch(`${API_BASE_URL}/${id}`);
+            const response = await fetch(`${API_BASE_URL}/${id}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                }
+            });
             const role = await response.json();
 
             currentRoleId = id;
@@ -211,7 +241,13 @@
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' });
+            const response = await fetch(`${API_BASE_URL}/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                }
+            });
             if (!response.ok) throw new Error('Failed to delete role');
 
             showSuccess('Role deleted successfully!');

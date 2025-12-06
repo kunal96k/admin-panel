@@ -1,5 +1,6 @@
 package com.tts.sms.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -63,6 +64,8 @@ public class AdmissionRequestDTO {
     // Other Details
     private String documentType;
     private String leadSource;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate admissionDate;
     private String rollNumber;
     private String notes;

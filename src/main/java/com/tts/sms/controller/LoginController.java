@@ -17,6 +17,11 @@ public class LoginController {
 
     private final RoleService roleService;
 
+    @GetMapping("/")
+    public String homeRedirect() {
+        return "redirect:/login";
+    }
+
     @GetMapping("/login")
     public String loginPage(
             @RequestParam(value = "error", required = false) String error,

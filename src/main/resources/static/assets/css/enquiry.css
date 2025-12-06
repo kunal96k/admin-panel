@@ -11,26 +11,10 @@
             font-family: 'Inter', sans-serif;
         }
 
-        .page-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            margin-bottom: 2rem;
-        }
-
         .page-header h2 {
             font-size: 1.875rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
-        }
-
-        .action-card {
-            background: white;
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-            margin-bottom: 1.5rem;
         }
 
         .btn-action {
@@ -39,13 +23,6 @@
             border-radius: 0.5rem;
             transition: all 0.2s;
             font-size: 0.75rem;
-        }
-
-        .table-card {
-            background: white;
-            border-radius: 0.75rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-            overflow: hidden;
         }
 
         .table-responsive {
@@ -87,54 +64,10 @@
             font-size: 0.75rem;
         }
 
-        .action-dropdown {
-            position: relative;
-        }
-
-        .action-menu {
-            background-color: #e2e8f0;
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: 0.5rem;
-            display: none;
-            min-width: 200px;
-            z-index: 3000;
-            pointer-events: auto;
-        }
-
-        /* visible state */
-        .action-menu.show {
-            display: block;
-        }
 
         tr:nth-child(-n+2) .action-menu {
             bottom: auto;
             top: auto;
-        }
-
-
-        .action-menu-item {
-            padding: 0.75rem 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-            background: none;
-            width: 100%;
-            text-align: left;
-            color: #1e293b;
-        }
-
-        .action-menu-item:hover {
-            background-color: #f1f5f9;
-        }
-
-        .action-menu-item i {
-            width: 20px;
-            font-size: 1rem;
         }
 
         .modal-header {
@@ -336,3 +269,1036 @@
         .text-muted {
             font-size: 0.875rem;
         }
+
+        /* Action Menu  - Must be at the end of CSS */
+        .action-dropdown {
+            position: relative;
+        }
+
+        .action-menu {
+            position: fixed !important;
+            right: 10% !important;
+            top: 50% !important;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            min-width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 99999 !important;
+            margin-top: 5px;
+        }
+
+        .action-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .action-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            color: #334155;
+        }
+
+        .action-menu-item:hover {
+            background-color: #f1f5f9;
+        }
+
+        .action-menu-item i {
+            width: 18px;
+            font-size: 16px;
+        }
+
+        .action-menu-item:first-child {
+            border-radius: 8px 8px 0 0;
+        }
+
+        .action-menu-item:last-child {
+            border-radius: 0 0 8px 8px;
+        }
+
+        /* Ensure table doesn't cut off the menu */
+        .table-responsive {
+            overflow: visible !important;
+        }
+
+        .table-card {
+            overflow: visible !important;
+        }
+
+        /*  action menu trigger button */
+        .action-menu-trigger {
+            border: 1px solid #e2e8f0;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .action-menu-trigger:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        /* Override Bootstrap table overflow */
+        table {
+            overflow: visible !important;
+        }
+
+        tbody tr {
+            position: relative;
+        }
+
+        body .action-menu {
+            z-index: 99999 !important;
+        }
+
+       /* Preview Section Container */
+       #importPreview {
+           max-height: 350px;
+           overflow-y: auto;
+           margin-top: 1rem;
+       }
+
+       /* Table Container with Scroll */
+       #importPreview .table-responsive {
+           max-height: 280px !important;
+           overflow-y: auto !important;
+           overflow-x: auto !important;
+           border: 1px solid #e2e8f0;
+           border-radius: 8px;
+           scroll-behavior: smooth;
+       }
+
+       /* Sticky Table Header */
+       #importPreview .table-responsive thead {
+           position: sticky;
+           top: 0;
+           background: #f8fafc;
+           z-index: 10;
+       }
+
+       /* Modal Body Max Height */
+       #importModal .modal-body {
+           max-height: 70vh;
+           overflow-y: auto;
+       }
+
+       /* Custom Light Gray Scrollbar - Webkit (Chrome, Safari, Edge) */
+       #importPreview .table-responsive::-webkit-scrollbar {
+           width: 10px;
+           height: 10px;
+       }
+
+       #importPreview .table-responsive::-webkit-scrollbar-track {
+           background: #f8fafc;
+           border-radius: 5px;
+           border: 1px solid #e2e8f0;
+       }
+
+       #importPreview .table-responsive::-webkit-scrollbar-thumb {
+           background: #e2e8f0;
+           border-radius: 5px;
+           border: 2px solid #f8fafc;
+           transition: background 0.2s ease;
+       }
+
+       #importPreview .table-responsive::-webkit-scrollbar-thumb:hover {
+           background: #cbd5e1;
+       }
+
+       #importPreview .table-responsive::-webkit-scrollbar-thumb:active {
+           background: #94a3b8;
+       }
+
+       /* Firefox Scrollbar */
+       #importPreview .table-responsive {
+           scrollbar-width: thin;
+           scrollbar-color: #e2e8f0 #f8fafc;
+       }
+
+
+       /* ========================================
+          CRITICAL MOBILE ES - VIEWPORT OVERFLOW
+          ======================================== */
+
+       /* Prevent horizontal scroll - Force 100vw */
+       html, body {
+           max-width: 100vw;
+           overflow-x: hidden;
+       }
+
+       .main-wrapper {
+           max-width: 100vw;
+           overflow-x: hidden;
+       }
+
+       .main-content {
+           max-width: 100vw;
+           overflow-x: hidden;
+       }
+
+       /* ========================================
+          PAGE HEADER
+          ======================================== */
+
+       .page-header {
+           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+           color: white;
+           padding: 2rem;
+           border-radius: 1rem;
+           margin-bottom: 2rem;
+           max-width: 100%;
+           box-sizing: border-box;
+       }
+
+       .page-header h2 {
+           font-size: 1.875rem;
+           font-weight: 700;
+           margin-bottom: 0.5rem;
+       }
+
+       /* ========================================
+          ACTION CARD
+          ======================================== */
+
+       .action-card {
+           background: white;
+           border-radius: 0.75rem;
+           padding: 1.5rem;
+           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+           margin-bottom: 1.5rem;
+           max-width: 100%;
+           box-sizing: border-box;
+       }
+
+       /* ========================================
+          TABLE CARD
+          ======================================== */
+
+       .table-card {
+           background: white;
+           border-radius: 0.75rem;
+           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+           overflow-x: auto;
+           overflow-y: visible;
+           font-size: 0.8rem;
+           max-width: 100%;
+           box-sizing: border-box;
+       }
+
+       /* ========================================
+          USER PROFILE DROPDOWN 
+          ======================================== */
+
+       @media (max-width: 767px) {
+           .topbar-right .dropdown-menu {
+               position: ed !important;
+               top: 60px !important;
+               right: 10px !important;
+               left: auto !important;
+               transform: none !important;
+               min-width: 240px;
+               max-width: calc(100vw - 20px);
+               z-index: 9999;
+           }
+
+           .topbar-right .dropdown-menu.show {
+               display: block;
+           }
+       }
+
+       /* ========================================
+          TABLE RESPONSIVE & SCROLLBAR
+          ======================================== */
+
+       .table-responsive {
+           overflow-x: auto !important;
+           overflow-y: visible !important;
+           -webkit-overflow-scrolling: touch;
+       }
+
+       /* Custom Table Scrollbar - Light Gray Theme */
+       .table-responsive::-webkit-scrollbar {
+           height: 10px;
+           width: 10px;
+       }
+
+       .table-responsive::-webkit-scrollbar-track {
+           background: #f8fafc;
+           border-radius: 5px;
+           border: 1px solid #e2e8f0;
+       }
+
+       .table-responsive::-webkit-scrollbar-thumb {
+           background: #e2e8f0;
+           border-radius: 5px;
+           border: 2px solid #f8fafc;
+           transition: background 0.2s ease;
+       }
+
+       .table-responsive::-webkit-scrollbar-thumb:hover {
+           background: #cbd5e1;
+       }
+
+       .table-responsive::-webkit-scrollbar-thumb:active {
+           background: #94a3b8;
+       }
+
+       /* Firefox Scrollbar */
+       .table-responsive {
+           scrollbar-width: thin;
+           scrollbar-color: #e2e8f0 #f8fafc;
+           scroll-behavior: smooth;
+       }
+
+       /* ========================================
+          TABLE COLUMN WIDTH OPTIMIZATION
+          ======================================== */
+
+       #admissionsTable {
+           min-width: 1000px;
+           width: 100%;
+           table-layout: fixed;
+       }
+
+       /* Optimized Column Widths */
+       #enquiryTable thead th:nth-child(1), /* ENQUIRY NO. */
+       #enquiryTable tbody td:nth-child(1) {
+           width: 8%;
+           min-width: 80px;
+           white-space: normal;
+          word-wrap: break-word;
+       }
+
+       #enquiryTable thead th:nth-child(2), /* STUDENT NAME */
+       #enquiryTable tbody td:nth-child(2) {
+           width: 15%;
+           min-width: 150px;
+           white-space: normal;
+           word-wrap: break-word;
+       }
+
+       #enquiryTable thead th:nth-child(3), /* MOBILE NO. */
+       #enquiryTable tbody td:nth-child(3) {
+           width: 10%;
+           min-width: 110px;
+           white-space: normal;
+           word-wrap: break-word;
+       }
+
+       #enquiryTable thead th:nth-child(4), /* COURSE */
+       #enquiryTable tbody td:nth-child(4) {
+           width: 18%;
+           min-width: 200px;
+           white-space: normal;
+          word-wrap: break-word;
+       }
+
+       #enquiryTable thead th:nth-child(5), /* ENQUIRY SOURCE */
+       #enquiryTable tbody td:nth-child(5) {
+           width: 8%;
+           min-width: 80px;
+           white-space: normal;
+          word-wrap: break-word;
+       }
+
+       #enquiryTable thead th:nth-child(6), /* ENQUIRY DATE */
+       #enquiryTable tbody td:nth-child(6) {
+           width: 8%;
+           min-width: 80px;
+           white-space: normal;
+          word-wrap: break-word;
+       }
+
+       #enquiryTable thead th:nth-child(7), /* ASSIGN TO */
+       #enquiryTable tbody td:nth-child(7) {
+           width: 10%;
+           min-width: 130px;
+           white-space: normal;
+           word-wrap: break-word;
+           white-space: normal;
+          word-wrap: break-word;
+       }
+
+       #enquiryTable thead th:nth-child(8), /* ENQUIRY STATUS */
+       #enquiryTable tbody td:nth-child(8) {
+           width: 7%;
+           min-width: 70px;
+       }
+
+       #enquiryTable thead th:nth-child(9), /* ACTIONS */
+       #enquiryTable tbody td:nth-child(9) {
+           width: 5%;
+           min-width: 50px;
+           text-align: center;
+       }
+
+       /* Cell Content Styling */
+       #enquiryTable tbody td {
+           vertical-align: middle;
+           padding: 1rem;
+           white-space: nowrap;
+           overflow: hidden;
+           text-overflow: ellipsis;
+       }
+
+       /* Course Column - Allow Wrapping */
+       #enquiryTable tbody td:nth-child(4) {
+           white-space: normal;
+           word-wrap: break-word;
+           line-height: 1.6;
+       }
+
+       /* Course Badges */
+       #enquiryTable tbody td:nth-child(4) .badge {
+           display: inline-block;
+           margin: 2px 4px 2px 0;
+           white-space: normal;
+           text-align: left;
+           max-width: 100%;
+           line-height: 1.4;
+           font-size: 0.75rem;
+       }
+
+       /* ========================================
+          RESPONSIVE BREAKPOINTS
+          ======================================== */
+
+       /* Extra Large Screens (1400px+) */
+       @media (min-width: 1400px) {
+           .main-content {
+               padding: 2rem 3rem;
+           }
+
+           .action-card {
+               padding: 2rem;
+           }
+       }
+
+       /* Large Screens (1200px - 1399px) */
+       @media (min-width: 1200px) and (max-width: 1399px) {
+           #enquiryTable {
+               min-width: 1100px;
+           }
+       }
+
+       /* Large Tablets & Small Desktops (992px - 1199px) */
+       @media (min-width: 992px) and (max-width: 1199px) {
+           .main-content {
+               padding: 1.5rem;
+           }
+
+           .page-header {
+               padding: 1.5rem;
+           }
+
+           .page-header h2 {
+               font-size: 1.625rem;
+           }
+
+           .action-card .row {
+               gap: 1rem;
+           }
+
+           .btn-action {
+               font-size: 0.8125rem;
+               padding: 0.5rem 1rem;
+           }
+
+           #enquiryTable {
+               min-width: 1000px;
+               font-size: 0.875rem;
+           }
+
+           #enquiryTable thead th {
+               font-size: 0.6875rem;
+               padding: 0.875rem 0.5rem;
+           }
+
+           #enquiryTable tbody td {
+               padding: 0.875rem 0.5rem;
+           }
+       }
+
+       /* Tablets (768px - 991px) */
+       @media (min-width: 768px) and (max-width: 991px) {
+           .main-content {
+               padding: 1.25rem;
+           }
+
+           .page-header {
+               padding: 1.25rem;
+               margin-bottom: 1.5rem;
+           }
+
+           .page-header h2 {
+               font-size: 1.5rem;
+           }
+
+           .page-header p {
+               font-size: 0.875rem;
+           }
+
+           /* Action Bar - Stack Buttons */
+           .action-card .col-lg-6 {
+               width: 100%;
+               margin-bottom: 1rem;
+           }
+
+           .action-card .col-lg-6:last-child {
+               margin-bottom: 0;
+           }
+
+           .btn-action {
+               font-size: 0.8125rem;
+               padding: 0.5rem 1rem;
+               margin-bottom: 0.5rem;
+           }
+
+           /* Search Input Full Width */
+           .action-card .input-group {
+               width: 100%;
+           }
+
+           /* Table Adjustments */
+           #enquiryTable {
+               min-width: 950px;
+               font-size: 0.8125rem;
+           }
+
+           #enquiryTable thead th {
+               font-size: 0.6875rem;
+               padding: 0.75rem 0.5rem;
+           }
+
+           #enquiryTable tbody td {
+               padding: 0.75rem 0.5rem;
+           }
+
+           /* Course Badges - Smaller */
+           #enquiryTable tbody td:nth-child(4) .badge {
+               font-size: 0.6875rem;
+               padding: 0.25rem 0.5rem;
+           }
+
+           /* Pagination */
+           .pagination .page-link {
+               padding: 0.375rem 0.625rem;
+               font-size: 0.8125rem;
+           }
+       }
+
+       /* Mobile Landscape (576px - 767px) */
+       @media (min-width: 576px) and (max-width: 767px) {
+           .main-content {
+               padding: 1rem;
+           }
+
+           .page-header {
+               padding: 1rem;
+               margin-bottom: 1rem;
+           }
+
+           .page-header h2 {
+               font-size: 1.375rem;
+           }
+
+           .page-header p {
+               font-size: 0.8125rem;
+           }
+
+           /* Action Bar - Full Stack */
+           .action-card {
+               padding: 1rem;
+           }
+
+           .action-card .row {
+               flex-direction: column;
+           }
+
+           .action-card .col-lg-6 {
+               width: 100%;
+               margin-bottom: 0.75rem;
+           }
+
+           .btn-action {
+               width: 100%;
+               margin-bottom: 0.5rem;
+               font-size: 0.8125rem;
+               padding: 0.625rem;
+           }
+
+           /* Search Bar Full Width */
+           .action-card .input-group {
+               width: 100%;
+           }
+
+           .action-card .input-group .form-control {
+               font-size: 0.875rem;
+           }
+
+           .action-card .input-group .form-select {
+               max-width: 80px !important;
+               font-size: 0.8125rem;
+           }
+
+           /* Table Compact */
+           #enquiryTable {
+               min-width: 900px;
+               font-size: 0.8125rem;
+           }
+
+           #enquiryTable thead th {
+               font-size: 0.625rem;
+               padding: 0.625rem 0.5rem;
+               letter-spacing: 0.03em;
+           }
+
+           #enquiryTable tbody td {
+               padding: 0.625rem 0.5rem;
+           }
+
+           /* Course Badges */
+           #enquiryTable tbody td:nth-child(4) .badge {
+               font-size: 0.625rem;
+               padding: 0.2rem 0.4rem;
+               margin: 1px 2px;
+           }
+
+           /* Action Menu Smaller */
+           .action-menu-trigger {
+               padding: 0.25rem 0.5rem;
+               font-size: 0.875rem;
+           }
+
+           /* Pagination Compact */
+           .pagination .page-link {
+               padding: 0.3rem 0.5rem;
+               font-size: 0.75rem;
+           }
+
+           .text-muted {
+               font-size: 0.75rem;
+           }
+       }
+
+       /* Mobile Portrait (up to 575px) */
+       @media (max-width: 575px) {
+           /* Topbar adjustments */
+           .topbar {
+               padding: 0.75rem 0.875rem;
+               position: sticky;
+               top: 0;
+               z-index: 1020;
+               max-width: 100vw;
+               box-sizing: border-box;
+           }
+
+           .topbar-left {
+               gap: 0.5rem;
+           }
+
+           .page-title {
+               font-size: 1.125rem;
+               white-space: nowrap;
+               overflow: hidden;
+               text-overflow: ellipsis;
+               max-width: calc(100vw - 180px);
+           }
+
+           .main-content {
+               padding: 0.75rem;
+               max-width: 100vw;
+               box-sizing: border-box;
+           }
+
+           .page-header {
+               padding: 0.875rem;
+               margin-bottom: 1rem;
+               border-radius: 0.75rem;
+               margin-left: 0;
+               margin-right: 0;
+               width: 100%;
+               box-sizing: border-box;
+           }
+
+           .page-header h2 {
+               font-size: 1.125rem;
+               margin-bottom: 0.375rem;
+               word-wrap: break-word;
+           }
+
+           .page-header p {
+               font-size: 0.75rem;
+               line-height: 1.4;
+               word-wrap: break-word;
+           }
+
+           /* Action Card - Ultra Compact */
+           .action-card {
+               padding: 0.75rem;
+               margin-bottom: 1rem;
+               margin-left: 0;
+               margin-right: 0;
+               width: 100%;
+               box-sizing: border-box;
+           }
+
+           .action-card .row {
+               flex-direction: column;
+               gap: 0.5rem;
+               margin: 0;
+           }
+
+           .action-card .col-lg-6 {
+               width: 100%;
+               margin-bottom: 0;
+               padding: 0;
+           }
+
+           /* Buttons - CRITICAL  */
+           .btn-action {
+               width: 100%;
+               margin-bottom: 0.5rem;
+               font-size: 0.8125rem;
+               padding: 0.625rem 0.875rem;
+               display: block;
+               white-space: nowrap;
+               box-sizing: border-box;
+           }
+
+           .btn-action i {
+               font-size: 0.875rem;
+           }
+
+           .btn-action:last-child {
+               margin-bottom: 0;
+           }
+
+           /* Search Input Compact */
+           .action-card .input-group {
+               flex-wrap: nowrap;
+               width: 100%;
+               box-sizing: border-box;
+           }
+
+           .action-card .input-group .form-control {
+               font-size: 0.8125rem;
+               padding: 0.5rem 0.75rem;
+               flex: 1;
+               min-width: 0;
+           }
+
+           .action-card .input-group .form-select {
+               max-width: 65px !important;
+               font-size: 0.75rem;
+               padding: 0.5rem 0.25rem;
+               flex-shrink: 0;
+           }
+
+           .action-card .input-group-text {
+               padding: 0.5rem 0.625rem;
+           }
+
+           /* Table Ultra Compact */
+           .table-card {
+               border-radius: 0.5rem;
+               margin-bottom: 1rem;
+               margin-left: 0;
+               margin-right: 0;
+               width: 100%;
+               overflow-x: auto !important;
+               box-sizing: border-box;
+           }
+
+           .table-responsive {
+               margin: 0;
+               padding: 0;
+               width: 100%;
+           }
+
+           #enquiryTable {
+               min-width: 850px;
+               font-size: 0.75rem;
+               margin-bottom: 0;
+           }
+
+           #enquiryTable thead th {
+               font-size: 0.625rem;
+               padding: 0.5rem 0.375rem;
+               letter-spacing: 0.02em;
+               line-height: 1.3;
+           }
+
+           #enquiryTable tbody td {
+               padding: 0.5rem 0.375rem;
+               font-size: 0.75rem;
+           }
+
+           /* Column Width Adjustments for Mobile */
+           #enquiryTable thead th:nth-child(1),
+           #enquiryTable tbody td:nth-child(1) {
+               width: 10%;
+               min-width: 85px;
+           }
+
+           #enquiryTable thead th:nth-child(2),
+           #enquiryTable tbody td:nth-child(2) {
+               width: 15%;
+               min-width: 130px;
+           }
+
+           #enquiryTable thead th:nth-child(3),
+           #enquiryTable tbody td:nth-child(3) {
+               width: 12%;
+               min-width: 105px;
+           }
+
+           #enquiryTable thead th:nth-child(4),
+           #enquiryTable tbody td:nth-child(4) {
+               width: 20%;
+               min-width: 170px;
+           }
+
+           #enquiryTable thead th:nth-child(9),
+           #enquiryTable tbody td:nth-child(9) {
+               width: 8%;
+               min-width: 68px;
+           }
+
+           /* Course Badges Ultra Compact */
+           #enquiryTable tbody td:nth-child(4) .badge {
+               font-size: 0.625rem;
+               padding: 0.2rem 0.35rem;
+               margin: 1px;
+               line-height: 1.3;
+           }
+
+           /* Action Menu Mobile Optimized */
+           .action-menu-trigger {
+               padding: 0.25rem 0.5rem;
+               font-size: 0.875rem;
+               width: 32px;
+               height: 32px;
+               display: flex;
+               align-items: center;
+               justify-content: center;
+           }
+
+           .action-menu {
+               min-width: 180px;
+               font-size: 0.8125rem;
+           }
+
+           .action-menu-item {
+               padding: 0.625rem 0.875rem;
+               font-size: 0.8125rem;
+           }
+
+           .action-menu-item i {
+               font-size: 0.875rem;
+           }
+
+           /* Pagination Mobile */
+           .d-flex.justify-content-between {
+               flex-direction: column;
+               gap: 0.75rem;
+               text-align: center;
+               padding: 0 0.5rem;
+           }
+
+           .pagination {
+               justify-content: center;
+               flex-wrap: wrap;
+               gap: 0.25rem;
+           }
+
+           .pagination .page-link {
+               padding: 0.375rem 0.5rem;
+               font-size: 0.75rem;
+               min-width: 32px;
+           }
+
+           .text-muted {
+               font-size: 0.75rem;
+           }
+
+           /* Empty/Loading State Mobile */
+           #enquiryTable tbody td[colspan] {
+               padding: 2rem 1rem !important;
+           }
+
+           #enquiryTable tbody td[colspan] .spinner-border {
+               width: 2rem;
+               height: 2rem;
+           }
+
+           #enquiryTable tbody td[colspan] p {
+               font-size: 0.875rem;
+           }
+       }
+
+       /* Extra Small Devices (up to 400px) */
+       @media (max-width: 400px) {
+           .page-header h2 {
+               font-size: 1rem;
+           }
+
+           .page-title {
+               font-size: 1rem;
+               max-width: calc(100vw - 160px);
+           }
+
+           .btn-action {
+               font-size: 0.75rem;
+               padding: 0.5rem 0.625rem;
+           }
+
+           #enquiryTable {
+               min-width: 800px;
+               font-size: 0.6875rem;
+           }
+
+           #enquiryTable thead th {
+               font-size: 0.5625rem;
+               padding: 0.4rem 0.3rem;
+           }
+
+           #enquiryTable tbody td {
+               padding: 0.4rem 0.3rem;
+           }
+
+           .action-card .input-group .form-select {
+               max-width: 55px !important;
+               font-size: 0.6875rem;
+           }
+       }
+
+       /* ========================================
+          TOUCH OPTIMIZATION
+          ======================================== */
+
+       @media (hover: none) and (pointer: coarse) {
+           /* Increase touch targets */
+           .btn-action,
+           .action-menu-trigger,
+           .pagination .page-link {
+               min-height: 44px;
+               min-width: 44px;
+           }
+
+           .action-menu-item {
+               min-height: 48px;
+               padding: 0.875rem 1rem;
+           }
+
+           /* Prevent accidental zoom */
+           input, select, textarea {
+               font-size: 16px !important;
+           }
+       }
+
+       /* ========================================
+          PRINT STYLES
+          ======================================== */
+
+       @media print {
+           .sidebar,
+           .topbar,
+           .footer,
+           .action-card,
+           .pagination,
+           .action-menu-trigger {
+               display: none !important;
+           }
+
+           .main-wrapper {
+               margin-left: 0 !important;
+           }
+
+           .main-content {
+               padding: 0;
+           }
+
+           #enquiryTable {
+               font-size: 10pt;
+           }
+
+           #enquiryTable thead th:nth-child(9),
+           #enquiryTable tbody td:nth-child(9) {
+               display: none;
+           }
+       }
+
+       /* ========================================
+          LANDSCAPE ORIENTATION
+          ======================================== */
+
+       @media (max-width: 991px) and (orientation: landscape) {
+           .page-header {
+               padding: 1rem 1.5rem;
+           }
+
+           .action-card .row {
+               flex-direction: row;
+           }
+
+           .action-card .col-lg-6 {
+               width: 50%;
+           }
+
+           #enquiryTable thead th,
+           #enquiryTable tbody td {
+               padding: 0.5rem;
+           }
+       }
+
+       /* ========================================
+          MODAL RESPONSIVE ES
+          ======================================== */
+
+       @media (max-width: 767px) {
+           .modal-dialog.modal-xl,
+           .modal-dialog.modal-lg {
+               margin: 0.5rem;
+               max-width: calc(100vw - 1rem);
+           }
+
+           .modal-body {
+               padding: 1rem;
+           }
+
+           .nav-pills .nav-link {
+               padding: 0.5rem 0.75rem;
+               font-size: 0.8125rem;
+           }
+
+           .form-label {
+               font-size: 0.875rem;
+           }
+
+           .form-control,
+           .form-select {
+               font-size: 0.875rem;
+               padding: 0.5rem 0.75rem;
+           }
+
+           /* Multi-select on mobile */
+           select[multiple] {
+               min-height: 120px;
+               font-size: 0.8125rem;
+           }
+       }

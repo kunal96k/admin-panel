@@ -1,22 +1,203 @@
 // fees-manager.js
 
-let feesData = []; // Initialize as empty array
+let feesData = [];
+let allCourses = [];
+let filteredCourses = [];
 let currentPage = 1;
 let entriesPerPage = 25;
 let filteredData = [];
 let currentStudentId = null;
 let importedFeesData = [];
+// CSRF Token Configuration
+let csrfToken = null;
+let csrfHeader = null;
+
+// Get CSRF token from meta tags
+function getCsrfToken() {
+    if (!csrfToken) {
+        csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+        csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+    }
+    return { token: csrfToken, header: csrfHeader };
+}
+
+// Get CSRF headers object for fetch requests
+function getCsrfHeaders() {
+    const csrf = getCsrfToken();
+    const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    };
+
+    if (csrf.token && csrf.header) {
+        headers[csrf.header] = csrf.token;
+    }
+
+    return headers;
+}
+
+let banks = [];
+let paymentModes = [];
+
+const API_BASE = '/api/fees-manager';
+
+function showLoading(message) {
+    Swal.fire({
+        title: message,
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+}
+
+function showSuccess(message) {
+    Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: message,
+        confirmButtonColor: '#667eea',
+        timer: 2000
+    });
+}
+
+function showError(message) {
+    Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: message,
+        confirmButtonColor: '#ef4444'
+    });
+}
+
+// Load banks from API
+async function loadBanks() {
+    try {
+       const response = await fetch('/bank/list?page=0&size=100', {
+           headers: getCsrfHeaders()
+       });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Banks response:', result);
+
+            // Handle different response formats
+            if (result.success && result.data) {
+                banks = result.data;
+            } else if (result.content && Array.isArray(result.content)) {
+                banks = result.content;
+            } else if (Array.isArray(result)) {
+                banks = result;
+            } else {
+                banks = [];
+            }
+
+            console.log('Loaded banks:', banks.length);
+            populateBankDropdowns();
+        }
+    } catch (error) {
+        console.error('Error loading banks:', error);
+        banks = [];
+        // Set default banks if API fails
+        banks = [
+            { id: 1, bankName: 'SBI', isActive: true },
+            { id: 2, bankName: 'HDFC', isActive: true },
+            { id: 3, bankName: 'ICICI', isActive: true },
+            { id: 4, bankName: 'Axis Bank', isActive: true }
+        ];
+        populateBankDropdowns();
+    }
+}
+
+// Load payment modes from API
+async function loadPaymentModes() {
+    try {
+        const response = await fetch('/api/payment-modes/active', {
+            headers: getCsrfHeaders()
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Payment modes response:', result);
+
+            paymentModes = Array.isArray(result) ? result : [];
+            console.log('Loaded payment modes:', paymentModes.length); // Debug log
+            populatePaymentModeDropdowns();
+        }
+    } catch (error) {
+        console.error('Error loading payment modes:', error);
+        paymentModes = [];
+        // Set default payment modes if API fails
+        paymentModes = [
+            { id: 1, paymentModeTitle: 'UPI', isActive: true },
+            { id: 2, paymentModeTitle: 'NEFT', isActive: true },
+            { id: 3, paymentModeTitle: 'RTGS', isActive: true },
+            { id: 4, paymentModeTitle: 'IMPS', isActive: true }
+        ];
+        populatePaymentModeDropdowns();
+    }
+}
+
+// Populate bank dropdowns
+function populateBankDropdowns() {
+    const bankSelects = ['bankName', 'refundBankName'];
+
+    bankSelects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (select) {
+            select.innerHTML = '<option value="">-- Select Bank --</option>';
+            banks.forEach(bank => {
+                const option = document.createElement('option');
+                option.value = bank.bankName;
+                option.textContent = bank.bankName;
+                select.appendChild(option);
+            });
+        }
+    });
+}
+
+// Populate payment mode dropdowns
+function populatePaymentModeDropdowns() {
+    const paymentModeSelects = ['onlinePaymentMode', 'refundOnlinePaymentMode'];
+
+    paymentModeSelects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (select) {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">-- Select Mode --</option>';
+
+            paymentModes.forEach(mode => {
+                if (mode.isActive !== false) {
+                    const option = document.createElement('option');
+                    option.value = mode.paymentModeTitle;
+                    option.textContent = mode.paymentModeTitle;
+                    select.appendChild(option);
+                }
+            });
+
+            // Restore previous selection if it exists
+            if (currentValue) {
+                select.value = currentValue;
+            }
+
+            console.log(`Populated ${selectId} with ${select.options.length - 1} modes`);
+        }
+    });
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     initializeEventListeners();
     loadFeesFromBackend();
+    loadCoursesForFilter();
     setDefaultDates();
 });
 
 function initializeEventListeners() {
+
+    loadBanks();
+    loadPaymentModes();
+
     // Search
-    document.getElementById('searchInput').addEventListener('input', handleSearch);
+   document.getElementById('searchInput').addEventListener('input', applyFilters);
 
     // Entries per page
     document.getElementById('entriesPerPage').addEventListener('change', function() {
@@ -61,7 +242,6 @@ function initializeEventListeners() {
     document.getElementById('enableGst').addEventListener('change', toggleGstFields);
     document.getElementById('paymentMode').addEventListener('change', togglePaymentFields);
     document.getElementById('btnSaveReceipt').addEventListener('click', saveReceipt);
-    document.getElementById('btnSavePrint').addEventListener('click', saveAndPrintReceipt);
 
     // Change Status Modal
     document.getElementById('btnSaveStatus').addEventListener('click', saveStatus);
@@ -74,6 +254,84 @@ function initializeEventListeners() {
     document.getElementById('refundPaymentMode').addEventListener('change', toggleRefundPaymentFields);
     document.getElementById('btnSaveRefund').addEventListener('click', saveRefund);
     document.getElementById('btnSaveRefundPrint').addEventListener('click', saveAndPrintRefund);
+
+    // Status and Course filters
+    document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
+    document.getElementById('courseFilter')?.addEventListener('change', applyFilters);
+    document.getElementById('courseSearchInput')?.addEventListener('input', filterCourseList);
+}
+
+// ==================== FILTERS ====================
+
+async function loadCoursesForFilter() {
+    try {
+        const response = await fetch('/api/courses/dropdown', {
+            headers: getCsrfHeaders()
+        });
+
+        if (response.ok) {
+            allCourses = await response.json();
+            filteredCourses = [...allCourses];
+            populateCourseFilter();
+        }
+    } catch (error) {
+        console.error('Error loading courses:', error);
+    }
+}
+
+function populateCourseFilter() {
+    const select = document.getElementById('courseFilter');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- All Courses --</option>';
+
+    filteredCourses.forEach(course => {
+        const option = document.createElement('option');
+        option.value = course.courseName;
+        option.textContent = course.courseName;
+        select.appendChild(option);
+    });
+}
+
+function filterCourseList() {
+    const searchTerm = document.getElementById('courseSearchInput').value.toLowerCase();
+
+    if (!searchTerm) {
+        filteredCourses = [...allCourses];
+    } else {
+        filteredCourses = allCourses.filter(course =>
+            course.courseName.toLowerCase().includes(searchTerm)
+        );
+    }
+
+    populateCourseFilter();
+}
+
+function applyFilters() {
+    const statusFilter = document.getElementById('statusFilter')?.value || '';
+    const courseFilter = document.getElementById('courseFilter')?.value || '';
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+    filteredData = feesData.filter(item => {
+        // Search filter
+        const matchesSearch = !searchTerm ||
+            item.regNo.toLowerCase().includes(searchTerm) ||
+            item.studentName.toLowerCase().includes(searchTerm) ||
+            item.mobile.includes(searchTerm) ||
+            (item.course && item.course.toLowerCase().includes(searchTerm));
+
+        // Status filter
+        const matchesStatus = !statusFilter || item.status === statusFilter;
+
+        // Course filter
+        const matchesCourse = !courseFilter ||
+            (item.course && item.course.includes(courseFilter));
+
+        return matchesSearch && matchesStatus && matchesCourse;
+    });
+
+    currentPage = 1;
+    renderTable();
 }
 
 // ==================== IMPORT FUNCTIONS ====================
@@ -200,14 +458,11 @@ async function importFeesCSV() {
         });
 
         // Send to backend
-        const response = await fetch('/api/fees-manager/bulk-import-json', {
-            method: 'POST',
-            headers: {
-                 'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(importedFeesData)
-        });
+       const response = await fetch('/api/fees-manager/bulk-import-json', {
+           method: 'POST',
+           headers: getCsrfHeaders(),
+           body: JSON.stringify(importedFeesData)
+       });
 
         const result = await response.json();
 
@@ -269,12 +524,9 @@ async function importFeesCSV() {
 
 async function loadFeesFromBackend() {
     try {
-        const response = await fetch('/api/fees-manager?page=0&size=100000', {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        });
+       const response = await fetch('/api/fees-manager?page=0&size=100000', {
+           headers: getCsrfHeaders()
+       });
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -372,6 +624,181 @@ function handleSearch(e) {
     renderTable();
 }
 
+async function changeFeesStatus(regNo) {
+    if (!regNo) {
+        showError('Registration number is missing');
+        return;
+    }
+
+    currentStudentRegNo = regNo;
+
+    //  Close any open modals first
+    document.querySelectorAll('.modal.show').forEach(modal => {
+        bootstrap.Modal.getInstance(modal)?.hide();
+    });
+
+    // Small delay to allow previous modal to close
+    setTimeout(() => {
+        //  Get current status
+        const student = feesData.find(s => s.regNo === regNo);
+        const currentStatus = student?.status || 'Pending';
+        
+        //  Set dropdown value
+        const statusSelect = document.getElementById('paymentStatus');
+        if (statusSelect) {
+            statusSelect.value = currentStatus;
+        }
+        
+        new bootstrap.Modal(document.getElementById('changeStatusModal')).show();
+    }, 300);
+}
+
+async function openFeeInstallments(regNo) {
+    if (!regNo) {
+        showError('Registration number is missing');
+        return;
+    }
+
+    currentStudentRegNo = regNo;
+    const student = feesData.find(s => s.regNo === regNo);
+
+    if (!student) {
+        showError('Student record not found');
+        return;
+    }
+
+    try {
+        showLoading('Loading installments...');
+
+        //  Fetch admission data for installment config
+        const admResponse = await fetch(`/api/admissions/by-regno/${regNo}`, {
+            headers: getCsrfHeaders()
+        });
+
+        let installmentConfig = {
+            startDate: null,
+            numberOfInstallments: null,
+            daysBetween: null,
+            totalAmount: student.totalFees || 0
+        };
+
+        if (admResponse.ok) {
+            const admission = await admResponse.json();
+
+            //  Use config from admission if available
+            if (admission.installmentStartDate) {
+                installmentConfig.startDate = admission.installmentStartDate;
+            }
+            if (admission.numberOfInstallments) {
+                installmentConfig.numberOfInstallments = admission.numberOfInstallments;
+            }
+            if (admission.daysBetweenInstallments) {
+                installmentConfig.daysBetween = admission.daysBetweenInstallments;
+            }
+            if (admission.totalInstallmentAmount) {
+                installmentConfig.totalAmount = admission.totalInstallmentAmount;
+            }
+        }
+
+        // Fetch existing installments
+        const response = await fetch(`${API_BASE}/installments/${regNo}`, {
+            headers: getCsrfHeaders()
+        });
+
+        if (!response.ok) throw new Error('Failed to load installments');
+
+        const installments = await response.json();
+        Swal.close();
+
+        // Populate form
+        document.getElementById('feeInstStudentName').textContent = student.studentName;
+        document.getElementById('feeInstTotalAmount').value = installmentConfig.totalAmount;
+        document.getElementById('feeInstTotalInstAmount').value = installmentConfig.totalAmount;
+
+        //  Pre-fill config fields with proper defaults
+        if (installmentConfig.startDate) {
+            document.getElementById('feeInstStartDate').value = installmentConfig.startDate;
+        } else {
+            document.getElementById('feeInstStartDate').value = new Date().toISOString().split('T')[0];
+        }
+
+        if (installmentConfig.numberOfInstallments) {
+            document.getElementById('feeInstNoOfInstallments').value = installmentConfig.numberOfInstallments;
+        } else {
+            document.getElementById('feeInstNoOfInstallments').value = ''; //  Empty if not set
+        }
+
+        if (installmentConfig.daysBetween) {
+            document.getElementById('feeInstDays').value = installmentConfig.daysBetween;
+        } else {
+            document.getElementById('feeInstDays').value = ''; //  Empty if not set
+        }
+
+        // Display installments
+        const tbody = document.getElementById('feeInstallmentsBody');
+        if (installments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments found. Click Generate to create installments.</td></tr>';
+        } else {
+            tbody.innerHTML = installments.map(inst => {
+                // Show refund status with red badge
+                const statusBadge = inst.status === 'Refund' 
+                    ? '<span class="badge bg-danger">Refund</span>'
+                    : `<span class="badge bg-${inst.status === 'Paid' ? 'success' : 'warning'}">${inst.status}</span>`;
+                
+                return `
+                <tr>
+                    <td>${inst.dueDate}</td>
+                    <td>₹${parseFloat(inst.amount).toFixed(2)}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        ${inst.status !== 'Refund' ? `
+                        <button class="btn btn-sm btn-danger" onclick="deleteInstallment(${inst.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        ` : '-'}
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        new bootstrap.Modal(document.getElementById('feeInstallmentsModal')).show();
+
+    } catch (error) {
+        Swal.close();
+        console.error('Error:', error);
+        showError('Failed to load installments');
+    }
+}
+
+async function loadRefundHistory(regNo) {
+    try {
+        const response = await fetch(`${API_BASE}/refunds/${regNo}`, {
+            headers: getCsrfHeaders()
+        });
+
+        if (response.ok) {
+            const refunds = await response.json();
+            const tbody = document.getElementById('refundHistoryBody');
+
+            if (refunds.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No refund records found</td></tr>';
+            } else {
+                tbody.innerHTML = refunds.map(ref => `
+                    <tr>
+                        <td><strong>${ref.refundNumber}</strong></td>
+                        <td>${formatDate(ref.refundDate)}</td>
+                        <td class="text-danger">-₹${ref.refundAmount.toFixed(2)}</td>
+                        <td><span class="badge bg-info">${ref.paymentMode}</span></td>
+                        <td><span class="badge bg-danger">Refunded</span></td>
+                    </tr>
+                `).join('');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading refund history:', error);
+    }
+}
+
 function renderTable() {
     const tbody = document.querySelector('#feesTable tbody');
 
@@ -416,6 +843,14 @@ function renderTable() {
                             <i class="bi bi-receipt-cutoff text-info"></i>
                             <span>View Receipts</span>
                         </button>
+                        <button class="action-menu-item" onclick="openFeeInstallments('${item.regNo}')">
+                            <i class="bi bi-cash-stack text-success"></i>
+                            <span>Fee Installments</span>
+                        </button>
+                        <button class="action-menu-item" onclick="changeFeesStatus('${item.regNo}')">
+                            <i class="bi bi-arrow-repeat text-warning"></i>
+                            <span>Change Status</span>
+                        </button>
                         <button class="action-menu-item" onclick="feesRefund('${item.regNo}')">
                             <i class="bi bi-arrow-counterclockwise text-danger"></i>
                             <span>Fees Refund</span>
@@ -427,6 +862,90 @@ function renderTable() {
     `).join('');
 
     updatePagination();
+}
+
+async function viewReceipts(regNo) {
+    if (!regNo) {
+        showError('Registration number is missing');
+        return;
+    }
+
+    const student = feesData.find(s => s.regNo === regNo);
+    if (!student) {
+        showError('Student record not found');
+        return;
+    }
+
+    try {
+        showLoading('Loading receipts...');
+
+        const response = await fetch(`${API_BASE}/receipts/${regNo}`, {
+            headers: getCsrfHeaders()
+        });
+
+        if (!response.ok) throw new Error('Failed to load receipts');
+
+        const receipts = await response.json();
+        Swal.close();
+
+        // Populate modal
+        document.getElementById('viewReceiptStudentName').textContent = student.studentName;
+
+        const tbody = document.getElementById('receiptsTableBody');
+        if (receipts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No receipts found</td></tr>';
+        } else {
+            tbody.innerHTML = receipts.map(receipt => {
+                //  Check if receipt is from old data
+                const isOldData = receipt.receiptType === 'Old Imported';
+                const receiptTypeBadge = isOldData
+                    ? '<span class="badge bg-secondary">Old Import</span>'
+                    : '<span class="badge bg-success">Regular</span>';
+
+                return `
+                <tr>
+                    <td><strong>${receipt.receiptNumber || 'N/A'}</strong></td>
+                    <td>${receipt.invoiceNumber || 'N/A'}</td>
+                    <td>₹${(receipt.amountReceived || 0).toLocaleString()}</td>
+                    <td>${receipt.receiptDate ? formatDate(receipt.receiptDate) : 'N/A'}</td>
+                    <td><span class="badge bg-info">${receipt.paymentMode || 'Cash'}</span></td>
+                    <td>${receipt.notes || '-'}</td>
+                    <td>${receiptTypeBadge}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary me-1"
+                            onclick="viewReceiptPreview('${receipt.receiptNumber}', '${regNo}')"
+                            title="View">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        ${!isOldData ? `
+                        <button class="btn btn-sm btn-info me-1"
+                            onclick="emailReceipt('${receipt.receiptNumber}', '${student.studentName}', '${receipt.registrationNumber}')"
+                            title="Email">
+                            <i class="bi bi-envelope"></i>
+                        </button>
+                        <button class="btn btn-sm btn-warning me-1"
+                            onclick="updateFeeReceipt(${receipt.id}, '${regNo}')"
+                            title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger"
+                            onclick="deleteReceipt(${receipt.id})"
+                            title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        ` : '<span class="text-muted small">Read Only</span>'}
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        new bootstrap.Modal(document.getElementById('viewReceiptsModal')).show();
+
+    } catch (error) {
+        Swal.close();
+        console.error('Error:', error);
+        showError('Failed to load receipts');
+    }
 }
 
 function toggleActionMenu(event) {
@@ -505,14 +1024,26 @@ function formatDate(dateString) {
 
 // Generate Receipt HTML
 function generateReceiptHTML(data) {
+    // Convert amount to words
+    const amountInWords = numberToWords(data.amountReceived || 0);
+
+    // Format date
+    const formatDate = (dateStr) => {
+        if (!dateStr) return 'N/A';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-GB');
+    };
+
     return `
         <div class="receipt-container" id="receiptContent">
             <div class="receipt-header">
                 <div class="text-center mb-4">
+                    <img src="/assets/images/technokraft-logo.png" alt="Logo" style="height: 60px; margin-bottom: 10px;"
+                         onerror="this.style.display='none'">
                     <h3 class="mb-1" style="color: #667eea; font-weight: 700;">TechnoKraft Training Solutions</h3>
                     <p class="mb-0 text-muted">Excellence in Technical Education</p>
-                    <p class="mb-0 small text-muted">123 Main Street, Nashik, Maharashtra - 422001</p>
-                    <p class="mb-0 small text-muted">Phone: +91 98765 43210 | Email: info@technokraft.com</p>
+                    <p class="mb-0 small text-muted">Kanchwala Avenue, College Road, Nashik, Maharashtra - 422005</p>
+                    <p class="mb-0 small text-muted">Phone: +91 86456 28278 | Email: support@tts.net.in</p>
                 </div>
 
                 <div style="border-top: 3px solid #667eea; border-bottom: 3px solid #667eea; padding: 10px 0; margin: 20px 0;">
@@ -523,11 +1054,11 @@ function generateReceiptHTML(data) {
             <div class="receipt-body">
                 <div class="row mb-3">
                     <div class="col-6">
-                        <p class="mb-1"><strong>Receipt No:</strong> ${data.receiptNo}</p>
-                        <p class="mb-1"><strong>Invoice No:</strong> ${data.invoiceNo}</p>
+                        <p class="mb-1"><strong>Receipt No:</strong> ${data.receiptNumber || 'N/A'}</p>
+                        <p class="mb-1"><strong>Invoice No:</strong> ${data.invoiceNumber || 'N/A'}</p>
                     </div>
                     <div class="col-6 text-end">
-                        <p class="mb-1"><strong>Date:</strong> ${data.date}</p>
+                        <p class="mb-1"><strong>Date:</strong> ${formatDate(data.receiptDate)}</p>
                     </div>
                 </div>
 
@@ -535,12 +1066,12 @@ function generateReceiptHTML(data) {
                     <h6 style="color: #667eea; margin-bottom: 10px; font-weight: 600;">Student Details</h6>
                     <div class="row">
                         <div class="col-6">
-                            <p class="mb-1"><strong>Name:</strong> ${data.studentName}</p>
-                            <p class="mb-1"><strong>Reg. No:</strong> ${data.regNo}</p>
+                            <p class="mb-1"><strong>Name:</strong> ${data.studentName || 'N/A'}</p>
+                            <p class="mb-1"><strong>Reg. No:</strong> ${data.registrationNumber || 'N/A'}</p>
                         </div>
                         <div class="col-6">
-                            <p class="mb-1"><strong>Mobile:</strong> ${data.mobile}</p>
-                            <p class="mb-1"><strong>Course:</strong> ${data.course}</p>
+                            <p class="mb-1"><strong>Mobile:</strong> ${data.mobile || 'N/A'}</p>
+                            <p class="mb-1"><strong>Course:</strong> ${data.course || 'N/A'}</p>
                         </div>
                     </div>
                 </div>
@@ -551,33 +1082,55 @@ function generateReceiptHTML(data) {
                         <tbody>
                             <tr>
                                 <td><strong>Amount Paid:</strong></td>
-                                <td class="text-end"><strong style="font-size: 1.1rem; color: #10b981;">₹${data.amount.toLocaleString()}</strong></td>
+                                <td class="text-end"><strong style="font-size: 1.1rem; color: #10b981;">₹${(data.amountReceived || 0).toLocaleString()}</strong></td>
                             </tr>
                             <tr>
                                 <td><strong>Amount in Words:</strong></td>
-                                <td class="text-end"><em>${data.amountInWords}</em></td>
+                                <td class="text-end"><em>${amountInWords}</em></td>
                             </tr>
                             <tr>
                                 <td><strong>Payment Mode:</strong></td>
-                                <td class="text-end">${data.paymentMode}</td>
+                                <td class="text-end">${data.paymentMode || 'Cash'}</td>
                             </tr>
-                            ${data.transactionId !== '-' ? `
+                            ${data.transactionNumber ? `
                             <tr>
                                 <td><strong>Transaction ID:</strong></td>
-                                <td class="text-end">${data.transactionId}</td>
+                                <td class="text-end">${data.transactionNumber}</td>
+                            </tr>
+                            ` : ''}
+                            ${data.chequeNumber ? `
+                            <tr>
+                                <td><strong>Cheque No:</strong></td>
+                                <td class="text-end">${data.chequeNumber}</td>
+                            </tr>
+                            ` : ''}
+                            ${data.bankName ? `
+                            <tr>
+                                <td><strong>Bank Name:</strong></td>
+                                <td class="text-end">${data.bankName}</td>
                             </tr>
                             ` : ''}
                             <tr>
-                                <td><strong>Received By:</strong></td>
-                                <td class="text-end">${data.receivedBy}</td>
+                                <td><strong>Total Fees:</strong></td>
+                                <td class="text-end">₹${(data.totalFees || 0).toLocaleString()}</td>
                             </tr>
+                            <tr>
+                                <td><strong>Pending Fees:</strong></td>
+                                <td class="text-end">₹${(data.pendingFees || 0).toLocaleString()}</td>
+                            </tr>
+                            ${data.nextDueDate ? `
+                            <tr>
+                                <td><strong>Next Due Date:</strong></td>
+                                <td class="text-end">${formatDate(data.nextDueDate)}</td>
+                            </tr>
+                            ` : ''}
                         </tbody>
                     </table>
                 </div>
 
-                ${data.note ? `
+                ${data.notes ? `
                 <div class="note-section" style="background: #fef3c7; padding: 10px; border-radius: 6px; border-left: 4px solid #f59e0b; margin-bottom: 20px;">
-                    <p class="mb-0 small"><strong>Note:</strong> ${data.note}</p>
+                    <p class="mb-0 small"><strong>Note:</strong> ${data.notes}</p>
                 </div>
                 ` : ''}
 
@@ -598,11 +1151,49 @@ function generateReceiptHTML(data) {
 
                 <div class="text-center mt-4 pt-3" style="border-top: 1px dashed #cbd5e1;">
                     <p class="mb-0 small text-muted">This is a computer-generated receipt and does not require a physical signature.</p>
-                    <p class="mb-0 small text-muted">For any queries, please contact us at +91 98765 43210</p>
+                    <p class="mb-0 small text-muted">For any queries, please contact us at +91 86456 28278</p>
                 </div>
             </div>
         </div>
     `;
+}
+
+// Helper function to convert number to words
+function numberToWords(num) {
+    if (num === 0) return 'Zero Rupees Only';
+
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+
+    function convertLessThanThousand(n) {
+        if (n === 0) return '';
+        if (n < 10) return ones[n];
+        if (n < 20) return teens[n - 10];
+        if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
+        return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertLessThanThousand(n % 100) : '');
+    }
+
+    num = Math.floor(num);
+
+    if (num < 1000) return convertLessThanThousand(num) + ' Rupees Only';
+    if (num < 100000) {
+        const thousands = Math.floor(num / 1000);
+        const remainder = num % 1000;
+        return convertLessThanThousand(thousands) + ' Thousand' +
+               (remainder !== 0 ? ' ' + convertLessThanThousand(remainder) : '') + ' Rupees Only';
+    }
+
+    const lakhs = Math.floor(num / 100000);
+    const remainder = num % 100000;
+    const thousands = Math.floor(remainder / 1000);
+    const hundreds = remainder % 1000;
+
+    let result = convertLessThanThousand(lakhs) + ' Lakh';
+    if (thousands > 0) result += ' ' + convertLessThanThousand(thousands) + ' Thousand';
+    if (hundreds > 0) result += ' ' + convertLessThanThousand(hundreds);
+
+    return result + ' Rupees Only';
 }
 
 // Print Receipt Content
@@ -753,10 +1344,7 @@ async function importFeesCSV() {
         // Send to backend
         const response = await fetch('/api/fees-manager/bulk-import-json', {
             method: 'POST',
-            headers: {
-                 'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
+            headers: getCsrfHeaders(),
             body: JSON.stringify(importedFeesData)
         });
 
@@ -818,90 +1406,38 @@ async function importFeesCSV() {
     }
 }
 
-function emailReceipt(receiptNo, studentName, mobile) {
-    Swal.fire({
-        title: 'Send Receipt via Email',
-        html: `
-            <div class="text-start">
-                <div class="mb-3">
-                    <label class="form-label">Receipt No.</label>
-                    <input type="text" class="form-control" value="${receiptNo}" readonly>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Student Name</label>
-                    <input type="text" class="form-control" value="${studentName}" readonly>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Email Address <span class="text-danger">*</span></label>
-                    <input type="email" class="form-control" id="emailAddress" placeholder="student@example.com" required>
-                    <small class="text-muted">Enter the email address to send receipt</small>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Additional Message (Optional)</label>
-                    <textarea class="form-control" id="emailMessage" rows="3" placeholder="Add any additional message..."></textarea>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="sendSMS" checked>
-//                    <label class="form-check-label" for="sendSMS">
-//                        Also send SMS notification to ${mobile}
-//                    </label>
-                </div>
-            </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: '<i class="bi bi-envelope me-2"></i>Send Email',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#667eea',
-        width: '550px',
-        preConfirm: () => {
-            const email = document.getElementById('emailAddress').value;
-            if (!email) {
-                Swal.showValidationMessage('Please enter an email address');
-                return false;
-            }
-            // Basic email validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                Swal.showValidationMessage('Please enter a valid email address');
-                return false;
-            }
-            return {
-                receiptNo: receiptNo,
-                email: email,
-                message: document.getElementById('emailMessage').value,
-                sendSMS: document.getElementById('sendSMS').checked
-            };
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Show sending progress
-            Swal.fire({
-                title: 'Sending...',
-                html: 'Please wait while we send the receipt',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
+// Generate and print receipt
+async function printReceiptWithData(receiptNo, regNo) {
+    try {
+        // Fetch receipt data
+        const response = await fetch(`${API_BASE}/receipts/${regNo}`, {
+            headers: getCsrfHeaders()
+        });
 
-            // Simulate API call
-            setTimeout(() => {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Email Sent!',
-                    html: `
-                        <p>Receipt has been sent successfully to:</p>
-                        <p class="fw-bold text-primary">${result.value.email}</p>
-                        ${result.value.sendSMS ? '<p class="text-muted mt-2"><i class="bi bi-check-circle text-success"></i> SMS notification also sent</p>' : ''}
-                    `,
-                    confirmButtonColor: '#667eea'
-                });
-            }, 2000);
-
-            // Here you would make actual API call
-            console.log('Sending email:', result.value);
+        if (!response.ok) {
+            throw new Error('Failed to fetch receipt data');
         }
-    });
+
+        const receipts = await response.json();
+        const receipt = receipts.find(r => r.receiptNumber === receiptNo);
+
+        if (!receipt) {
+            throw new Error('Receipt not found');
+        }
+
+        // Generate receipt HTML
+        const receiptHTML = generateReceiptHTML(receipt);
+        printReceiptContent(receiptHTML);
+
+    } catch (error) {
+        console.error('Error printing receipt:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Print Error',
+            text: 'Failed to load receipt data for printing',
+            confirmButtonColor: '#ef4444'
+        });
+    }
 }
 
 // Toggle Functions
@@ -937,35 +1473,25 @@ function toggleRefundPaymentFields() {
 // Save Functions
 async function saveReceipt() {
     const regNo = currentStudentRegNo;
+    const receiptId = document.getElementById('btnSaveReceipt').dataset.receiptId;
+    const isUpdate = !!receiptId;
 
     if (!regNo) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Student information is missing',
-            confirmButtonColor: '#667eea'
-        });
+        showError('Student information is missing');
         return;
     }
 
-    // Validate required fields
     const nowReceiving = parseFloat(document.getElementById('nowReceiving').value);
     const installmentId = document.getElementById('installment').value;
     const nextDueDate = document.getElementById('nextDueDate').value;
 
     if (!nowReceiving || nowReceiving <= 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Validation Error',
-            text: 'Please enter a valid amount',
-            confirmButtonColor: '#667eea'
-        });
+        showError('Please enter a valid amount');
         return;
     }
 
-    // Prepare receipt data with regNo
     const receiptData = {
-        regNo: regNo, // CHANGED FROM admissionId
+        regNo: regNo,
         installmentId: installmentId ? parseInt(installmentId) : null,
         receiptDate: document.getElementById('receiptDate').value,
         amountReceived: nowReceiving,
@@ -989,58 +1515,188 @@ async function saveReceipt() {
     };
 
     try {
-        Swal.fire({
-            title: 'Saving...',
-            text: 'Please wait while we save the receipt',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
+        showLoading(isUpdate ? 'Updating receipt...' : 'Saving receipt...');
 
-        const response = await fetch('/api/fees-manager/receipts', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(receiptData)
-        });
+        const url = isUpdate ? `/api/fees-manager/receipts/${receiptId}` : '/api/fees-manager/receipts';
+        const method = isUpdate ? 'PUT' : 'POST';
+
+       const response = await fetch(url, {
+           method: method,
+           headers: getCsrfHeaders(),
+           body: JSON.stringify(receiptData)
+       });
 
         const result = await response.json();
-
         Swal.close();
 
+        // In saveReceipt function, after successful save:
         if (response.ok) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: 'Fee receipt saved successfully',
-                confirmButtonColor: '#667eea'
-            }).then(() => {
-                bootstrap.Modal.getInstance(document.getElementById('feeReceiptModal')).hide();
-                loadFeesFromBackend();
-            });
+            await updateFeesTotalPaid(regNo);
+
+            showSuccess(`Fee receipt ${isUpdate ? 'updated' : 'saved'} successfully`);
+
+            // Reset button and title
+            delete document.getElementById('btnSaveReceipt').dataset.receiptId;
+            document.getElementById('btnSaveReceipt').innerHTML = '<i class="bi bi-check-circle me-2"></i>Save Changes';
+            document.querySelector('#feeReceiptModal .modal-title').innerHTML = '<i class="bi bi-receipt me-2"></i>New Fee Receipt';
+
+            bootstrap.Modal.getInstance(document.getElementById('feeReceiptModal')).hide();
+
+            //  FORCE RELOAD TO SHOW UPDATED TOTAL PAID
+            await loadFeesFromBackend();
         } else {
-            throw new Error(result.message || 'Failed to save receipt');
+            throw new Error(result.message || `Failed to ${isUpdate ? 'update' : 'save'} receipt`);
         }
 
     } catch (error) {
         Swal.close();
-        console.error('Error saving receipt:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: error.message || 'Failed to save receipt',
-            confirmButtonColor: '#ef4444'
-        });
+        console.error('Error:', error);
+        showError(error.message || `Failed to ${isUpdate ? 'update' : 'save'} receipt`);
     }
 }
 
+function generateFeeInstallments() {
+    const totalAmount = parseFloat(document.getElementById('feeInstTotalAmount').value);
+    const noOfInstallments = parseInt(document.getElementById('feeInstNoOfInstallments').value);
+    const daysBetween = parseInt(document.getElementById('feeInstDays').value);
+    const startDate = document.getElementById('feeInstStartDate').value;
+
+    if (!totalAmount || !noOfInstallments || !startDate) {
+        showError('Please fill all required fields');
+        return;
+    }
+
+    const amountPerInstallment = totalAmount / noOfInstallments;
+    const tbody = document.getElementById('feeInstallmentsBody');
+    let currentDate = new Date(startDate);
+
+    tbody.innerHTML = '';
+
+    for (let i = 1; i <= noOfInstallments; i++) {
+        const dueDate = new Date(currentDate);
+        const formattedDate = dueDate.toISOString().split('T')[0];
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <input type="date" class="form-control form-control-sm"
+                       value="${formattedDate}"
+                       data-installment="${i}">
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm"
+                       value="${amountPerInstallment.toFixed(2)}"
+                       step="0.01"
+                       data-installment="${i}">
+            </td>
+            <td>
+                <select class="form-select form-select-sm" data-installment="${i}">
+                    <option value="Pending">Pending</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Overdue">Overdue</option>
+                    <option value="Waived">Waived</option>
+                </select>
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-danger"
+                        onclick="this.closest('tr').remove()">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+
+        currentDate.setDate(currentDate.getDate() + daysBetween);
+    }
+
+    document.getElementById('feeInstTotalInstAmount').value = totalAmount.toFixed(2);
+    showSuccess(`Generated ${noOfInstallments} installments`);
+}
+
+async function saveFeeInstallments() {
+    const tbody = document.getElementById('feeInstallmentsBody');
+    const rows = tbody.querySelectorAll('tr');
+
+    if (rows.length === 0 || rows[0].cells.length === 1) {
+        showError('No installments to save');
+        return;
+    }
+
+    const installments = [];
+    rows.forEach((row, index) => {
+        const dateInput = row.querySelector('input[type="date"]');
+        const amountInput = row.querySelector('input[type="number"]');
+        const statusSelect = row.querySelector('select');
+
+        installments.push({
+            installmentNumber: index + 1,
+            dueDate: dateInput.value,
+            amount: parseFloat(amountInput.value),
+            status: statusSelect.value
+        });
+    });
+
+    try {
+        showLoading('Saving installments...');
+
+       const response = await fetch(`${API_BASE}/installments/${currentStudentRegNo}`, {
+           method: 'POST',
+           headers: getCsrfHeaders(),
+           body: JSON.stringify({
+               registrationNumber: currentStudentRegNo,
+               installments: installments
+           })
+       });
+
+        if (!response.ok) throw new Error('Failed to save installments');
+
+        Swal.close();
+        showSuccess('Fee installments saved successfully!');
+        bootstrap.Modal.getInstance(document.getElementById('feeInstallmentsModal')).hide();
+
+    } catch (error) {
+        Swal.close();
+        console.error('Error:', error);
+        showError('Failed to save installments');
+    }
+}
+
+// Update Fees Total Paid
+async function updateFeesTotalPaid(regNo) {
+    try {
+        // Fetch all receipts for this student
+        const response = await fetch(`${API_BASE}/receipts/${regNo}`, {
+            headers: getCsrfHeaders()
+        });
+
+        if (response.ok) {
+            const receipts = await response.json();
+
+            // Calculate total paid from all receipts
+            const totalPaid = receipts.reduce((sum, receipt) => {
+                return sum + (receipt.amountReceived || 0);
+            }, 0);
+
+            // Update fees table
+           await fetch(`${API_BASE}/update-total-paid`, {
+               method: 'PUT',
+               headers: getCsrfHeaders(),
+               body: JSON.stringify({
+                   regNo: regNo,
+                   totalPaid: totalPaid
+               })
+           });
+        }
+    } catch (error) {
+        console.error('Error updating total paid:', error);
+    }
+}
 
 function saveAndPrintReceipt() {
     Swal.fire({
         icon: 'success',
         title: 'Success!',
-        text: 'Fee receipt saved and printed successfully',
+        text: 'Fee receipt saved successfully',
         confirmButtonColor: '#667eea'
     }).then(() => {
         bootstrap.Modal.getInstance(document.getElementById('feeReceiptModal')).hide();
@@ -1049,77 +1705,48 @@ function saveAndPrintReceipt() {
 }
 
 async function saveStatus() {
-    const admissionId = currentStudentId;
+    const regNo = currentStudentRegNo;
 
-    if (!admissionId) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Student information is missing',
-            confirmButtonColor: '#667eea'
-        });
+    if (!regNo) {
+        showError('Student information is missing');
         return;
     }
 
     const paymentStatus = document.getElementById('paymentStatus').value;
 
     if (!paymentStatus) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Validation Error',
-            text: 'Please select a payment status',
-            confirmButtonColor: '#667eea'
-        });
+        showError('Please select a payment status');
         return;
     }
 
     try {
-        Swal.fire({
-            title: 'Updating...',
-            text: 'Please wait while we update the status',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
+        showLoading('Updating status...');
 
-        const response = await fetch('/api/fees-manager/status', {
+        const response = await fetch(`${API_BASE}/status`, {
             method: 'PUT',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
+            headers: getCsrfHeaders(),
             body: JSON.stringify({
-                admissionId: admissionId,
+                registrationNumber: regNo,
                 paymentStatus: paymentStatus
             })
         });
 
-        const result = await response.json();
+        if (!response.ok) {
+            throw new Error('Failed to update status');
+        }
 
         Swal.close();
+        showSuccess('Fee status updated successfully');
 
-        if (response.ok) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: 'Fee status updated successfully',
-                confirmButtonColor: '#667eea'
-            }).then(() => {
-                bootstrap.Modal.getInstance(document.getElementById('changeStatusModal')).hide();
-                loadFeesFromBackend();
-            });
-        } else {
-            throw new Error(result.message || 'Failed to update status');
-        }
+        bootstrap.Modal.getInstance(document.getElementById('changeStatusModal')).hide();
+
+        // Reload fees data
+        await loadFeesFromBackend();
 
     } catch (error) {
         Swal.close();
         console.error('Error updating status:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: error.message || 'Failed to update status',
-            confirmButtonColor: '#ef4444'
-        });
+        showError(error.message || 'Failed to update status');
     }
 }
 
@@ -1333,15 +1960,12 @@ async function deleteReceipt(receiptId) {
     if (result.isConfirmed) {
         try {
              const response = await fetch(
-                        `/api/fees-manager/receipts/${receiptId}`,
-                        {
-                            method: 'DELETE',
-                            headers: {
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json'
-                            }
-                        }
-                    );
+                 `/api/fees-manager/receipts/${receiptId}`,
+                 {
+                     method: 'DELETE',
+                     headers: getCsrfHeaders()
+                 }
+             );
 
             if (response.ok) {
                 Swal.fire({
@@ -1370,147 +1994,285 @@ async function deleteReceipt(receiptId) {
     }
 }
 
-
 // ==================== Modal Functions - Search by admissionId ====================
+
 async function openFeeReceipt(regNo) {
     if (!regNo) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Student registration number is missing',
-            confirmButtonColor: '#667eea'
-        });
+        showError('Student registration number is missing');
         return;
     }
 
-    currentStudentRegNo = regNo; // Store regNo instead of admissionId
+    //  RESET MODAL TITLE FOR NEW RECEIPT
+    document.querySelector('#feeReceiptModal .modal-title').innerHTML =
+        '<i class="bi bi-receipt me-2"></i>New Fee Receipt';
+
+    //  RESET BUTTON TEXT
+    delete document.getElementById('btnSaveReceipt').dataset.receiptId;
+    document.getElementById('btnSaveReceipt').innerHTML =
+        '<i class="bi bi-check-circle me-2"></i>Save Changes';
+
+    currentStudentRegNo = regNo;
     const student = feesData.find(s => s.regNo === regNo);
 
     if (!student) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Student record not found',
-            confirmButtonColor: '#667eea'
-        });
+        showError('Student record not found');
         return;
     }
 
+    // Reset form
+    document.getElementById('feeReceiptForm').reset();
+
+    // Populate form
     document.getElementById('receiptStudentName').value = student.studentName;
     document.getElementById('receiptTotalFees').value = student.totalFees;
     document.getElementById('receiptPendingFees').value = student.feesDue;
     document.getElementById('receivedFees').value = student.totalPaid;
 
+    // Set today's date
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('receiptDate').value = today;
+
+    // Load installments
     await loadInstallmentsForReceipt(regNo);
+
+    // Set next due date automatically
+    setNextInstallmentDueDate(regNo);
 
     new bootstrap.Modal(document.getElementById('feeReceiptModal')).show();
 }
-async function loadInstallmentsForReceipt(regNo) {
+
+// Set next installment due date based on existing installments
+async function setNextInstallmentDueDate(regNo) {
     try {
-        const response = await fetch(`/api/fees-manager/installments/${regNo}`, {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
+        const response = await fetch(`${API_BASE}/installments/${regNo}`, {
+            headers: getCsrfHeaders()
         });
 
         if (response.ok) {
             const installments = await response.json();
-            const select = document.getElementById('installment');
 
-            select.innerHTML = '<option value="">-- Select Installment --</option>';
+            if (installments && installments.length > 0) {
+                // Find the last pending or last installment
+                const pendingInstallments = installments.filter(i => i.status === 'Pending');
 
-            installments.forEach(inst => {
-                const option = document.createElement('option');
-                option.value = inst.id;
-                option.textContent = `Installment ${inst.installmentNumber} - ₹${inst.amount.toLocaleString()} (${inst.status})`;
-                select.appendChild(option);
-            });
+                if (pendingInstallments.length > 0) {
+                    // Get the next pending installment date
+                    const nextInstallment = pendingInstallments[0];
+                    document.getElementById('nextDueDate').value = nextInstallment.dueDate;
+                } else {
+                    // All paid, calculate next date from last installment
+                    const lastInstallment = installments[installments.length - 1];
+                    const lastDate = new Date(lastInstallment.dueDate);
+
+                    // Get days gap from fees data
+                    const student = feesData.find(s => s.regNo === regNo);
+                    const daysGap = student?.daysBetweenInstallments || 30;
+
+                    lastDate.setDate(lastDate.getDate() + daysGap);
+                    document.getElementById('nextDueDate').value = lastDate.toISOString().split('T')[0];
+                }
+            } else {
+                // No installments, set 30 days from today
+                const nextDate = new Date();
+                nextDate.setDate(nextDate.getDate() + 30);
+                document.getElementById('nextDueDate').value = nextDate.toISOString().split('T')[0];
+            }
         }
     } catch (error) {
-        console.error('Error loading installments:', error);
+        console.error('Error setting next due date:', error);
+        // Default to 30 days from today
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + 30);
+        document.getElementById('nextDueDate').value = nextDate.toISOString().split('T')[0];
     }
 }
-async function viewReceipts(regNo) {
-    currentStudentRegNo = regNo;
-    const student = feesData.find(s => s.regNo === regNo);
+async function emailReceipt(receiptNo, studentName, mobile) {
+    // : Get regNo from the receipt data, not from student search
+    let studentEmail = '';
+    let actualRegNo = null;
 
-    if (!student) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Student record not found',
-            confirmButtonColor: '#667eea'
+    try {
+        // First, try to find the receipt to get the correct registration number
+        const allReceipts = await fetch(`${API_BASE}/receipts`, {
+            headers: getCsrfHeaders()
         });
+
+        if (allReceipts.ok) {
+            const receipts = await allReceipts.json();
+            const targetReceipt = receipts.find(r => r.receiptNumber === receiptNo);
+            
+            if (targetReceipt) {
+                actualRegNo = targetReceipt.registrationNumber;
+            }
+        }
+    } catch (error) {
+        console.error('Error finding receipt:', error);
+    }
+
+    // If we couldn't find regNo from receipt, fall back to searching by name
+    if (!actualRegNo) {
+        const student = feesData.find(s => s.studentName === studentName);
+        if (student) {
+            actualRegNo = student.regNo;
+        }
+    }
+
+    if (!actualRegNo) {
+        showError('Could not find student registration number');
         return;
     }
 
-    document.getElementById('viewReceiptStudentName').textContent = student.studentName;
-
-    // Fetch receipts using regNo
+    // Now fetch admission data using the CORRECT registration number
     try {
-        const response = await fetch(`/api/fees-manager/receipts/${regNo}`, {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            }
-        });
+       const admResponse = await fetch(`/api/admissions/by-regno/${actualRegNo}`, {
+           headers: getCsrfHeaders()
+       });
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch receipts');
+        if (admResponse.ok) {
+            const admission = await admResponse.json();
+            studentEmail = admission.emailPrimary || '';
         }
-
-        const receipts = await response.json();
-
-        const receiptsBody = document.getElementById('receiptsTableBody');
-
-        if (receipts.length === 0) {
-            receiptsBody.innerHTML = `
-                <tr>
-                    <td colspan="8" class="text-center text-muted">
-                        <small>No receipts found for this student</small>
-                    </td>
-                </tr>
-            `;
-        } else {
-            receiptsBody.innerHTML = receipts.map(receipt => `
-                <tr>
-                    <td>${receipt.receiptNumber || 'N/A'}</td>
-                    <td>${receipt.invoiceNumber || 'N/A'}</td>
-                    <td>₹${(receipt.amountReceived || 0).toLocaleString()}</td>
-                    <td>${receipt.receiptDate ? formatDate(receipt.receiptDate) : '-'}</td>
-                    <td>${receipt.paymentMode || 'Cash'}</td>
-                    <td>${receipt.notes || '-'}</td>
-                    <td>${receipt.receiptType || 'Regular'}</td>
-                    <td>
-                        <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-secondary" onclick="viewReceiptPreview('${receipt.receiptNumber}', '${regNo}')" title="View Receipt">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-info" onclick="printReceipt('${receipt.receiptNumber}')" title="Print">
-                                <i class="bi bi-printer"></i>
-                            </button>
-                            <button class="btn btn-sm btn-success" onclick="emailReceipt('${receipt.receiptNumber}', '${student.studentName}', '${student.mobile}')" title="Email">
-                                <i class="bi bi-envelope"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteReceipt(${receipt.id})" title="Delete">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        new bootstrap.Modal(document.getElementById('viewReceiptsModal')).show();
-
     } catch (error) {
-        console.error('Error fetching receipts:', error);
+        console.error('Error fetching email:', error);
+    }
+
+    // Close view receipts modal
+    const viewReceiptsModal = document.getElementById('viewReceiptsModal');
+    if (viewReceiptsModal) {
+        const modalInstance = bootstrap.Modal.getInstance(viewReceiptsModal);
+        if (modalInstance) {
+            modalInstance.hide();
+        }
+    }
+
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('padding-right');
+
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    const { value: formValues, isConfirmed } = await Swal.fire({
+        title: 'Send Receipt via Email',
+        html: `
+            <div class="text-start">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Receipt No.</label>
+                    <input type="text" class="form-control" value="${receiptNo}" readonly
+                           style="background-color: #f8f9fa;">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Student Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="emailStudentName"
+                           value="${studentName}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Email Address <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control" id="emailAddress"
+                           placeholder="student@example.com"
+                           value="${studentEmail}" required>
+                    <small class="text-muted">Receipt will be sent as PDF attachment</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Additional Message (Optional)</label>
+                    <textarea class="form-control" id="emailMessage" rows="3"
+                              placeholder="Add any additional message..."></textarea>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-envelope me-2"></i>Send Email',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#667eea',
+        width: '600px',
+        showLoaderOnConfirm: true,
+        preConfirm: async () => {
+            const email = document.getElementById('emailAddress').value.trim();
+            const name = document.getElementById('emailStudentName').value.trim();
+
+            if (!email) {
+                Swal.showValidationMessage('Please enter an email address');
+                return false;
+            }
+            if (!name) {
+                Swal.showValidationMessage('Please enter student name');
+                return false;
+            }
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                Swal.showValidationMessage('Please enter a valid email address');
+                return false;
+            }
+
+            try {
+                // : Use the correct registration number
+                const receiptResponse = await fetch(`${API_BASE}/receipts/${actualRegNo}`, {
+                    headers: getCsrfHeaders()
+                });
+
+                if (!receiptResponse.ok) {
+                    Swal.showValidationMessage('Failed to load receipt data');
+                    return false;
+                }
+
+                const receipts = await receiptResponse.json();
+                const receipt = receipts.find(r => r.receiptNumber === receiptNo);
+
+                if (!receipt) {
+                    Swal.showValidationMessage('Receipt not found');
+                    return false;
+                }
+
+                const student = feesData.find(s => s.regNo === actualRegNo);
+
+                const receiptData = {
+                    ...receipt,
+                    mobile: student?.mobile || mobile || 'N/A',
+                    course: student?.course || 'N/A',
+                    email: email
+                };
+
+                const pdfBase64 = await generateInvoicePDF(receiptData);
+
+                if (!pdfBase64) {
+                    Swal.showValidationMessage('Failed to generate PDF');
+                    return false;
+                }
+
+                const response = await fetch(`${API_BASE}/receipts/${receiptNo}/send-email`, {
+                    method: 'POST',
+                    headers: getCsrfHeaders(),
+                    body: JSON.stringify({
+                        email: email,
+                        studentName: name,
+                        message: document.getElementById('emailMessage').value,
+                        pdfData: pdfBase64
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    Swal.showValidationMessage(errorData.message || 'Failed to send email');
+                    return false;
+                }
+
+                return { email };
+            } catch (error) {
+                console.error('Error sending email:', error);
+                Swal.showValidationMessage('Network error: ' + error.message);
+                return false;
+            }
+        }
+    });
+
+    if (isConfirmed && formValues) {
         Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to load receipts',
-            confirmButtonColor: '#ef4444'
+            icon: 'success',
+            title: 'Email Sent!',
+            html: `
+                <p>Receipt sent successfully to:</p>
+                <p class="fw-bold text-primary">${formValues.email}</p>
+            `,
+            confirmButtonColor: '#667eea'
         });
     }
 }
@@ -1578,6 +2340,7 @@ function manageInstallments(admissionId) {
 
 //  feesRefund function
 function feesRefund(regNo) {
+
     if (!regNo) {
         Swal.fire({
             icon: 'error',
@@ -1606,7 +2369,108 @@ function feesRefund(regNo) {
     document.getElementById('refundPaidFees').value = student.totalPaid;
     document.getElementById('refundPendingFees').value = student.feesDue;
 
+    loadRefundHistory(regNo);
+
     new bootstrap.Modal(document.getElementById('feesRefundModal')).show();
+}
+
+async function updateFeeReceipt(receiptId, regNo) {
+    try {
+        showLoading('Loading receipt...');
+
+        const response = await fetch(`${API_BASE}/receipts/${regNo}`, {
+            headers: getCsrfHeaders()
+        });
+
+        if (!response.ok) throw new Error('Failed to load receipt');
+
+        const receipts = await response.json();
+        const receipt = receipts.find(r => r.id === receiptId);
+
+        if (!receipt) throw new Error('Receipt not found');
+
+        Swal.close();
+
+        // Close view receipts modal
+        bootstrap.Modal.getInstance(document.getElementById('viewReceiptsModal')).hide();
+
+        //  CHANGE MODAL TITLE
+        document.querySelector('#feeReceiptModal .modal-title').innerHTML =
+            '<i class="bi bi-pencil-square me-2"></i>Update Fee Receipt';
+
+        // Open fee receipt modal with data
+        currentStudentRegNo = regNo;
+        const student = feesData.find(s => s.regNo === regNo);
+
+        // Populate form
+        document.getElementById('receiptStudentName').value = student.studentName;
+        document.getElementById('receiptTotalFees').value = student.totalFees;
+        document.getElementById('receiptPendingFees').value = student.feesDue;
+        document.getElementById('receivedFees').value = receipt.previousPaid || 0;
+        document.getElementById('nowReceiving').value = receipt.amountReceived;
+        document.getElementById('receiptDate').value = receipt.receiptDate;
+        document.getElementById('paymentMode').value = receipt.paymentMode;
+        document.getElementById('receiptNotes').value = receipt.notes || '';
+
+        if (receipt.nextDueDate) {
+            document.getElementById('nextDueDate').value = receipt.nextDueDate;
+        }
+
+        // Handle payment mode fields
+        togglePaymentFields();
+
+        if (receipt.bankName) document.getElementById('bankName').value = receipt.bankName;
+        if (receipt.chequeNumber) document.getElementById('chequeNo').value = receipt.chequeNumber;
+        if (receipt.chequeDate) document.getElementById('chequeDate').value = receipt.chequeDate;
+        if (receipt.transactionNumber) document.getElementById('transactionNo').value = receipt.transactionNumber;
+        if (receipt.ifscCode) document.getElementById('ifscCode').value = receipt.ifscCode;
+        if (receipt.onlinePaymentMode) document.getElementById('onlinePaymentMode').value = receipt.onlinePaymentMode;
+
+        // Load installments
+        await loadInstallmentsForReceipt(regNo);
+
+        // Store receipt ID for update
+        document.getElementById('btnSaveReceipt').dataset.receiptId = receiptId;
+        document.getElementById('btnSaveReceipt').innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>Update Receipt';
+
+        new bootstrap.Modal(document.getElementById('feeReceiptModal')).show();
+
+    } catch (error) {
+        Swal.close();
+        console.error('Error:', error);
+        showError('Failed to load receipt for update');
+    }
+}
+
+async function loadInstallmentsForReceipt(regNo) {
+    try {
+        const response = await fetch(`${API_BASE}/installments/${regNo}`, {
+            headers: getCsrfHeaders()
+        });
+
+        if (response.ok) {
+            const installments = await response.json();
+            const select = document.getElementById('installment');
+
+            select.innerHTML = '<option value="">-- Select Installment --</option>';
+
+            // Only show pending installments
+            const pendingInstallments = installments.filter(i => i.status === 'Pending');
+
+            pendingInstallments.forEach(inst => {
+                const option = document.createElement('option');
+                option.value = inst.id;
+                option.textContent = `Installment ${inst.installmentNumber} - ₹${inst.amount.toFixed(2)} (Due: ${inst.dueDate})`;
+                select.appendChild(option);
+            });
+
+            if (pendingInstallments.length === 0) {
+                select.innerHTML = '<option value="">All installments paid</option>';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading installments:', error);
+    }
 }
 
 // Update saveRefund to use regNo
@@ -1661,14 +2525,11 @@ async function saveRefund() {
             didOpen: () => Swal.showLoading()
         });
 
-        const response = await fetch('/api/fees-manager/refunds', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(refundData)
-        });
+      const response = await fetch('/api/fees-manager/refunds', {
+          method: 'POST',
+          headers: getCsrfHeaders(),
+          body: JSON.stringify(refundData)
+      });
 
         const result = await response.json();
 
@@ -1702,58 +2563,366 @@ async function saveRefund() {
 
 // ==================== View Receipt Preview ====================
 
-function viewReceiptPreview(receiptNo, admissionId) {
-    const student = feesData.find(s => s.admissionId === admissionId);
+async function viewReceiptPreview(receiptNo, regNo) {
+    try {
+        showLoading('Loading receipt...');
+        
+        //  FETCH ACTUAL RECEIPT DATA
+       const response = await fetch(`${API_BASE}/receipts/${regNo}`, {
+           headers: getCsrfHeaders()
+       });
 
-    if (!student) {
+        if (!response.ok) throw new Error('Failed to load receipt');
+
+        const receipts = await response.json();
+        const receipt = receipts.find(r => r.receiptNumber === receiptNo);
+
+        if (!receipt) {
+            throw new Error('Receipt not found');
+        }
+
+        //  GET STUDENT DETAILS
+        const student = feesData.find(s => s.regNo === regNo);
+
+        Swal.close();
+
+        const receiptHTML = generateReceiptHTML({
+            ...receipt,
+            mobile: student?.mobile || 'N/A',
+            course: student?.course || 'N/A'
+        });
+
+        Swal.fire({
+            title: 'Fee Receipt Preview',
+            html: receiptHTML,
+            width: '800px',
+            showCloseButton: true,
+            showCancelButton: true,
+            showConfirmButton: true,
+            confirmButtonText: '<i class="bi bi-printer me-2"></i>Print Receipt',
+            cancelButtonText: '<i class="bi bi-envelope me-2"></i>Send via Email',
+            confirmButtonColor: '#667eea',
+            cancelButtonColor: '#10b981',
+            reverseButtons: true,
+            customClass: {
+                htmlContainer: 'receipt-preview-container'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                printReceiptContent(receiptHTML);
+            } else if (result.dismiss === Swal.DismissReason.cancel) {
+                emailReceipt(receiptNo, receipt.studentName, student?.mobile);
+            }
+        });
+
+    } catch (error) {
+        Swal.close();
+        console.error('Error:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Student record not found',
-            confirmButtonColor: '#667eea'
+            text: error.message || 'Failed to load receipt',
+            confirmButtonColor: '#ef4444'
         });
-        return;
     }
+}
 
-    // Mock receipt data - replace with actual API call
-    const receiptData = {
-        receiptNo: receiptNo,
-        invoiceNo: receiptNo.replace('REC', 'INV'),
-        date: formatDate(new Date()),
-        studentName: student.studentName,
-        regNo: student.regNo,
-        mobile: student.mobile,
-        course: student.course,
-        amount: 10000,
-        amountInWords: 'Ten Thousand Only',
-        paymentMode: 'Cash',
-        transactionId: receiptNo === 'REC001' ? '-' : 'TXN' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-        receivedBy: 'Admin',
-        note: 'First installment payment'
-    };
+/**
+ * Generate professional invoice PDF from receipt data
+ */
+async function generateInvoicePDF(receiptData) {
+    return new Promise((resolve, reject) => {
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
 
-    const receiptHTML = generateReceiptHTML(receiptData);
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 15;
+            let y = 15;
 
-    Swal.fire({
-        title: 'Fee Receipt Preview',
-        html: receiptHTML,
-        width: '800px',
-        showCloseButton: true,
-        showCancelButton: true,
-        showConfirmButton: true,
-        confirmButtonText: '<i class="bi bi-printer me-2"></i>Print Receipt',
-        cancelButtonText: '<i class="bi bi-envelope me-2"></i>Send via Email',
-        confirmButtonColor: '#667eea',
-        cancelButtonColor: '#10b981',
-        reverseButtons: true,
-        customClass: {
-            htmlContainer: 'receipt-preview-container'
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            printReceiptContent(receiptHTML);
-        } else if (result.dismiss === Swal.DismissReason.cancel) {
-            emailReceipt(receiptNo, student.studentName, student.mobile);
+            // ===== ADD LOGO (Image Path) =====
+            const logoUrl = '/assets/images/tts-logo-ev.png'; // Update with actual path
+            try {
+                doc.addImage(logoUrl, 'PNG', margin, y, 20, 25);
+            } catch (e) {
+                console.warn('Logo not found:', e);
+            }
+
+            // ===== HEADER - Company Info =====
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            doc.text('TechnoKraft Training Solutions', margin + 30, y + 6);
+
+            y += 10;
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text('1st Floor, Kanchwala Avenue, Above Viju\'s Dabeli', margin + 30, y);
+
+            y += 4;
+            doc.text('College Road, Nashik, Maharashtra - 422005', margin + 30, y);
+
+            y += 4;
+            doc.text('Phone: +91 02532312447 | Email: info@tts.net.in', margin + 30, y);
+
+            y += 12; // Increased spacing
+
+            // ===== TITLE BAR =====
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.5);
+            doc.line(margin, y, pageWidth - margin, y);
+
+            y += 10; // Increased spacing
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('FEES RECEIPT', pageWidth / 2, y, { align: 'center' });
+
+            y += 6;
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 10; // Increased spacing
+
+            // ===== TABLE SETUP WITH INCREASED HEIGHT =====
+            const rowHeight = 9; // Increased from 7 to 9
+            const fullWidth = pageWidth - 2 * margin;
+            const halfWidth = fullWidth / 2;
+            const labelWidth = 45;
+            const valueWidth = halfWidth - labelWidth;
+
+            doc.setFontSize(10);
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.3);
+
+            // ===== ROW 1: Receipt Date & Receipt No =====
+            doc.rect(margin, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Receipt Date:', margin + 2, y + 6);
+
+            doc.rect(margin + labelWidth, y, valueWidth, rowHeight);
+            doc.setFont('helvetica', 'normal');
+            doc.text(formatDate(receiptData.receiptDate), margin + labelWidth + 2, y + 6);
+
+            doc.rect(margin + halfWidth, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Receipt No:', margin + halfWidth + 2, y + 6);
+
+            doc.rect(margin + halfWidth + labelWidth, y, valueWidth, rowHeight);
+            doc.setFont('helvetica', 'normal');
+            doc.text(receiptData.receiptNumber || 'N/A', margin + halfWidth + labelWidth + 2, y + 6);
+
+            y += rowHeight;
+
+            // ===== ROW 2: Invoice No & Reg. No =====
+            doc.rect(margin, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Invoice No:', margin + 2, y + 6);
+
+            doc.rect(margin + labelWidth, y, valueWidth, rowHeight);
+            doc.setFont('helvetica', 'normal');
+            doc.text(receiptData.invoiceNumber || 'N/A', margin + labelWidth + 2, y + 6);
+
+            doc.rect(margin + halfWidth, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Reg. No:', margin + halfWidth + 2, y + 6);
+
+            doc.rect(margin + halfWidth + labelWidth, y, valueWidth, rowHeight);
+            doc.setFont('helvetica', 'normal');
+            doc.text(receiptData.registrationNumber || 'N/A', margin + halfWidth + labelWidth + 2, y + 6);
+
+            y += rowHeight;
+
+            // ===== ROW 3: Student Name (full width) =====
+            doc.rect(margin, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Student Name:', margin + 2, y + 6);
+
+            doc.rect(margin + labelWidth, y, fullWidth - labelWidth, rowHeight);
+            doc.setFont('helvetica', 'normal');
+            doc.text(receiptData.studentName || 'N/A', margin + labelWidth + 2, y + 6);
+
+            y += rowHeight;
+
+            // ===== ROW 4: Contact No & Email (FULL EMAIL DISPLAY) =====
+            doc.rect(margin, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Contact No:', margin + 2, y + 6);
+
+            doc.rect(margin + labelWidth, y, valueWidth, rowHeight);
+            doc.setFont('helvetica', 'normal');
+            doc.text(receiptData.mobile || 'N/A', margin + labelWidth + 2, y + 6);
+
+            doc.rect(margin + halfWidth, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Email:', margin + halfWidth + 2, y + 6);
+
+            doc.rect(margin + halfWidth + labelWidth, y, valueWidth, rowHeight);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            const emailText = receiptData.email || 'N/A';
+            doc.text(emailText, margin + halfWidth + labelWidth + 2, y + 6);
+            doc.setFontSize(10);
+
+            y += rowHeight;
+
+            // ===== ROW 5: Courses (full width, dynamic height) =====
+            doc.rect(margin, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Courses:', margin + 2, y + 6);
+
+            const courseText = receiptData.course || 'N/A';
+            const maxCourseWidth = fullWidth - labelWidth - 4;
+            const splitCourse = doc.splitTextToSize(courseText, maxCourseWidth);
+            const courseHeight = Math.max(rowHeight, splitCourse.length * 5 + 4);
+
+            doc.rect(margin + labelWidth, y, fullWidth - labelWidth, courseHeight);
+            doc.setFont('helvetica', 'normal');
+            doc.text(splitCourse, margin + labelWidth + 2, y + 6);
+
+            y += courseHeight;
+
+            // ===== ROW 6: Amount Received =====
+            doc.rect(margin, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Amount Received:', margin + 2, y + 6);
+
+            doc.rect(margin + labelWidth, y, fullWidth - labelWidth, rowHeight);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Rs. ' + formatCurrency(receiptData.amountReceived), margin + labelWidth + 2, y + 6);
+
+            y += rowHeight;
+
+            // ===== ROW 7: Amount in Words =====
+            doc.rect(margin, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Amount (in words):', margin + 2, y + 6);
+
+            doc.rect(margin + labelWidth, y, fullWidth - labelWidth, rowHeight);
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(9);
+            doc.text(numberToWords(receiptData.amountReceived), margin + labelWidth + 2, y + 6);
+
+            y += rowHeight;
+            doc.setFontSize(10);
+
+            // ===== PAYMENT DETAILS =====
+            const paymentRows = [
+                ['Payment Mode:', receiptData.paymentMode || 'Cash'],
+                ['Cheque No:', receiptData.chequeNumber || 'NA'],
+                ['Cheque Dated:', receiptData.chequeDate ? formatDate(receiptData.chequeDate) : 'NA'],
+                ['Bank Name:', receiptData.bankName || 'NA'],
+                ['IFSC Code:', receiptData.ifscCode || 'NA'],
+                ['Online Tranx. No:', receiptData.transactionNumber || 'NA'],
+                ['Due Date:', receiptData.nextDueDate ? formatDate(receiptData.nextDueDate) : 'NA'],
+                ['Due Fees:', 'Rs. ' + formatCurrency(receiptData.pendingFees || 0)],
+                ['Total Fees:', 'Rs. ' + formatCurrency(receiptData.totalFees || 0)]
+            ];
+
+            paymentRows.forEach(([label, value]) => {
+                doc.rect(margin, y, labelWidth, rowHeight);
+                doc.setFont('helvetica', 'bold');
+                doc.text(label, margin + 2, y + 6);
+
+                doc.rect(margin + labelWidth, y, fullWidth - labelWidth, rowHeight);
+                doc.setFont('helvetica', 'normal');
+                doc.text(value, margin + labelWidth + 2, y + 6);
+
+                y += rowHeight;
+            });
+
+            y += 3; // Extra spacing before terms
+
+            // ===== TERMS & CONDITIONS =====
+            const termsHeight = 32;
+            doc.rect(margin, y, fullWidth, termsHeight);
+
+            y += 6;
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Terms and Conditions:', margin + 3, y);
+
+            y += 5;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            const terms = [
+                'This receipt of fees is an acknowledgement of the payment made to TechnoKraft Training Solutions.',
+                'Present this receipt of fees whenever demanded.',
+                'Fees once paid is neither refundable nor transferable under any circumstances.',
+                'This is a computer generated voucher, signature is not required.'
+            ];
+
+            terms.forEach(term => {
+                const wrappedTerm = doc.splitTextToSize(term, fullWidth - 6);
+                doc.text(wrappedTerm, margin + 3, y);
+                y += wrappedTerm.length * 4.5;
+            });
+
+            y += 10;
+
+            // ===== FOOTER =====
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 100, 100);
+            doc.text('Generated on ' + formatDate(new Date()), pageWidth / 2, y, { align: 'center' });
+
+            const pdfBase64 = doc.output('dataurlstring').split(',')[1];
+            resolve(pdfBase64);
+
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            reject(error);
         }
     });
+}
+
+// ==================== HELPER FUNCTIONS ====================
+
+function formatDate(date) {
+    if (!date) return 'N/A';
+    const d = new Date(date);
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    return d.toLocaleDateString('en-US', options);
+}
+
+function formatCurrency(amount) {
+    if (!amount) return '0.00';
+    return parseFloat(amount).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+function numberToWords(num) {
+    if (!num || num === 0) return 'Zero Rupees Only';
+
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+
+    function convertLessThanThousand(n) {
+        if (n === 0) return '';
+        if (n < 10) return ones[n];
+        if (n < 20) return teens[n - 10];
+        if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
+        return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertLessThanThousand(n % 100) : '');
+    }
+
+    num = Math.floor(num);
+
+    if (num < 1000) return convertLessThanThousand(num) + ' Rupees Only';
+    if (num < 100000) {
+        const thousands = Math.floor(num / 1000);
+        const remainder = num % 1000;
+        return convertLessThanThousand(thousands) + ' Thousand' +
+               (remainder !== 0 ? ' ' + convertLessThanThousand(remainder) : '') + ' Rupees Only';
+    }
+
+    const lakhs = Math.floor(num / 100000);
+    const remainder = num % 100000;
+    const thousands = Math.floor(remainder / 1000);
+    const hundreds = remainder % 1000;
+
+    let result = convertLessThanThousand(lakhs) + ' Lakh';
+    if (thousands > 0) result += ' ' + convertLessThanThousand(thousands) + ' Thousand';
+    if (hundreds > 0) result += ' ' + convertLessThanThousand(hundreds);
+
+    return result + ' Rupees Only';
 }

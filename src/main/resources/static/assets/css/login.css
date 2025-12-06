@@ -301,3 +301,8 @@ body {
         padding: 16px 20px;
     }
 }
+
+.login-header img{
+    width: 100px;
+    height: auto;
+}

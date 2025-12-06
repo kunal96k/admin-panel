@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -42,10 +43,12 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.getEmployeeById(id));
     }
 
-    // NEW: Security check endpoint
-    @GetMapping("/{id}/can-modify")
-    public ResponseEntity<Map<String, Object>> canModifyEmployee(@PathVariable Long id) {
-        return ResponseEntity.ok(employeeService.canModifyEmployee(id));
+    /**
+     * NEW: Get current logged-in user's employee profile
+     */
+    @GetMapping("/current-user")
+    public ResponseEntity<EmployeeResponseDTO> getCurrentUserProfile() {
+        return ResponseEntity.ok(employeeService.getCurrentUserProfile());
     }
 
     @PostMapping(consumes = "multipart/form-data")
@@ -100,5 +103,24 @@ public class EmployeeController {
         Map<String, String> response = new HashMap<>();
         response.put("message", "Credentials sent successfully");
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/can-modify")
+    public ResponseEntity<Map<String, Object>> canModifyEmployee(@PathVariable Long id) {
+        try {
+            Map<String, Object> result = employeeService.canModifyEmployee(id);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("canModify", false);
+            errorResponse.put("canDelete", false);
+            errorResponse.put("message", "❌ Security check failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+        }
+    }
+
+    @GetMapping("/{id}/permissions")
+    public ResponseEntity<List<Map<String, Object>>> getEmployeePermissions(@PathVariable Long id) {
+        return ResponseEntity.ok(employeeService.getEmployeePermissions(id));
     }
 }

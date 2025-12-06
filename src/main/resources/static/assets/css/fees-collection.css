@@ -1,0 +1,1653 @@
+:root {
+    --primary-color: #667eea;
+    --secondary-color: #764ba2;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --info-color: #3b82f6;
+}
+
+body {
+    background-color: #f8fafc;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Page Header */
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.page-header h2 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        padding: 1.5rem;
+    }
+
+    .page-header h2 {
+        font-size: 1.5rem;
+    }
+}
+
+/* Statistics Cards */
+.stats-card {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+    height: 100%;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.stats-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+}
+
+.stats-icon.total {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.stats-icon.revenue {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.stats-icon.courses {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.stats-icon.average {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.stats-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.stats-label {
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+@media (max-width: 768px) {
+    .stats-card {
+        padding: 1.25rem;
+    }
+
+    .stats-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+    }
+
+    .stats-number {
+        font-size: 1.5rem;
+    }
+}
+
+/* Action Card */
+.action-card {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 768px) {
+    .action-card {
+        padding: 1rem;
+    }
+}
+
+/* Form Elements */
+.form-label {
+    font-weight: 500;
+    color: #334155;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.form-control, .form-select {
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+    padding: 0.625rem 0.875rem;
+    transition: all 0.2s;
+    font-size: 0.9375rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+}
+
+.required {
+    color: #ef4444;
+}
+
+.invalid-feedback {
+    font-size: 0.8125rem;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.625rem 1.25rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    font-size: 0.9375rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+}
+
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-outline-secondary:hover {
+    background-color: #f1f5f9;
+}
+
+@media (max-width: 576px) {
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* Table Card */
+.table-card {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    overflow-x: auto;
+}
+
+.table-responsive {
+    margin: 0;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    background-color: #f8fafc;
+    color: #1e293b;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 1rem;
+    white-space: nowrap;
+}
+
+.table thead.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f8fafc;
+}
+
+.table tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+    color: #475569;
+    font-size: 0.9375rem;
+}
+
+.table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.table tfoot td {
+    padding: 1rem;
+    font-size: 1rem;
+    background-color: #e0f2fe;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .table thead th,
+    .table tbody td,
+    .table tfoot td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .table thead th {
+        font-size: 0.6875rem;
+    }
+}
+
+/* DataTables Styling */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_processing {
+    color: #64748b;
+    padding: 1rem;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    margin-left: 0.5rem;
+}
+
+.dataTables_wrapper .dataTables_length select {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    margin: 0 0.5rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    border-radius: 0.375rem;
+    margin: 0 2px;
+    padding: 0.5rem 0.75rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+/* Export Tools */
+#exportTools .dt-button {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    color: #475569;
+    transition: all 0.2s;
+    margin-right: 0.5rem;
+}
+
+#exportTools .dt-button:hover {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+}
+
+#exportTools .dt-button i {
+    margin-right: 0.25rem;
+}
+
+@media (max-width: 576px) {
+    #exportTools {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    #exportTools .dt-button {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Badge */
+.badge {
+    padding: 0.375rem 0.75rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+    border-radius: 0.375rem;
+}
+
+.badge-cash {
+    background-color: #10b981;
+    color: white;
+}
+
+.badge-online {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.badge-cheque {
+    background-color: #f59e0b;
+    color: white;
+}
+
+.badge-card {
+    background-color: #8b5cf6;
+    color: white;
+}
+
+/* Loading State */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Custom Scrollbar */
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Responsive Utilities */
+@media (max-width: 991px) {
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .page-header,
+    .action-card,
+    .btn,
+    #exportSection {
+        display: none !important;
+    }
+
+    .table-card {
+        box-shadow: none;
+    }
+
+    body {
+        background: white;
+    }
+
+    .table tfoot {
+        display: table-footer-group !important;
+    }
+}
+
+/* Export Button Group Improvements */
+#exportTools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+#exportTools .btn-export {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    color: #475569;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+#exportTools .btn-export:hover {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Table Wrapper */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table {
+    min-width: 800px;
+    overflow: visible !important;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+    #exportTools {
+        justify-content: flex-start;
+        gap: 0.375rem;
+    }
+
+    #exportTools .btn-export {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8125rem;
+    }
+
+    .table {
+        font-size: 0.8125rem;
+        overflow: visible !important;
+    }
+
+    .stats-card {
+        margin-bottom: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    #exportTools {
+        width: 100%;
+    }
+
+    #exportTools .btn-export {
+        flex: 1 1 calc(50% - 0.25rem);
+        justify-content: center;
+    }
+}
+
+    /* ========================================
+       USER PROFILE DROPDOWN
+       ======================================== */
+
+    /*  dropdown positioning in mobile */
+    @media (max-width: 767px) {
+        .topbar-right .dropdown-menu {
+            position: ed !important;
+            top: 60px !important;
+            right: 10px !important;
+            left: auto !important;
+            transform: none !important;
+            min-width: 240px;
+            max-width: calc(100vw - 20px);
+            z-index: 9999;
+        }
+
+        .topbar-right .dropdown-menu.show {
+            display: block;
+        }
+    }
+
+    /* ========================================
+       FEES COLLECTION REPORT - RESPONSIVE
+       ======================================== */
+
+    /* ========================================
+       LARGE DESKTOP (1200px and above)
+       ======================================== */
+    @media (min-width: 1200px) {
+        .container-fluid {
+            max-width: 1320px;
+        }
+    }
+
+    /* ========================================
+       DESKTOP (992px - 1199px)
+       ======================================== */
+    @media (max-width: 1199px) {
+        .container-fluid {
+            padding-left: 1.25rem;
+            padding-right: 1.25rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.625rem;
+        }
+
+        .stats-card {
+            padding: 1.25rem;
+        }
+
+        .stats-icon {
+            width: 55px;
+            height: 55px;
+            font-size: 1.625rem;
+        }
+
+        .stats-number {
+            font-size: 1.75rem;
+        }
+
+        .action-card {
+            padding: 1.25rem;
+        }
+
+        .table thead th {
+            font-size: 0.7rem;
+            padding: 0.875rem;
+        }
+
+        .table tbody td {
+            padding: 0.875rem;
+            font-size: 0.875rem;
+        }
+    }
+
+    /* ========================================
+       TABLET LANDSCAPE (768px - 991px)
+       ======================================== */
+    @media (max-width: 991px) {
+        .container-fluid {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0.875rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.5rem;
+            line-height: 1.3;
+        }
+
+        .page-header h2 i {
+            font-size: 1.375rem;
+        }
+
+        .page-header p {
+            font-size: 0.875rem;
+        }
+
+        /* Statistics Cards - 2 Column Layout */
+        .row.mb-4 {
+            margin-bottom: 1.25rem !important;
+        }
+
+        .row.mb-4 > .col-md-6 {
+            margin-bottom: 1rem;
+        }
+
+        .stats-card {
+            padding: 1.25rem;
+        }
+
+        .stats-icon {
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            margin-bottom: 0.875rem;
+        }
+
+        .stats-number {
+            font-size: 1.625rem;
+        }
+
+        .stats-label {
+            font-size: 0.8125rem;
+        }
+
+        /* Action Card / Filter Section */
+        .action-card {
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .action-card .alert {
+            font-size: 0.875rem;
+            padding: 0.875rem;
+        }
+
+        .form-label {
+            font-size: 0.8125rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .form-control,
+        .form-select {
+            font-size: 0.875rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        /* Export Tools */
+        #exportTools {
+            gap: 0.375rem;
+        }
+
+        #exportTools .btn-export {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8125rem;
+        }
+
+        /* Table */
+        .table thead th {
+            font-size: 0.6875rem;
+            padding: 0.75rem 0.625rem;
+            letter-spacing: 0.03em;
+        }
+
+        .table tbody td {
+            padding: 0.75rem 0.625rem;
+            font-size: 0.8125rem;
+        }
+
+        .table tfoot td {
+            padding: 0.875rem;
+            font-size: 0.9375rem;
+        }
+
+        .badge {
+            padding: 0.3rem 0.6rem;
+            font-size: 0.6875rem;
+        }
+
+        /* DataTables Controls */
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            padding: 0.75rem;
+        }
+
+        .dataTables_wrapper .dataTables_length select,
+        .dataTables_wrapper .dataTables_filter input {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.875rem;
+        }
+    }
+
+    /* ========================================
+       TABLET PORTRAIT (576px - 767px)
+       ======================================== */
+    @media (max-width: 767px) {
+        .container-fluid {
+            padding-left: 0.875rem;
+            padding-right: 0.875rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+            border-radius: 0.75rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.375rem;
+            margin-bottom: 0.375rem;
+        }
+
+        .page-header h2 i {
+            font-size: 1.25rem;
+            margin-right: 0.375rem !important;
+        }
+
+        .page-header p {
+            font-size: 0.8125rem;
+            line-height: 1.4;
+        }
+
+        /* Statistics Cards - Full Width Stack */
+        .row.mb-4 {
+            margin-bottom: 1rem !important;
+        }
+
+        .row.mb-4 > .col-md-6 {
+            margin-bottom: 0.875rem;
+            width: 100%;
+        }
+
+        .stats-card {
+            padding: 1rem;
+        }
+
+        .stats-icon {
+            width: 48px;
+            height: 48px;
+            font-size: 1.375rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .stats-number {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .stats-label {
+            font-size: 0.75rem;
+        }
+
+        /* Action Card - Stack Filters Vertically */
+        .action-card {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.75rem;
+        }
+
+        .action-card .row.g-3 {
+            gap: 0.75rem !important;
+        }
+
+        .action-card .col-lg-3,
+        .action-card .col-lg-2,
+        .action-card .col-md-6 {
+            width: 100%;
+            padding: 0;
+        }
+
+        .form-label {
+            font-size: 0.8125rem;
+            margin-bottom: 0.375rem;
+        }
+
+        .form-label i {
+            font-size: 0.875rem;
+        }
+
+        .form-control,
+        .form-select {
+            font-size: 0.875rem;
+            padding: 0.625rem 0.875rem;
+            border-radius: 0.5rem;
+        }
+
+        /* Action Buttons - Full Width */
+        .action-card .col-lg-2 .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+            padding: 0.625rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .action-card .col-lg-2 .btn:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Alert Box */
+        .action-card .alert {
+            font-size: 0.8125rem;
+            padding: 0.75rem;
+            margin-top: 0.75rem !important;
+        }
+
+        .action-card .alert i {
+            font-size: 0.875rem;
+        }
+
+        /* Import & Export Section - Stack Vertically */
+        .action-card .row.align-items-center {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
+
+        .action-card .row.align-items-center > .col-12 {
+            width: 100%;
+            margin-bottom: 0.75rem;
+        }
+
+        .action-card .row.align-items-center > .col-12:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Import Button - Full Width */
+        #importCsvBtn {
+            width: 100%;
+            padding: 0.625rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        /* Export Tools - Full Width Buttons */
+        #exportSection {
+            width: 100%;
+        }
+
+        #exportTools {
+            flex-direction: column;
+            width: 100%;
+            gap: 0.5rem;
+            justify-content: flex-start !important;
+        }
+
+        #exportTools .btn-export {
+            width: 100%;
+            margin-right: 0 !important;
+            padding: 0.625rem 1rem;
+            font-size: 0.875rem;
+            justify-content: center;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        #exportTools .btn-export i {
+            font-size: 0.9375rem;
+        }
+
+        /* Table - Enable Horizontal Scroll */
+        .table-card {
+            margin-bottom: 1rem;
+            border-radius: 0.75rem;
+            overflow: visible;
+        }
+
+        .table-responsive {
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 -0.75rem;
+            padding: 0 0.75rem;
+        }
+
+        .table {
+            min-width: 750px;
+            font-size: 0.8125rem;
+        }
+
+        .table thead th {
+            font-size: 0.625rem;
+            padding: 0.7rem 0.5rem;
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+            position: sticky;
+            top: 0;
+            background-color: #f8fafc;
+            z-index: 10;
+        }
+
+        .table tbody td {
+            padding: 0.7rem 0.5rem;
+            font-size: 0.8125rem;
+            white-space: nowrap;
+        }
+
+        .table tfoot td {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.875rem;
+            position: sticky;
+            bottom: 0;
+            background-color: #e0f2fe;
+            z-index: 10;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.3rem 0.55rem;
+            font-size: 0.6875rem;
+        }
+
+        /* DataTables Wrapper - Stack Controls */
+        .dataTables_wrapper > .row {
+            margin: 0 !important;
+        }
+
+        .dataTables_wrapper .row > div {
+            padding: 0 !important;
+            margin-bottom: 0.75rem;
+        }
+
+        /* DataTables Length */
+        .dataTables_wrapper .dataTables_length {
+            text-align: center;
+            padding: 0.75rem;
+        }
+
+        .dataTables_wrapper .dataTables_length select {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 0.5rem;
+            min-width: 80px;
+        }
+
+        /* DataTables Filter/Search */
+        .dataTables_wrapper .dataTables_filter {
+            text-align: center;
+            padding: 0.75rem;
+        }
+
+        .dataTables_wrapper .dataTables_filter label {
+            display: block;
+            width: 100%;
+        }
+
+        .dataTables_wrapper .dataTables_filter input {
+            width: 100% !important;
+            max-width: 100%;
+            padding: 0.625rem 0.875rem;
+            font-size: 0.875rem;
+            border-radius: 0.5rem;
+            margin-left: 0 !important;
+        }
+
+        /* DataTables Info */
+        .dataTables_wrapper .dataTables_info {
+            text-align: center;
+            font-size: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        /* DataTables Pagination */
+        .dataTables_wrapper .dataTables_paginate {
+            text-align: center;
+            margin-top: 0.75rem;
+            padding: 0 0.75rem;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .pagination {
+            justify-content: center;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.4rem 0.6rem;
+            font-size: 0.75rem;
+            min-width: 36px;
+            border-radius: 0.375rem;
+            margin: 0 0.1rem;
+        }
+
+        /* Hide some pagination buttons on mobile */
+        .dataTables_wrapper .dataTables_paginate .paginate_button:not(.previous):not(.next):not(.current):not(:nth-child(2)):not(:nth-last-child(2)) {
+            display: none;
+        }
+
+        /* Empty State */
+        .table tbody td[colspan] {
+            padding: 2rem 1rem !important;
+        }
+
+        .table tbody td[colspan] i {
+            font-size: 2.5rem !important;
+        }
+
+        .table tbody td[colspan] p {
+            font-size: 0.875rem;
+            margin-top: 0.75rem !important;
+        }
+
+        /* Loading Overlay */
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+        }
+    }
+
+    /* ========================================
+       SMALL MOBILE (425px - 575px)
+       ======================================== */
+    @media (max-width: 575px) {
+        .container-fluid {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.625rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.25rem;
+            line-height: 1.3;
+        }
+
+        .page-header h2 i {
+            font-size: 1.125rem;
+        }
+
+        .page-header p {
+            font-size: 0.75rem;
+            margin-top: 0.375rem !important;
+        }
+
+        /* Statistics Cards */
+        .row.mb-4 > .col-md-6 {
+            margin-bottom: 0.75rem;
+        }
+
+        .stats-card {
+            padding: 0.875rem;
+        }
+
+        .stats-icon {
+            width: 44px;
+            height: 44px;
+            font-size: 1.25rem;
+            margin-bottom: 0.625rem;
+        }
+
+        .stats-number {
+            font-size: 1.375rem;
+        }
+
+        .stats-label {
+            font-size: 0.6875rem;
+        }
+
+        /* Action Card */
+        .action-card {
+            padding: 0.875rem;
+            margin-bottom: 0.875rem;
+            border-radius: 0.625rem;
+        }
+
+        .action-card .row.g-3 {
+            gap: 0.625rem !important;
+        }
+
+        .form-label {
+            font-size: 0.75rem;
+            margin-bottom: 0.375rem;
+        }
+
+        .form-control,
+        .form-select {
+            font-size: 0.8125rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.5rem 0.875rem;
+            font-size: 0.8125rem;
+        }
+
+        .action-card .col-lg-2 .btn {
+            padding: 0.5rem 0.875rem;
+        }
+
+        /* Alert Box */
+        .action-card .alert {
+            font-size: 0.75rem;
+            padding: 0.625rem;
+        }
+
+        /* Import Button */
+        #importCsvBtn {
+            padding: 0.5rem 0.875rem;
+            font-size: 0.8125rem;
+        }
+
+        #importCsvBtn i {
+            font-size: 0.9375rem;
+        }
+
+        /* Export Tools */
+        #exportTools .btn-export {
+            padding: 0.5rem 0.875rem;
+            font-size: 0.8125rem;
+        }
+
+        /* Table */
+        .table-responsive {
+            margin: 0 -0.625rem;
+            padding: 0 0.625rem;
+        }
+
+        .table {
+            min-width: 700px;
+            font-size: 0.75rem;
+        }
+
+        .table thead th {
+            font-size: 0.5625rem;
+            padding: 0.625rem 0.375rem;
+            letter-spacing: 0.02em;
+        }
+
+        .table tbody td {
+            padding: 0.625rem 0.375rem;
+            font-size: 0.75rem;
+        }
+
+        .table tfoot td {
+            padding: 0.625rem 0.375rem;
+            font-size: 0.8125rem;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.625rem;
+        }
+
+        /* DataTables Controls */
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            padding: 0.625rem;
+        }
+
+        .dataTables_wrapper .dataTables_length select,
+        .dataTables_wrapper .dataTables_filter input {
+            padding: 0.5rem 0.625rem;
+            font-size: 0.8125rem;
+        }
+
+        .dataTables_wrapper .dataTables_info {
+            font-size: 0.6875rem;
+            padding: 0.5rem 0.625rem;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.35rem 0.5rem;
+            font-size: 0.6875rem;
+            min-width: 32px;
+        }
+
+        /* Empty State */
+        .table tbody td[colspan] {
+            padding: 1.5rem 0.75rem !important;
+        }
+
+        .table tbody td[colspan] i {
+            font-size: 2.25rem !important;
+        }
+
+        .table tbody td[colspan] p {
+            font-size: 0.8125rem;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            width: 36px;
+            height: 36px;
+            border-width: 3px;
+        }
+    }
+
+    /* ========================================
+       EXTRA SMALL MOBILE (320px - 424px)
+       ======================================== */
+    @media (max-width: 424px) {
+        .container-fluid {
+            padding-left: 0.625rem;
+            padding-right: 0.625rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            padding: 0.875rem;
+            margin-bottom: 0.875rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.125rem;
+        }
+
+        .page-header h2 i {
+            font-size: 1rem;
+        }
+
+        .page-header p {
+            font-size: 0.6875rem;
+        }
+
+        /* Statistics Cards */
+        .stats-card {
+            padding: 0.75rem;
+        }
+
+        .stats-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-number {
+            font-size: 1.25rem;
+        }
+
+        .stats-label {
+            font-size: 0.625rem;
+        }
+
+        /* Action Card */
+        .action-card {
+            padding: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .form-label {
+            font-size: 0.6875rem;
+        }
+
+        .form-control,
+        .form-select {
+            font-size: 0.75rem;
+            padding: 0.5rem 0.625rem;
+        }
+
+        .btn {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .action-card .alert {
+            font-size: 0.6875rem;
+            padding: 0.5rem;
+        }
+
+        /* Import/Export Buttons */
+        #importCsvBtn,
+        #exportTools .btn-export {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        /* Table */
+        .table-responsive {
+            margin: 0 -0.5rem;
+            padding: 0 0.5rem;
+        }
+
+        .table {
+            min-width: 650px;
+        }
+
+        .table thead th {
+            font-size: 0.5rem;
+            padding: 0.5rem 0.25rem;
+        }
+
+        .table tbody td {
+            font-size: 0.6875rem;
+            padding: 0.5rem 0.25rem;
+        }
+
+        .table tfoot td {
+            font-size: 0.75rem;
+            padding: 0.5rem 0.25rem;
+        }
+
+        .badge {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.5625rem;
+        }
+
+        /* DataTables Controls */
+        .dataTables_wrapper .dataTables_length select,
+        .dataTables_wrapper .dataTables_filter input {
+            padding: 0.4rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .dataTables_wrapper .dataTables_info {
+            font-size: 0.625rem;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.3rem 0.4rem;
+            font-size: 0.625rem;
+            min-width: 28px;
+        }
+
+        /* Empty State */
+        .table tbody td[colspan] {
+            padding: 1.25rem 0.625rem !important;
+        }
+
+        .table tbody td[colspan] i {
+            font-size: 2rem !important;
+        }
+
+        .table tbody td[colspan] p {
+            font-size: 0.75rem;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+        }
+    }
+
+    /* ========================================
+       LANDSCAPE ORIENTATION
+       ======================================== */
+    @media (max-width: 767px) and (orientation: landscape) {
+        .page-header {
+            padding: 0.875rem 1.25rem;
+            margin-bottom: 0.875rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.125rem;
+        }
+
+        .action-card {
+            padding: 1.25rem;
+        }
+
+        .stats-card {
+            padding: 0.75rem;
+        }
+
+        .stats-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1.125rem;
+        }
+
+        .stats-number {
+            font-size: 1.25rem;
+        }
+
+        /* Compact table for landscape */
+        .table thead th,
+        .table tbody td {
+            padding: 0.5rem 0.375rem;
+            font-size: 0.75rem;
+        }
+
+        /* Alert more compact */
+        .action-card .alert {
+            font-size: 0.75rem;
+            padding: 0.625rem;
+        }
+    }
+
+    /* ========================================
+       DATATABLE RESPONSIVE FIXES
+       ======================================== */
+
+    /* Ensure DataTables controls don't overflow */
+    @media (max-width: 767px) {
+        .dataTables_wrapper {
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        .dataTables_wrapper .row {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dataTables_wrapper .row > div {
+            width: 100% !important;
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+
+        /* Ensure table doesn't break layout */
+        .table-card {
+            overflow-x: hidden;
+        }
+    }
+
+    /* ========================================
+       TOUCH DEVICE OPTIMIZATIONS
+       ======================================== */
+    @media (hover: none) and (pointer: coarse) {
+        /* Increase touch targets */
+        .btn,
+        .form-control,
+        .form-select,
+        .paginate_button,
+        .dt-button {
+            min-height: 44px;
+        }
+
+        /* Better touch feedback */
+        .btn:active,
+        .paginate_button:active,
+        .dt-button:active {
+            transform: scale(0.96);
+            transition: transform 0.1s;
+        }
+
+        /* Remove hover effects on touch */
+        .stats-card:hover {
+            transform: none;
+        }
+
+        .btn-primary:hover,
+        .btn-success:hover {
+            transform: none;
+        }
+    }
+
+    /* ========================================
+       PRINT STYLES
+       ======================================== */
+    @media print {
+        .page-header,
+        .action-card,
+        .btn,
+        #exportSection,
+        #importCsvBtn,
+        .dataTables_length,
+        .dataTables_filter,
+        .dataTables_paginate,
+        .dataTables_info,
+        .sidebar,
+        .topbar,
+        .footer {
+            display: none !important;
+        }
+
+        body {
+            background: white;
+        }
+
+        .table-card {
+            box-shadow: none;
+            border: 1px solid #ddd;
+        }
+
+        .table {
+            font-size: 10pt;
+            page-break-inside: avoid;
+        }
+
+        .table thead th {
+            background: white !important;
+            color: black !important;
+            border-bottom: 2px solid #333;
+        }
+
+        .table tbody tr {
+            page-break-inside: avoid;
+        }
+
+        .table tfoot {
+            display: table-footer-group !important;
+        }
+
+        .table tfoot td {
+            background: white !important;
+            border-top: 2px solid #333;
+            font-weight: bold;
+        }
+
+        .badge {
+            border: 1px solid currentColor;
+        }
+
+        @page {
+            margin: 1cm;
+        }
+
+        .main-wrapper {
+            margin-left: 0 !important;
+        }
+    }
+
+    /* ========================================
+       ACCESSIBILITY ENHANCEMENTS
+       ======================================== */
+
+    /* Focus visible for keyboard navigation */
+    @media (prefers-reduced-motion: no-preference) {
+        .btn:focus-visible,
+        .form-control:focus-visible,
+        .form-select:focus-visible,
+        .paginate_button:focus-visible,
+        .dt-button:focus-visible {
+            outline: 3px solid #667eea;
+            outline-offset: 2px;
+        }
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+
+        .stats-card:hover,
+        .btn-primary:hover,
+        .btn-success:hover {
+            transform: none !important;
+        }
+
+        .loading-spinner {
+            animation: none !important;
+            border-top-color: #667eea;
+        }
+    }
+
+    /* High contrast mode */
+    @media (prefers-contrast: high) {
+        .page-header,
+        .stats-card,
+        .action-card,
+        .table-card {
+            border: 2px solid currentColor;
+        }
+
+        .table thead th {
+            border-bottom: 3px solid currentColor;
+        }
+
+        .table tbody td {
+            border-bottom: 1px solid currentColor;
+        }
+
+        .btn {
+            border: 2px solid currentColor;
+        }
+
+        .badge {
+            border: 2px solid currentColor;
+        }
+    }
+
+    /* ========================================
+       iOS SAFARI FIXES
+       ======================================== */
+    @supports (-webkit-touch-callout: none) {
+        /* Fix viewport height */
+        .loading-overlay {
+            height: -webkit-fill-available;
+        }
+
+        /* Prevent input zoom */
+        input[type="text"],
+        input[type="date"],
+        input[type="file"],
+        select,
+        textarea {
+            font-size: 16px !important;
+        }
+
+        /* Fix scrolling */
+        .table-responsive {
+            -webkit-overflow-scrolling: touch;
+        }
+    }
+
+    /* ========================================
+       CUSTOM SCROLLBAR
+       ======================================== */
+    @media (min-width: 768px) {
+        .table-responsive::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #653a8e 100%);
+        }
+    }

@@ -1,3 +1,7 @@
+#============================================
+# application.yml (Base Configuration)
+# ============================================
+
 # Super Admin Configuration
 app:
   superadmin:
@@ -5,13 +9,13 @@ app:
     username: ${SUPERADMIN_USERNAME:admin}
     password: ${SUPERADMIN_PASSWORD:admin@123}
 
-  base-url: ${APP_BASE_URL:http://localhost:8081}
+  base-url: ${APP_BASE_URL:https://team.ttsnashik.com}  #  CHANGED: HTTPS by default
   
   upload:
     courses:
       dir: ${COURSES_UPLOAD_DIR:./uploads/courses}
       max-file-size: 2MB
-      allowed-extensions: jpg,jpeg,png,gif
+      allowed-extensions: jpg,jpeg,png,gif,webp
 
   csv:
     upload-dir: ${CSV_UPLOAD_DIR:./uploads/csv}
@@ -19,8 +23,8 @@ app:
 
   security:
     cors:
-      allowed-origins: "*"
-      allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
+      allowed-origins: "https://team.ttsnashik.com,https://www.ttsnashik.com"  #  CHANGED: Specific domains
+      allowed-methods: "GET,POST,PUT,DELETE,OPTIONS,PATCH"
       allowed-headers: "*"
       max-age: 3600
 
@@ -44,15 +48,20 @@ spring:
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
   profiles:
-    active: ${SPRING_PROFILE:dev}
+    active: ${SPRING_PROFILE:prod}
 
   jackson:
     serialization:
       write-dates-as-timestamps: false
       fail-on-empty-beans: false
+    date-format: yyyy-MM-dd
     time-zone: Asia/Kolkata
+    default-property-inclusion: non_null  #  ADDED: Reduce response size
 
   servlet:
     multipart:
@@ -69,7 +78,7 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false  #  CHANGED: false in production
         dialect: org.hibernate.dialect.MySQLDialect
         jdbc:
           batch_size: 20
@@ -90,7 +99,7 @@ spring:
 
   thymeleaf:
     enabled: true
-    cache: false
+    cache: true  #  CHANGED: true in production
     check-template-location: true
     prefix: classpath:/templates/
     suffix: .html
@@ -104,6 +113,7 @@ spring:
     pathmatch:
       use-suffix-pattern: false
       use-registered-suffix-pattern: false
+      trailing-slash-match: true  #  ADDED
 
   web:
     resources:
@@ -126,6 +136,11 @@ server:
       charset: UTF-8
       enabled: true
       force: true
+    session:
+      timeout: 30m  #  ADDED
+      cookie:
+        http-only: true  #  ADDED: Security
+        secure: true  #  ADDED: HTTPS only cookies
 
   compression:
     enabled: true
@@ -135,14 +150,17 @@ server:
       application/json,application/xml
     min-response-size: 1024
 
+  http2:
+    enabled: true  #  ADDED: HTTP/2 support
+
 logging:
   level:
     root: INFO
-    com.tts.sms: DEBUG
-    org.springframework.web: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.tts.sms: INFO  #  CHANGED: INFO in production
+    org.springframework.web: WARN
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
 
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

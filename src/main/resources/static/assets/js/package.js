@@ -1,3 +1,5 @@
+// JavaScript code for managing course packages
+
 let selectedCourses = [];
 let currentPage = 1;
 let entriesPerPage = 10;
@@ -5,6 +7,10 @@ let allPackages = [];
 let filteredPackages = [];
 let allCourses = [];
 let editingPackageId = null;
+
+// CSRF Token Management
+let csrfToken = null;
+let csrfHeader = null;
 
 $(document).ready(function() {
     initializeSelect2();
@@ -22,6 +28,14 @@ function initializeSelect2() {
 }
 
 function setupEventListeners() {
+    // Get CSRF token from meta tags
+    csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+    csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+    if (!csrfToken || !csrfHeader) {
+        console.warn('CSRF token not found in page meta tags');
+    }
+
     $('#courseSelect').on('select2:select', function(e) {
         const courseId = parseInt(e.params.data.id);
         const course = allCourses.find(c => c.id === courseId);
@@ -264,6 +278,9 @@ function savePackage() {
         url: url,
         method: method,
         contentType: 'application/json',
+        headers: {
+            [csrfHeader]: csrfToken
+        },
         data: JSON.stringify(requestData),
         success: function(response) {
             showSuccess(editingPackageId ? 'Package updated successfully!' : 'Package created successfully!');
@@ -428,6 +445,9 @@ function deletePackage(id) {
         $.ajax({
             url: `/api/packages/${id}`,
             method: 'DELETE',
+            headers: {
+                [csrfHeader]: csrfToken
+            },
             success: function() {
                 showSuccess('Package deleted successfully!');
                 bootstrap.Modal.getInstance($('#deleteModal')[0]).hide();

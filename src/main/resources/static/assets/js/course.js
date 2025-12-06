@@ -37,6 +37,19 @@
         loadCourses();
     });
 
+    // CSRF Token Management
+    function getCsrfToken() {
+        const csrfCookie = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('XSRF-TOKEN='));
+        return csrfCookie ? decodeURIComponent(csrfCookie.split('=')[1]) : null;
+    }
+
+    function getCsrfHeaders() {
+        const token = getCsrfToken();
+        return token ? { 'X-CSRF-TOKEN': token } : {};
+    }
+
     // ==================== EVENT LISTENERS ====================
 
     function initializeEventListeners() {
@@ -133,7 +146,8 @@
 
            const response = await fetch(`${API_BASE_URL}?page=${currentPage}&size=${pageSize}`, {
                headers: {
-                   'Accept': 'application/json'
+                   'Accept': 'application/json',
+                   ...getCsrfHeaders()
                }
            });
 
@@ -166,10 +180,11 @@
                 : `${API_BASE_URL}?page=${currentPage}&size=${pageSize}`;
 
             const response = await fetch(url, {
-                        headers: {
-                            'Accept': 'application/json'
-                        }
-                    });
+                headers: {
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                }
+            });
 
             if (!response.ok) {
                 throw new Error('Search failed');
@@ -361,11 +376,13 @@
 
     window.editCourse = async function(id) {
         try {
-           const response = await fetch(`${API_BASE_URL}/${id}`, {
-               headers: {
-                   'Accept': 'application/json'
-               }
-           });
+
+          const response = await fetch(`${API_BASE_URL}/${id}`, {
+              headers: {
+                  'Accept': 'application/json',
+                  ...getCsrfHeaders()
+              }
+          });
 
             if (!response.ok) {
                 throw new Error('Failed to load course details');
@@ -437,13 +454,14 @@
 
             const method = editingCourseId ? 'PUT' : 'POST';
 
-           const response = await fetch(url, {
-               method: method,
-               body: formData,
-               headers: {
-                   'Accept': 'application/json'
-               }
-           });
+          const response = await fetch(url, {
+              method: method,
+              body: formData,
+              headers: {
+                  'Accept': 'application/json',
+                  ...getCsrfHeaders()
+              }
+          });
 
 
             if (!response.ok) {
@@ -490,7 +508,8 @@
           const response = await fetch(`${API_BASE_URL}/${id}`, {
               method: 'DELETE',
               headers: {
-                  'Accept': 'application/json'
+                  'Accept': 'application/json',
+                  ...getCsrfHeaders()
               }
           });
 
@@ -596,11 +615,12 @@
 
     async function loadSubjects(courseId) {
         try {
-           const response = await fetch(`${SUBJECT_API_URL}/course/${courseId}`, {
-               headers: {
-                   'Accept': 'application/json'
-               }
-           });
+          const response = await fetch(`${SUBJECT_API_URL}/course/${courseId}`, {
+              headers: {
+                  'Accept': 'application/json',
+                  ...getCsrfHeaders()
+              }
+          });
 
             if (!response.ok) {
                 throw new Error('Failed to load subjects');
@@ -673,7 +693,8 @@
                method: method,
                body: formData,
                headers: {
-                   'Accept': 'application/json'
+                   'Accept': 'application/json',
+                   ...getCsrfHeaders()
                }
            });
 
@@ -739,7 +760,8 @@
            const response = await fetch(`${SUBJECT_API_URL}/${id}`, {
                method: 'DELETE',
                headers: {
-                   'Accept': 'application/json'
+                   'Accept': 'application/json',
+                   ...getCsrfHeaders()
                }
            });
 
@@ -766,7 +788,8 @@
 
           const response = await fetch(`${API_BASE_URL}/export/csv`, {
               headers: {
-                  'Accept': 'application/json'
+                  'Accept': 'application/json',
+                  ...getCsrfHeaders()
               }
           });
             if (!response.ok) {

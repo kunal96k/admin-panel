@@ -17,6 +17,53 @@
         let capturedPhoto = null;
         let employeeModal = null;
 
+        // ========================================
+        // PERMISSION CHECK UTILITY
+        // ========================================
+
+        // CSRF Token Management
+        function getCsrfToken() {
+            const csrfCookie = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('XSRF-TOKEN='));
+            return csrfCookie ? decodeURIComponent(csrfCookie.split('=')[1]) : null;
+        }
+
+        function getCsrfHeaders() {
+            const token = getCsrfToken();
+            return token ? { 'X-CSRF-TOKEN': token } : {};
+        }
+
+        function checkEmployeeModifyPermission(employeeId, operation) {
+
+            return fetch(`/api/employees/${employeeId}/can-modify`, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.canModify) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '🚫 Access Denied',
+                            html: `<div style="text-align: left; padding: 10px;">
+                                ${data.message}
+                            </div>`,
+                            confirmButtonColor: '#ef4444',
+                            confirmButtonText: 'Understood'
+                        });
+                        return false;
+                    }
+                    return true;
+                })
+                .catch(error => {
+                    console.error('Permission check failed:', error);
+                    return false;
+                });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             initializeEventListeners();
             loadRoles();
@@ -31,7 +78,12 @@
 
         async function loadRoles() {
             try {
-                const response = await fetch(`${ROLE_API_URL}/active`);
+                const response = await fetch(`${ROLE_API_URL}/active`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
                 if (!response.ok) throw new Error('Failed to load roles');
 
                 roles = await response.json();
@@ -108,13 +160,15 @@
         async function saveEmployee() {
             if (!validateCurrentStep()) return;
 
+            const addUserChecked = document.getElementById('addUserCheckbox').checked;
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
 
-            if (document.getElementById('addUserCheckbox').checked) {
+            // Only validate and send credentials if checkbox is checked
+            if (addUserChecked) {
                 if (!username || !password || !confirmPassword) {
-                    showError('Username, Password and Confirm Password are all required');
+                    showError('Username, Password and Confirm Password are all required when "Add User Login Credentials" is enabled');
                     return;
                 }
 
@@ -148,17 +202,42 @@
                 roleId: document.getElementById('role').value,
                 zoomLink: document.getElementById('zoomLink').value,
                 menuPermissions: menuPermissions,
-                username: username || null,
-                password: password || null,
-                confirmPassword: confirmPassword || null,
+                // Only send credentials if checkbox is CHECKED
+                username: addUserChecked ? username : null,
+                password: addUserChecked ? password : null,
+                confirmPassword: addUserChecked ? confirmPassword : null,
                 viewAdmission: document.getElementById('viewAdmission')?.checked || false,
                 newAdmission: document.getElementById('newAdmission')?.checked || false,
                 viewEnquiry: document.getElementById('viewEnquiry')?.checked || false,
                 newEnquiry: document.getElementById('newEnquiry')?.checked || false,
+                accDashboard: document.getElementById('accDashboard')?.checked || false,
+                counsellorDash: document.getElementById('counsellorDash')?.checked || false,
+                todaysFollowup: document.getElementById('todaysFollowup')?.checked || false,
+                overdueFollowup: document.getElementById('overdueFollowup')?.checked || false,
                 feeManager: document.getElementById('feeManager')?.checked || false,
+                batchWiseFee: document.getElementById('batchWiseFee')?.checked || false,
+                paymentLink: document.getElementById('paymentLink')?.checked || false,
                 manageCourse: document.getElementById('manageCourse')?.checked || false,
-                manageBatch: document.getElementById('manageBatch')?.checked || false
+                manageBatch: document.getElementById('manageBatch')?.checked || false,
+                timeTable: document.getElementById('timeTable')?.checked || false,
+                timeTableAttendance: document.getElementById('timeTableAttendance')?.checked || false,
+                studyNote: document.getElementById('studyNote')?.checked || false,
+                sendAppMsg: document.getElementById('sendAppMsg')?.checked || false,
+                shareVideo: document.getElementById('shareVideo')?.checked || false,
+                liveLecture: document.getElementById('liveLecture')?.checked || false,
+                offlineExam: document.getElementById('offlineExam')?.checked || false
             };
+
+            // Show loading with proper message
+            Swal.fire({
+                title: editingEmployeeId ? 'Updating Employee...' : 'Creating Employee...',
+                html: '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-3">Please wait while we save your changes...</p></div>',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
 
             try {
                 const formData = new FormData();
@@ -174,7 +253,11 @@
 
                 const response = await fetch(url, {
                     method: method,
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
                 });
 
                 if (!response.ok) {
@@ -182,18 +265,35 @@
                     throw new Error(error.message || 'Failed to save employee');
                 }
 
-                showSuccess(editingEmployeeId ? 'Employee updated successfully!' : 'Employee added successfully!');
+                Swal.close();
 
-              const modalElement = document.getElementById('employeeModal');
-              const modalInstance = bootstrap.Modal.getInstance(modalElement);
-              if (modalInstance) {
-                  modalInstance.hide();
-              }
+                // Show success message with icon
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: editingEmployeeId ? 'Employee updated successfully!' : 'Employee added successfully!',
+                    confirmButtonColor: '#667eea',
+                    timer: 2000
+                });
+
+                const modalElement = document.getElementById('employeeModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
 
                 await loadEmployees();
             } catch (error) {
                 console.error('Error saving employee:', error);
-                showError(error.message);
+                Swal.close();
+
+                // Show detailed error message
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: error.message || 'Failed to save employee. Please try again.',
+                    confirmButtonColor: '#ef4444'
+                });
             }
         }
 
@@ -212,8 +312,12 @@
         async function loadEmployees() {
             try {
                 showLoading();
-                const response = await fetch(`${API_BASE_URL}?page=${currentPage}&size=${pageSize}`);
-
+                const response = await fetch(`${API_BASE_URL}?page=${currentPage}&size=${pageSize}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
                 if (!response.ok) throw new Error('Failed to load employees');
 
                 const data = await response.json();
@@ -242,12 +346,11 @@
                     ? '<span class="badge badge-access badge-active">Active</span>'
                     : '<span class="badge badge-access badge-inactive">Inactive</span>';
 
-                // Format date of birth for display
                 const dobDisplay = emp.dateOfBirth ? formatDate(emp.dateOfBirth) : 'N/A';
 
                 return `
                     <tr>
-                        <td><strong>${srNo}</strong></td>
+                        <td style="text-align:center;"><strong>${srNo}</strong></td>
                         <td>${emp.employeeName}</td>
                         <td>${emp.roleName || 'N/A'}</td>
                         <td>${emp.mobileNumber}</td>
@@ -255,13 +358,13 @@
                         <td>${accessBadge}</td>
                         <td>${dobDisplay}</td>
                         <td>
-                            <button class="action-btn" onclick="editEmployee(${emp.id})" title="Edit">
+                            <button class="action-btn btn-edit" data-employee-id="${emp.id}" title="Edit">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
-                            <button class="action-btn" onclick="deleteEmployee(${emp.id})" title="Delete">
+                            <button class="action-btn btn-delete" data-employee-id="${emp.id}" title="Delete">
                                 <i class="bi bi-trash"></i>
                             </button>
-                            <button class="action-btn" onclick="viewEmployee(${emp.id})" title="View Details">
+                            <button class="action-btn btn-view" data-employee-id="${emp.id}" title="View Details">
                                 <i class="bi bi-eye"></i>
                             </button>
                         </td>
@@ -271,13 +374,48 @@
 
             updatePaginationInfo();
             renderPagination();
+
+            // Attach event listeners using event delegation
+            attachTableEventListeners();
+        }
+
+        function attachTableEventListeners() {
+            const tbody = document.getElementById('employeeTableBody');
+
+            // Remove old listeners if any
+            tbody.removeEventListener('click', handleTableClick);
+
+            // Add single event listener for all buttons
+            tbody.addEventListener('click', handleTableClick);
+        }
+
+        function handleTableClick(event) {
+            const editBtn = event.target.closest('.btn-edit');
+            const deleteBtn = event.target.closest('.btn-delete');
+            const viewBtn = event.target.closest('.btn-view');
+
+            if (editBtn) {
+                const employeeId = parseInt(editBtn.dataset.employeeId);
+                editEmployee(employeeId);
+            } else if (deleteBtn) {
+                const employeeId = parseInt(deleteBtn.dataset.employeeId);
+                deleteEmployee(employeeId);
+            } else if (viewBtn) {
+                const employeeId = parseInt(viewBtn.dataset.employeeId);
+                viewEmployee(employeeId);
+            }
         }
 
         let allMenus = [];
 
         async function loadMenus() {
             try {
-                const response = await fetch(`${MENU_API_URL}/all`);
+                const response = await fetch(`${MENU_API_URL}/all`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
                 if (!response.ok) throw new Error('Failed to load menus');
 
                 allMenus = await response.json();
@@ -413,8 +551,12 @@
         async function searchEmployees(searchTerm) {
             try {
                 showLoading();
-                const response = await fetch(`${API_BASE_URL}/search?searchTerm=${encodeURIComponent(searchTerm)}&page=${currentPage}&size=${pageSize}`);
-
+                const response = await fetch(`${API_BASE_URL}/search?searchTerm=${encodeURIComponent(searchTerm)}&page=${currentPage}&size=${pageSize}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
                 if (!response.ok) throw new Error('Failed to search employees');
 
                 const data = await response.json();
@@ -790,35 +932,47 @@
             }
         }
 
-
-        window.editEmployee = async function (id) {
+        async function editEmployee(id) {
             try {
-                // Check if user can modify this employee
-                const securityCheck = await fetch(`${API_BASE_URL}/${id}/can-modify`);
-                const permission = await securityCheck.json();
-
-                if (!permission.canModify) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: '🚫 Access Denied',
-                        html: permission.message,
-                        confirmButtonColor: '#ef4444',
-                        confirmButtonText: 'Understood'
-                    });
-                    return;
+                //  STEP 1: Check permission BEFORE loading any data
+                const hasPermission = await checkEmployeeModifyPermission(id, 'update');
+                if (!hasPermission) {
+                    return; // Stop execution if no permission
                 }
 
-                // Proceed with loading employee data
-                const response = await fetch(`${API_BASE_URL}/${id}`);
+                // STEP 2: Show loading
+                Swal.fire({
+                    title: 'Loading...',
+                    html: '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-3">Please wait while we load employee data...</p></div>',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // STEP 3: Load employee data
+                const response = await fetch(`${API_BASE_URL}/${id}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
+
                 if (!response.ok) throw new Error('Failed to load employee');
 
                 const employee = await response.json();
+
+                // STEP 4: Load menus and permissions
+                await loadMenus();
+                await loadEmployeePermissions(id);
+
                 editingEmployeeId = id;
 
                 document.getElementById('employeeModalTitle').innerHTML =
                     '<i class="bi bi-pencil-square me-2"></i>Edit Employee';
 
-                // Fill form fields
+                // STEP 5: Fill form fields with existing data
                 document.getElementById('employeeName').value = employee.employeeName || '';
                 document.getElementById('mobileNumber').value = employee.mobileNumber || '';
                 document.getElementById('emailId').value = employee.emailId || '';
@@ -829,51 +983,94 @@
                 document.getElementById('role').value = employee.roleId || '';
                 document.getElementById('zoomLink').value = employee.zoomLink || '';
 
-                loadMenus();
+                // STEP 6: Fill mobile permissions checkboxes
+                document.getElementById('newAdmission').checked = employee.newAdmission || false;
+                document.getElementById('viewAdmission').checked = employee.viewAdmission || false;
+                document.getElementById('newEnquiry').checked = employee.newEnquiry || false;
+                document.getElementById('viewEnquiry').checked = employee.viewEnquiry || false;
+                document.getElementById('accDashboard').checked = employee.accDashboard || false;
+                document.getElementById('counsellorDash').checked = employee.counsellorDash || false;
+                document.getElementById('todaysFollowup').checked = employee.todaysFollowup || false;
+                document.getElementById('overdueFollowup').checked = employee.overdueFollowup || false;
+                document.getElementById('feeManager').checked = employee.feeManager || false;
+                document.getElementById('batchWiseFee').checked = employee.batchWiseFee || false;
+                document.getElementById('paymentLink').checked = employee.paymentLink || false;
+                document.getElementById('manageCourse').checked = employee.manageCourse || false;
+                document.getElementById('manageBatch').checked = employee.manageBatch || false;
+                document.getElementById('timeTable').checked = employee.timeTable || false;
+                document.getElementById('timeTableAttendance').checked = employee.timeTableAttendance || false;
+                document.getElementById('studyNote').checked = employee.studyNote || false;
+                document.getElementById('sendAppMsg').checked = employee.sendAppMsg || false;
+                document.getElementById('shareVideo').checked = employee.shareVideo || false;
+                document.getElementById('liveLecture').checked = employee.liveLecture || false;
+                document.getElementById('offlineExam').checked = employee.offlineExam || false;
+
+                // STEP 7: Hide user credentials section on edit (only show if they want to update)
+                document.getElementById('addUserCheckbox').checked = false;
+                document.getElementById('userCredentialsSection').style.display = 'none';
+                clearPasswordFields();
 
                 currentStep = 1;
                 showStep(1);
+
+                // STEP 8: Close loading and show modal
+                Swal.close();
 
                 const modal = new bootstrap.Modal(document.getElementById('employeeModal'));
                 modal.show();
             } catch (error) {
                 console.error('Error loading employee:', error);
-                showError(error.message || 'Failed to load employee details');
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: error.message || 'Failed to load employee details',
+                    confirmButtonColor: '#ef4444'
+                });
             }
-        };
+        }
 
         // Security check before delete
-        window.deleteEmployee = async function (id) {
+        async function deleteEmployee(id) {
             try {
-                // Check if user can delete this employee
-                const securityCheck = await fetch(`${API_BASE_URL}/${id}/can-modify`);
-                const permission = await securityCheck.json();
-
-                if (!permission.canDelete) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: '🚫 Access Denied',
-                        html: permission.message,
-                        confirmButtonColor: '#ef4444',
-                        confirmButtonText: 'Understood'
-                    });
-                    return;
+                //  STEP 1: Check permission BEFORE showing confirmation
+                const hasPermission = await checkEmployeeModifyPermission(id, 'delete');
+                if (!hasPermission) {
+                    return; // Stop execution if no permission
                 }
 
-                // Proceed with deletion confirmation
+                // STEP 2: Show confirmation dialog
                 const result = await Swal.fire({
                     title: 'Are you sure?',
-                    text: "You won't be able to revert this!",
+                    html: `
+                        <div class="text-center">
+                            <p style="font-size: 16px; margin-bottom: 10px;">You won't be able to revert this action!</p>
+                            <p style="font-size: 14px; color: #64748b;">This will permanently delete the employee record.</p>
+                        </div>
+                    `,
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#ef4444',
                     cancelButtonColor: '#64748b',
-                    confirmButtonText: 'Yes, deleteDContinueit!'
+                    confirmButtonText: 'Yes, delete it!',
+                    cancelButtonText: 'Cancel'
                 });
 
                 if (result.isConfirmed) {
+                    // STEP 3: Show deleting loader
+                    Swal.fire({
+                        title: 'Deleting...',
+                        html: '<div class="text-center"><div class="spinner-border text-danger" role="status"></div><p class="mt-3">Please wait...</p></div>',
+                        allowOutsideClick: false,
+                        showConfirmButton: false
+                    });
+
                     const response = await fetch(`${API_BASE_URL}/${id}`, {
-                        method: 'DELETE'
+                        method: 'DELETE',
+                        headers: {
+                            'Accept': 'application/json',
+                            ...getCsrfHeaders()
+                        }
                     });
 
                     if (!response.ok) {
@@ -881,18 +1078,63 @@
                         throw new Error(error.message || 'Failed to delete employee');
                     }
 
-                    showSuccess('Employee deleted successfully!');
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: 'Employee deleted successfully!',
+                        confirmButtonColor: '#667eea',
+                        timer: 2000
+                    });
+
                     await loadEmployees();
                 }
             } catch (error) {
                 console.error('Error deleting employee:', error);
-                showError(error.message || 'Failed to delete employee');
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: error.message || 'Failed to delete employee',
+                    confirmButtonColor: '#ef4444'
+                });
             }
-        };
+        }
+
+        async function loadEmployeePermissions(employeeId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/${employeeId}/permissions`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
+                if (!response.ok) return; // Skip if endpoint doesn't exist yet
+
+                const permissions = await response.json();
+
+                // Set menu permission checkboxes
+                permissions.forEach(perm => {
+                    const checkbox = document.querySelector(`[data-menu-id="${perm.menuId}"]`);
+                    if (checkbox) {
+                        checkbox.checked = perm.hasAccess;
+                    }
+                });
+
+                updateMenuCount();
+            } catch (error) {
+                console.warn('Could not load employee permissions:', error);
+            }
+        }
 
         async function exportCSV() {
             try {
-                const response = await fetch(`${API_BASE_URL}?page=0&size=10000`);
+                const response = await fetch(`${API_BASE_URL}?page=0&size=10000`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
                 if (!response.ok) throw new Error('Failed to fetch data');
 
                 const data = await response.json();
@@ -933,35 +1175,40 @@
         }
 
 
-            window.viewEmployee = async function(id) {
-                try {
-                    const response = await fetch(`${API_BASE_URL}/${id}`);
-                    if (!response.ok) throw new Error('Failed to load employee');
+           async function viewEmployee(id) {
+               try {
+                   const response = await fetch(`${API_BASE_URL}/${id}`, {
+                       headers: {
+                           'Accept': 'application/json',
+                           ...getCsrfHeaders()
+                       }
+                   });
+                   if (!response.ok) throw new Error('Failed to load employee');
 
-                    const emp = await response.json();
+                   const emp = await response.json();
 
-                    Swal.fire({
-                        title: emp.employeeName,
-                        html: `
-                            <div style="text-align: left;">
-                                <p><strong>Mobile:</strong> ${emp.mobileNumber}</p>
-                                <p><strong>Email:</strong> ${emp.emailId}</p>
-                                <p><strong>Role:</strong> ${emp.roleName || 'N/A'}</p>
-                                <p><strong>Designation:</strong> ${emp.designation || 'N/A'}</p>
-                                <p><strong>Gender:</strong> ${emp.gender}</p>
-                                <p><strong>DOB:</strong> ${formatDate(emp.dateOfBirth)}</p>
-                                <p><strong>Address:</strong> ${emp.address || 'N/A'}</p>
-                                <p><strong>Status:</strong> ${emp.isActive ? 'Active' : 'Inactive'}</p>
-                            </div>
-                        `,
-                        confirmButtonColor: '#667eea',
-                        width: 600
-                    });
-                } catch (error) {
-                    console.error('Error viewing employee:', error);
-                    showError('Failed to load employee details');
-                }
-            };
+                   Swal.fire({
+                       title: emp.employeeName,
+                       html: `
+                           <div style="text-align: left;">
+                               <p><strong>Mobile:</strong> ${emp.mobileNumber}</p>
+                               <p><strong>Email:</strong> ${emp.emailId}</p>
+                               <p><strong>Role:</strong> ${emp.roleName || 'N/A'}</p>
+                               <p><strong>Designation:</strong> ${emp.designation || 'N/A'}</p>
+                               <p><strong>Gender:</strong> ${emp.gender}</p>
+                               <p><strong>DOB:</strong> ${formatDate(emp.dateOfBirth)}</p>
+                               <p><strong>Address:</strong> ${emp.address || 'N/A'}</p>
+                               <p><strong>Status:</strong> ${emp.isActive ? 'Active' : 'Inactive'}</p>
+                           </div>
+                       `,
+                       confirmButtonColor: '#667eea',
+                       width: 600
+                   });
+               } catch (error) {
+                   console.error('Error viewing employee:', error);
+                   showError('Failed to load employee details');
+               }
+           }
 
             window.changePage = function(page) {
                 if (page >= 0 && page < totalPages) {
@@ -971,5 +1218,6 @@
             };
 
             window.updateMenuCount = updateMenuCount;
-
+            window.editEmployee = editEmployee;
+            window.deleteEmployee = deleteEmployee;
     })();

@@ -1,90 +1,126 @@
 (function() {
     'use strict';
 
-        let currentTab = 1;
+       let currentTab = 1;
        const totalTabs = 6;
        let admissionData = {};
        let importedAdmissions = [];
        let videoStream = null;
+
+       let selectedCourses = [];
 
        let currentPage = 0;
        let pageSize = 25;
        let totalPages = 0;
        let totalElements = 0;
 
-    // Course list
-    const COURSE_NAMES = [
-        "JAVA CORE AND ADVANCE",
-        "SPRING BOOT",
-        "PYTHON",
-        "PYTHON - DATA ANALYTICS",
-        "WEB DEVELOPMENT",
-        "DATA SCIENCE",
-        "FULL STACK JAVA DEVELOPMENT",
-        "FULL STACK PYTHON DEVELOPMENT",
-        "REACT JS",
-        "NODE JS",
-        "ANGULAR JS",
-        "MACHINE LEARNING",
-        "ARTIFICIAL INTELLIGENCE"
-    ];
+       function getCsrfToken() {
+           // Try cookie first (for XSRF-TOKEN)
+           const cookieValue = document.cookie
+               .split('; ')
+               .find(row => row.startsWith('XSRF-TOKEN='))
+               ?.split('=')[1];
+
+           if (cookieValue) return cookieValue;
+
+           // Fallback to meta tag
+           const metaTag = document.querySelector('meta[name="_csrf"]');
+           return metaTag ? metaTag.getAttribute('content') : null;
+       }
+
+       function getCsrfHeader() {
+           return 'X-CSRF-TOKEN';
+       }
+
 
     // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        initializeEventListeners();
-        loadAdmissions();
-        checkEnquiryPreFill();
-    });
+       document.addEventListener('DOMContentLoaded', function() {
+           initializeEventListeners();
+           loadAdmissions();
+           loadDropdownData();
+           checkEnquiryPreFill();
+           initializeCourseSearch();
+       });
 
-    function initializeEventListeners() {
-        // Main buttons
-        document.getElementById('btnNewAdmission')?.addEventListener('click', openNewAdmissionModal);
-        document.getElementById('btnImportAdmissions')?.addEventListener('click', openImportModal);
-        document.getElementById('btnExportAdmissions')?.addEventListener('click', exportAdmissions);
+       function initializeEventListeners() {
+           // Main buttons
+           document.getElementById('btnNewAdmission')?.addEventListener('click', openNewAdmissionModal);
+           document.getElementById('btnImportAdmissions')?.addEventListener('click', openImportModal);
 
-        // Modal navigation
-        document.getElementById('btnNext')?.addEventListener('click', nextTab);
-        document.getElementById('btnPrevious')?.addEventListener('click', previousTab);
-        document.getElementById('btnFinish')?.addEventListener('click', saveAdmission);
+           // Modal navigation -  : Use proper function names
+           document.getElementById('btnNext')?.addEventListener('click', navigateNext);
+           document.getElementById('btnPrevious')?.addEventListener('click', navigatePrevious);
+           document.getElementById('btnFinish')?.addEventListener('click', saveAdmission);
 
-        // Tab switching
-        document.querySelectorAll('#admissionTabs .nav-link').forEach((tab, index) => {
-            tab.addEventListener('shown.bs.tab', function() {
-                currentTab = index + 1;
-                updateNavigationButtons();
-                const progress = this.getAttribute('data-progress');
-                updateProgress(progress);
-            });
-        });
+           // Tab switching
+           document.querySelectorAll('#admissionTabs .nav-link').forEach((tab, index) => {
+               tab.addEventListener('shown.bs.tab', function() {
+                   currentTab = index + 1;
+                   updateNavigationButtons();
+                   const progress = this.getAttribute('data-progress');
+                   updateProgress(progress);
+               });
+           });
 
-        // Import functionality
-        document.getElementById('btnBrowseAdmFile')?.addEventListener('click', () => {
-            document.getElementById('admCsvFileInput').click();
-        });
+           // Import functionality
+           document.getElementById('btnBrowseAdmFile')?.addEventListener('click', () => {
+               document.getElementById('admCsvFileInput').click();
+           });
 
-        document.getElementById('admCsvFileInput')?.addEventListener('change', function(e) {
-            handleCSVFile(e.target.files[0]);
-        });
+           document.getElementById('admCsvFileInput')?.addEventListener('change', function(e) {
+               handleCSVFile(e.target.files[0]);
+           });
 
-        document.getElementById('btnImportAdmData')?.addEventListener('click', importAdmissions);
+           document.getElementById('btnImportAdmData')?.addEventListener('click', importAdmissions);
 
-        // Import type change
-        document.querySelectorAll('input[name="admImportType"]').forEach(radio => {
-            radio.addEventListener('change', handleImportTypeChange);
-        });
+           // Import type change
+           document.querySelectorAll('input[name="admImportType"]').forEach(radio => {
+               radio.addEventListener('change', handleImportTypeChange);
+           });
 
-        // Camera & Photo
-        document.getElementById('btnCapturePhoto')?.addEventListener('click', capturePhoto);
-        document.getElementById('admPhotoUpload')?.addEventListener('change', function(e) {
-            handlePhotoUpload(e.target.files[0]);
-        });
+           // Camera & Photo
+           document.getElementById('btnCapturePhoto')?.addEventListener('click', capturePhoto);
+           document.getElementById('admPhotoUpload')?.addEventListener('change', function(e) {
+               handlePhotoUpload(e.target.files[0]);
+           });
 
-        // Generate installments
-        document.getElementById('btnGenerateInstallments')?.addEventListener('click', generateInstallments);
+           // Generate installments
+           document.getElementById('btnGenerateInstallments')?.addEventListener('click', generateInstallments);
 
-        // Search
-        document.getElementById('searchInput')?.addEventListener('input', debounce(searchAdmissions, 500));
-    }
+           // Search
+           document.getElementById('searchInput')?.addEventListener('input', debounce(searchAdmissions, 500));
+
+           // Package selection
+           document.getElementById('admPackage')?.addEventListener('change', handlePackageChange);
+
+           // Course selection
+           document.getElementById('admCourse')?.addEventListener('change', handleCourseAdd);
+
+           // Discount calculations
+           document.getElementById('admDiscountPercent')?.addEventListener('input', calculateDiscount);
+           document.getElementById('admDiscountAmount')?.addEventListener('input', calculateDiscountFromAmount);
+       }
+
+       function navigateNext() {
+               if (currentTab < totalTabs) {
+                   currentTab++;
+                   showTab(currentTab);
+                   updateNavigationButtons();
+               }
+           }
+
+           function navigatePrevious() {
+               if (currentTab > 1) {
+                   currentTab--;
+                   showTab(currentTab);
+                   updateNavigationButtons();
+               }
+           }
+
+        function updateProgress(width) {
+            const bar = document.getElementById('admissionProgressBar');
+            if (bar) bar.style.width = width + '%';
+        }
 
     // Check for enquiry pre-fill
    function checkEnquiryPreFill() {
@@ -133,43 +169,42 @@
            return metaTag ? metaTag.getAttribute('content') : 'X-CSRF-TOKEN';
        }
 
-    // In admission.js - Update loadAdmissions function
-    async function loadAdmissions(page = 0, size = 25) {
-        try {
-            showLoading('Loading admissions...');
+async function loadAdmissions(page = 0, size = 25) {
+    try {
+        showLoading('Loading admissions...');
 
-            const response = await fetch(`/api/admissions?page=${page}&size=${size}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to load admissions');
+        // : Sort by createdAt DESC (latest first)
+        const response = await fetch(`/api/admissions?page=${page}&size=${size}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             }
+        });
 
-            const data = await response.json();
-
-            currentPage = data.number || 0;
-            pageSize = data.size || 25;
-            totalPages = data.totalPages || 0;
-            totalElements = data.totalElements || 0;
-
-            Swal.close();
-            renderAdmissionsTable(data.content || []);
-            updatePaginationInfo();
-            renderPaginationControls();
-
-        } catch (error) {
-            Swal.close();
-            console.error('Error loading admissions:', error);
-            renderAdmissionsTable([]);
-            showError('Failed to load admissions');
+        if (!response.ok) {
+            throw new Error('Failed to load admissions');
         }
-    }
 
+        const data = await response.json();
+
+        currentPage = data.number || 0;
+        pageSize = data.size || 25;
+        totalPages = data.totalPages || 0;
+        totalElements = data.totalElements || 0;
+
+        Swal.close();
+        renderAdmissionsTable(data.content || []);
+        updatePaginationInfo();
+        renderPaginationControls();
+
+    } catch (error) {
+        Swal.close();
+        console.error('Error loading admissions:', error);
+        renderAdmissionsTable([]);
+        showError('Failed to load admissions');
+    }
+}
     // Render Admissions Table
     function renderAdmissionsTable(admissions) {
         const tbody = document.querySelector('#admissionsTable tbody');
@@ -287,36 +322,6 @@
         }
     }
 
-    // Load Admission for Edit
-    async function loadAdmissionForEdit(id) {
-        try {
-            showLoading('Loading admission details...');
-
-           const response = await fetch(`/api/admissions/${id}`, {
-                       method: 'GET',
-                       headers: {
-                           'Accept': 'application/json',
-                           'Content-Type': 'application/json'
-                       }
-                   });
-            if (!response.ok) throw new Error('Failed to load admission');
-
-            const admission = await response.json();
-            Swal.close();
-
-            // Store in session and reload
-            sessionStorage.setItem('admissionEnquiry', JSON.stringify(admission));
-            sessionStorage.setItem('admissionFromEnquiry', 'true');
-
-            window.location.reload();
-
-        } catch (error) {
-            Swal.close();
-            console.error('Error:', error);
-            showError('Failed to load admission details');
-        }
-    }
-
 async function openNewAdmissionModal() {
     const fromEnquiry = sessionStorage.getItem('admissionFromEnquiry');
 
@@ -349,15 +354,12 @@ async function openNewAdmissionModal() {
         if (mobile) {
             try {
                 showLoading('Checking for existing enquiry...');
-
-                // ✅ ONLY check if enquiry exists (for pre-filling)
                 const enquiryResponse = await fetch(`/api/admissions/enquiry-data/${mobile}`);
 
                 if (enquiryResponse.ok) {
                     const enquiry = await enquiryResponse.json();
                     Swal.close();
 
-                    // Show success message
                     await Swal.fire({
                         title: 'Enquiry Found!',
                         html: `
@@ -375,12 +377,9 @@ async function openNewAdmissionModal() {
 
                     sessionStorage.setItem('admissionEnquiry', JSON.stringify(enquiry));
                     sessionStorage.setItem('admissionFromEnquiry', 'true');
-
                     window.location.reload();
                 } else {
-                    // ✅ NO ERROR - Just proceed without pre-fill
                     Swal.close();
-
                     await Swal.fire({
                         title: 'No Enquiry Found',
                         html: `
@@ -396,21 +395,24 @@ async function openNewAdmissionModal() {
                         timer: 2500
                     });
 
-                    // Open empty form
                     currentTab = 1;
                     clearForms();
-                    setValue('admMobilePrimary', mobile); // Pre-fill only mobile
+                    setValue('admMobilePrimary', mobile);
+                    
+                    //  Set default dates
+                    const today = new Date().toISOString().split('T')[0];
+                    setValue('admAdmissionDate', today);
+                    setValue('instStartDate', today);
+                    
                     updateNavigationButtons();
                     updateProgress(16.66);
                     const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
                     modal.show();
                 }
-
             } catch (error) {
                 Swal.close();
                 console.error('Error:', error);
 
-                // ✅ Even on error, allow form to open
                 await Swal.fire({
                     title: 'Notice',
                     text: 'Could not check enquiry status. You can still create admission manually.',
@@ -421,15 +423,26 @@ async function openNewAdmissionModal() {
                 currentTab = 1;
                 clearForms();
                 setValue('admMobilePrimary', mobile);
+                
+                //  Set default dates
+                const today = new Date().toISOString().split('T')[0];
+                setValue('admAdmissionDate', today);
+                setValue('instStartDate', today);
+                
                 updateNavigationButtons();
                 updateProgress(16.66);
                 const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
                 modal.show();
             }
         } else if (mobile === null) {
-            // User clicked "Skip & Create New"
             currentTab = 1;
             clearForms();
+            
+            //  Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            setValue('admAdmissionDate', today);
+            setValue('instStartDate', today);
+            
             updateNavigationButtons();
             updateProgress(16.66);
             const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
@@ -441,227 +454,834 @@ async function openNewAdmissionModal() {
     // If already has enquiry data in session, open modal
     currentTab = 1;
     clearForms();
+    
+    //  Set default dates
+    const today = new Date().toISOString().split('T')[0];
+    setValue('admAdmissionDate', today);
+    setValue('instStartDate', today);
+    
     updateNavigationButtons();
     updateProgress(16.66);
     const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
     modal.show();
 }
 
-    function prefillAdmissionForm(data, isUpdate = false) {
-        console.log('Pre-filling form with:', data);
+// Enhanced success message with details
+function showSuccessWithDetails(title, message, details = null) {
+    let html = `<p>${message}</p>`;
 
-        // Tab 1: Personal Info
-        setValue('admFirstName', data.firstName);
-        setValue('admMiddleName', data.middleName);
-        setValue('admLastName', data.lastName);
-        setValue('admCollege', data.college);
-        setValue('admQualification', data.qualification);
-        setValue('admAadhaar', data.aadhaar);
-        setValue('admDob', data.birthDate);
-        setValue('admGender', data.gender);
-        setValue('admCast', data.cast);
-        setValue('admCategory', data.category);
-        setValue('admPhysicallyHandicapped', data.physicallyHandicapped);
-        setValue('admBloodGroup', data.bloodGroup);
-
-        // Tab 2: Other Details
-        setValue('admMobilePrimary', data.mobile || data.mobilePrimary);
-        setValue('admMobileSecondary', data.secondaryMobile || data.mobileSecondary);
-        setValue('admEmailPrimary', data.email || data.emailPrimary);
-        setValue('admEmailSecondary', data.emailSecondary);
-        setValue('admCurrentAddress', data.currentAddress);
-        setValue('admPermanentAddress', data.permanentAddress);
-        setValue('admPinCodeCurrent', data.pinCurrent || data.pinCodeCurrent);
-        setValue('admPinCodePermanent', data.pinPermanent || data.pinCodePermanent);
-        setValue('admDocument', data.documentType);
-        setValue('admLeadSource', data.source || data.leadSource);
-        setValue('admNotes', data.note || data.notes);
-
-        const today = new Date().toISOString().split('T')[0];
-        setValue('admAdmissionDate', data.admissionDate || today);
-
-        // Tab 3: Course Details
-        setValue('admPackage', data.packageName);
-
-        if (data.coursesList && data.coursesList.length > 0) {
-            displaySelectedCourses(data.coursesList);
-        }
-
-        highlightPrefilledFields();
+    if (details) {
+        html += `
+            <div class="alert alert-info mt-3 text-start">
+                <small>${details}</small>
+            </div>
+        `;
     }
 
-    // Save Admission
-    async function saveAdmission() {
-        const admissionData = collectAdmissionData();
+    Swal.fire({
+        icon: 'success',
+        title: title,
+        html: html,
+        confirmButtonColor: '#10b981',
+        timer: 3000,
+        timerProgressBar: true
+    });
+}
 
-        if (!validateAdmissionData(admissionData)) {
-            showError('Please fill all required fields');
+// Enhanced error message with details
+function showErrorWithDetails(title, message, technicalError = null) {
+    let html = `
+        <div class="alert alert-danger text-start">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>${message}</strong>
+        </div>
+    `;
+
+    if (technicalError) {
+        html += `
+            <details class="mt-3">
+                <summary class="text-muted" style="cursor: pointer;">
+                    <small>Technical Details</small>
+                </summary>
+                <pre class="text-start mt-2 p-2 bg-light rounded" style="font-size: 0.85rem;">${technicalError}</pre>
+            </details>
+        `;
+    }
+
+    Swal.fire({
+        icon: 'error',
+        title: title,
+        html: html,
+        confirmButtonColor: '#ef4444'
+    });
+}
+
+    function prefillAdmissionForm(data, isUpdate = false) {
+         console.log('Pre-filling form with:', data);
+     
+         //  Helper function to format date
+         function formatDate(dateValue) {
+             if (!dateValue) return '';
+             
+             // If it's an array [YYYY, MM, DD], convert to string
+             if (Array.isArray(dateValue)) {
+                 const [year, month, day] = dateValue;
+                 return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+             }
+             
+             // If it's already a string in YYYY-MM-DD format, return as is
+             if (typeof dateValue === 'string' && dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                 return dateValue;
+             }
+             
+             // Try to parse as date
+             try {
+                 const date = new Date(dateValue);
+                 if (!isNaN(date.getTime())) {
+                     return date.toISOString().split('T')[0];
+                 }
+             } catch (e) {
+                 console.warn('Failed to parse date:', dateValue);
+             }
+             
+             return '';
+         }
+     
+         // Tab 1: Personal Info
+         setValue('admFirstName', data.firstName);
+         setValue('admMiddleName', data.middleName);
+         setValue('admLastName', data.lastName);
+         setValue('admCollege', data.college);
+         setValue('admQualification', data.qualification);
+         setValue('admAadhaar', data.aadhaar);
+         setValue('admDob', formatDate(data.birthDate)); //  Format date
+         setValue('admGender', data.gender);
+         setValue('admCast', data.cast);
+         setValue('admCategory', data.category);
+         setValue('admPhysicallyHandicapped', data.physicallyHandicapped);
+         setValue('admBloodGroup', data.bloodGroup);
+     
+         // Tab 2: Other Details
+         setValue('admMobilePrimary', data.mobile || data.mobilePrimary);
+         setValue('admMobileSecondary', data.secondaryMobile || data.mobileSecondary);
+         setValue('admEmailPrimary', data.email || data.emailPrimary);
+         setValue('admEmailSecondary', data.emailSecondary);
+         setValue('admCurrentAddress', data.currentAddress);
+         setValue('admPermanentAddress', data.permanentAddress);
+         setValue('admPinCodeCurrent', data.pinCurrent || data.pinCodeCurrent);
+         setValue('admPinCodePermanent', data.pinPermanent || data.pinCodePermanent);
+         setValue('admDocument', data.documentType);
+         setValue('admLeadSource', data.source || data.leadSource);
+         setValue('admNotes', data.note || data.notes);
+         setValue('admRollNo', data.rollNumber);
+         setValue('admAdmissionDate', formatDate(data.admissionDate)); //  Format date
+     
+         // Tab 3: Properly populate courses with amounts
+         if (data.coursesList && data.coursesList.length > 0) {
+             const totalPayable = data.totalPayableFees || 0;
+             const amountPerCourse = totalPayable / data.coursesList.length;
+     
+             selectedCourses = data.coursesList.map((courseName, index) => ({
+                 id: index + 1,
+                 name: courseName,
+                 price: amountPerCourse
+             }));
+     
+             renderSelectedCourses();
+         }
+     
+         setValue('admTotalFees', data.totalPayableFees || 0);
+         setValue('admReceivableFees', data.totalReceivableFees || 0);
+         setValue('admDiscountPercent', data.discountPercent || 0);
+         setValue('admDiscountAmount', data.discountAmount || 0);
+     
+         // Tab 4: Batch & Subject
+         if (data.batchesList && data.batchesList.length > 0) {
+             const batchSelect = document.getElementById('admBatch');
+             Array.from(batchSelect.options).forEach(option => {
+                 if (data.batchesList.includes(option.value)) {
+                     option.selected = true;
+                 }
+             });
+         }
+     
+         const subjectSelect = document.getElementById('admSubject');
+         if (data.subjectsList && data.subjectsList.length > 0) {
+             enableSubjectSelection().then(() => {
+                 setTimeout(() => {
+                     Array.from(subjectSelect.options).forEach(option => {
+                         if (data.subjectsList.some(s => option.textContent.includes(s))) {
+                             option.selected = true;
+                         }
+                     });
+                 }, 500);
+             });
+         } else {
+             subjectSelect.disabled = true;
+             subjectSelect.innerHTML = '<option value="">No subjects selected</option>';
+         }
+     
+         //  Tab 5: Installment dates
+         if (data.installmentStartDate) {
+             setValue('instStartDate', formatDate(data.installmentStartDate));
+         }
+         if (data.numberOfInstallments) {
+             setValue('instNoOfInstallments', data.numberOfInstallments);
+         }
+         if (data.daysBetweenInstallments) {
+             setValue('instDays', data.daysBetweenInstallments);
+         }
+         if (data.totalInstallmentAmount) {
+             setValue('instTotalInstAmount', data.totalInstallmentAmount);
+         }
+     
+         // Tab 6: Load photo if available
+         if (data.photoPath && data.photoPath.trim() !== '') {
+             loadStudentPhoto(data.photoPath);
+         }
+     
+         highlightPrefilledFields();
+     }
+
+    function loadStudentPhoto(photoPath) {
+        try {
+            const canvas = document.getElementById('admCanvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, 300, 300);
+            };
+
+            img.onerror = function() {
+                console.warn('Failed to load student photo:', photoPath);
+            };
+
+            // Construct full photo URL
+            img.src = `/uploads/admissions/${photoPath}`;
+
+        } catch (error) {
+            console.error('Error loading photo:', error);
+        }
+    }
+
+    // ==================== LOAD DROPDOWN DATA ====================
+
+    async function loadDropdownData() {
+        await Promise.all([
+            loadPackages(),
+            loadBatches(),
+            loadLeadSources()
+        ]);
+    }
+
+    async function loadPackages() {
+        try {
+            const response = await fetch('/api/packages/dropdown');
+            if (!response.ok) throw new Error('Failed to load packages');
+
+            const packages = await response.json();
+            const select = document.getElementById('admPackage');
+
+            select.innerHTML = '<option value="">-- Select Package --</option>';
+            packages.forEach(pkg => {
+                const option = document.createElement('option');
+                option.value = pkg.id;
+                option.textContent = `${pkg.packageName} (₹${pkg.totalAmount})`;
+                option.dataset.courses = JSON.stringify(pkg.courses);
+                option.dataset.amount = pkg.totalAmount;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading packages:', error);
+        }
+    }
+
+    async function loadBatches() {
+        try {
+            const response = await fetch('/api/batches?page=0&size=100');
+            if (!response.ok) throw new Error('Failed to load batches');
+
+            const data = await response.json();
+            const select = document.getElementById('admBatch');
+
+            select.innerHTML = '';
+            data.batches.forEach(batch => {
+                const option = document.createElement('option');
+                option.value = batch.batchNo;
+                option.textContent = `${batch.batchName} (${batch.startTime} - ${batch.endTime})`;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading batches:', error);
+        }
+    }
+
+    async function loadLeadSources() {
+        try {
+            const response = await fetch('/lead-source/list?page=0&size=100');
+            if (!response.ok) throw new Error('Failed to load lead sources');
+
+            const result = await response.json();
+            const select = document.getElementById('admLeadSource');
+
+            select.innerHTML = '<option value="">-- Select Source --</option>';
+            result.data.forEach(source => {
+                const option = document.createElement('option');
+                option.value = source.sourceTitle;
+                option.textContent = source.sourceTitle;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading lead sources:', error);
+        }
+    }
+
+    // ==================== PACKAGE & COURSE HANDLING ====================
+
+    function handlePackageChange(e) {
+        const select = e.target;
+        const selectedOption = select.options[select.selectedIndex];
+
+        if (!selectedOption.value) {
+            clearCourseSelection();
             return;
         }
 
-        try {
-            showLoading('Saving admission...');
+        const courses = JSON.parse(selectedOption.dataset.courses || '[]');
+        const packageAmount = parseFloat(selectedOption.dataset.amount || 0);
 
-            const response = await fetch('/api/admissions', {
-                       method: 'POST',
-                       headers: {
-                           'Accept': 'application/json',
-                           'Content-Type': 'application/json'
-                       },
-                       body: JSON.stringify(admissionData)
-                   });
+        // Auto-add all package courses
+        selectedCourses = courses.map(course => ({
+            id: course.id,
+            name: course.courseName,
+            price: parseFloat(course.courseFees)
+        }));
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Failed to save admission');
-            }
+        renderSelectedCourses();
+        calculateTotalFees();
 
-            const result = await response.json();
-
-            Swal.close();
-            closeModal('admissionModal');
-
-            showSuccess('Admission saved successfully!');
-            loadAdmissions();
-
-            // Ask for print
-            const printResult = await Swal.fire({
-                title: 'Print Admission Form?',
-                text: 'Do you want to print the admission form?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, Print',
-                cancelButtonText: 'No',
-                confirmButtonColor: '#667eea'
-            });
-
-            if (printResult.isConfirmed) {
-                await printAdmission(result.id);
-            }
-
-        } catch (error) {
-            Swal.close();
-            console.error('Error saving admission:', error);
-            showError(error.message || 'Failed to save admission');
-        }
+        // Enable subject selection if courses are selected
+        enableSubjectSelection();
     }
 
-    // Collect Admission Data - FIXED: Remove recursion
-    function collectAdmissionData() {
-        const courseSelect = document.getElementById('admCourse');
-        const selectedCourses = courseSelect ?
-            Array.from(courseSelect.selectedOptions).map(opt => opt.value) : [];
+    function handleCourseAdd(e) {
+        const select = e.target;
+        const selectedOption = select.options[select.selectedIndex];
 
-        const batchSelect = document.getElementById('admBatch');
-        const selectedBatches = batchSelect ?
-            Array.from(batchSelect.selectedOptions).map(opt => opt.value) : [];
+        if (!selectedOption.value) return;
 
-        const subjectSelect = document.getElementById('admSubject');
-        const selectedSubjects = subjectSelect ?
-            Array.from(subjectSelect.selectedOptions).map(opt => opt.value) : [];
+        const courseId = parseInt(selectedOption.value);
+        const courseName = selectedOption.dataset.name;
+        const coursePrice = parseFloat(selectedOption.dataset.price);
 
-        // Collect installment data if available
-        const installmentConfig = collectInstallmentData();
-
-        return {
-            firstName: getValue('admFirstName'),
-            middleName: getValue('admMiddleName'),
-            lastName: getValue('admLastName'),
-            college: getValue('admCollege'),
-            qualification: getValue('admQualification'),
-            aadhaar: getValue('admAadhaar'),
-            birthDate: getValue('admDob') || null,
-            gender: getValue('admGender'),
-            cast: getValue('admCast'),
-            category: getValue('admCategory'),
-            physicallyHandicapped: getValue('admPhysicallyHandicapped'),
-            bloodGroup: getValue('admBloodGroup'),
-            mobilePrimary: getValue('admMobilePrimary'),
-            mobileSecondary: getValue('admMobileSecondary'),
-            emailPrimary: getValue('admEmailPrimary'),
-            emailSecondary: getValue('admEmailSecondary'),
-            currentAddress: getValue('admCurrentAddress'),
-            permanentAddress: getValue('admPermanentAddress'),
-            pinCodeCurrent: getValue('admPinCodeCurrent'),
-            pinCodePermanent: getValue('admPinCodePermanent'),
-            documentType: getValue('admDocument'),
-            leadSource: getValue('admLeadSource'),
-            admissionDate: getValue('admAdmissionDate') || new Date().toISOString().split('T')[0],
-            rollNumber: getValue('admRollNo'),
-            notes: getValue('admNotes'),
-            packageName: getValue('admPackage'),
-            courses: selectedCourses,
-            batches: selectedBatches,
-            subjects: selectedSubjects,
-            totalPayableFees: parseFloat(getValue('admTotalFees')) || 0,
-            totalReceivableFees: parseFloat(getValue('admReceivableFees')) || 0,
-            discountPercent: parseFloat(getValue('admDiscountPercent')) || 0,
-            discountAmount: parseFloat(getValue('admDiscountAmount')) || 0,
-            installmentConfig: installmentConfig
-        };
-    }
-
-    // Collect Installment Data
-    function collectInstallmentData() {
-        const tbody = document.getElementById('installmentsBody');
-        if (!tbody) return null;
-
-        const rows = tbody.querySelectorAll('tr');
-
-        if (rows.length === 0 || rows[0].cells.length === 1) {
-            return null;
+        // Check if already added
+        if (selectedCourses.some(c => c.id === courseId)) {
+            showError('Course already added');
+            select.value = '';
+            return;
         }
 
-        const installments = [];
-
-        rows.forEach((row, index) => {
-            const date = row.querySelector(`input[type="date"]`)?.value;
-            const amount = parseFloat(row.querySelector(`input[type="number"]`)?.value) || 0;
-            const status = row.querySelector(`select`)?.value || 'Pending';
-
-            if (date && amount > 0) {
-                installments.push({
-                    installmentNumber: index + 1,
-                    dueDate: date,
-                    amount: amount,
-                    status: status
-                });
-            }
+        // Add course
+        selectedCourses.push({
+            id: courseId,
+            name: courseName,
+            price: coursePrice
         });
 
-        if (installments.length === 0) return null;
+        renderSelectedCourses();
+        calculateTotalFees();
+        enableSubjectSelection();
 
-        return {
-            startDate: installments[0].dueDate,
-            numberOfInstallments: installments.length,
-            daysBetween: 30
-        };
+        // Reset selection
+        select.value = '';
     }
 
-    // Validate Admission Data
-    function validateAdmissionData(data) {
-        if (!data.firstName || !data.lastName) {
-            console.error('Name required');
-            return false;
+    function renderSelectedCourses() {
+        const tbody = document.getElementById('selectedCoursesBody');
+
+        if (selectedCourses.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-center text-muted">No courses added</td>
+                </tr>
+            `;
+            return;
         }
 
-        if (!data.mobilePrimary || !/^[6-9]\d{9}$/.test(data.mobilePrimary)) {
-            console.error('Invalid mobile');
-            return false;
-        }
+        tbody.innerHTML = selectedCourses.map((course, index) => `
+            <tr>
+                <td>${course.name}</td>
+                <td>
+                    <input type="number"
+                           class="form-control form-control-sm"
+                           value="${parseFloat(course.price || 0).toFixed(2)}"
+                           data-index="${index}"
+                           onchange="updateCoursePrice(this)"
+                           min="0"
+                           step="0.01">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger btn-remove-course"
+                            data-index="${index}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
 
-        if (!data.leadSource) {
-            console.error('Lead source required');
-            return false;
-        }
+        tbody.querySelectorAll('.btn-remove-course').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const index = parseInt(this.dataset.index);
+                selectedCourses.splice(index, 1);
+                renderSelectedCourses();
+                calculateTotalFees();
 
-        if (!data.documentType) {
-            console.error('Document type required');
-            return false;
-        }
-
-        return true;
+                if (selectedCourses.length === 0) {
+                    disableSubjectSelection();
+                }
+            });
+        });
     }
+
+    window.updateCoursePrice = function(input) {
+        const index = parseInt(input.dataset.index);
+        const newPrice = parseFloat(input.value) || 0;
+
+        selectedCourses[index].price = newPrice;
+        calculateTotalFees();
+    };
+
+   window.removeCourse = function(indexOrButton) {
+       const index = typeof indexOrButton === 'number' ? indexOrButton : parseInt(indexOrButton);
+
+       selectedCourses.splice(index, 1);
+       renderSelectedCourses();
+       calculateTotalFees();
+
+       if (selectedCourses.length === 0) {
+           disableSubjectSelection();
+       }
+
+       return false;
+   };
+
+    function clearCourseSelection() {
+        selectedCourses = [];
+        renderSelectedCourses();
+        calculateTotalFees();
+        disableSubjectSelection();
+    }
+
+    // ==================== FEE CALCULATIONS ====================
+
+   function calculateDiscount() {
+       const totalPayable = parseFloat(document.getElementById('admTotalFees').value) || 0;
+       const discountPercent = parseFloat(document.getElementById('admDiscountPercent').value) || 0;
+   
+       const discountAmount = (totalPayable * discountPercent) / 100;
+       const receivable = totalPayable - discountAmount;
+   
+       document.getElementById('admDiscountAmount').value = discountAmount.toFixed(2);
+       document.getElementById('admReceivableFees').value = receivable.toFixed(2);
+   
+       // : Auto-update installment totals
+       setValue('instTotalAmount', receivable.toFixed(2));
+       setValue('feeInstTotalAmount', receivable.toFixed(2));
+   }
+   
+   function calculateDiscountFromAmount() {
+       const totalPayable = parseFloat(document.getElementById('admTotalFees').value) || 0;
+       const discountAmount = parseFloat(document.getElementById('admDiscountAmount').value) || 0;
+   
+       const discountPercent = totalPayable > 0 ? (discountAmount / totalPayable) * 100 : 0;
+       const receivable = totalPayable - discountAmount;
+   
+       document.getElementById('admDiscountPercent').value = discountPercent.toFixed(2);
+       document.getElementById('admReceivableFees').value = receivable.toFixed(2);
+   
+       // : Auto-update installment totals
+       setValue('instTotalAmount', receivable.toFixed(2));
+       setValue('feeInstTotalAmount', receivable.toFixed(2));
+   }
+
+    function updateInstallmentTotals(amount) {
+        document.getElementById('instTotalAmount').value = amount.toFixed(2);
+        document.getElementById('feeInstTotalAmount').value = amount.toFixed(2);
+    }
+
+    // ==================== SUBJECT HANDLING ====================
+
+    async function enableSubjectSelection() {
+        const subjectSelect = document.getElementById('admSubject');
+        subjectSelect.disabled = false;
+        subjectSelect.innerHTML = '<option value="">Loading subjects...</option>';
+
+        try {
+            // Get subjects for all selected courses
+            const allSubjects = [];
+
+            for (const course of selectedCourses) {
+                const response = await fetch(`/api/subjects/course/${course.id}`);
+                if (response.ok) {
+                    const subjects = await response.json();
+                    allSubjects.push(...subjects.map(s => ({
+                        id: s.id,
+                        name: s.subjectName,
+                        courseId: course.id,
+                        courseName: course.name
+                    })));
+                }
+            }
+
+            subjectSelect.innerHTML = '';
+            if (allSubjects.length === 0) {
+                subjectSelect.innerHTML = '<option value="">No subjects available</option>';
+                return;
+            }
+
+            allSubjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject.id;
+                option.textContent = `${subject.name} (${subject.courseName})`;
+                subjectSelect.appendChild(option);
+            });
+
+        } catch (error) {
+            console.error('Error loading subjects:', error);
+            subjectSelect.innerHTML = '<option value="">Error loading subjects</option>';
+        }
+    }
+
+    function disableSubjectSelection() {
+        const subjectSelect = document.getElementById('admSubject');
+        subjectSelect.disabled = true;
+        subjectSelect.innerHTML = '<option value="">Select courses first</option>';
+    }
+    
+    // ==================== LOAD ADMISSION FOR UPDATE ====================
+    
+     async function loadAdmissionForEdit(id) {
+            try {
+                showLoading('Loading admission details...');
+
+                const csrfToken = getCsrfToken();
+                const headers = {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                };
+                if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
+                const response = await fetch(`/api/admissions/${id}`, {
+                    method: 'GET',
+                    headers: headers,
+                    credentials: 'include'
+                });
+
+                if (!response.ok) throw new Error('Failed to load admission');
+
+                const admission = await response.json();
+                Swal.close();
+
+                //  CHANGE MODAL TITLE
+                document.getElementById('admissionModalTitle').textContent = 'Update Admission';
+
+                //  Store admission ID for update
+                document.getElementById('btnFinish').dataset.admissionId = id;
+                document.getElementById('btnFinish').textContent = 'Update';
+
+                //  Pre-fill all form data
+                prefillAdmissionForm(admission, true);
+
+                //  Load installments ONLY IF THEY EXIST
+                if (admission.installments && admission.installments.length > 0) {
+                    displayExistingInstallments(admission.installments);
+
+                    //  Pre-fill installment config fields IF AVAILABLE
+                    if (admission.installmentStartDate) {
+                        setValue('instStartDate', admission.installmentStartDate);
+                    }
+                    if (admission.numberOfInstallments) {
+                        setValue('instNoOfInstallments', admission.numberOfInstallments);
+                    }
+                    if (admission.daysBetweenInstallments) {
+                        setValue('instDays', admission.daysBetweenInstallments);
+                    }
+                    if (admission.totalInstallmentAmount) {
+                        setValue('instTotalInstAmount', admission.totalInstallmentAmount);
+                    }
+                } else {
+                    //  OLD CSV DATA - No installments
+                    const tbody = document.getElementById('installmentsBody');
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments found. You can generate new ones.</td></tr>';
+                }
+
+                setValue('instTotalAmount', admission.totalReceivableFees || 0);
+
+                // Open modal
+                currentTab = 1;
+                updateNavigationButtons();
+                updateProgress(16.66);
+                const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
+                modal.show();
+
+            } catch (error) {
+                Swal.close();
+                console.error('Error:', error);
+                showError('Failed to load admission details: ' + error.message);
+            }
+        }
+
+    // ==================== DISPLAY EXISTING INSTALLMENTS ====================
+    
+    function displayExistingInstallments(installments) {
+        const tbody = document.getElementById('installmentsBody');
+
+        if (!installments || installments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments generated</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = installments.map((inst, index) => `
+            <tr>
+                <td>
+                    <input type="date" class="form-control form-control-sm"
+                           value="${inst.dueDate}"
+                           id="instDate${index + 1}"
+                           required>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm"
+                           value="${inst.amount.toFixed(2)}"
+                           id="instAmount${index + 1}"
+                           step="0.01"
+                           min="0"
+                           required>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm" id="instStatus${index + 1}">
+                        <option value="Pending" ${inst.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option value="Paid" ${inst.status === 'Paid' ? 'selected' : ''}>Paid</option>
+                        <option value="Overdue" ${inst.status === 'Overdue' ? 'selected' : ''}>Overdue</option>
+                        <option value="Waived" ${inst.status === 'Waived' ? 'selected' : ''}>Waived</option>
+                    </select>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger"
+                            onclick="window.removeInstallment(this)"
+                            data-installment-id="${inst.id || ''}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // ==================== FEE CALCULATIONS ====================
+
+    function calculateTotalFees() {
+        const totalPayable = selectedCourses.reduce((sum, course) => sum + course.price, 0);
+
+        document.getElementById('admTotalFees').value = totalPayable.toFixed(2);
+
+        // Recalculate receivable with current discount
+        const discountPercent = parseFloat(document.getElementById('admDiscountPercent').value) || 0;
+        const discountAmount = (totalPayable * discountPercent) / 100;
+        const receivable = totalPayable - discountAmount;
+
+        document.getElementById('admDiscountAmount').value = discountAmount.toFixed(2);
+        document.getElementById('admReceivableFees').value = receivable.toFixed(2);
+
+        setValue('instTotalAmount', receivable.toFixed(2));
+        setValue('feeInstTotalAmount', receivable.toFixed(2));
+    }
+
+    function calculateDiscount() {
+        const totalPayable = parseFloat(document.getElementById('admTotalFees').value) || 0;
+        const discountPercent = parseFloat(document.getElementById('admDiscountPercent').value) || 0;
+
+        const discountAmount = (totalPayable * discountPercent) / 100;
+        const receivable = totalPayable - discountAmount;
+
+        document.getElementById('admDiscountAmount').value = discountAmount.toFixed(2);
+        document.getElementById('admReceivableFees').value = receivable.toFixed(2);
+
+        //  Auto-update installment totals
+        setValue('instTotalAmount', receivable.toFixed(2));
+        setValue('feeInstTotalAmount', receivable.toFixed(2));
+    }
+
+    function calculateDiscountFromAmount() {
+        const totalPayable = parseFloat(document.getElementById('admTotalFees').value) || 0;
+        const discountAmount = parseFloat(document.getElementById('admDiscountAmount').value) || 0;
+
+        const discountPercent = totalPayable > 0 ? (discountAmount / totalPayable) * 100 : 0;
+        const receivable = totalPayable - discountAmount;
+
+        document.getElementById('admDiscountPercent').value = discountPercent.toFixed(2);
+        document.getElementById('admReceivableFees').value = receivable.toFixed(2);
+
+        //  Auto-update installment totals
+        setValue('instTotalAmount', receivable.toFixed(2));
+        setValue('feeInstTotalAmount', receivable.toFixed(2));
+    }
+
+       // ==================== SAVE/UPDATE ADMISSION ====================
+
+      async function saveAdmission() {
+          const admissionData = collectAdmissionData();
+          const admissionId = document.getElementById('btnFinish').dataset.admissionId;
+          const isUpdate = !!admissionId;
+
+          if (!validateAdmissionData(admissionData)) {
+              showErrorWithDetails(
+                  'Validation Failed',
+                  'Please fill all required fields',
+                  'Required: First Name, Last Name, Mobile, Lead Source, At least one course'
+              );
+              return;
+          }
+
+          try {
+              showLoading(isUpdate ? 'Updating admission...' : 'Saving admission...');
+
+              const url = isUpdate ? `/api/admissions/${admissionId}` : '/api/admissions';
+              const method = isUpdate ? 'PUT' : 'POST';
+
+              // Get CSRF token
+              const csrfToken = getCsrfToken();
+              const csrfHeader = getCsrfHeader();
+
+              const headers = {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json'
+              };
+
+              // Add CSRF token to headers
+              if (csrfToken) {
+                  headers[csrfHeader] = csrfToken;
+              }
+
+              const response = await fetch(url, {
+                  method: method,
+                  headers: headers,
+                  credentials: 'include', // Important for cookies
+                  body: JSON.stringify(admissionData)
+              });
+
+              if (!response.ok) {
+                  const error = await response.json();
+                  throw new Error(error.message || `Failed to ${isUpdate ? 'update' : 'save'} admission`);
+              }
+
+              const result = await response.json();
+
+              Swal.close();
+              closeModal('admissionModal');
+
+              showSuccessWithDetails(
+                  isUpdate ? 'Admission Updated!' : 'Admission Saved!',
+                  `Admission ${isUpdate ? 'updated' : 'created'} successfully`,
+                  `Registration No: ${result.registrationNumber || 'Generated'}`
+              );
+
+              loadAdmissions();
+              clearForms();
+              clearCourseSelection();
+
+              document.getElementById('admissionModalTitle').textContent = 'New Admission';
+              document.getElementById('btnFinish').textContent = 'Finish';
+              delete document.getElementById('btnFinish').dataset.admissionId;
+
+          } catch (error) {
+              Swal.close();
+              console.error('Error saving admission:', error);
+
+              showErrorWithDetails(
+                  `Failed to ${isUpdate ? 'Update' : 'Save'} Admission`,
+                  error.message || `An error occurred while ${isUpdate ? 'updating' : 'saving'} the admission`,
+                  error.stack || error.toString()
+              );
+          }
+      }
+
+       function collectAdmissionData() {
+           const batchSelect = document.getElementById('admBatch');
+           const selectedBatches = Array.from(batchSelect.selectedOptions).map(opt => opt.value);
+
+           const subjectSelect = document.getElementById('admSubject');
+           const selectedSubjects = Array.from(subjectSelect.selectedOptions).map(opt => opt.textContent);
+
+           const installmentConfig = collectInstallmentData();
+
+           return {
+               firstName: getValue('admFirstName'),
+               middleName: getValue('admMiddleName'),
+               lastName: getValue('admLastName'),
+               college: getValue('admCollege'),
+               qualification: getValue('admQualification'),
+               aadhaar: getValue('admAadhaar'),
+               birthDate: getValue('admDob') || null,
+               gender: getValue('admGender'),
+               cast: getValue('admCast'),
+               category: getValue('admCategory'),
+               physicallyHandicapped: getValue('admPhysicallyHandicapped'),
+               bloodGroup: getValue('admBloodGroup'),
+               mobilePrimary: getValue('admMobilePrimary'),
+               mobileSecondary: getValue('admMobileSecondary'),
+               emailPrimary: getValue('admEmailPrimary'),
+               emailSecondary: getValue('admEmailSecondary'),
+               currentAddress: getValue('admCurrentAddress'),
+               permanentAddress: getValue('admPermanentAddress'),
+               pinCodeCurrent: getValue('admPinCodeCurrent'),
+               pinCodePermanent: getValue('admPinCodePermanent'),
+               documentType: getValue('admDocument'),
+               leadSource: getValue('admLeadSource'),
+               admissionDate: getValue('admAdmissionDate') || new Date().toISOString().split('T')[0],
+               rollNumber: getValue('admRollNo'),
+               notes: getValue('admNotes'),
+               packageName: getSelectedPackageName(),
+               courses: selectedCourses.map(c => c.name),
+               batches: selectedBatches,
+               subjects: selectedSubjects,
+               totalPayableFees: parseFloat(getValue('admTotalFees')) || 0,
+               totalReceivableFees: parseFloat(getValue('admReceivableFees')) || 0,
+               discountPercent: parseFloat(getValue('admDiscountPercent')) || 0,
+               discountAmount: parseFloat(getValue('admDiscountAmount')) || 0,
+               installmentConfig: installmentConfig
+           };
+       }
+
+       function getSelectedPackageName() {
+           const select = document.getElementById('admPackage');
+           const selectedOption = select.options[select.selectedIndex];
+           return selectedOption.value ? selectedOption.textContent.split('(')[0].trim() : null;
+       }
+
+       function collectInstallmentData() {
+           const tbody = document.getElementById('installmentsBody');
+           if (!tbody) return null;
+
+           const rows = tbody.querySelectorAll('tr');
+           if (rows.length === 0 || rows[0].cells.length === 1) {
+               return null;
+           }
+
+           const startDate = getValue('instStartDate');
+           const numberOfInstallments = parseInt(getValue('instNoOfInstallments')) || 0;
+           const daysBetween = parseInt(getValue('instDays')) || 30;
+
+           if (!startDate || numberOfInstallments === 0) {
+               return null;
+           }
+
+           return {
+               startDate: startDate,
+               numberOfInstallments: numberOfInstallments,
+               daysBetween: daysBetween
+           };
+       }
 
     // Search Admissions
    async function searchAdmissions(e) {
@@ -670,16 +1290,16 @@ async function openNewAdmissionModal() {
        try {
            const searchDTO = {
                searchTerm: searchTerm || null,
-               page: 0, // Reset to first page on search
+               page: 0,
                size: pageSize,
-               sortBy: 'admission_date',
+               sortBy: 'createdAt',
                sortDirection: 'DESC'
            };
 
            const response = await fetch('/api/admissions/search', {
                method: 'POST',
                headers: {
-                    'Accept': 'application/json',
+                   'Accept': 'application/json',
                    'Content-Type': 'application/json',
                },
                body: JSON.stringify(searchDTO)
@@ -689,7 +1309,6 @@ async function openNewAdmissionModal() {
 
            const data = await response.json();
 
-           // Update pagination for search results
            currentPage = data.number || 0;
            totalPages = data.totalPages || 0;
            totalElements = data.totalElements || 0;
@@ -702,19 +1321,302 @@ async function openNewAdmissionModal() {
        }
    }
 
-    // Export Admissions
-    async function exportAdmissions() {
+// ==================== EXPORT FUNCTIONALITY ====================
+
+let exportDataTable = null;
+
+// Fetch export data with fees
+async function prepareExportData() {
+    try {
+        showLoading('Fetching export data...');
+
+        const response = await fetch(`/api/admissions/export`);
+        if (!response.ok) throw new Error('Failed to fetch export data');
+
+        const admissions = await response.json();
+
+        Swal.close();
+
+        if (admissions.length === 0) {
+            showError('No data available to export');
+            return null;
+        }
+
+        return admissions;
+
+    } catch (error) {
+        Swal.close();
+        console.error('Export error:', error);
+        showError('Failed to fetch data: ' + error.message);
+        return null;
+    }
+}
+
+// Build export table
+function buildExportTable(admissions) {
+    let tempTable = document.getElementById('tempExportTable');
+
+    if (!tempTable) {
+        tempTable = document.createElement('table');
+        tempTable.id = 'tempExportTable';
+        tempTable.style.display = 'none';
+        document.body.appendChild(tempTable);
+    }
+
+    const tableHTML = `
+        <thead>
+            <tr>
+                <th>Reg No</th>
+                <th>Student Name</th>
+                <th>Mobile</th>
+                <th>Email</th>
+                <th>Course</th>
+                <th>College</th>
+                <th>Total Fees</th>
+                <th>Receivable</th>
+                <th>Admission Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${admissions.map(adm => `
+                <tr>
+                    <td>${adm.registrationNumber}</td>
+                    <td>${adm.studentName}</td>
+                    <td>${adm.mobile}</td>
+                    <td>${adm.email}</td>
+                    <td>${adm.courses}</td>
+                    <td>${adm.college}</td>
+                    <td>${adm.totalFees}</td>
+                    <td>${adm.receivableFees}</td>
+                    <td>${adm.admissionDate}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+    `;
+
+    tempTable.innerHTML = tableHTML;
+    return tempTable;
+}
+
+// Initialize DataTable
+function initDataTable(table) {
+    if (exportDataTable) {
         try {
-            showLoading('Exporting admissions...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            Swal.close();
-            showSuccess('Export completed successfully!');
-        } catch (error) {
-            Swal.close();
-            console.error('Export error:', error);
-            showError('Failed to export admissions');
+            exportDataTable.destroy();
+        } catch (e) {
+            console.log('Cleaning up old table');
         }
     }
+
+    exportDataTable = $(table).DataTable({
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: 'csvHtml5',
+                text: 'CSV',
+                title: 'Admissions_Export',
+                filename: `Admissions_${new Date().toISOString().split('T')[0]}`
+            },
+            {
+                extend: 'excelHtml5',
+                text: 'Excel',
+                title: 'Admissions Export',
+                filename: `Admissions_${new Date().toISOString().split('T')[0]}`
+            },
+            {
+                extend: 'pdfHtml5',
+                text: 'PDF',
+                title: 'TechnoKraft Training & Solutions - Admissions Report',
+                filename: `Admissions_${new Date().toISOString().split('T')[0]}`,
+                orientation: 'landscape',
+                pageSize: 'A3',
+                customize: function(doc) {
+                    doc.content.splice(0, 0, {
+                        text: 'TechnoKraft Training & Solutions',
+                        style: 'header',
+                        alignment: 'center',
+                        fontSize: 18,
+                        bold: true,
+                        margin: [0, 0, 0, 10]
+                    });
+
+                    doc.content.splice(1, 0, {
+                        text: 'Admissions Report',
+                        style: 'subheader',
+                        alignment: 'center',
+                        fontSize: 14,
+                        margin: [0, 0, 0, 5]
+                    });
+
+                    doc.content.splice(2, 0, {
+                        text: `Generated on: ${new Date().toLocaleString()}`,
+                        alignment: 'right',
+                        fontSize: 10,
+                        margin: [0, 0, 0, 15]
+                    });
+
+                    doc.styles.tableHeader = {
+                        bold: true,
+                        fontSize: 11,
+                        color: 'white',
+                        fillColor: '#4f46e5',
+                        alignment: 'center'
+                    };
+
+                    doc.defaultStyle.fontSize = 9;
+                }
+            },
+            'copy',
+            'print'
+        ],
+        paging: false,
+        searching: false,
+        ordering: false,
+        info: false,
+        autoWidth: false
+    });
+
+    return exportDataTable;
+}
+
+// Export functions
+window.exportToCSV = async function() {
+    try {
+        const admissions = await prepareExportData();
+        if (!admissions) return;
+
+        const table = buildExportTable(admissions);
+        const dt = initDataTable(table);
+
+        dt.button('.buttons-csv').trigger();
+        showSuccess('CSV exported successfully!');
+
+    } catch (error) {
+        console.error('CSV export error:', error);
+        showError('Failed to export CSV');
+    }
+};
+
+window.exportToExcel = async function() {
+    try {
+        const admissions = await prepareExportData();
+        if (!admissions) return;
+
+        const table = buildExportTable(admissions);
+        const dt = initDataTable(table);
+
+        dt.button('.buttons-excel').trigger();
+        showSuccess('Excel exported successfully!');
+
+    } catch (error) {
+        console.error('Excel export error:', error);
+        showError('Failed to export Excel');
+    }
+};
+
+window.exportToPDF = async function() {
+    try {
+        const admissions = await prepareExportData();
+        if (!admissions) return;
+
+        const table = buildExportTable(admissions);
+        const dt = initDataTable(table);
+
+        dt.button('.buttons-pdf').trigger();
+        showSuccess('PDF exported successfully!');
+
+    } catch (error) {
+        console.error('PDF export error:', error);
+        showError('Failed to export PDF');
+    }
+};
+
+window.copyTableData = async function() {
+    try {
+        const admissions = await prepareExportData();
+        if (!admissions) return;
+
+        const table = buildExportTable(admissions);
+        const dt = initDataTable(table);
+
+        dt.button('.buttons-copy').trigger();
+        showSuccess('Data copied to clipboard!');
+
+    } catch (error) {
+        console.error('Copy error:', error);
+        showError('Failed to copy data');
+    }
+};
+
+window.printTable = async function() {
+    try {
+        const admissions = await prepareExportData();
+        if (!admissions) return;
+
+        const table = buildExportTable(admissions);
+        const dt = initDataTable(table);
+
+        dt.button('.buttons-print').trigger();
+
+    } catch (error) {
+        console.error('Print error:', error);
+        showError('Failed to print');
+    }
+};
+   // Copy table data to clipboard
+   async function copyTableData() {
+       try {
+           showLoading('Copying data to clipboard...');
+
+           const response = await fetch(`/api/admissions?page=0&size=${totalElements}`, {
+               method: 'GET',
+               headers: {
+                   'Accept': 'application/json',
+                   'Content-Type': 'application/json'
+               }
+           });
+
+           if (!response.ok) throw new Error('Failed to fetch data');
+
+           const data = await response.json();
+           const admissions = data.content || [];
+
+           // Create tab-separated text
+           const headers = ['Reg No', 'Student Name', 'Mobile', 'Course', 'Admission Date'];
+           const rows = admissions.map(adm => [
+               adm.registrationNumber || '-',
+               adm.studentName || `${adm.firstName} ${adm.lastName}`,
+               adm.mobilePrimary || '-',
+               adm.courses || '-',
+               adm.admissionDate || '-'
+           ]);
+
+           const textData = [
+               headers.join('\t'),
+               ...rows.map(row => row.join('\t'))
+           ].join('\n');
+
+           await navigator.clipboard.writeText(textData);
+
+           Swal.close();
+
+           showSuccessWithDetails(
+               'Copied to Clipboard!',
+               `${admissions.length} records copied`,
+               'You can now paste into Excel, Google Sheets, or any text editor'
+           );
+
+       } catch (error) {
+           Swal.close();
+           console.error('Copy error:', error);
+
+           showErrorWithDetails(
+               'Copy Failed',
+               'Failed to copy data to clipboard',
+               error.message
+           );
+       }
+   }
 
     // View Admission
     async function viewAdmission(id) {
@@ -760,57 +1662,175 @@ async function openNewAdmissionModal() {
         }
     }
 
+    // Initialize course search functionality
+    function initializeCourseSearch() {
+        const searchInput = document.getElementById('admCourseSearch');
+        const dropdown = document.getElementById('admCourseDropdown');
+
+        if (!searchInput || !dropdown) {
+            console.warn('Course search elements not found');
+            return;
+        }
+
+        let allCourses = [];
+
+        // Load courses on initialization
+        loadCoursesForSearch();
+
+        async function loadCoursesForSearch() {
+            try {
+                const response = await fetch('/api/courses/dropdown');
+                if (!response.ok) throw new Error('Failed to load courses');
+
+                allCourses = await response.json();
+                console.log(' Loaded courses for search:', allCourses.length);
+
+            } catch (error) {
+                console.error('❌ Error loading courses:', error);
+            }
+        }
+
+        // Show dropdown on focus
+        searchInput.addEventListener('focus', function() {
+            if (allCourses.length > 0) {
+                renderCourseDropdown('');
+                dropdown.classList.add('show');
+            }
+        });
+
+        // Filter on input
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            renderCourseDropdown(searchTerm);
+            dropdown.classList.add('show');
+        });
+
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        function renderCourseDropdown(searchTerm) {
+            const filteredCourses = searchTerm
+                ? allCourses.filter(course =>
+                    course.courseName.toLowerCase().includes(searchTerm)
+                  )
+                : allCourses;
+
+            if (filteredCourses.length === 0) {
+                dropdown.innerHTML = '<div class="dropdown-item text-muted">No courses found</div>';
+                return;
+            }
+
+            dropdown.innerHTML = filteredCourses.map(course => `
+                <button type="button"
+                        class="dropdown-item course-option"
+                        data-id="${course.id}"
+                        data-name="${course.courseName}"
+                        data-price="${course.courseFees}">
+                    <strong>${course.courseName}</strong>
+                    <span class="text-muted float-end">₹${parseFloat(course.courseFees).toFixed(2)}</span>
+                </button>
+            `).join('');
+
+            // Attach click handlers
+            dropdown.querySelectorAll('.course-option').forEach(option => {
+                option.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    selectCourse(
+                        parseInt(this.dataset.id),
+                        this.dataset.name,
+                        parseFloat(this.dataset.price)
+                    );
+                });
+            });
+        }
+
+        function selectCourse(id, name, price) {
+            // Check if already added
+            if (selectedCourses.some(c => c.id === id)) {
+                showError('Course already added');
+                return;
+            }
+
+            // Add course
+            selectedCourses.push({ id, name, price });
+
+            // Clear search and hide dropdown
+            searchInput.value = '';
+            dropdown.classList.remove('show');
+
+            // Update UI
+            renderSelectedCourses();
+            calculateTotalFees();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Course Added!',
+                text: `${name} has been added`,
+                timer: 1500,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        }
+    }
+
+    async function renderCourseOptions(searchTerm) {
+        const dropdown = document.getElementById('admCourseDropdown');
+
+        try {
+            const response = await fetch('/api/courses/dropdown');
+            if (!response.ok) throw new Error('Failed to load courses');
+
+            const courses = await response.json();
+
+            const filteredCourses = courses.filter(course =>
+                course.courseName.toLowerCase().includes(searchTerm)
+            );
+
+            if (filteredCourses.length === 0) {
+                dropdown.innerHTML = '<div class="dropdown-item text-muted">No courses found</div>';
+                return;
+            }
+
+            dropdown.innerHTML = filteredCourses.map(course => `
+                <button type="button"
+                        class="dropdown-item course-option"
+                        data-id="${course.id}"
+                        data-name="${course.courseName}"
+                        data-price="${course.courseFees}">
+                    ${course.courseName} <span class="text-muted">(₹${course.courseFees})</span>
+                </button>
+            `).join('');
+
+            // Attach click handlers
+            dropdown.querySelectorAll('.course-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    selectCourse(
+                        parseInt(this.dataset.id),
+                        this.dataset.name,
+                        parseFloat(this.dataset.price)
+                    );
+                });
+            });
+
+        } catch (error) {
+            console.error('Error loading courses:', error);
+            dropdown.innerHTML = '<div class="dropdown-item text-danger">Error loading courses</div>';
+        }
+    }
+
+    // ==================== COURSE SEARCH FUNCTIONALITY ====================
+
     // Open Fee Installments
     async function openFeeInstallments(id) {
         try {
             showLoading('Loading installments...');
-
-           const response = await fetch(`/api/admissions/${id}/installments`, {
-                      method: 'GET',
-                      headers: {
-                          'Accept': 'application/json',
-                          'Content-Type': 'application/json'
-                      }
-                  });
-
-            if (!response.ok) throw new Error('Failed to load installments');
-
-            const installments = await response.json();
-            Swal.close();
-
-            const tbody = document.getElementById('feeInstallmentsBody');
-
-            if (installments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments found</td></tr>';
-            } else {
-                tbody.innerHTML = installments.map(inst => `
-                    <tr>
-                        <td>${inst.dueDate}</td>
-                        <td>₹${inst.amount.toFixed(2)}</td>
-                        <td><span class="badge bg-${inst.status === 'Paid' ? 'success' : 'warning'}">${inst.status}</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-danger" onclick="deleteInstallment(${inst.id})">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
-            }
-
-            const modal = new bootstrap.Modal(document.getElementById('feeInstallmentsModal'));
-            modal.show();
-
-        } catch (error) {
-            Swal.close();
-            console.error('Error:', error);
-            showError('Failed to load installments');
-        }
-    }
-
-    // Open Transfer Modal
-    async function openTransferModal(id) {
-        try {
-            showLoading('Loading admission...');
 
             const response = await fetch(`/api/admissions/${id}`, {
                 method: 'GET',
@@ -825,61 +1845,360 @@ async function openNewAdmissionModal() {
             const admission = await response.json();
             Swal.close();
 
-            document.getElementById('transferStudentName').textContent = admission.studentName;
-            document.getElementById('transferFirstName').value = admission.firstName;
-            document.getElementById('transferMiddleName').value = admission.middleName || '';
-            document.getElementById('transferLastName').value = admission.lastName;
-            document.getElementById('transferMobilePrimary').value = admission.mobilePrimary;
-            document.getElementById('transferDate').value = new Date().toISOString().split('T')[0];
+            setValue('feeInstTotalAmount', admission.totalReceivableFees || 0);
+            setValue('feeInstTotalInstAmount', admission.totalInstallmentAmount || admission.totalReceivableFees || 0);
 
-            const modal = new bootstrap.Modal(document.getElementById('transferAdmissionModal'));
+            if (admission.installmentStartDate) {
+                setValue('feeInstStartDate', admission.installmentStartDate);
+            }
+
+            if (admission.numberOfInstallments) {
+                setValue('feeInstNoOfInstallments', admission.numberOfInstallments);
+            }
+
+            if (admission.daysBetweenInstallments) {
+                setValue('feeInstDays', admission.daysBetweenInstallments);
+            }
+
+            const instResponse = await fetch(`/api/admissions/${id}/installments`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!instResponse.ok) throw new Error('Failed to load installments');
+
+            const installments = await instResponse.json();
+            const tbody = document.getElementById('feeInstallmentsBody');
+
+            if (installments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments found</td></tr>';
+            } else {
+                tbody.innerHTML = installments.map(inst => `
+                    <tr>
+                        <td>${inst.dueDate}</td>
+                        <td>₹${parseFloat(inst.amount).toFixed(2)}</td>
+                        <td><span class="badge bg-${inst.status === 'Paid' ? 'success' : 'warning'}">${inst.status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="deleteInstallment(${inst.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            document.getElementById('feeInstStudentName').textContent = admission.studentName;
+
+            const modal = new bootstrap.Modal(document.getElementById('feeInstallmentsModal'));
             modal.show();
 
         } catch (error) {
             Swal.close();
             console.error('Error:', error);
-            showError('Failed to load admission');
+            showError('Failed to load installments');
         }
     }
+
+    window.deleteInstallment = async function(installmentId) {
+        const result = await Swal.fire({
+            title: 'Delete Installment?',
+            text: 'This action cannot be undone',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Delete',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#ef4444'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                showLoading('Deleting installment...');
+
+                const response = await fetch(`/api/fee-installments/${installmentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to delete installment');
+
+                Swal.close();
+                showSuccess('Installment deleted successfully!');
+
+                // Refresh installments modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('feeInstallmentsModal'));
+                if (modal) {
+                    const studentName = document.getElementById('feeInstStudentName').textContent;
+                    // Reload installments
+                    location.reload();
+                }
+            } catch (error) {
+                Swal.close();
+                console.error('Error:', error);
+                showError('Failed to delete installment');
+            }
+        }
+    };
+
+   // ==================== OPEN TRANSFER MODAL WITH INSTALLMENTS ====================
+
+   async function openTransferModal(id) {
+       try {
+           showLoading('Loading admission...');
+
+           const response = await fetch(`/api/admissions/${id}`, {
+               method: 'GET',
+               headers: {
+                   'Accept': 'application/json',
+                   'Content-Type': 'application/json'
+               }
+           });
+
+           if (!response.ok) throw new Error('Failed to load admission');
+
+           const admission = await response.json();
+           Swal.close();
+
+           // Populate transfer fields
+           document.getElementById('transferStudentName').textContent = admission.studentName;
+           document.getElementById('transferFirstName').value = admission.firstName;
+           document.getElementById('transferMiddleName').value = admission.middleName || '';
+           document.getElementById('transferLastName').value = admission.lastName;
+           document.getElementById('transferCollege').value = admission.college || '';
+           document.getElementById('transferQualification').value = admission.qualification || '';
+           document.getElementById('transferDob').value = admission.birthDate || '';
+           document.getElementById('transferGender').value = admission.gender || '';
+           document.getElementById('transferBloodGroup').value = admission.bloodGroup || '';
+
+           document.getElementById('transferMobilePrimary').value = admission.mobilePrimary;
+           document.getElementById('transferMobileSecondary').value = admission.mobileSecondary || '';
+           document.getElementById('transferEmailPrimary').value = admission.emailPrimary || '';
+           document.getElementById('transferCurrentAddress').value = admission.currentAddress || '';
+           document.getElementById('transferDocument').value = admission.documentType || '';
+           document.getElementById('transferLeadSource').value = admission.leadSource || '';
+
+           await loadTransferPackages();
+           await loadTransferCourses();
+           await loadTransferBatches();
+
+           document.getElementById('transferPackage').value = admission.packageName || '';
+           document.getElementById('transferTotalFees').value = admission.totalPayableFees || 0;
+           document.getElementById('transferReceivableFees').value = admission.totalReceivableFees || 0;
+           document.getElementById('transferDiscountPercent').value = admission.discountPercent || 0;
+           document.getElementById('transferDiscountAmount').value = admission.discountAmount || 0;
+
+           if (admission.batchesList) {
+               const batchSelect = document.getElementById('transferBatch');
+               Array.from(batchSelect.options).forEach(option => {
+                   option.selected = admission.batchesList.includes(option.value);
+               });
+           }
+
+           //  DISPLAY EXISTING INSTALLMENTS IN TRANSFER MODAL
+           if (admission.installments && admission.installments.length > 0) {
+               displayTransferInstallments(admission.installments);
+           }
+
+           document.getElementById('transferDate').value = new Date().toISOString().split('T')[0];
+           document.getElementById('btnTransferAdmission').dataset.admissionId = id;
+
+           const modal = new bootstrap.Modal(document.getElementById('transferAdmissionModal'));
+           modal.show();
+
+       } catch (error) {
+           Swal.close();
+           console.error('Error:', error);
+           showError('Failed to load admission');
+       }
+   }
+
+   // ==================== DISPLAY INSTALLMENTS IN TRANSFER MODAL ====================
+
+   function displayTransferInstallments(installments) {
+       let installmentSection = document.getElementById('transferInstallmentsSection');
+
+       if (!installmentSection) {
+           const tab5Content = document.getElementById('transferTab5');
+           installmentSection = document.createElement('div');
+           installmentSection.id = 'transferInstallmentsSection';
+           installmentSection.className = 'col-12 mt-4';
+           installmentSection.innerHTML = `
+               <h6 class="text-primary mb-3"><u>Existing Installments</u></h6>
+               <div class="table-responsive">
+                   <table class="table table-sm table-bordered">
+                       <thead class="table-light">
+                           <tr>
+                               <th>Installment</th>
+                               <th>Due Date</th>
+                               <th>Amount</th>
+                               <th>Status</th>
+                           </tr>
+                       </thead>
+                       <tbody id="transferInstallmentsBody"></tbody>
+                   </table>
+               </div>
+           `;
+           tab5Content.querySelector('.row').appendChild(installmentSection);
+       }
+
+       const tbody = document.getElementById('transferInstallmentsBody');
+       tbody.innerHTML = installments.map((inst, index) => `
+           <tr>
+               <td><strong>#${index + 1}</strong></td>
+               <td>${inst.dueDate}</td>
+               <td>₹${parseFloat(inst.amount).toFixed(2)}</td>
+               <td>
+                   <span class="badge bg-${
+                       inst.status === 'Paid' ? 'success' :
+                       inst.status === 'Overdue' ? 'danger' : 'warning'
+                   }">
+                       ${inst.status}
+                   </span>
+               </td>
+           </tr>
+       `).join('');
+   }
+
+    async function loadTransferPackages() {
+        const response = await fetch('/api/packages/dropdown');
+        const packages = await response.json();
+        const select = document.getElementById('transferPackage');
+        select.innerHTML = '<option value="">-- Select Package --</option>';
+        packages.forEach(pkg => {
+            const option = document.createElement('option');
+            option.value = pkg.id;
+            option.textContent = `${pkg.packageName} (₹${pkg.totalAmount})`;
+            select.appendChild(option);
+        });
+    }
+
+    async function loadTransferCourses() {
+        const response = await fetch('/api/courses/dropdown');
+        const courses = await response.json();
+        const select = document.getElementById('transferCourse');
+        select.innerHTML = '<option value="">-- Select Course --</option>';
+        courses.forEach(course => {
+            const option = document.createElement('option');
+            option.value = course.id;
+            option.textContent = `${course.courseName} (₹${course.courseFees})`;
+            select.appendChild(option);
+        });
+    }
+
+    async function loadTransferBatches() {
+        const response = await fetch('/api/batches?page=0&size=100');
+        const data = await response.json();
+        const select = document.getElementById('transferBatch');
+        select.innerHTML = '';
+        data.batches.forEach(batch => {
+            const option = document.createElement('option');
+            option.value = batch.batchNo;
+            option.textContent = `${batch.batchName} (${batch.startTime} - ${batch.endTime})`;
+            select.appendChild(option);
+        });
+    }
+
+        // Handle transfer submission
+        document.getElementById('btnTransferAdmission')?.addEventListener('click', async function() {
+
+             // Show disabled message
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Feature Temporarily Disabled',
+                    html: `
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Transfer Admission is temporarily disabled</strong>
+                        </div>
+                        <p class="mt-3">This feature is currently under maintenance.</p>
+                        <p class="text-muted">Please contact your Super Admin for assistance.</p>
+                    `,
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#f59e0b'
+                });
+                return;
+            /*
+
+            const admissionId = this.dataset.admissionId;
+
+            const transferData = {
+                admissionId: parseInt(admissionId),
+                academicYear: getValue('transferAcademicYear'),
+                transferDate: getValue('transferDate'),
+                transferReason: getValue('transferReason'),
+                courses: [getValue('transferCourse')],
+                batches: Array.from(document.getElementById('transferBatch').selectedOptions).map(o => o.value),
+                subjects: Array.from(document.getElementById('transferSubject').selectedOptions).map(o => o.textContent),
+                packageName: document.getElementById('transferPackage').options[document.getElementById('transferPackage').selectedIndex]?.text,
+                totalPayableFees: parseFloat(getValue('transferTotalFees')),
+                totalReceivableFees: parseFloat(getValue('transferReceivableFees')),
+                discountPercent: parseFloat(getValue('transferDiscountPercent')),
+                discountAmount: parseFloat(getValue('transferDiscountAmount'))
+            };
+
+            try {
+                showLoading('Transferring admission...');
+
+                const response = await fetch('/api/admissions/transfer', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(transferData)
+                });
+
+                if (!response.ok) throw new Error('Transfer failed');
+
+                Swal.close();
+                closeModal('transferAdmissionModal');
+                showSuccess('Admission transferred successfully!');
+                loadAdmissions();
+
+            } catch (error) {
+                Swal.close();
+                console.error('Error:', error);
+                showError('Failed to transfer admission');
+            }
+            */
+        });
 
     // Print Admission
     async function printAdmission(id) {
         try {
             showLoading('Generating print preview...');
 
-             const response = await fetch(`/api/admissions/${id}`, {
-                        method: 'GET',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        }
-                    });
+            const response = await fetch(`/api/admissions/${id}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
 
             if (!response.ok) throw new Error('Failed to load admission');
 
             const admission = await response.json();
             Swal.close();
 
+            const photoElement = document.getElementById('printStudentPhoto');
+            if (admission.photoPath) {
+                photoElement.src = `/uploads/admissions/${admission.photoPath}`;
+            } else {
+                // Use default SVG placeholder
+                photoElement.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22110%22 height=%22150%22%3E%3Crect fill=%22%23ddd%22 width=%22110%22 height=%22150%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2212%22%3ENo Photo%3C/text%3E%3C/svg%3E';
+            }
+
+            // Populate other fields
             document.getElementById('printRegNo').textContent = admission.registrationNumber;
             document.getElementById('printAdmDate').textContent = admission.admissionDate;
             document.getElementById('printStudentName').textContent = admission.studentName;
-            document.getElementById('printBirthDate').textContent = admission.birthDate || '-';
-            document.getElementById('printGender').textContent = admission.gender || '-';
-            document.getElementById('printAadhaar').textContent = admission.aadhaar || '-';
-            document.getElementById('printBloodGroup').textContent = admission.bloodGroup || '-';
-            document.getElementById('printCategory').textContent = admission.category || '-';
-            document.getElementById('printCast').textContent = admission.cast || '-';
-            document.getElementById('printQualification').textContent = admission.qualification || '-';
-            document.getElementById('printCollege').textContent = admission.college || '-';
-            document.getElementById('printMobile1').textContent = admission.mobilePrimary;
-            document.getElementById('printMobile2').textContent = admission.mobileSecondary || '-';
-            document.getElementById('printEmail1').textContent = admission.emailPrimary || '-';
-            document.getElementById('printEmail2').textContent = admission.emailSecondary || '-';
-            document.getElementById('printCurrentAddr').textContent = admission.currentAddress || '-';
-            document.getElementById('printPermanentAddr').textContent = admission.permanentAddress || '-';
-            document.getElementById('printCourses').textContent = admission.courses || '-';
-            document.getElementById('printDocument').textContent = admission.documentType || '-';
-            document.getElementById('printNotes').textContent = admission.notes || '-';
+            // ... rest of the code remains same
 
             const modal = new bootstrap.Modal(document.getElementById('printAdmissionModal'));
             modal.show();
@@ -911,13 +2230,18 @@ async function openNewAdmissionModal() {
             try {
                 showLoading('Deleting admission...');
 
+                const csrfToken = getCsrfToken();
+                const headers = {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                };
+                if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
                 const response = await fetch(`/api/admissions/${id}`, {
-                          method: 'DELETE',
-                          headers: {
-                              'Accept': 'application/json',
-                              'Content-Type': 'application/json'
-                          }
-                      });
+                    method: 'DELETE',
+                    headers: headers,
+                    credentials: 'include'
+                });
 
                 if (!response.ok) throw new Error('Failed to delete admission');
 
@@ -999,79 +2323,81 @@ async function openNewAdmissionModal() {
                       reader.readAsDataURL(file);
                   }
 
-                  // Generate Installments
-                  function generateInstallments() {
-                      const totalAmount = parseFloat(getValue('instTotalAmount')) || 0;
-                      const noOfInstallments = parseInt(getValue('instNoOfInstallments')) || 0;
-                      const daysBetween = parseInt(getValue('instDays')) || 30;
-                      const startDate = getValue('instStartDate');
+                 // ==================== INSTALLMENT GENERATION ====================
 
-                      if (!totalAmount || !noOfInstallments || !startDate) {
-                          showError('Please fill all required fields');
-                          return;
-                      }
+                     function generateInstallments() {
+                         const totalAmount = parseFloat(getValue('instTotalAmount')) || 0;
+                         const noOfInstallments = parseInt(getValue('instNoOfInstallments')) || 0;
+                         const daysBetween = parseInt(getValue('instDays')) || 30;
+                         const startDate = getValue('instStartDate');
 
-                      const amountPerInstallment = totalAmount / noOfInstallments;
-                      const tbody = document.getElementById('installmentsBody');
-                      let currentDate = new Date(startDate);
+                         if (!totalAmount || !noOfInstallments || !startDate) {
+                             showError('Please fill all required fields');
+                             return;
+                         }
 
-                      tbody.innerHTML = '';
+                         const amountPerInstallment = totalAmount / noOfInstallments;
+                         const tbody = document.getElementById('installmentsBody');
+                         let currentDate = new Date(startDate);
 
-                      for (let i = 1; i <= noOfInstallments; i++) {
-                          const dueDate = new Date(currentDate);
-                          const formattedDate = dueDate.toISOString().split('T')[0];
+                         tbody.innerHTML = '';
 
-                          const row = document.createElement('tr');
-                          row.innerHTML = `
-                              <td>
-                                  <input type="date" class="form-control form-control-sm"
-                                         value="${formattedDate}"
-                                         id="instDate${i}"
-                                         required>
-                              </td>
-                              <td>
-                                  <input type="number" class="form-control form-control-sm"
-                                         value="${amountPerInstallment.toFixed(2)}"
-                                         id="instAmount${i}"
-                                         step="0.01"
-                                         required>
-                              </td>
-                              <td>
-                                  <select class="form-select form-select-sm" id="instStatus${i}">
-                                      <option value="Pending">Pending</option>
-                                      <option value="Paid">Paid</option>
-                                      <option value="Overdue">Overdue</option>
-                                      <option value="Waived">Waived</option>
-                                  </select>
-                              </td>
-                              <td>
-                                  <button type="button" class="btn btn-sm btn-danger"
-                                          onclick="window.removeInstallment(this)">
-                                      <i class="bi bi-trash"></i>
-                                  </button>
-                              </td>
-                          `;
-                          tbody.appendChild(row);
+                         for (let i = 1; i <= noOfInstallments; i++) {
+                             const dueDate = new Date(currentDate);
+                             const formattedDate = dueDate.toISOString().split('T')[0];
 
-                          currentDate.setDate(currentDate.getDate() + daysBetween);
-                      }
+                             const row = document.createElement('tr');
+                             row.innerHTML = `
+                                 <td>
+                                     <input type="date" class="form-control form-control-sm"
+                                            value="${formattedDate}"
+                                            id="instDate${i}"
+                                            required>
+                                 </td>
+                                 <td>
+                                     <input type="number" class="form-control form-control-sm"
+                                            value="${amountPerInstallment.toFixed(2)}"
+                                            id="instAmount${i}"
+                                            step="0.01"
+                                            min="0"
+                                            required>
+                                 </td>
+                                 <td>
+                                     <select class="form-select form-select-sm" id="instStatus${i}">
+                                         <option value="Pending">Pending</option>
+                                         <option value="Paid">Paid</option>
+                                         <option value="Overdue">Overdue</option>
+                                         <option value="Waived">Waived</option>
+                                     </select>
+                                 </td>
+                                 <td>
+                                     <button type="button" class="btn btn-sm btn-danger"
+                                             onclick="window.removeInstallment(this)">
+                                         <i class="bi bi-trash"></i>
+                                     </button>
+                                 </td>
+                             `;
+                             tbody.appendChild(row);
 
-                      setValue('instTotalInstAmount', totalAmount.toFixed(2));
-                      showSuccess(`Generated ${noOfInstallments} installments`);
-                  }
+                             currentDate.setDate(currentDate.getDate() + daysBetween);
+                         }
 
-                  function removeInstallment(button) {
-                      const row = button.closest('tr');
-                      row.remove();
+                         setValue('instTotalInstAmount', totalAmount.toFixed(2));
+                         showSuccess(`Generated ${noOfInstallments} installments`);
+                     }
 
-                      const tbody = document.getElementById('installmentsBody');
-                      const rows = tbody.querySelectorAll('tr');
+                     window.removeInstallment = function(button) {
+                         const row = button.closest('tr');
+                         row.remove();
 
-                      if (rows.length === 0) {
-                          tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments generated</td></tr>';
-                          setValue('instTotalInstAmount', '0');
-                      }
-                  }
+                         const tbody = document.getElementById('installmentsBody');
+                         const rows = tbody.querySelectorAll('tr');
+
+                         if (rows.length === 0) {
+                             tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments generated</td></tr>';
+                             setValue('instTotalInstAmount', '0');
+                         }
+                     };
 
                   function generateFeeInstallments() {
                       const totalAmount = parseFloat(getValue('feeInstTotalAmount')) || 0;
@@ -1130,6 +2456,7 @@ async function openNewAdmissionModal() {
                       setValue('feeInstTotalInstAmount', totalAmount.toFixed(2));
                       showSuccess(`Generated ${noOfInstallments} installments`);
                   }
+
 
                   async function saveFeeInstallments() {
                       const tbody = document.getElementById('feeInstallmentsBody');
@@ -1215,7 +2542,7 @@ async function openNewAdmissionModal() {
                                   lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : 'Student',
                                   mobilePrimary: cleanMobile(row[2]) || `temp${i}`,
                                   courses: coursesList.length > 0 ? coursesList : ['Not Specified'],
-                                  admissionDate: parseDate(row[4]) || new Date().toISOString().split('T')[0],
+                                  admissionDate: parseDate_ddmmyyyy_orDate(row[4]) || new Date().toISOString().split('T')[0],
                                   leadSource: 'CSV_IMPORT',
                                   documentType: 'Aadhaar Card'
                               };
@@ -1234,7 +2561,7 @@ async function openNewAdmissionModal() {
                                   college: row[7],
                                   totalPayableFees: parseFloat(row[8]) || 0,
                                   totalReceivableFees: parseFloat(row[9]) || 0,
-                                  admissionDate: parseDate(row[10]) || new Date().toISOString().split('T')[0],
+                                  admissionDate: parseDate_ddmmyyyy_orDate(row[10]) || new Date().toISOString().split('T')[0],
                                   courses: coursesList.length > 0 ? coursesList : ['Not Specified'],
                                   leadSource: row[12] || 'CSV_IMPORT',
                                   documentType: 'Aadhaar Card'
@@ -1278,14 +2605,19 @@ async function openNewAdmissionModal() {
                       try {
                           showLoading(`Importing ${importedAdmissions.length} admissions...`);
 
-                          const response = await fetch('/api/admissions/bulk-import-json?importSource=OLD_FORMAT', {
-                              method: 'POST',
-                              headers: {
-                                  'Accept': 'application/json',
-                                  'Content-Type': 'application/json'
-                              },
-                              body: JSON.stringify(importedAdmissions)
-                          });
+                         const csrfToken = getCsrfToken();
+                         const headers = {
+                             'Accept': 'application/json',
+                             'Content-Type': 'application/json'
+                         };
+                         if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
+                         const response = await fetch('/api/admissions/bulk-import-json?importSource=OLD_FORMAT', {
+                             method: 'POST',
+                             headers: headers,
+                             credentials: 'include',
+                             body: JSON.stringify(importedAdmissions)
+                         });
 
                           if (!response.ok) {
                               const error = await response.json();
@@ -1334,45 +2666,87 @@ async function openNewAdmissionModal() {
                       return cleaned || null;
                   }
 
-                  function parseDate(dateStr) {
-                      if (!dateStr || !dateStr.trim()) return null;
-
-                      try {
-                          const parts = dateStr.split('/');
-                          if (parts.length === 3) {
-                              const day = parseInt(parts[0]);
-                              const month = parseInt(parts[1]) - 1;
-                              const year = parseInt(parts[2]);
-                              const date = new Date(year, month, day);
-                              return date.toISOString().split('T')[0];
-                          }
-
-                          const date = new Date(dateStr);
-                          if (!isNaN(date.getTime())) {
-                              return date.toISOString().split('T')[0];
-                          }
-                      } catch (e) {
-                          console.warn('Failed to parse date:', dateStr);
+                  function toIsoDateFromJsDate(dateStr) {
+                      // Use local date parts (not UTC) because we want calendar date as shown in Excel
+                        const yyyy = d.getFullYear();
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        return `${yyyy}-${mm}-${dd}`;
                       }
 
-                      return null;
+                      function parseDate_ddmmyyyy_orDate(cell) {
+                        if (!cell && cell !== 0) return null;
+
+                        // If it's already a Date object (e.g. from excel parser), convert to yyyy-mm-dd
+                        if (cell instanceof Date && !isNaN(cell)) {
+                          return toIsoDateFromJsDate(cell);
+                        }
+
+                        // If it's a number (Excel sometimes gives timestamps) — try to convert
+                        if (typeof cell === 'number') {
+                          const d = new Date(cell);
+                          if (!isNaN(d)) return toIsoDateFromJsDate(d);
+                        }
+
+                        // If it's a string, try to parse DD-MM-YYYY or D/M/YYYY etc.
+                        const s = String(cell).trim();
+                        if (!s) return null;
+
+                        // If it already looks like ISO yyyy-mm-dd, return it
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+                        // Try split by - or /
+                        const parts = s.split(/[-\/]/);
+                        if (parts.length === 3) {
+                          // Determine if format is DD-MM-YYYY (common) or MM-DD-YYYY (ambiguous).
+                          // We'll assume the CSV/display uses DD-MM-YYYY as you showed.
+                          const [d, m, y] = parts;
+                          const dd = d.padStart(2, '0');
+                          const mm = m.padStart(2, '0');
+                          const yyyy = y.length === 2 ? '20' + y : y;
+                          // Basic validation
+                          if (/^\d{2}$/.test(dd) && /^\d{2}$/.test(mm) && /^\d{4}$/.test(yyyy)) {
+                            return `${yyyy}-${mm}-${dd}`;
+                          }
+                        }
+
+                        // Last resort: try Date parsing but convert to ISO date (risky, avoid if possible)
+                        const maybe = new Date(s);
+                        if (!isNaN(maybe)) return toIsoDateFromJsDate(maybe);
+
+                        return null;
                   }
 
-                  // Helper Functions
-                  function clearForms() {
-                      ['personalInfoForm', 'otherDetailsForm', 'courseDetailsForm',
-                       'batchDetailsForm', 'installmentsForm', 'imageUploadForm'].forEach(id => {
-                          document.getElementById(id)?.reset();
-                      });
-                  }
+                 // ==================== CLEAR FORMS (RESET FOR NEW ADMISSION) ====================
 
-                  function nextTab() {
-                      if (currentTab < totalTabs) {
-                          currentTab++;
-                          showTab(currentTab);
-                          updateNavigationButtons();
-                      }
-                  }
+                 function clearForms() {
+                     ['personalInfoForm', 'otherDetailsForm', 'courseDetailsForm',
+                      'batchDetailsForm', 'installmentsForm', 'imageUploadForm'].forEach(id => {
+                         document.getElementById(id)?.reset();
+                     });
+
+                     document.getElementById('admTotalFees').value = '0';
+                     document.getElementById('admReceivableFees').value = '0';
+                     document.getElementById('admDiscountPercent').value = '0';
+                     document.getElementById('admDiscountAmount').value = '0';
+
+                     //  Reset installment fields
+                     setValue('instTotalAmount', '0');
+                     setValue('instTotalInstAmount', '0');
+                     setValue('instStartDate', '');
+                     setValue('instNoOfInstallments', '');
+                     setValue('instDays', '');
+
+                     const tbody = document.getElementById('selectedCoursesBody');
+                     if (tbody) {
+                         tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No courses added</td></tr>';
+                     }
+
+                     const instBody = document.getElementById('installmentsBody');
+                     if (instBody) {
+                         instBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments generated</td></tr>';
+                     }
+                 }
 
                   function previousTab() {
                       if (currentTab > 1) {
@@ -1397,18 +2771,13 @@ async function openNewAdmissionModal() {
                       btnFinish.style.display = currentTab === totalTabs ? 'inline-block' : 'none';
                   }
 
-                  function updateProgress(width) {
-                      const bar = document.getElementById('admissionProgressBar');
-                      if (bar) bar.style.width = width + '%';
-                  }
-
-                  function setValue(id, value) {
-                      const el = document.getElementById(id);
-                      if (el && value != null) {
-                          el.value = value;
-                          el.dispatchEvent(new Event('change', { bubbles: true }));
+                   function setValue(id, value) {
+                          const el = document.getElementById(id);
+                          if (el && value != null && value !== '') {
+                              el.value = value;
+                              el.dispatchEvent(new Event('change', { bubbles: true }));
+                          }
                       }
-                  }
 
                   function getValue(id) {
                       const el = document.getElementById(id);
@@ -1588,7 +2957,75 @@ async function openNewAdmissionModal() {
       });
   }
 
+  // Manual dropdown toggle fallback
+  document.addEventListener('DOMContentLoaded', function() {
+      const exportBtn = document.getElementById('btnExportAdmissions');
+      const exportMenu = document.querySelector('#btnExportAdmissions + .dropdown-menu');
+
+      if (exportBtn && exportMenu) {
+          exportBtn.addEventListener('click', function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+
+              // Close other dropdowns
+              document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                  if (menu !== exportMenu) {
+                      menu.classList.remove('show');
+                  }
+              });
+
+              // Toggle this dropdown
+              exportMenu.classList.toggle('show');
+          });
+
+          // Close when clicking outside
+          document.addEventListener('click', function(e) {
+              if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target)) {
+                  exportMenu.classList.remove('show');
+              }
+          });
+
+          // Prevent menu from closing when clicking inside
+          exportMenu.addEventListener('click', function(e) {
+              if (e.target.tagName === 'A') {
+                  exportMenu.classList.remove('show');
+              }
+          });
+      }
+  });
+
+  function validateAdmissionData(data) {
+      if (!data.firstName || !data.lastName) {
+          console.error('Name required');
+          showError('Please enter student first name and last name');
+          return false;
+      }
+
+      if (!data.mobilePrimary || !/^[6-9]\d{9}$/.test(data.mobilePrimary)) {
+          console.error('Invalid mobile');
+          showError('Please enter a valid 10-digit mobile number');
+          return false;
+      }
+
+      if (!data.leadSource) {
+          console.warn('Lead source missing, setting default');
+          data.leadSource = 'Direct'; // Set default value
+      }
+
+      if (selectedCourses.length === 0) {
+          console.error('At least one course required');
+          showError('Please select at least one course');
+          return false;
+      }
+
+      return true;
+  }
+
+
       // Make functions globally available
+      window.navigateNext = navigateNext;
+      window.navigatePrevious = navigatePrevious;
+      window.showTab = showTab;
       window.capturePhoto = capturePhoto;
       window.handlePhotoUpload = handlePhotoUpload;
       window.generateInstallments = generateInstallments;

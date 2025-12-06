@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fee Receipt - TTS</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f7fa;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .receipt-box {
+            background: #f8f9ff;
+            border: 2px solid #e0e7ff;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 25px 0;
+        }
+        .receipt-item {
+            display: flex;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e7ff;
+        }
+        .receipt-item:last-child {
+            border-bottom: none;
+        }
+        .receipt-label {
+            font-weight: 600;
+            color: #4338ca;
+            min-width: 140px;
+        }
+        .receipt-value {
+            color: #1e293b;
+            flex: 1;
+        }
+        .amount-highlight {
+            font-size: 24px;
+            font-weight: 700;
+            color: #10b981;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .info-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 6px;
+        }
+        .footer {
+            background: #f8fafc;
+            padding: 30px;
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+        }
+        .footer strong {
+            color: #334155;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">
+            <img src="https://powerbi.ttsnasik.com/assets/image/tts-logo-ev.png"
+                 alt="TechnoKraft Logo"
+                 style="max-width: 100%; height: auto;">
+        </div>
+        <h1>Fee Receipt</h1>
+        <p>Payment Confirmation</p>
+    </div>
+
+    <div class="content">
+        <p style="font-size: 16px;">
+            Dear <strong th:text="${studentName}">Student Name</strong>,
+        </p>
+
+        <p>
+            Thank you for your payment. Please find your fee receipt attached to this email as a PDF document.
+        </p>
+
+        <div class="amount-highlight">
+            Amount Paid: <span th:text="${amount}">₹0.00</span>
+        </div>
+
+        <div class="receipt-box">
+            <h3 style="color: #4338ca; margin: 0 0 15px; text-align: center;">Receipt Summary</h3>
+
+            <div class="receipt-item">
+                <div class="receipt-label">Receipt No:</div>
+                <div class="receipt-value"><strong th:text="${receiptNo}">REC001</strong></div>
+            </div>
+
+            <div class="receipt-item">
+                <div class="receipt-label">Receipt Date:</div>
+                <div class="receipt-value" th:text="${receiptDate}">January 15, 2025</div>
+            </div>
+
+            <div class="receipt-item">
+                <div class="receipt-label">Payment Mode:</div>
+                <div class="receipt-value" th:text="${paymentMode}">Cash</div>
+            </div>
+
+            <div class="receipt-item">
+                <div class="receipt-label">Amount Paid:</div>
+                <div class="receipt-value"><strong th:text="${amount}">₹0.00</strong></div>
+            </div>
+        </div>
+
+        <div class="info-box" th:if="${message}">
+            <strong>Additional Note:</strong>
+            <p style="margin: 8px 0 0;" th:text="${message}"></p>
+        </div>
+
+        <div class="info-box">
+            <strong>📎 Attachment:</strong>
+            <p style="margin: 8px 0 0;">Your detailed fee receipt is attached as a PDF file. Please save it for your records.</p>
+        </div>
+
+        <p>
+            If you have any questions or need further assistance, please don't hesitate to contact us.
+        </p>
+
+        <p style="margin: 25px 0 0;">
+            Best regards,<br>
+            <strong>TechnoKraft Training & Solution Pvt. Ltd.</strong>
+        </p>
+    </div>
+
+    <div class="footer">
+        <strong>TechnoKraft Training & Solution Pvt. Ltd.</strong><br>
+        1st Floor, Kanchwala Avenue, Above Viju's Dabeli,<br>
+        Thatte Nagar Marg, College Road,<br>
+        Nashik, Maharashtra 422005, India<br><br>
+        📞 +91 86456 28278 | ✉️ support@tts.net.in<br>
+        🌐 <a href="https://tts.net.in" style="color: #667eea;">www.tts.net.in</a><br><br>
+        &copy; <span th:text="${year}">2025</span> TechnoKraft. All rights reserved.
+    </div>
+</div>
+</body>
+</html>

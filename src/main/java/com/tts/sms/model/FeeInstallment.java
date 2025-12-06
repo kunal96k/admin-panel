@@ -26,7 +26,6 @@ public class FeeInstallment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // CHANGED: Use registration_number instead of admission_id
     @NotBlank(message = "Registration number is required")
     @Column(name = "registration_number", nullable = false, length = 50)
     private String registrationNumber;
@@ -63,6 +62,36 @@ public class FeeInstallment {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    /**
+     * Total amount for all installments (stored for reference)
+     */
+    @Column(name = "total_amount", nullable = true)
+    private Double totalAmount;
+
+    /**
+     * Total installment amount (can differ from total_amount)
+     */
+    @Column(name = "total_installment_amount", nullable = true)
+    private Double totalInstallmentAmount;
+
+    /**
+     * Installment start date (first installment date)
+     */
+    @Column(name = "installment_start_date", nullable = true)
+    private LocalDate installmentStartDate;
+
+    /**
+     * Number of installments in the series
+     */
+    @Column(name = "number_of_installments", nullable = true)
+    private Integer numberOfInstallments;
+
+    /**
+     * Days between each installment
+     */
+    @Column(name = "days_between_installments", nullable = true)
+    private Integer daysBetweenInstallments;
+
     // Metadata
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -85,13 +114,11 @@ public class FeeInstallment {
         }
     }
 
-    // Helper method to check if installment is overdue
     @Transient
     public boolean isOverdue() {
         return "Pending".equals(status) && dueDate.isBefore(LocalDate.now());
     }
 
-    // Helper method to check if installment is paid
     @Transient
     public boolean isPaid() {
         return "Paid".equals(status);

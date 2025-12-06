@@ -32,7 +32,6 @@ public class FeeReceipt {
     @Column(name = "invoice_number", length = 50)
     private String invoiceNumber;
 
-    // CHANGED: Use registration_number instead of admission_id
     @Column(name = "registration_number", nullable = false, length = 50)
     private String registrationNumber;
 
