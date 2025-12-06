@@ -12,7 +12,7 @@
 		<relativePath/>
 	</parent>
 
-	<packaging>war</packaging>
+	<packaging>jar</packaging>
 
 	<groupId>com.tts</groupId>
 	<artifactId>sms</artifactId>
@@ -28,11 +28,12 @@
 
 	<dependencies>
 
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-tomcat</artifactId>
-			<scope>provided</scope>
-		</dependency>
+		<!-- Tomcat: provided when deploying to external servlet container -->
+<!--		<dependency>-->
+<!--			<groupId>org.springframework.boot</groupId>-->
+<!--			<artifactId>spring-boot-starter-tomcat</artifactId>-->
+<!--			<scope>provided</scope>-->
+<!--		</dependency>-->
 
 		<dependency>
 			<groupId>com.itextpdf</groupId>
