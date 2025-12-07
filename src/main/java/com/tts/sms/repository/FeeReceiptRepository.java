@@ -164,4 +164,10 @@ public interface FeeReceiptRepository extends JpaRepository<FeeReceipt, Long> {
     @Query("SELECT COALESCE(SUM(r.amountReceived), 0.0) FROM FeeReceipt r " +
             "WHERE r.isDeleted = false AND r.receiptDate = CURRENT_DATE")
     Double getTotalReceivedToday();
+
+    /**
+     * Find max invoice number for generating new invoice numbers
+     */
+    @Query("SELECT MAX(r.invoiceNumber) FROM FeeReceipt r WHERE r.invoiceNumber LIKE :prefix%")
+    String findMaxInvoiceNumber(@Param("prefix") String prefix);
 }

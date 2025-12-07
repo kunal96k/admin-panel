@@ -28,7 +28,6 @@
 
 	<dependencies>
 
-		<!-- Tomcat: provided when deploying to external servlet container -->
 <!--		<dependency>-->
 <!--			<groupId>org.springframework.boot</groupId>-->
 <!--			<artifactId>spring-boot-starter-tomcat</artifactId>-->

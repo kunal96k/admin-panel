@@ -896,7 +896,7 @@ async function viewReceipts(regNo) {
             tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No receipts found</td></tr>';
         } else {
             tbody.innerHTML = receipts.map(receipt => {
-                //  Check if receipt is from old data
+                //  Check if receipt is from old data OR new data
                 const isOldData = receipt.receiptType === 'Old Imported';
                 const receiptTypeBadge = isOldData
                     ? '<span class="badge bg-secondary">Old Import</span>'

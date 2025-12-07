@@ -30,6 +30,7 @@ public class FeesManagerService {
     private final FeeCollectionRepository feeCollectionRepository;
     private final FeeInstallmentRepository feeInstallmentRepository;
     private final CSVService csvService;
+    private final FeesManagerMapper feesManagerMapper;
 
     // ==================== FEES SUMMARY ====================
 
@@ -375,88 +376,238 @@ public class FeesManagerService {
     public FeeReceiptResponseDTO createFeeReceipt(FeeReceiptRequestDTO requestDTO) {
         log.debug("Creating fee receipt for regNo: {}", requestDTO.getRegNo());
 
+        //  VALIDATION: Only allow receipts for REG* numbers
+        if (requestDTO.getRegNo() == null || !requestDTO.getRegNo().startsWith("REG")) {
+            log.error("❌ Cannot create receipt for non-REG admission: {}", requestDTO.getRegNo());
+            throw new IllegalArgumentException(
+                    "Cannot create fee receipt for non-REG admission. Only admissions with registration numbers starting with 'REG' can have receipts.");
+        }
+
+        // Verify admission exists
         Admission admission = admissionRepository
                 .findByRegistrationNumberAndIsDeletedFalse(requestDTO.getRegNo());
 
         if (admission == null) {
-            throw new ResourceNotFoundException("Admission not found: " + requestDTO.getRegNo());
+            log.error("❌ Admission not found with registration number: {}", requestDTO.getRegNo());
+            throw new ResourceNotFoundException(
+                    "Admission not found with registration number: " + requestDTO.getRegNo());
         }
 
-        FeeReceipt receipt = FeeReceipt.builder()
-                .receiptNumber(generateReceiptNumber())
-                .invoiceNumber(generateInvoiceNumber())
-                .registrationNumber(requestDTO.getRegNo())
-                .installmentId(requestDTO.getInstallmentId())
-                .receiptDate(requestDTO.getReceiptDate() != null ? requestDTO.getReceiptDate() : LocalDate.now())
-                .amountReceived(requestDTO.getAmountReceived())
-                .previousPaid(requestDTO.getPreviousPaid())
-                .totalFees(requestDTO.getTotalFees())
-                .pendingFees(requestDTO.getPendingFees())
-                .gstEnabled(requestDTO.getGstEnabled() != null ? requestDTO.getGstEnabled() : false)
-                .sgstPercent(requestDTO.getSgstPercent())
-                .cgstPercent(requestDTO.getCgstPercent())
-                .invoiceValue(requestDTO.getInvoiceValue())
-                .paymentMode(requestDTO.getPaymentMode())
-                .bankName(requestDTO.getBankName())
-                .chequeNumber(requestDTO.getChequeNumber())
-                .chequeDate(requestDTO.getChequeDate())
-                .transactionNumber(requestDTO.getTransactionNumber())
-                .ifscCode(requestDTO.getIfscCode())
-                .onlinePaymentMode(requestDTO.getOnlinePaymentMode())
-                .nextDueDate(requestDTO.getNextDueDate())
-                .receiptType(requestDTO.getReceiptType() != null ? requestDTO.getReceiptType() : "Regular")
-                .notes(requestDTO.getNotes())
-                .createdBy("SYSTEM")
-                .build();
+        log.info(" Verified admission exists: {} ({})", admission.getFullName(), requestDTO.getRegNo());
 
-        FeeReceipt saved = feeReceiptRepository.save(receipt);
+        // Generate receipt number
+        String receiptNumber = generateReceiptNumber();
+        log.debug("Generated receipt number: {}", receiptNumber);
 
-        recalculateFeesFromTransactions(requestDTO.getRegNo());
+        // Create receipt entity
+        FeeReceipt receipt = feesManagerMapper.toReceiptEntity(requestDTO);
+        receipt.setReceiptNumber(receiptNumber);
+        receipt.setRegistrationNumber(requestDTO.getRegNo());
+        receipt.setCreatedBy("SYSTEM");
 
-        //  Update installment if linked
+        // Generate invoice number if GST is enabled
+        if (Boolean.TRUE.equals(requestDTO.getGstEnabled())) {
+            String invoiceNumber = generateInvoiceNumber();
+            receipt.setInvoiceNumber(invoiceNumber);
+            log.debug("Generated invoice number: {}", invoiceNumber);
+        }
+
+        //  ALWAYS generate invoice number (not just for GST)
+//        String invoiceNumber = generateInvoiceNumber();
+//        receipt.setInvoiceNumber(invoiceNumber);
+//        log.debug("Generated invoice number: {}", invoiceNumber);
+
+        // Save receipt
+        FeeReceipt savedReceipt = feeReceiptRepository.save(receipt);
+        log.info(" Created fee receipt: {} for regNo: {}", receiptNumber, requestDTO.getRegNo());
+
+        //  Update Fees table - ONLY for REG* admissions
+        try {
+            updateFeesTableAfterReceipt(requestDTO.getRegNo(), requestDTO.getAmountReceived());
+            log.info(" Updated fees table for regNo: {}", requestDTO.getRegNo());
+        } catch (Exception e) {
+            log.error("❌ Failed to update fees table for regNo: {}", requestDTO.getRegNo(), e);
+            // Don't throw - receipt is already saved
+        }
+
+        // Update installment if provided
         if (requestDTO.getInstallmentId() != null) {
-            feeInstallmentRepository.findById(requestDTO.getInstallmentId()).ifPresent(installment -> {
-                installment.setStatus("Paid");
-                installment.setPaidAmount(requestDTO.getAmountReceived());
-                installment.setPaidDate(LocalDate.now());
-                feeInstallmentRepository.save(installment);
-            });
+            try {
+                updateInstallmentStatus(requestDTO.getInstallmentId(), requestDTO.getAmountReceived());
+                log.info(" Updated installment: {}", requestDTO.getInstallmentId());
+            } catch (Exception e) {
+                log.error("❌ Failed to update installment: {}", requestDTO.getInstallmentId(), e);
+            }
         }
 
-        // Recalculate total paid from all receipts
-        recalculateTotalPaid(requestDTO.getRegNo());
+        return feesManagerMapper.toReceiptResponseDTO(savedReceipt);
+    }
 
-        log.info(" Created fee receipt: {}", saved.getReceiptNumber());
-        return toReceiptResponseDTO(saved, admission);
+    /**
+     *  Generate receipt number (e.g., REC0001, REC0002)
+     */
+    private String generateReceiptNumber() {
+        String prefix = "REC";
+        String maxReceiptNo = feeReceiptRepository.findMaxReceiptNumber(prefix);
+
+        int nextNumber = 1;
+        if (maxReceiptNo != null && maxReceiptNo.length() > prefix.length()) {
+            try {
+                String numberPart = maxReceiptNo.substring(prefix.length());
+                nextNumber = Integer.parseInt(numberPart) + 1;
+            } catch (NumberFormatException e) {
+                log.warn("Error parsing receipt number: {}, starting from 1", maxReceiptNo);
+            }
+        }
+
+        return String.format("%s%04d", prefix, nextNumber);
+    }
+
+    /**
+     *  Generate invoice number (e.g., INV0001, INV0002)
+     */
+    private String generateInvoiceNumber() {
+        String prefix = "INV";
+        // You'll need to add a similar method in FeeReceiptRepository
+        String maxInvoiceNo = feeReceiptRepository.findMaxInvoiceNumber(prefix);
+
+        int nextNumber = 1;
+        if (maxInvoiceNo != null && maxInvoiceNo.length() > prefix.length()) {
+            try {
+                String numberPart = maxInvoiceNo.substring(prefix.length());
+                nextNumber = Integer.parseInt(numberPart) + 1;
+            } catch (NumberFormatException e) {
+                log.warn("Error parsing invoice number: {}, starting from 1", maxInvoiceNo);
+            }
+        }
+
+        return String.format("%s%04d", prefix, nextNumber);
+    }
+
+    /**
+     *  Update Fees table after receipt creation - ONLY for REG* admissions
+     */
+    private void updateFeesTableAfterReceipt(String registrationNumber, Double amountReceived) {
+        if (!registrationNumber.startsWith("REG")) {
+            log.info("⏭️ Skipping fees update for non-REG admission: {}", registrationNumber);
+            return;
+        }
+
+        feesRepository.findByRegistrationNumberAndIsDeletedFalse(registrationNumber)
+                .ifPresent(fees -> {
+                    // Update total paid
+                    Double currentTotalPaid = fees.getTotalPaid() != null ? fees.getTotalPaid() : 0.0;
+                    fees.setTotalPaid(currentTotalPaid + amountReceived);
+
+                    // Recalculate fees due
+                    Double feesDue = fees.getTotalFees() - fees.getTotalPaid() + fees.getFeesRefund();
+                    fees.setFeesDue(feesDue);
+
+                    // Update status
+                    if (feesDue <= 0.01) {
+                        fees.setStatus("Clear");
+                    } else {
+                        fees.setStatus("Pending");
+                    }
+
+                    fees.setUpdatedBy("SYSTEM");
+                    feesRepository.save(fees);
+
+                    log.info(" Updated fees: totalPaid={}, feesDue={}, status={}",
+                            fees.getTotalPaid(), fees.getFeesDue(), fees.getStatus());
+                });
+    }
+
+    /**
+     *  Update installment status after payment
+     */
+    private void updateInstallmentStatus(Long installmentId, Double amountReceived) {
+        feeInstallmentRepository.findById(installmentId)
+                .ifPresent(installment -> {
+                    installment.setPaidAmount(amountReceived);
+                    installment.setPaidDate(LocalDate.now());
+                    installment.setStatus("Paid");
+                    installment.setUpdatedBy("SYSTEM");
+
+                    feeInstallmentRepository.save(installment);
+                    log.info(" Updated installment {} to Paid", installmentId);
+                });
     }
 
     @Transactional(readOnly = true)
     public List<FeeReceiptResponseDTO> getReceiptsByRegNo(String regNo) {
         log.debug("📋 Fetching receipts for regNo: {}", regNo);
 
-        // 1️⃣ FIRST: Try to get from fee_receipts table (NEW entries)
-        List<FeeReceipt> receipts = feeReceiptRepository
+        List<FeeReceiptResponseDTO> allReceipts = new ArrayList<>();
+
+        // 1️⃣ FIRST: Get NEW receipts from fee_receipts table (REG* admissions)
+        List<FeeReceipt> newReceipts = feeReceiptRepository
                 .findByRegistrationNumberAndIsDeletedFalseOrderByReceiptDateDesc(regNo);
 
-        if (!receipts.isEmpty()) {
-            log.info("✅ Found {} receipts in fee_receipts table", receipts.size());
-            return receipts.stream()
+        if (!newReceipts.isEmpty()) {
+            log.info(" Found {} receipts in fee_receipts table", newReceipts.size());
+            allReceipts.addAll(newReceipts.stream()
                     .map(this::toReceiptDTO)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList()));
         }
 
-        // 2️⃣ SECOND: If no receipts found, try fee_collections table (OLD data)
-        log.info("🔄 No receipts in fee_receipts, checking fee_collections...");
-        List<FeeReceiptResponseDTO> oldReceipts = getReceiptsFromFeeCollections(regNo);
+        // 2️⃣ SECOND: Get OLD data from fee_collections table using mobile + name matching
+        try {
+            Admission admission = admissionRepository
+                    .findByRegistrationNumberAndIsDeletedFalse(regNo);
 
-        if (!oldReceipts.isEmpty()) {
-            log.info("✅ Found {} records in fee_collections", oldReceipts.size());
-            return oldReceipts;
+            if (admission != null) {
+                String studentName = admission.getFullName();
+                String mobile = admission.getMobilePrimary();
+
+                // Search by name OR mobile (partial match for flexibility)
+                List<FeeCollection> oldCollections = feeCollectionRepository
+                        .findByNamePartAndMobileAndIsDeletedFalse(
+                                studentName.split(" ")[0], // First name for partial match
+                                mobile
+                        );
+
+                if (!oldCollections.isEmpty()) {
+                    log.info(" Found {} records in fee_collections (old data)", oldCollections.size());
+
+                    // Convert to receipt format
+                    List<FeeReceiptResponseDTO> oldReceipts = oldCollections.stream()
+                            .map(fc -> FeeReceiptResponseDTO.builder()
+                                    .id(fc.getId())
+                                    .receiptNumber(fc.getReceiptNo() != null ? fc.getReceiptNo() : "N/A")
+                                    .invoiceNumber("OLD-" + fc.getId()) //  Generate pseudo invoice
+                                    .registrationNumber(regNo)
+                                    .studentName(studentName)
+                                    .mobile(mobile)
+                                    .amountReceived(fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
+                                    .receiptDate(fc.getReceiptDate())
+                                    .paymentMode(fc.getPaymentMode() != null ? fc.getPaymentMode() : "Cash")
+                                    .notes(fc.getNotes())
+                                    .receiptType("Old Imported") //  Mark as old data
+                                    .status("Completed")
+                                    .build())
+                            .collect(Collectors.toList());
+
+                    allReceipts.addAll(oldReceipts);
+                }
+            }
+        } catch (Exception e) {
+            log.error("❌ Error fetching from fee_collections: {}", e.getMessage());
         }
 
-        // 3️⃣ THIRD: If still no data, return empty list
-        log.warn("⚠️ No receipts found in either table for regNo: {}", regNo);
-        return new ArrayList<>();
+        // 3️⃣ Sort all receipts by date (newest first)
+        allReceipts.sort((a, b) -> {
+            if (a.getReceiptDate() == null) return 1;
+            if (b.getReceiptDate() == null) return -1;
+            return b.getReceiptDate().compareTo(a.getReceiptDate());
+        });
+
+        log.info("📊 Total receipts: {} (New: {}, Old: {})",
+                allReceipts.size(),
+                newReceipts.size(),
+                allReceipts.size() - newReceipts.size());
+
+        return allReceipts;
     }
 
     /**
@@ -534,7 +685,7 @@ public class FeesManagerService {
             List<FeeCollection> feeCollections = feeCollectionRepository
                     .findByStudentNameAndMobileAndIsDeletedFalse(studentName, mobile);
 
-            log.info("✅ Found {} records in fee_collections", feeCollections.size());
+            log.info(" Found {} records in fee_collections", feeCollections.size());
 
             // Convert to receipt format
             return feeCollections.stream()
@@ -753,29 +904,6 @@ public class FeesManagerService {
                 .stream()
                 .map(this::toInstallmentDTO)
                 .toList();
-    }
-
-    // ==================== HELPER METHODS ====================
-
-    private String generateReceiptNumber() {
-        String prefix = "REC" + Year.now().getValue();
-        String maxReceiptNo = feeReceiptRepository.findMaxReceiptNumber(prefix);
-
-        int nextNumber = 1;
-        if (maxReceiptNo != null && maxReceiptNo.length() > prefix.length()) {
-            try {
-                nextNumber = Integer.parseInt(maxReceiptNo.substring(prefix.length())) + 1;
-            } catch (NumberFormatException e) {
-                log.warn("Error parsing receipt number: {}", maxReceiptNo);
-            }
-        }
-
-        return String.format("%s%05d", prefix, nextNumber);
-    }
-
-    private String generateInvoiceNumber() {
-        String prefix = "INV" + Year.now().getValue();
-        return String.format("%s%05d", prefix, new Random().nextInt(99999));
     }
 
     private String generateRefundNumber() {

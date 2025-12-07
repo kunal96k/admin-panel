@@ -77,7 +77,7 @@ public class AdmissionService {
             }
         }
 
-        // ✅ Construct student name from first, middle, last
+        //  Construct student name from first, middle, last
         String studentName = buildFullName(
                 admission.getFirstName(),
                 admission.getMiddleName(),
@@ -99,7 +99,7 @@ public class AdmissionService {
                 .build();
     }
 
-    // ✅ Helper method to build full name
+    //  Helper method to build full name
     private String buildFullName(String firstName, String middleName, String lastName) {
         StringBuilder name = new StringBuilder();
 
@@ -216,11 +216,19 @@ public class AdmissionService {
         Admission admission = admissionMapper.toEntity(requestDTO);
         admission.setEnquiryId(enquiryId);
 
+        //  CRITICAL: Determine if this is a NEW admission or CSV import
+        boolean isNewAdmission = false;
+
         // Generate registration number if not provided
         if (requestDTO.getRegistrationNumber() != null && !requestDTO.getRegistrationNumber().trim().isEmpty()) {
             admission.setRegistrationNumber(requestDTO.getRegistrationNumber());
+
+            //  Check if this is an old CSV import (doesn't start with REG)
+            isNewAdmission = requestDTO.getRegistrationNumber().startsWith("REG");
         } else {
+            //  Generate new REG number - This is definitely a NEW admission
             admission.setRegistrationNumber(generateRegistrationNumber());
+            isNewAdmission = true;
         }
 
         // Set defaults
@@ -238,8 +246,18 @@ public class AdmissionService {
             enquiryRepository.save(enquiry);
         }
 
-        // Generate fee installments if config provided
-        if (requestDTO.getInstallmentConfig() != null) {
+        //  ONLY create fees record for NEW admissions (REG* numbers)
+        if (isNewAdmission) {
+            log.info(" NEW ADMISSION: Creating fees record for regNo: {}",
+                    savedAdmission.getRegistrationNumber());
+            createFeesRecord(savedAdmission);
+        } else {
+            log.info("⏭️ OLD CSV IMPORT: Skipping fees record creation for regNo: {}",
+                    savedAdmission.getRegistrationNumber());
+        }
+
+        // Generate fee installments if config provided (only for new admissions)
+        if (isNewAdmission && requestDTO.getInstallmentConfig() != null) {
             generateInstallments(
                     savedAdmission.getRegistrationNumber(),
                     requestDTO.getInstallmentConfig(),
@@ -250,6 +268,64 @@ public class AdmissionService {
         return toResponseDTOWithInstallments(savedAdmission);
     }
 
+    /**
+     * ✅ Create fees record ONLY for NEW admissions (REG* numbers)
+     * This method is NEVER called for old CSV imports
+     */
+    private void createFeesRecord(Admission admission) {
+        try {
+            // ✅ Double-check: Only proceed if registration number starts with REG
+            if (!admission.getRegistrationNumber().startsWith("REG")) {
+                log.warn("⚠️ Skipping fees record - Not a REG number: {}",
+                        admission.getRegistrationNumber());
+                return;
+            }
+
+            // Check if already exists
+            Optional<Fees> existingFees = feesRepository
+                    .findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber());
+
+            if (existingFees.isPresent()) {
+                log.info("ℹ️ Fees record already exists for regNo: {} - Skipping",
+                        admission.getRegistrationNumber());
+                return;
+            }
+
+            String courseName = (admission.getCourses() != null && !admission.getCourses().isEmpty())
+                    ? String.join(", ", admission.getCourses())
+                    : "N/A";
+
+            Fees fees = Fees.builder()
+                    .registrationNumber(admission.getRegistrationNumber())
+                    .admissionId(admission.getId())
+                    .studentName(admission.getFullName())
+                    .mobile(admission.getMobilePrimary())
+                    .totalFees(admission.getTotalReceivableFees() != null ? admission.getTotalReceivableFees() : 0.0)
+                    .feesDue(admission.getTotalReceivableFees() != null ? admission.getTotalReceivableFees() : 0.0)
+                    .totalPaid(0.0)
+                    .dueDate(null)
+                    .feesRefund(0.0)
+                    .status("Pending")
+                    .course(courseName)
+                    .installmentStartDate(null)
+                    .numberOfInstallments(null)
+                    .daysBetweenInstallments(null)
+                    .totalInstallmentAmount(null)
+                    .createdBy("SYSTEM")
+                    .build();
+
+            Fees savedFees = feesRepository.save(fees);
+            feesRepository.flush();
+
+            log.info("✅ Created and flushed fees record for regNo: {}", admission.getRegistrationNumber());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to create fees record for regNo: {}",
+                    admission.getRegistrationNumber(), e);
+            throw new RuntimeException("Failed to create fees record: " + e.getMessage(), e);
+        }
+    }
+    
     @Transactional
     public AdmissionResponseDTO updateAdmission(Long id, AdmissionRequestDTO requestDTO) {
         log.debug("Updating admission with id: {}", id);
@@ -594,8 +670,7 @@ public class AdmissionService {
             boolean hasWarnings = false;
 
             try {
-
-                //  Validate and set defaults
+                // ✅ Validate and set defaults
                 if (dto.getMobilePrimary() == null || dto.getMobilePrimary().trim().isEmpty()) {
                     dto.setMobilePrimary("N/A");
                     hasWarnings = true;
@@ -611,6 +686,7 @@ public class AdmissionService {
                     hasWarnings = true;
                 }
 
+                // Try to find enquiry
                 Long enquiryId = null;
                 try {
                     List<Enquiry> enquiries = enquiryRepository
@@ -641,8 +717,14 @@ public class AdmissionService {
                     dto.setDocumentType("N/A");
                 }
 
+                // ✅ IMPORTANT: Determine if this is NEW or OLD format
+                boolean isNewAdmission = false;
+
                 String regNumber = dto.getRegistrationNumber();
                 if (regNumber != null && !regNumber.trim().isEmpty()) {
+                    // ✅ Check if it's a NEW admission (starts with REG)
+                    isNewAdmission = regNumber.startsWith("REG");
+
                     try {
                         Admission existing = admissionRepository
                                 .findByRegistrationNumberAndIsDeletedFalse(regNumber);
@@ -656,7 +738,9 @@ public class AdmissionService {
                         log.warn("Could not check existing admission: {}", e.getMessage());
                     }
                 } else {
+                    // ✅ Generate new REG number - This is definitely NEW
                     regNumber = generateRegistrationNumber();
+                    isNewAdmission = true;
                     dto.setRegistrationNumber(regNumber);
                 }
 
@@ -666,15 +750,16 @@ public class AdmissionService {
                 admission.setRegistrationNumber(regNumber);
 
                 try {
-                    saveAdmissionInNewTransaction(admission);
+                    // ✅ Pass isNewAdmission flag to save method
+                    saveAdmissionInNewTransaction(admission, isNewAdmission);
                     successCount++;
 
                     if (hasWarnings) {
                         withWarnings++;
                     }
 
-                    log.info(" Row {}: Saved (Mobile: {}, Reg: {})",
-                            rowNumber, admission.getMobilePrimary(), admission.getRegistrationNumber());
+                    log.info("✅ Row {}: Saved (isNew={}, Mobile: {}, Reg: {})",
+                            rowNumber, isNewAdmission, admission.getMobilePrimary(), admission.getRegistrationNumber());
 
                 } catch (Exception saveEx) {
                     log.error("❌ Row {}: Save failed - {}", rowNumber, saveEx.getMessage());
@@ -851,13 +936,28 @@ public class AdmissionService {
 //        }
 //    }
 
+    /**
+     * ✅ Save admission in new transaction
+     * Only creates fees record for NEW admissions (REG* numbers)
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void saveAdmissionInNewTransaction(Admission admission) {
+    public void saveAdmissionInNewTransaction(Admission admission, boolean isNewAdmission) {
         try {
             Admission saved = admissionRepository.save(admission);
             admissionRepository.flush();
 
-            log.debug("✅ Saved admission and fees for regNo: {}", saved.getRegistrationNumber());
+            // ✅ ONLY create fees record for NEW admissions
+            if (isNewAdmission && saved.getRegistrationNumber().startsWith("REG")) {
+                log.info("✅ NEW ADMISSION: Creating fees record for regNo: {}",
+                        saved.getRegistrationNumber());
+                createFeesRecord(saved);
+            } else {
+                log.info("⏭️ OLD CSV IMPORT: Skipping fees record for regNo: {}",
+                        saved.getRegistrationNumber());
+            }
+
+            log.debug("✅ Saved admission (isNew={}) for regNo: {}",
+                    isNewAdmission, saved.getRegistrationNumber());
 
         } catch (Exception e) {
             log.error("❌ Failed to save admission: {}", e.getMessage());
