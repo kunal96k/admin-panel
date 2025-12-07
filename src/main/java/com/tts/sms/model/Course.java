@@ -22,13 +22,13 @@ public class Course {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "course_name", nullable = false, length = 100)
+    @Column(name = "course_name", nullable = false, length = 1000)
     private String courseName;
 
     @Column(name = "course_fees", nullable = false, precision = 10, scale = 2)
     private BigDecimal courseFees;
 
-    @Column(name = "course_image_path", length = 500)
+    @Column(name = "course_image_path", length = 1000)
     private String courseImagePath;
 
     @Column(name = "is_active", nullable = false)

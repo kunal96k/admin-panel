@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -196,7 +197,7 @@ public class FeesManagerService {
 
         try {
             List<FeesCSVImportDTO> dtos = csvService.parseFeesCSV(file);
-            return processBulkFeesImport(dtos);
+            return processBulkFeesImport(dtos);  //  FIXED: Call the correct method
 
         } catch (Exception e) {
             log.error("❌ Error during bulk fees import", e);
@@ -224,67 +225,51 @@ public class FeesManagerService {
             FeesCSVImportDTO dto = dtos.get(i);
 
             try {
-                if (dto.getRegistrationNumber() == null || dto.getRegistrationNumber().isEmpty()) {
+                //  VALIDATE REQUIRED FIELDS
+                if (dto.getRegistrationNumber() == null || dto.getRegistrationNumber().trim().isEmpty()) {
                     errors.add(FeesBulkImportResponseDTO.ImportError.builder()
                             .rowNumber(rowNumber)
                             .fieldName("registrationNumber")
                             .errorMessage("Registration number is required")
+                            .rejectedValue("EMPTY")
+                            .build());
+                    continue;
+                }
+
+                //  VALIDATE STUDENT NAME
+                if (dto.getStudentName() == null || dto.getStudentName().trim().isEmpty()) {
+                    errors.add(FeesBulkImportResponseDTO.ImportError.builder()
+                            .rowNumber(rowNumber)
+                            .fieldName("studentName")
+                            .errorMessage("Student name is required")
                             .rejectedValue(dto.getRegistrationNumber())
                             .build());
                     continue;
                 }
 
-                Optional<Fees> existingFees = feesRepository
-                        .findByRegistrationNumberAndIsDeletedFalse(dto.getRegistrationNumber());
+                //  SAVE IN NEW TRANSACTION TO ISOLATE FAILURES
+                try {
+                    saveFeeRecordInNewTransaction(dto, rowNumber);
+                    successCount++;
 
-                Fees fees;
-                if (existingFees.isPresent()) {
-                    fees = existingFees.get();
-                    fees.setStudentName(dto.getStudentName());
-                    fees.setMobile(dto.getMobile());
-                    fees.setTotalFees(dto.getTotalFees() != null ? dto.getTotalFees() : 0.0);
-                    fees.setFeesDue(dto.getFeesDue() != null ? dto.getFeesDue() : 0.0);
-                    fees.setTotalPaid(dto.getTotalPaid() != null ? dto.getTotalPaid() : 0.0);
-                    fees.setDueDate(dto.getDueDate()); // KEEP NULL IF NULL
-                    fees.setFeesRefund(dto.getFeesRefund() != null ? dto.getFeesRefund() : 0.0);
-                    fees.setStatus(dto.getStatus() != null ? dto.getStatus() : "Pending");
-                    fees.setCourse(dto.getCourse());
-                    fees.setUpdatedBy("CSV_IMPORT");
-                    updateCount++;
-                } else {
-                    fees = Fees.builder()
-                            .registrationNumber(dto.getRegistrationNumber())
-                            .studentName(dto.getStudentName())
-                            .mobile(dto.getMobile())
-                            .totalFees(dto.getTotalFees() != null ? dto.getTotalFees() : 0.0)
-                            .feesDue(dto.getFeesDue() != null ? dto.getFeesDue() : 0.0)
-                            .totalPaid(dto.getTotalPaid() != null ? dto.getTotalPaid() : 0.0)
-                            .dueDate(dto.getDueDate()) // KEEP NULL IF NULL
-                            .feesRefund(dto.getFeesRefund() != null ? dto.getFeesRefund() : 0.0)
-                            .status(dto.getStatus() != null ? dto.getStatus() : "Pending")
-                            .course(dto.getCourse())
-                            .createdBy("CSV_IMPORT")
-                            .build();
-                    createCount++;
-                }
-
-                Admission admission = admissionRepository
-                        .findByRegistrationNumberAndIsDeletedFalse(dto.getRegistrationNumber());
-                if (admission != null) {
-                    fees.setAdmissionId(admission.getId());
-                }
-
-                feesRepository.save(fees);
-
-                if (fees.getTotalPaid() != null && fees.getTotalPaid() > 0) {
-                    try {
-                        generateDefaultReceiptForCSVImport(fees.getRegistrationNumber());
-                    } catch (Exception e) {
-                        log.warn("⚠️ Could not generate default receipt for {}", fees.getRegistrationNumber());
+                    //  Check if it's an update or create - MOVED BEFORE save to avoid duplicate query
+                    Optional<Fees> existing = feesRepository
+                            .findByRegistrationNumberAndIsDeletedFalse(dto.getRegistrationNumber());
+                    if (existing.isPresent()) {
+                        updateCount++;
+                    } else {
+                        createCount++;
                     }
-                }
 
-                successCount++;
+                } catch (Exception saveEx) {
+                    log.error("❌ Row {}: Save failed - {}", rowNumber, saveEx.getMessage());
+                    errors.add(FeesBulkImportResponseDTO.ImportError.builder()
+                            .rowNumber(rowNumber)
+                            .fieldName("database")
+                            .errorMessage(saveEx.getMessage())
+                            .rejectedValue(dto.getRegistrationNumber())
+                            .build());
+                }
 
             } catch (Exception e) {
                 log.error("❌ Row {}: Error - {}", rowNumber, e.getMessage(), e);
@@ -292,7 +277,7 @@ public class FeesManagerService {
                         .rowNumber(rowNumber)
                         .fieldName("processing")
                         .errorMessage(e.getMessage())
-                        .rejectedValue(dto.getRegistrationNumber())
+                        .rejectedValue(dto.getRegistrationNumber() != null ? dto.getRegistrationNumber() : "UNKNOWN")
                         .build());
             }
         }
@@ -305,9 +290,104 @@ public class FeesManagerService {
                 .successfulImports(successCount)
                 .failedImports(failedCount)
                 .errors(errors)
-                .message(String.format("%d/%d records processed (Created: %d, Updated: %d)",
-                        successCount, dtos.size(), createCount, updateCount))
+                .message(String.format("%d/%d records processed (Created: %d, Updated: %d, Failed: %d)",
+                        successCount, dtos.size(), createCount, updateCount, failedCount))
                 .build();
+    }
+
+
+    /**
+     *  Save fees record in NEW transaction to isolate failures
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveFeeRecordInNewTransaction(FeesCSVImportDTO dto, int rowNumber) {
+        try {
+            //  Check if record exists
+            Optional<Fees> existingFees = feesRepository
+                    .findByRegistrationNumberAndIsDeletedFalse(dto.getRegistrationNumber());
+
+            Fees fees;
+            if (existingFees.isPresent()) {
+                //  UPDATE EXISTING RECORD
+                fees = existingFees.get();
+
+                // Only update if value is not null
+                if (dto.getStudentName() != null) {
+                    fees.setStudentName(dto.getStudentName());
+                }
+                if (dto.getMobile() != null) {
+                    fees.setMobile(dto.getMobile());
+                }
+                if (dto.getTotalFees() != null) {
+                    fees.setTotalFees(dto.getTotalFees());
+                } else {
+                    fees.setTotalFees(0.0);
+                }
+                if (dto.getFeesDue() != null) {
+                    fees.setFeesDue(dto.getFeesDue());
+                } else {
+                    fees.setFeesDue(0.0);
+                }
+                if (dto.getTotalPaid() != null) {
+                    fees.setTotalPaid(dto.getTotalPaid());
+                } else {
+                    fees.setTotalPaid(0.0);
+                }
+                if (dto.getDueDate() != null) {
+                    fees.setDueDate(dto.getDueDate());
+                }
+                if (dto.getFeesRefund() != null) {
+                    fees.setFeesRefund(dto.getFeesRefund());
+                } else {
+                    fees.setFeesRefund(0.0);
+                }
+                if (dto.getStatus() != null) {
+                    fees.setStatus(dto.getStatus());
+                }
+                if (dto.getCourse() != null) {
+                    fees.setCourse(dto.getCourse());
+                }
+
+                fees.setUpdatedBy("CSV_IMPORT");
+
+            } else {
+                //  CREATE NEW RECORD
+                fees = Fees.builder()
+                        .registrationNumber(dto.getRegistrationNumber())
+                        .studentName(dto.getStudentName())
+                        .mobile(dto.getMobile())
+                        .totalFees(dto.getTotalFees() != null ? dto.getTotalFees() : 0.0)
+                        .feesDue(dto.getFeesDue() != null ? dto.getFeesDue() : 0.0)
+                        .totalPaid(dto.getTotalPaid() != null ? dto.getTotalPaid() : 0.0)
+                        .dueDate(dto.getDueDate())
+                        .feesRefund(dto.getFeesRefund() != null ? dto.getFeesRefund() : 0.0)
+                        .status(dto.getStatus() != null ? dto.getStatus() : "Pending")
+                        .course(dto.getCourse())
+                        .createdBy("CSV_IMPORT")
+                        .build();
+
+                //  Try to link to admission
+                try {
+                    Admission admission = admissionRepository
+                            .findByRegistrationNumberAndIsDeletedFalse(dto.getRegistrationNumber());
+                    if (admission != null) {
+                        fees.setAdmissionId(admission.getId());
+                    }
+                } catch (Exception e) {
+                    log.debug("Could not link admission for regNo: {}", dto.getRegistrationNumber());
+                }
+            }
+
+            //  SAVE AND FLUSH IMMEDIATELY
+            Fees saved = feesRepository.save(fees);
+            feesRepository.flush();
+
+            log.debug(" Row {}: Saved fees for regNo: {}", rowNumber, dto.getRegistrationNumber());
+
+        } catch (Exception e) {
+            log.error("❌ Row {}: Database error - {}", rowNumber, e.getMessage());
+            throw new RuntimeException("Failed to save: " + e.getMessage(), e);
+        }
     }
 
     // ==================== FEE RECEIPTS - USE REG NO ====================

@@ -113,7 +113,7 @@ public class CSVService {
                 }
             }
 
-            log.info("✅ Parsed {} records (STRICT MODE)", dtos.size());
+            log.info(" Parsed {} records (STRICT MODE)", dtos.size());
             return dtos;
 
         } catch (CsvException e) {
@@ -172,7 +172,7 @@ public class CSVService {
                 }
             }
 
-            log.info("✅ Parsed {} records (STRICT MODE)", dtos.size());
+            log.info(" Parsed {} records (STRICT MODE)", dtos.size());
             return dtos;
 
         } catch (CsvException e) {
@@ -243,7 +243,7 @@ public class CSVService {
                 }
             }
 
-            log.info("✅ ADMISSION CSV IMPORT COMPLETE: {} records created", dtos.size());
+            log.info(" ADMISSION CSV IMPORT COMPLETE: {} records created", dtos.size());
             return dtos;
 
         } catch (CsvException e) {
@@ -472,7 +472,7 @@ public class CSVService {
                 }
             }
 
-            log.info("✅ Parsed {} fees records (NULL-SAFE MODE)", dtos.size());
+            log.info(" Parsed {} fees records (NULL-SAFE MODE)", dtos.size());
             return dtos;
 
         } catch (CsvException e) {

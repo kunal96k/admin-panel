@@ -52,7 +52,7 @@ public class Certificate {
     private LocalDate courseToDate;
 
     @Column(name = "status", nullable = false)
-    private String status = "Pending"; // "Pending" or "Issued"
+    private String status = "Not Issued"; // "Not Issued " or "Issued"
 
     @Column(name = "notes", length = 1000)
     private String notes;

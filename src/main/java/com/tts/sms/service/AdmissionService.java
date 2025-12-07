@@ -269,12 +269,12 @@ public class AdmissionService {
     }
 
     /**
-     * ✅ Create fees record ONLY for NEW admissions (REG* numbers)
+     *  Create fees record ONLY for NEW admissions (REG* numbers)
      * This method is NEVER called for old CSV imports
      */
     private void createFeesRecord(Admission admission) {
         try {
-            // ✅ Double-check: Only proceed if registration number starts with REG
+            //  Double-check: Only proceed if registration number starts with REG
             if (!admission.getRegistrationNumber().startsWith("REG")) {
                 log.warn("⚠️ Skipping fees record - Not a REG number: {}",
                         admission.getRegistrationNumber());
@@ -317,7 +317,7 @@ public class AdmissionService {
             Fees savedFees = feesRepository.save(fees);
             feesRepository.flush();
 
-            log.info("✅ Created and flushed fees record for regNo: {}", admission.getRegistrationNumber());
+            log.info(" Created and flushed fees record for regNo: {}", admission.getRegistrationNumber());
 
         } catch (Exception e) {
             log.error("❌ Failed to create fees record for regNo: {}",
@@ -670,7 +670,7 @@ public class AdmissionService {
             boolean hasWarnings = false;
 
             try {
-                // ✅ Validate and set defaults
+                //  Validate and set defaults
                 if (dto.getMobilePrimary() == null || dto.getMobilePrimary().trim().isEmpty()) {
                     dto.setMobilePrimary("N/A");
                     hasWarnings = true;
@@ -717,12 +717,12 @@ public class AdmissionService {
                     dto.setDocumentType("N/A");
                 }
 
-                // ✅ IMPORTANT: Determine if this is NEW or OLD format
+                //  IMPORTANT: Determine if this is NEW or OLD format
                 boolean isNewAdmission = false;
 
                 String regNumber = dto.getRegistrationNumber();
                 if (regNumber != null && !regNumber.trim().isEmpty()) {
-                    // ✅ Check if it's a NEW admission (starts with REG)
+                    //  Check if it's a NEW admission (starts with REG)
                     isNewAdmission = regNumber.startsWith("REG");
 
                     try {
@@ -738,7 +738,7 @@ public class AdmissionService {
                         log.warn("Could not check existing admission: {}", e.getMessage());
                     }
                 } else {
-                    // ✅ Generate new REG number - This is definitely NEW
+                    //  Generate new REG number - This is definitely NEW
                     regNumber = generateRegistrationNumber();
                     isNewAdmission = true;
                     dto.setRegistrationNumber(regNumber);
@@ -750,7 +750,7 @@ public class AdmissionService {
                 admission.setRegistrationNumber(regNumber);
 
                 try {
-                    // ✅ Pass isNewAdmission flag to save method
+                    //  Pass isNewAdmission flag to save method
                     saveAdmissionInNewTransaction(admission, isNewAdmission);
                     successCount++;
 
@@ -758,7 +758,7 @@ public class AdmissionService {
                         withWarnings++;
                     }
 
-                    log.info("✅ Row {}: Saved (isNew={}, Mobile: {}, Reg: {})",
+                    log.info(" Row {}: Saved (isNew={}, Mobile: {}, Reg: {})",
                             rowNumber, isNewAdmission, admission.getMobilePrimary(), admission.getRegistrationNumber());
 
                 } catch (Exception saveEx) {
@@ -937,31 +937,108 @@ public class AdmissionService {
 //    }
 
     /**
-     * ✅ Save admission in new transaction
-     * Only creates fees record for NEW admissions (REG* numbers)
+     *  Save admission in new transaction with proper error handling
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveAdmissionInNewTransaction(Admission admission, boolean isNewAdmission) {
         try {
+            //  VALIDATE BEFORE SAVE
+            if (admission.getRegistrationNumber() == null || admission.getRegistrationNumber().trim().isEmpty()) {
+                throw new IllegalArgumentException("Registration number cannot be null");
+            }
+            if (admission.getFirstName() == null || admission.getFirstName().trim().isEmpty()) {
+                throw new IllegalArgumentException("First name cannot be null");
+            }
+            if (admission.getLastName() == null || admission.getLastName().trim().isEmpty()) {
+                throw new IllegalArgumentException("Last name cannot be null");
+            }
+            if (admission.getMobilePrimary() == null || admission.getMobilePrimary().trim().isEmpty()) {
+                throw new IllegalArgumentException("Mobile number cannot be null");
+            }
+
+            //  SAVE ADMISSION
             Admission saved = admissionRepository.save(admission);
             admissionRepository.flush();
 
-            // ✅ ONLY create fees record for NEW admissions
-            if (isNewAdmission && saved.getRegistrationNumber().startsWith("REG")) {
-                log.info("✅ NEW ADMISSION: Creating fees record for regNo: {}",
-                        saved.getRegistrationNumber());
-                createFeesRecord(saved);
-            } else {
-                log.info("⏭️ OLD CSV IMPORT: Skipping fees record for regNo: {}",
-                        saved.getRegistrationNumber());
-            }
+            log.debug(" Saved admission for regNo: {}", saved.getRegistrationNumber());
 
-            log.debug("✅ Saved admission (isNew={}) for regNo: {}",
-                    isNewAdmission, saved.getRegistrationNumber());
+            //  ONLY create fees record for NEW admissions (REG* numbers)
+            if (isNewAdmission && saved.getRegistrationNumber().startsWith("REG")) {
+                try {
+                    createFeesRecordInNewTransaction(saved);
+                } catch (Exception feesEx) {
+                    log.error("❌ Failed to create fees for regNo: {} - {}",
+                            saved.getRegistrationNumber(), feesEx.getMessage());
+                    // Don't throw - admission is saved, fees creation failure is logged
+                }
+            } else {
+                log.debug("⏭️ Skipping fees creation for regNo: {}", saved.getRegistrationNumber());
+            }
 
         } catch (Exception e) {
             log.error("❌ Failed to save admission: {}", e.getMessage());
-            throw e;
+            throw new RuntimeException("Save failed: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * ✅ Create fees record in NEW transaction (isolated from admission save)
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createFeesRecordInNewTransaction(Admission admission) {
+        try {
+            // ✅ Double-check: Only proceed if registration number starts with REG
+            if (!admission.getRegistrationNumber().startsWith("REG")) {
+                log.warn("⚠️ Skipping fees record - Not a REG number: {}",
+                        admission.getRegistrationNumber());
+                return;
+            }
+
+            // ✅ Check if already exists
+            Optional<Fees> existingFees = feesRepository
+                    .findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber());
+
+            if (existingFees.isPresent()) {
+                log.info("ℹ️ Fees record already exists for regNo: {} - Skipping",
+                        admission.getRegistrationNumber());
+                return;
+            }
+
+            String courseName = (admission.getCourses() != null && !admission.getCourses().isEmpty())
+                    ? String.join(", ", admission.getCourses())
+                    : "N/A";
+
+            // ✅ CREATE FEES RECORD WITH DEFAULTS
+            Fees fees = Fees.builder()
+                    .registrationNumber(admission.getRegistrationNumber())
+                    .admissionId(admission.getId())
+                    .studentName(admission.getFullName())
+                    .mobile(admission.getMobilePrimary())
+                    .totalFees(admission.getTotalReceivableFees() != null ? admission.getTotalReceivableFees() : 0.0)
+                    .feesDue(admission.getTotalReceivableFees() != null ? admission.getTotalReceivableFees() : 0.0)
+                    .totalPaid(0.0)
+                    .dueDate(null)
+                    .feesRefund(0.0)
+                    .status("Pending")
+                    .course(courseName)
+                    .installmentStartDate(null)
+                    .numberOfInstallments(null)
+                    .daysBetweenInstallments(null)
+                    .totalInstallmentAmount(null)
+                    .createdBy("SYSTEM")
+                    .isDeleted(false)
+                    .build();
+
+            // ✅ SAVE AND FLUSH
+            Fees saved = feesRepository.save(fees);
+            feesRepository.flush();
+
+            log.info("✅ Created fees record for regNo: {}", admission.getRegistrationNumber());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to create fees record for regNo: {}",
+                    admission.getRegistrationNumber(), e);
+            throw new RuntimeException("Fees creation failed: " + e.getMessage(), e);
         }
     }
 }

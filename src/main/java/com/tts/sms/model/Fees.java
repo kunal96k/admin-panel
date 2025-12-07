@@ -57,7 +57,7 @@ public class Fees {
     @Builder.Default
     private String status = "Pending";
 
-    @Column(name = "course", length = 200)
+    @Column(name = "course", length = 1000)
     private String course;
 
     @Column(name = "admission_id")

@@ -943,6 +943,7 @@ function handleCertCSVFile(file) {
 }
 
 // : Parse CSV with correct format
+//  Parse CSV with correct 7-column format
 function parseCertCSV(text) {
     const lines = text.split('\n').filter(line => line.trim());
     importedCertData = [];
@@ -953,15 +954,16 @@ function parseCertCSV(text) {
         const row = values.map(v => v.trim().replace(/^"|"$/g, ''));
 
         if (row.length >= 3) { // Minimum: RegNo, CertNo, StudentName
+            //  CSV has 7 columns: Reg No, Cert No, Student Name, Batch(Course), Grade, Issue Date, Status
             const record = {
-                registrationNo: row[0] || null,
-                certificateNo: row[1] || null,
-                studentName: row[2] || null,
-                courseName: row[3] || null,
-                batch: row[4] || null,
-                grade: row[5] || null,
-                issueDate: row[6] || null,
-                status: row[7] || 'Not Issued' // Default status
+                registrationNo: row[0] || null,        // Column 0: Reg No
+                certificateNo: row[1] || null,         // Column 1: Certificate No
+                studentName: row[2] || null,           // Column 2: Student Name
+                courseName: row[3] || null,            // Column 3: Batch (actually course name)
+                batch: 'NA',                            //  Always NA - not in CSV
+                grade: row[4] || null,                 // Column 4: Grade
+                issueDate: row[5] || null,             // Column 5: Issue Date
+                status: row[6] || 'Not Issued'         // Column 6: Status
             };
 
             importedCertData.push(record);
@@ -1173,7 +1175,15 @@ function updatePaginationInfo(showing, total) {
     const endEl = document.getElementById('entriesEnd');
     const totalEl = document.getElementById('totalEntries');
 
-    const start = showing > 0 ? (currentPage * pageSize) + 1 : 0;
+    //  Handle empty data case
+    if (total === 0 || showing === 0) {
+        if (startEl) startEl.textContent = '0';
+        if (endEl) endEl.textContent = '0';
+        if (totalEl) totalEl.textContent = '0';
+        return;
+    }
+
+    const start = (currentPage * pageSize) + 1;
     const end = (currentPage * pageSize) + showing;
 
     if (startEl) startEl.textContent = start;
@@ -1185,6 +1195,12 @@ function renderPagination() {
     const paginationControls = document.getElementById('paginationControls');
     if (!paginationControls) return;
 
+    //  FIX: Hide pagination if no data
+    if (totalPages === 0 || totalElements === 0) {
+        paginationControls.innerHTML = '';
+        return;
+    }
+
     let html = '';
 
     // Previous button
@@ -1194,19 +1210,56 @@ function renderPagination() {
         </li>
     `;
 
-    // Page numbers
-    const maxPages = 5;
-    let startPage = Math.max(0, currentPage - 2);
-    let endPage = Math.min(totalPages - 1, startPage + maxPages - 1);
+    //  Smart pagination with ellipsis
+    const maxVisiblePages = 7;
+    let startPage = 0;
+    let endPage = totalPages - 1;
 
-    if (endPage - startPage < maxPages - 1) {
-        startPage = Math.max(0, endPage - maxPages + 1);
+    if (totalPages > maxVisiblePages) {
+        const halfVisible = Math.floor(maxVisiblePages / 2);
+
+        if (currentPage <= halfVisible) {
+            // Near start
+            endPage = maxVisiblePages - 2;
+        } else if (currentPage >= totalPages - halfVisible - 1) {
+            // Near end
+            startPage = totalPages - maxVisiblePages + 1;
+        } else {
+            // Middle
+            startPage = currentPage - halfVisible + 1;
+            endPage = currentPage + halfVisible - 1;
+        }
     }
 
+    // First page button (always show if not in range)
+    if (startPage > 0) {
+        html += `
+            <li class="page-item ${currentPage === 0 ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="changePage(0); return false;">1</a>
+            </li>
+        `;
+        if (startPage > 1) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+
+    // Middle page numbers
     for (let i = startPage; i <= endPage; i++) {
         html += `
             <li class="page-item ${i === currentPage ? 'active' : ''}">
                 <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i + 1}</a>
+            </li>
+        `;
+    }
+
+    // Last page button (always show if not in range)
+    if (endPage < totalPages - 1) {
+        if (endPage < totalPages - 2) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        html += `
+            <li class="page-item ${currentPage === totalPages - 1 ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${totalPages - 1}); return false;">${totalPages}</a>
             </li>
         `;
     }
@@ -1235,7 +1288,7 @@ async function autoGenerateCertificates() {
         title: '🎓 Auto-Generate Certificates',
         html: `
             <div class="text-start">
-                <h6 class="text-primary mb-3">✅ For NEW Admissions Only</h6>
+                <h6 class="text-primary mb-3"> For NEW Admissions Only</h6>
                 <p class="mb-2">This will automatically create certificate entries for students with:</p>
                 <ul class="mb-3">
                     <li><strong>Registration numbers starting with "REG"</strong> (e.g., REG8000, REG8001)</li>
@@ -1276,12 +1329,33 @@ async function autoGenerateCertificates() {
             showConfirmButton: false
         });
 
+        // Refresh CSRF token
+        initializeCsrfToken();
+
         const response = await fetch('/api/certificates/auto-generate', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            }
         });
 
+        //  Check content type before parsing
+        const contentType = response.headers.get('content-type');
+
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('❌ Non-JSON response received:', contentType);
+            const text = await response.text();
+            console.error('Response body:', text.substring(0, 500));
+            throw new Error('Server returned non-JSON response. Please check if you are logged in.');
+        }
+
         const data = await response.json();
+
+        console.log(' Auto-generate response:', data);
+
+        Swal.close();
 
         if (data.success) {
             Swal.fire({
@@ -1326,11 +1400,20 @@ async function autoGenerateCertificates() {
 
     } catch (error) {
         Swal.close();
-        console.error('Auto-generate error:', error);
+        console.error('❌ Auto-generate error:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Failed to auto-generate certificates. Please try again or contact support.',
+            html: `
+                <div class="text-start">
+                    <p><strong>Failed to auto-generate certificates</strong></p>
+                    <p class="text-muted small">${error.message}</p>
+                    <hr>
+                    <small class="text-danger">
+                        If this error persists, please contact support or check browser console for details.
+                    </small>
+                </div>
+            `,
             confirmButtonColor: '#ef4444'
         });
     }
