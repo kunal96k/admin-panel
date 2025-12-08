@@ -982,19 +982,19 @@ public class AdmissionService {
     }
 
     /**
-     * ✅ Create fees record in NEW transaction (isolated from admission save)
+     *  Create fees record in NEW transaction (isolated from admission save)
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createFeesRecordInNewTransaction(Admission admission) {
         try {
-            // ✅ Double-check: Only proceed if registration number starts with REG
+            //  Double-check: Only proceed if registration number starts with REG
             if (!admission.getRegistrationNumber().startsWith("REG")) {
                 log.warn("⚠️ Skipping fees record - Not a REG number: {}",
                         admission.getRegistrationNumber());
                 return;
             }
 
-            // ✅ Check if already exists
+            //  Check if already exists
             Optional<Fees> existingFees = feesRepository
                     .findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber());
 
@@ -1008,7 +1008,7 @@ public class AdmissionService {
                     ? String.join(", ", admission.getCourses())
                     : "N/A";
 
-            // ✅ CREATE FEES RECORD WITH DEFAULTS
+            //  CREATE FEES RECORD WITH DEFAULTS
             Fees fees = Fees.builder()
                     .registrationNumber(admission.getRegistrationNumber())
                     .admissionId(admission.getId())
@@ -1029,11 +1029,11 @@ public class AdmissionService {
                     .isDeleted(false)
                     .build();
 
-            // ✅ SAVE AND FLUSH
+            //  SAVE AND FLUSH
             Fees saved = feesRepository.save(fees);
             feesRepository.flush();
 
-            log.info("✅ Created fees record for regNo: {}", admission.getRegistrationNumber());
+            log.info(" Created fees record for regNo: {}", admission.getRegistrationNumber());
 
         } catch (Exception e) {
             log.error("❌ Failed to create fees record for regNo: {}",

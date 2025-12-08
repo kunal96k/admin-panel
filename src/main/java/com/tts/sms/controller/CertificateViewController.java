@@ -49,6 +49,10 @@ public class CertificateViewController {
 
     @GetMapping("/print/{id}")
     public String printCertificate(@PathVariable Long id, Model model) {
-        return viewCertificate(id, model); // Same view for both
+        String result = viewCertificate(id, model);
+        if (!"error".equals(result)) {
+            model.addAttribute("isPrintMode", true);
+        }
+        return result;
     }
 }

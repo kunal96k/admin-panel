@@ -33,9 +33,9 @@
         }
 
 
-        /* ========================================
-           PROFILE & SETTINGS MODAL STYLING
-           ======================================== */
+       /* ========================================
+       PROFILE & SETTINGS MODAL STYLING
+       ======================================== */
 
         #profileModal .modal-header,
         #settingsModal .modal-header {
@@ -47,6 +47,17 @@
         #settingsModal .modal-content {
             border-radius: 0.5rem;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Fix modal body overflow */
+        #profileModal .modal-body,
+        #settingsModal .modal-body {
+            overflow-y: auto;
+            max-height: calc(90vh - 140px);
+            padding: 1.5rem;
         }
 
         /* Profile Image Styling */
@@ -59,10 +70,15 @@
             transform: scale(1.05);
         }
 
-        /* Table Styling */
+        /* Table Styling with proper spacing */
+        #profileModal .table {
+            margin-bottom: 0;
+        }
+
         #profileModal .table td {
             padding: 0.75rem 0.5rem;
             vertical-align: middle;
+            word-break: break-word;
         }
 
         #profileModal .table td.text-muted {
@@ -98,6 +114,18 @@
             #profileModal .modal-dialog,
             #settingsModal .modal-dialog {
                 margin: 0.5rem;
+                max-width: calc(100% - 1rem);
+            }
+
+            #profileModal .modal-content,
+            #settingsModal .modal-content {
+                max-height: 95vh;
+            }
+
+            #profileModal .modal-body,
+            #settingsModal .modal-body {
+                max-height: calc(95vh - 140px);
+                padding: 1rem;
             }
 
             #profileModal img {
@@ -107,6 +135,17 @@
 
             #profileModal .table td {
                 font-size: 0.875rem;
+                padding: 0.5rem 0.25rem;
+            }
+
+            #profileModal .row {
+                margin: 0;
+            }
+
+            #profileModal .col-md-4,
+            #profileModal .col-md-8 {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
             }
         }
 
@@ -153,7 +192,35 @@
             color: #2563eb !important;
         }
 
+        /* Scrollbar styling for modal body */
+        #profileModal .modal-body::-webkit-scrollbar,
+        #settingsModal .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
 
+        #profileModal .modal-body::-webkit-scrollbar-track,
+        #settingsModal .modal-body::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        #profileModal .modal-body::-webkit-scrollbar-thumb,
+        #settingsModal .modal-body::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        #profileModal .modal-body::-webkit-scrollbar-thumb:hover,
+        #settingsModal .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Ensure modal footer stays at bottom */
+        #profileModal .modal-footer,
+        #settingsModal .modal-footer {
+            flex-shrink: 0;
+            border-top: 1px solid #e2e8f0;
+        }
 
 /* ========================================
    CONTAINER

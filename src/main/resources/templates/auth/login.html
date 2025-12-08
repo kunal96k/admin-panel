@@ -503,7 +503,6 @@
 <script th:inline="javascript">
     /*<![CDATA[*/
     document.addEventListener('DOMContentLoaded', function() {
-        tryAutoFullscreen();
 
         const hasError = /*[[${param.error != null}]]*/ false;
         const errorMsg = /*[[${error}]]*/ 'Invalid credentials';
@@ -530,17 +529,6 @@
             });
         }
     });
-
-    function tryAutoFullscreen() {
-        const el = document.documentElement;
-        if (el.requestFullscreen) {
-            el.requestFullscreen().catch(() => {});
-        } else if (el.webkitRequestFullscreen) {
-            el.webkitRequestFullscreen();
-        } else if (el.msRequestFullscreen) {
-            el.msRequestFullscreen();
-        }
-    }
 
     const togglePassword = document.getElementById('togglePassword');
     const passwordInput = document.getElementById('password');

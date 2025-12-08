@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 item.style.display = 'none';
                 console.log(`❌ Hiding menu: ${menuId}`);
             } else {
-                console.log(`✅ Showing menu: ${menuId}`);
+                console.log(` Showing menu: ${menuId}`);
             }
         });
     } else {
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, true);
     });
     
-    console.log('✅ Permission-based access control initialized');
+    console.log(' Permission-based access control initialized');
 
     // Prevent direct URL manipulation
     window.addEventListener('load', function() {
@@ -600,7 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
            });
 
            if (dropdowns.length > 0) {
-               console.log('✅ Initialized', dropdowns.length, 'Bootstrap dropdown(s)');
+               console.log(' Initialized', dropdowns.length, 'Bootstrap dropdown(s)');
            }
        }
 
@@ -691,7 +691,7 @@ document.addEventListener('DOMContentLoaded', function() {
            }
        });
 
-       console.log('✅ Dropdown fix module loaded successfully');
+       console.log(' Dropdown fix module loaded successfully');
    })();
 
 // ========================================
@@ -716,7 +716,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        console.log('✅ User menu elements found');
+        console.log(' User menu elements found');
 
         // Step 1: Remove Bootstrap's data-bs-toggle to prevent auto-initialization
         userMenu.removeAttribute('data-bs-toggle');
@@ -775,7 +775,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        console.log('✅ User menu dropdown initialized successfully (click-only)');
+        console.log(' User menu dropdown initialized successfully (click-only)');
     }
 
     // Initialize when DOM is ready
@@ -848,7 +848,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            console.log('✅ Profile & Settings handlers attached');
+            console.log(' Profile & Settings handlers attached');
         }, 500);
     }
 
@@ -1034,59 +1034,79 @@ document.addEventListener('DOMContentLoaded', function() {
         const photoUrl = employee.photoUrl || '/assets/images/default-user.png';
 
         const profileHTML = `
-            <div class="row">
-                <div class="col-md-4 text-center mb-4">
-                    <img src="${photoUrl}"
-                         alt="Profile Photo"
-                         class="img-fluid rounded-circle mb-3"
-                         style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #3b82f6;"
-                         onerror="this.src='/assets/images/default-user.png'">
-                    <h5 class="mb-1">${employee.employeeName}</h5>
-                    <p class="text-muted">${employee.roleName || 'N/A'}</p>
-                    <span class="badge ${employee.isActive ? 'bg-success' : 'bg-secondary'}">
-                        ${employee.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                </div>
-                <div class="col-md-8">
-                    <h6 class="text-primary fw-bold mb-3">Personal Information</h6>
-                    <table class="table table-borderless">
-                        <tbody>
-                            <tr>
-                                <td class="text-muted" style="width: 40%;"><i class="bi bi-envelope me-2"></i>Email</td>
-                                <td class="fw-semibold">${employee.emailId}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted"><i class="bi bi-phone me-2"></i>Mobile</td>
-                                <td class="fw-semibold">${employee.mobileNumber}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted"><i class="bi bi-briefcase me-2"></i>Designation</td>
-                                <td class="fw-semibold">${employee.designation || 'N/A'}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted"><i class="bi bi-gender-ambiguous me-2"></i>Gender</td>
-                                <td class="fw-semibold">${formatGender(employee.gender)}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted"><i class="bi bi-calendar me-2"></i>Date of Birth</td>
-                                <td class="fw-semibold">${formatDate(employee.dateOfBirth)}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted"><i class="bi bi-geo-alt me-2"></i>Address</td>
-                                <td class="fw-semibold">${employee.address || 'N/A'}</td>
-                            </tr>
-                            ${employee.zoomLink ? `
-                            <tr>
-                                <td class="text-muted"><i class="bi bi-camera-video me-2"></i>Zoom Link</td>
-                                <td>
-                                    <a href="${employee.zoomLink}" target="_blank" class="text-primary">
-                                        Join Meeting <i class="bi bi-box-arrow-up-right ms-1"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            ` : ''}
-                        </tbody>
-                    </table>
+            <div class="container-fluid">
+                <div class="row g-4">
+                    <div class="col-md-4 text-center">
+                        <img src="${photoUrl}"
+                             alt="Profile Photo"
+                             class="img-fluid rounded-circle mb-3"
+                             style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #3b82f6;"
+                             onerror="this.src='/assets/images/default-user.png'">
+                        <h5 class="mb-1">${employee.employeeName}</h5>
+                        <p class="text-muted mb-2">${employee.roleName || 'N/A'}</p>
+                        <span class="badge ${employee.isActive ? 'bg-success' : 'bg-secondary'}">
+                            ${employee.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
+                    <div class="col-md-8">
+                        <h6 class="text-primary fw-bold mb-3">
+                            <i class="bi bi-person-lines-fill me-2"></i>Personal Information
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm">
+                                <tbody>
+                                    <tr>
+                                        <td class="text-muted" style="width: 35%;">
+                                            <i class="bi bi-envelope me-2"></i>Email
+                                        </td>
+                                        <td class="fw-semibold">${employee.emailId}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">
+                                            <i class="bi bi-phone me-2"></i>Mobile
+                                        </td>
+                                        <td class="fw-semibold">${employee.mobileNumber}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">
+                                            <i class="bi bi-briefcase me-2"></i>Designation
+                                        </td>
+                                        <td class="fw-semibold">${employee.designation || 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">
+                                            <i class="bi bi-gender-ambiguous me-2"></i>Gender
+                                        </td>
+                                        <td class="fw-semibold">${formatGender(employee.gender)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">
+                                            <i class="bi bi-calendar me-2"></i>Date of Birth
+                                        </td>
+                                        <td class="fw-semibold">${formatDate(employee.dateOfBirth)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">
+                                            <i class="bi bi-geo-alt me-2"></i>Address
+                                        </td>
+                                        <td class="fw-semibold">${employee.address || 'N/A'}</td>
+                                    </tr>
+                                    ${employee.zoomLink ? `
+                                    <tr>
+                                        <td class="text-muted">
+                                            <i class="bi bi-camera-video me-2"></i>Zoom Link
+                                        </td>
+                                        <td>
+                                            <a href="${employee.zoomLink}" target="_blank" class="text-primary">
+                                                Join Meeting <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    ` : ''}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -1136,6 +1156,6 @@ document.addEventListener('DOMContentLoaded', function() {
     window.openProfileModal = openProfileModal;
     window.openSettingsModal = openSettingsModal;
 
-    console.log('✅ Profile & Settings module loaded');
+    console.log(' Profile & Settings module loaded');
 
 })();

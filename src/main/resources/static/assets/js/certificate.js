@@ -397,30 +397,30 @@ async function loadCertificates() {
                     </span>
                 </td>
                 <td>
-                    <div class="action-dropdown">
-                        <button class="btn btn-light action-menu-trigger" style="padding: 0.25rem 0.5rem;">
-                            <i class="bi bi-three-dots-vertical"></i>
-                        </button>
-                        <div class="action-menu">
-                            <button class="action-menu-item" onclick="issueCertificate(${cert.id})">
-                                <i class="bi bi-pencil-square"></i><span>${cert.status === 'Issued' ? 'Edit Certificate' : 'Issue Certificate'}</span>
+                        <div class="action-dropdown">
+                            <button class="btn btn-light action-menu-trigger" style="padding: 0.25rem 0.5rem;">
+                                <i class="bi bi-three-dots-vertical"></i>
                             </button>
-                            ${cert.status === 'Issued' ? `
-                            <button class="action-menu-item" onclick="viewCertificate(${cert.id})">
-                                <i class="bi bi-eye"></i><span>View Certificate</span>
-                            </button>
-                           <button class="action-menu-item" onclick="promptAndSendEmail(${cert.id}, '${cert.studentEmail || ''}')">
-                               <i class="bi bi-envelope"></i><span>Send Email</span>
-                           </button>
-                            ` : ''}
-                            <button class="action-menu-item" onclick="printCertificate(${cert.id})">
-                                <i class="bi bi-printer"></i><span>Print Certificate</span>
-                            </button>
-                            <button class="action-menu-item text-danger" onclick="deleteCertificate(${cert.id})">
-                                <i class="bi bi-trash"></i><span>Delete</span>
-                            </button>
+                            <div class="action-menu">
+                                <button class="action-menu-item" onclick="issueCertificate(${cert.id})">
+                                    <i class="bi bi-pencil-square"></i><span>${cert.status === 'Issued' ? 'Edit Certificate' : 'Issue Certificate'}</span>
+                                </button>
+                                ${cert.status === 'Issued' ? `
+                                <button class="action-menu-item" onclick="viewCertificate(${cert.id})">
+                                    <i class="bi bi-eye"></i><span>View Certificate</span>
+                                </button>
+                                <button class="action-menu-item" onclick="promptAndSendEmail(${cert.id}, '${cert.studentEmail || ''}')">
+                                    <i class="bi bi-envelope"></i><span>Send Email</span>
+                                </button>
+                                <button class="action-menu-item" onclick="printCertificate(${cert.id})">
+                                    <i class="bi bi-printer"></i><span>Print Certificate</span>
+                                </button>
+                                ` : ''}
+                                <button class="action-menu-item text-danger" onclick="deleteCertificate(${cert.id})">
+                                    <i class="bi bi-trash"></i><span>Delete</span>
+                                </button>
+                            </div>
                         </div>
-                    </div>
                 </td>
             </tr>
         `).join('');
@@ -590,8 +590,31 @@ function printCertificate(id) {
         menu.classList.remove('show');
     });
 
-    //  Open print view in new window
-    window.open(`/certificates/print/${id}`, '_blank', 'width=1400,height=900');
+    // Check if certificate is issued before allowing print
+    fetch(`/api/certificates/${id}`)
+        .then(response => response.json())
+        .then(certificate => {
+            if (certificate.status !== 'Issued') {
+                Swal.fire({
+                    title: 'Certificate Not Issued',
+                    text: 'This certificate has not been issued yet. Please issue the certificate first.',
+                    icon: 'warning',
+                    confirmButtonColor: '#667eea'
+                });
+                return;
+            }
+            // Open print view in new window
+            window.open(`/certificates/print/${id}`, '_blank', 'width=1400,height=900');
+        })
+        .catch(error => {
+            console.error('Error checking certificate status:', error);
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to check certificate status',
+                icon: 'error',
+                confirmButtonColor: '#667eea'
+            });
+        });
 }
 
 // View certificate

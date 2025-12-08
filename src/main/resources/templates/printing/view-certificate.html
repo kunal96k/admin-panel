@@ -57,11 +57,46 @@
                 display: none !important;
             }
         }
+
+                @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            .certificate-container {
+                box-shadow: none;
+                padding: 0;
+                max-width: 100%;
+                margin: 0;
+            }
+            .action-buttons {
+                display: none !important;
+            }
+            #canvas {
+                border: none;
+                width: 100%;
+                max-width: 100%;
+                page-break-inside: avoid;
+            }
+            /* Hide everything except certificate */
+            body > *:not(.certificate-container) {
+                display: none !important;
+            }
+            h2, p.text-muted {
+                display: none !important;
+            }
+        }
+
+        /* Print button visibility control */
+        .print-btn {
+            display: inline-flex;
+        }
     </style>
 </head>
 <body>
 <div class="certificate-container">
-    <div class="text-center mb-4">
+    <div th:unless="${isPrintMode}" class="text-center mb-4">
         <h2><i class="bi bi-award-fill text-primary"></i> Certificate of Completion</h2>
         <p class="text-muted">Certificate No: <strong th:text="${certificateNo}">CERT2025001</strong></p>
     </div>
@@ -73,7 +108,7 @@
         <button id="download-btn" class="btn btn-success btn-action">
             <i class="bi bi-download"></i> Download Certificate
         </button>
-        <button onclick="window.print()" class="btn btn-primary btn-action">
+        <button onclick="window.print()" class="btn btn-primary btn-action print-btn">
             <i class="bi bi-printer"></i> Print Certificate
         </button>
         <button onclick="window.close()" class="btn btn-secondary btn-action">
