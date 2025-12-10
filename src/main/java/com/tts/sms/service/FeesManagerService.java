@@ -1213,4 +1213,38 @@ public class FeesManagerService {
             log.error("❌ Failed to generate default receipt for {}", regNo, e);
         }
     }
+
+    /**
+     * Delete fee installment - SAFE: nullifies foreign keys first
+     */
+    @Transactional
+    public void deleteFeeInstallment(Long installmentId) {
+        log.debug("🗑 Deleting fee installment: {}", installmentId);
+
+        FeeInstallment installment = feeInstallmentRepository.findById(installmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Installment not found: " + installmentId));
+
+        String regNo = installment.getRegistrationNumber();
+
+        // STEP 1: Set installment_id to NULL in all receipts that reference this installment
+        List<FeeReceipt> receipts = feeReceiptRepository.findByInstallmentIdAndIsDeletedFalse(installmentId);
+        if (!receipts.isEmpty()) {
+            log.info(" Nullifying installment_id in {} receipts", receipts.size());
+            receipts.forEach(receipt -> {
+                receipt.setInstallmentId(null);
+                receipt.setUpdatedBy("SYSTEM");
+            });
+            feeReceiptRepository.saveAll(receipts);
+            feeReceiptRepository.flush();
+        }
+
+        // STEP 2: Now safe to delete the installment
+        feeInstallmentRepository.delete(installment);
+        feeInstallmentRepository.flush();
+
+        log.info(" Deleted installment {} for regNo: {}", installmentId, regNo);
+
+        // STEP 3: Recalculate fees after deletion
+        recalculateFeesFromTransactions(regNo);
+    }
 }

@@ -888,38 +888,6 @@
     }
 
     /* ========================================
-       PRINT STYLES
-       ======================================== */
-
-    @media print {
-        .sidebar,
-        .topbar,
-        .footer,
-        .action-card,
-        .pagination,
-        .action-menu-trigger {
-            display: none !important;
-        }
-
-        .main-wrapper {
-            margin-left: 0 !important;
-        }
-
-        .main-content {
-            padding: 0;
-        }
-
-        #admissionsTable {
-            font-size: 10pt;
-        }
-
-        #admissionsTable thead th:nth-child(6),
-        #admissionsTable tbody td:nth-child(6) {
-            display: none;
-        }
-    }
-
-    /* ========================================
        LANDSCAPE ORIENTATION
        ======================================== */
 
@@ -1269,4 +1237,3 @@
             font-size: 0.6875rem;
         }
     }
-

@@ -80,8 +80,9 @@ public class SecurityConfig {
                         .csrfTokenRequestHandler(csrfHandler)
                 )
 
-                /* AUTH RULES */
+                /* AUTH RULES - FIXED ORDER */
                 .authorizeHttpRequests(auth -> auth
+                        //  PUBLIC ROUTES FIRST
                         .requestMatchers(
                                 "/",
                                 "/login",
@@ -91,10 +92,20 @@ public class SecurityConfig {
                                 "/js/**",
                                 "/images/**",
                                 "/uploads/**",
-                                "/webjars/**"
+                                "/webjars/**",
+                                "/error"
                         ).permitAll()
+
+                        //  ADMIN ROUTES
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/**").authenticated()    // CSRF PROTECTED
+
+                        //  FEE INSTALLMENTS
+                        .requestMatchers("/api/fees-manager/installments/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+
+                        //  ALL OTHER API ROUTES
+                        .requestMatchers("/api/**").authenticated()
+
+                        //  CATCH-ALL MUST BE LAST
                         .anyRequest().authenticated()
                 )
 

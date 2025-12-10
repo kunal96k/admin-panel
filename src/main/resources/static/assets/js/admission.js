@@ -62,6 +62,18 @@
                });
            });
 
+            const pageSizeSelect = document.getElementById('pageSizeSelect');
+               if (pageSizeSelect) {
+                   pageSizeSelect.addEventListener('change', function(e) {
+                       const newSize = parseInt(e.target.value);
+                       if (!isNaN(newSize) && newSize > 0) {
+                           pageSize = newSize;
+                           currentPage = 0; // Reset to first page
+                           loadAdmissions(0, pageSize);
+                       }
+                   });
+               }
+
            // Import functionality
            document.getElementById('btnBrowseAdmFile')?.addEventListener('click', () => {
                document.getElementById('admCsvFileInput').click();
@@ -1937,30 +1949,39 @@ window.printTable = async function() {
             try {
                 showLoading('Deleting installment...');
 
-                const response = await fetch(`/api/fee-installments/${installmentId}`, {
+                const csrfToken = getCsrfToken();
+                const headers = {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                };
+                if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
+                const response = await fetch(`/api/fees-manager/installments/${installmentId}`, {
                     method: 'DELETE',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }
+                    headers: headers,
+                    credentials: 'include'
                 });
 
-                if (!response.ok) throw new Error('Failed to delete installment');
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to delete installment');
+                }
 
                 Swal.close();
                 showSuccess('Installment deleted successfully!');
 
-                // Refresh installments modal
+                // Reload installments modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('feeInstallmentsModal'));
                 if (modal) {
                     const studentName = document.getElementById('feeInstStudentName').textContent;
-                    // Reload installments
+                    // Reload current view
                     location.reload();
                 }
+
             } catch (error) {
                 Swal.close();
                 console.error('Error:', error);
-                showError('Failed to delete installment');
+                showError(error.message || 'Failed to delete installment');
             }
         }
     };
@@ -2188,53 +2209,533 @@ window.printTable = async function() {
             */
         });
 
-    // Print Admission
-    async function printAdmission(id) {
-        try {
-            showLoading('Generating print preview...');
+   // ==================== PRINT ADMISSION FORM - NEW WINDOW APPROACH ====================
 
-            const response = await fetch(`/api/admissions/${id}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            });
+   async function printAdmission(id) {
+       try {
+           showLoading('Loading admission form...');
 
-            if (!response.ok) throw new Error('Failed to load admission');
+           const response = await fetch(`/api/admissions/${id}`, {
+               method: 'GET',
+               headers: {
+                   'Accept': 'application/json',
+                   'Content-Type': 'application/json'
+               }
+           });
 
-            const admission = await response.json();
-            Swal.close();
+           if (!response.ok) throw new Error('Failed to load admission');
 
-            const photoElement = document.getElementById('printStudentPhoto');
-            if (admission.photoPath) {
-                photoElement.src = `/uploads/admissions/${admission.photoPath}`;
-            } else {
-                // Use default SVG placeholder
-                photoElement.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22110%22 height=%22150%22%3E%3Crect fill=%22%23ddd%22 width=%22110%22 height=%22150%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2212%22%3ENo Photo%3C/text%3E%3C/svg%3E';
-            }
+           const admission = await response.json();
+           Swal.close();
 
-            // Populate other fields
-            document.getElementById('printRegNo').textContent = admission.registrationNumber;
-            document.getElementById('printAdmDate').textContent = admission.admissionDate;
-            document.getElementById('printStudentName').textContent = admission.studentName;
-            // ... rest of the code remains same
+           // Open print form in new window
+           openPrintWindow(admission);
 
-            const modal = new bootstrap.Modal(document.getElementById('printAdmissionModal'));
-            modal.show();
+       } catch (error) {
+           Swal.close();
+           console.error('Error:', error);
+           showError('Failed to generate print form');
+       }
+   }
 
-        } catch (error) {
-            Swal.close();
-            console.error('Error:', error);
-            showError('Failed to generate print preview');
-        }
-    }
+   function openPrintWindow(admission) {
+       // Create new window
+       const printWindow = window.open('', '_blank', 'width=900,height=800,scrollbars=yes');
 
-    function printToPDF() {
-        window.print();
-    }
+       if (!printWindow) {
+           showError('Please allow pop-ups to print the admission form');
+           return;
+       }
 
-    // Delete Admission
+       // Build full HTML document
+       const htmlContent = buildPrintHTML(admission);
+
+       // Write to new window
+       printWindow.document.open();
+       printWindow.document.write(htmlContent);
+       printWindow.document.close();
+
+       // Wait for images to load, then show print dialog
+       printWindow.onload = function() {
+           setTimeout(() => {
+               printWindow.focus();
+               printWindow.print();
+           }, 500);
+       };
+   }
+
+   function buildPrintHTML(admission) {
+       // Prepare photo URL
+       let photoUrl = '/assets/images/user-logo.png'; // Default
+       if (admission.photoPath && admission.photoPath.trim() !== '') {
+           photoUrl = `/uploads/admissions/${admission.photoPath}`;
+       }
+
+       // Prepare courses
+       const courses = admission.coursesList && admission.coursesList.length > 0
+           ? admission.coursesList.join(', ')
+           : (admission.courses || '-');
+
+       return `
+   <!DOCTYPE html>
+   <html lang="en">
+   <head>
+       <meta charset="UTF-8">
+       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+       <title>Admission Form - ${admission.registrationNumber || 'Print'}</title>
+       <style>
+           /* Reset */
+           * {
+               margin: 0;
+               padding: 0;
+               box-sizing: border-box;
+           }
+
+           /* Page Setup */
+           @page {
+               size: A4 portrait;
+               margin: 12mm;
+           }
+
+           body {
+               font-family: 'Arial', 'Helvetica', sans-serif;
+               font-size: 10pt;
+               line-height: 1.4;
+               color: #000;
+               background: #fff;
+               padding: 0;
+               margin: 0;
+           }
+
+           /* Single Professional Border */
+           .form-container {
+               border: 2px solid #2c3e50;
+               padding: 15mm;
+               width: 100%;
+               max-width: 210mm;
+               margin: 0 auto;
+               background: #fff;
+               page-break-inside: avoid;
+           }
+
+           /* Header Section */
+           .header {
+               display: flex;
+               align-items: center;
+               justify-content: space-between;
+               padding-bottom: 12px;
+               border-bottom: 2px solid #34495e;
+               margin-bottom: 12px;
+           }
+
+           .header-left {
+               display: flex;
+               align-items: center;
+               flex: 1;
+           }
+
+           .logo {
+               width: 70px;
+               height: 70px;
+               margin-right: 15px;
+               flex-shrink: 0;
+           }
+
+           .logo img {
+               width: 100%;
+               height: 100%;
+               object-fit: contain;
+           }
+
+           .company-info {
+               flex: 1;
+           }
+
+           .company-name {
+               font-size: 16pt;
+               font-weight: bold;
+               margin-bottom: 3px;
+               color: #2c3e50;
+               letter-spacing: 0.5px;
+           }
+
+           .company-details {
+               font-size: 9pt;
+               line-height: 1.4;
+               margin: 2px 0;
+               color: #34495e;
+           }
+
+           /* Title */
+           .form-title {
+               text-align: center;
+               font-size: 18pt;
+               font-weight: bold;
+               text-transform: uppercase;
+               margin: 12px 0 10px 0;
+               padding: 8px 0;
+               background: #ecf0f1;
+               border-left: 4px solid #3498db;
+               letter-spacing: 2px;
+               color: #2c3e50;
+           }
+
+           /* Registration & Photo Section */
+           .reg-photo-section {
+               display: flex;
+               justify-content: space-between;
+               align-items: flex-start;
+               margin-bottom: 12px;
+               padding-bottom: 10px;
+               border-bottom: 1px solid #bdc3c7;
+           }
+
+           .reg-info {
+               flex: 1;
+           }
+
+           .reg-info p {
+               font-size: 10pt;
+               margin: 5px 0;
+               color: #2c3e50;
+           }
+
+           .reg-info strong {
+               font-weight: 600;
+               min-width: 120px;
+               display: inline-block;
+               color: #34495e;
+           }
+
+           .student-photo {
+               width: 90px;
+               height: 120px;
+               border: 2px solid #34495e;
+               display: flex;
+               align-items: center;
+               justify-content: center;
+               background: #ecf0f1;
+               flex-shrink: 0;
+               margin-left: 15px;
+           }
+
+           .student-photo img {
+               width: 100%;
+               height: 100%;
+               object-fit: cover;
+           }
+
+           /* Section Headers */
+           .section-title {
+               font-size: 11pt;
+               font-weight: bold;
+               margin: 10px 0 6px 0;
+               padding: 4px 8px;
+               background: #34495e;
+               color: #fff;
+               border-radius: 2px;
+           }
+
+           /* Form Fields - Compact */
+           .form-row {
+               margin: 4px 0;
+               font-size: 9.5pt;
+               line-height: 1.5;
+               display: flex;
+           }
+
+           .form-row strong {
+               font-weight: 600;
+               color: #2c3e50;
+               min-width: 150px;
+               flex-shrink: 0;
+           }
+
+           .form-row span {
+               flex: 1;
+               color: #34495e;
+           }
+
+           /* Two Column Layout - Compact */
+           .two-column {
+               display: grid;
+               grid-template-columns: 1fr 1fr;
+               gap: 8px 15px;
+               margin: 6px 0;
+           }
+
+           .two-column .form-row {
+               margin: 0;
+           }
+
+           .two-column .form-row strong {
+               min-width: 100px;
+           }
+
+           /* Declaration - Compact */
+           .declaration {
+               margin-top: 10px;
+               padding: 8px;
+               border: 1px solid #34495e;
+               background: #f8f9fa;
+               page-break-inside: avoid;
+           }
+
+           .declaration-content {
+               font-size: 9pt;
+               font-weight: 600;
+               margin-bottom: 8px;
+               color: #2c3e50;
+           }
+
+           .declaration-fields {
+               display: flex;
+               justify-content: space-between;
+               align-items: center;
+               margin-top: 8px;
+           }
+
+           .declaration-fields p {
+               font-size: 9pt;
+               margin: 0;
+               color: #34495e;
+           }
+
+           .declaration-fields strong {
+               font-weight: 600;
+           }
+
+           .underline {
+               display: inline-block;
+               min-width: 120px;
+               border-bottom: 1px solid #000;
+               margin-left: 5px;
+           }
+
+           /* Signature */
+           .signature-section {
+               margin-top: 15px;
+               text-align: right;
+           }
+
+           .signature-section p {
+               font-size: 10pt;
+               font-weight: 600;
+               margin: 0;
+               color: #2c3e50;
+           }
+
+           .signature-line {
+               display: inline-block;
+               min-width: 200px;
+               border-top: 1px solid #000;
+               margin-top: 40px;
+               padding-top: 5px;
+           }
+
+           /* Print Styles */
+           @media print {
+               body {
+                   margin: 0;
+                   padding: 0;
+               }
+
+               .form-container {
+                   border: 2px solid #000;
+                   page-break-inside: avoid;
+               }
+
+               @page {
+                   margin: 10mm;
+               }
+
+               /* Ensure colors print */
+               * {
+                   -webkit-print-color-adjust: exact !important;
+                   print-color-adjust: exact !important;
+               }
+           }
+
+           /* No Photo Placeholder */
+           .no-photo {
+               color: #7f8c8d;
+               font-size: 9pt;
+               text-align: center;
+               font-style: italic;
+           }
+
+           /* Address Fields - Allow wrap */
+           .form-row.address {
+               display: block;
+           }
+
+           .form-row.address strong {
+               display: block;
+               margin-bottom: 2px;
+           }
+
+           .form-row.address span {
+               display: block;
+               padding-left: 10px;
+           }
+       </style>
+   </head>
+   <body>
+       <div class="form-container">
+           <!-- Header -->
+       <!--    <div class="header">
+               <div class="header-left">
+                   <div class="logo">
+                       <img src="/assets/images/tts-logo-ev.png" alt="TTS Logo" onerror="this.style.display='none'">
+                   </div>
+                   <div class="company-info">
+                       <div class="company-name">TechnoKraft Training & Solutions</div>
+                       <div class="company-details">1st Floor, Kanchwala Avenue, Above Viju's Dabeli, College Road, Nashik</div>
+                       <div class="company-details">
+                           <strong>E-mail:</strong> info@tts.net.in &nbsp;|&nbsp;
+                           <strong>Mobile:</strong> 02332312447
+                       </div>
+                   </div>
+               </div>
+           </div> -->
+
+           <!-- Title -->
+           <div class="form-title">Admission Form</div>
+
+           <!-- Registration & Photo -->
+           <div class="reg-photo-section">
+               <div class="reg-info">
+                   <p><strong>Reg. No:</strong> ${admission.registrationNumber || '-'}</p>
+                   <p><strong>Admission Date:</strong> ${admission.admissionDate || '-'}</p>
+               </div>
+               <div class="student-photo">
+                   <img src="${photoUrl}" alt="Student Photo" onerror="this.outerHTML='<div class=\\'no-photo\\'>No Photo Available</div>'">
+               </div>
+           </div>
+
+           <!-- Personal Details -->
+           <div class="section-title">Personal Details</div>
+           <div class="form-row">
+               <strong>1. Student Name:</strong>
+               <span>${admission.studentName || '-'}</span>
+           </div>
+           <div class="form-row">
+               <strong>2. Birth Date:</strong>
+               <span>${admission.birthDate || '-'}</span>
+           </div>
+           <div class="form-row">
+               <strong>3. Gender:</strong>
+               <span>${admission.gender || '-'}</span>
+           </div>
+
+           <div class="two-column">
+               <div class="form-row">
+                   <strong>4. Aadhaar No:</strong>
+                   <span>${admission.aadhaar || '-'}</span>
+               </div>
+               <div class="form-row">
+                   <strong>5. Blood Group:</strong>
+                   <span>${admission.bloodGroup || '-'}</span>
+               </div>
+               <div class="form-row">
+                   <strong>6. Category:</strong>
+                   <span>${admission.category || '-'}</span>
+               </div>
+               <div class="form-row">
+                   <strong>7. Cast:</strong>
+                   <span>${admission.cast || '-'}</span>
+               </div>
+               <div class="form-row">
+                   <strong>8. Qualification:</strong>
+                   <span>${admission.qualification || '-'}</span>
+               </div>
+               <div class="form-row">
+                   <strong>9. College:</strong>
+                   <span>${admission.college || '-'}</span>
+               </div>
+           </div>
+
+           <!-- Communication Details -->
+           <div class="section-title">Communication Details</div>
+           <div class="two-column">
+               <div class="form-row">
+                   <strong>10. Primary Mobile:</strong>
+                   <span>${admission.mobilePrimary || '-'}</span>
+               </div>
+               <div class="form-row">
+                   <strong>11. Secondary Mobile:</strong>
+                   <span>${admission.mobileSecondary || '-'}</span>
+               </div>
+               <div class="form-row">
+                   <strong>12. Primary Email:</strong>
+                   <span>${admission.emailPrimary || '-'}</span>
+               </div>
+               <div class="form-row">
+                   <strong>13. Secondary Email:</strong>
+                   <span>${admission.emailSecondary || '-'}</span>
+               </div>
+           </div>
+
+           <div class="form-row address">
+               <strong>14. Current Address:</strong>
+               <span>${admission.currentAddress || '-'}</span>
+           </div>
+           <div class="form-row address">
+               <strong>15. Permanent Address:</strong>
+               <span>${admission.permanentAddress || '-'}</span>
+           </div>
+
+           <!-- Course Details -->
+           <div class="section-title">Course Details</div>
+           <div class="form-row">
+               <strong>16. Courses:</strong>
+               <span>${courses}</span>
+           </div>
+           <div class="form-row">
+               <strong>17. Document Submitted:</strong>
+               <span>${admission.documentType || '-'}</span>
+           </div>
+           <div class="form-row">
+               <strong>18. Notes:</strong>
+               <span>${admission.notes || '-'}</span>
+           </div>
+
+           <!-- Declaration -->
+           <div class="section-title">Declaration</div>
+           <div class="declaration">
+               <div class="declaration-content">
+                   I hereby declare that above furnished information are true to the best of my knowledge and belief.
+               </div>
+               <div class="declaration-fields">
+                   <p><strong>Place:</strong><span class="underline"></span></p>
+                   <p><strong>Date:</strong><span class="underline"></span></p>
+               </div>
+           </div>
+
+           <!-- Signature -->
+           <div class="signature-section">
+               <div class="signature-line">Student's Signature</div>
+           </div>
+       </div>
+
+       <script>
+           // Close window after printing
+           window.onafterprint = function() {
+               window.close();
+           };
+       </script>
+   </body>
+   </html>
+       `;
+   }
+
+   // Make function globally available
+   window.printAdmission = printAdmission;
+   window.printToPDF = function() {
+       window.print();
+   };
+
+    // ==================== DELETE ADMISSION ====================
     async function deleteAdmission(id) {
         const result = await Swal.fire({
             title: 'Delete Admission?',

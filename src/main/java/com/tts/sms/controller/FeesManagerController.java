@@ -54,6 +54,29 @@ public class FeesManagerController {
     }
 
     /**
+     * Delete fee installment
+     */
+    @DeleteMapping(value = "/installments/{installmentId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> deleteFeeInstallment(@PathVariable Long installmentId) {
+        log.info("DELETE /api/fees-manager/installments/{}", installmentId);
+
+        try {
+            feesManagerService.deleteFeeInstallment(installmentId);
+            return ResponseEntity.ok(Map.of(
+                    "success", "true",
+                    "message", "Installment deleted successfully"
+            ));
+        } catch (Exception e) {
+            log.error("Error deleting installment", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", "false",
+                            "message", e.getMessage()
+                    ));
+        }
+    }
+
+    /**
      * Update existing fee receipt
      */
     @PutMapping(value = "/receipts/{receiptId}", produces = MediaType.APPLICATION_JSON_VALUE)

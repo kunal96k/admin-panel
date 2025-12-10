@@ -770,6 +770,61 @@ async function openFeeInstallments(regNo) {
     }
 }
 
+// Delete installment function
+window.deleteInstallment = async function(installmentId) {
+    const result = await Swal.fire({
+        title: 'Delete Installment?',
+        text: 'This action cannot be undone',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Delete',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#ef4444'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            showLoading('Deleting installment...');
+
+            const response = await fetch(`/api/fees-manager/installments/${installmentId}`, {
+                method: 'DELETE',
+                headers: getCsrfHeaders()
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to delete installment');
+            }
+
+            Swal.close();
+            showSuccess('Installment deleted successfully!');
+
+            // Reload the current modal
+            const feeInstModal = document.getElementById('feeInstallmentsModal');
+            if (feeInstModal && bootstrap.Modal.getInstance(feeInstModal)) {
+                // Get current regNo from the modal title
+                const studentNameEl = document.getElementById('feeInstStudentName');
+                if (studentNameEl) {
+                    // Find the admission by student name
+                    const student = feesData.find(s => s.studentName === studentNameEl.textContent);
+                    if (student) {
+                        // Reload installments
+                        openFeeInstallments(student.regNo);
+                    }
+                }
+            } else {
+                // Fallback: reload page
+                loadFeesFromBackend();
+            }
+
+        } catch (error) {
+            Swal.close();
+            console.error('Error:', error);
+            showError(error.message || 'Failed to delete installment');
+        }
+    }
+};
+
 async function loadRefundHistory(regNo) {
     try {
         const response = await fetch(`${API_BASE}/refunds/${regNo}`, {
