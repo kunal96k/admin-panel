@@ -1,3 +1,5 @@
+// admission.js
+
 (function() {
     'use strict';
 
@@ -246,7 +248,7 @@ async function loadAdmissions(page = 0, size = 25) {
                     <td>${adm.studentName || `${adm.firstName} ${adm.lastName}`}</td>
                     <td>${adm.mobilePrimary || 'N/A'}</td>
                     <td><span class="badge bg-primary">${courses}</span></td>
-                    <td>${adm.admissionDate || 'N/A'}</td>
+                    <td>${adm.admissionDate ? new Date(adm.admissionDate).toLocaleDateString('en-GB') : 'N/A'}</td>
                     <td>
                         <div class="action-dropdown">
                             <button class="btn btn-sm btn-light action-menu-trigger">
@@ -388,6 +390,11 @@ async function openNewAdmissionModal() {
 
                     sessionStorage.setItem('admissionEnquiry', JSON.stringify(enquiry));
                     sessionStorage.setItem('admissionFromEnquiry', 'true');
+
+                    const today = getTodayDate();
+                    setValue('admAdmissionDate', today);
+                    setValue('instStartDate', today);
+                    window.location.reload();
                     window.location.reload();
                 } else {
                     Swal.close();
@@ -462,14 +469,13 @@ async function openNewAdmissionModal() {
         return;
     }
 
-    // If already has enquiry data in session, open modal
     currentTab = 1;
     clearForms();
     
-    //  Set default dates
-    const today = new Date().toISOString().split('T')[0];
-    setValue('admAdmissionDate', today);
-    setValue('instStartDate', today);
+   //  Set default dates
+   const today = new Date().toISOString().split('T')[0];
+   setValue('admAdmissionDate', today);
+   setValue('instStartDate', today);
     
     updateNavigationButtons();
     updateProgress(16.66);
@@ -533,6 +539,18 @@ function showErrorWithDetails(title, message, technicalError = null) {
          //  Helper function to format date
          function formatDate(dateValue) {
              if (!dateValue) return '';
+
+             if (!data.admissionDate) {
+                 const today = getTodayDate();
+                 setValue('admAdmissionDate', today);
+             }
+
+             if (!data.installmentStartDate) {
+                 const today = getTodayDate();
+                 setValue('instStartDate', today);
+             }
+
+             highlightPrefilledFields();
              
              // If it's an array [YYYY, MM, DD], convert to string
              if (Array.isArray(dateValue)) {
@@ -3238,36 +3256,44 @@ window.printTable = async function() {
                         return null;
                   }
 
+                  function getTodayDate() {
+                      return new Date().toISOString().split('T')[0];
+                  }
+
                  // ==================== CLEAR FORMS (RESET FOR NEW ADMISSION) ====================
 
-                 function clearForms() {
-                     ['personalInfoForm', 'otherDetailsForm', 'courseDetailsForm',
-                      'batchDetailsForm', 'installmentsForm', 'imageUploadForm'].forEach(id => {
-                         document.getElementById(id)?.reset();
-                     });
+                function clearForms() {
+                    ['personalInfoForm', 'otherDetailsForm', 'courseDetailsForm',
+                     'batchDetailsForm', 'installmentsForm', 'imageUploadForm'].forEach(id => {
+                        document.getElementById(id)?.reset();
+                    });
 
-                     document.getElementById('admTotalFees').value = '0';
-                     document.getElementById('admReceivableFees').value = '0';
-                     document.getElementById('admDiscountPercent').value = '0';
-                     document.getElementById('admDiscountAmount').value = '0';
+                    document.getElementById('admTotalFees').value = '0';
+                    document.getElementById('admReceivableFees').value = '0';
+                    document.getElementById('admDiscountPercent').value = '0';
+                    document.getElementById('admDiscountAmount').value = '0';
 
-                     //  Reset installment fields
-                     setValue('instTotalAmount', '0');
-                     setValue('instTotalInstAmount', '0');
-                     setValue('instStartDate', '');
-                     setValue('instNoOfInstallments', '');
-                     setValue('instDays', '');
+                    setValue('instTotalAmount', '0');
+                    setValue('instTotalInstAmount', '0');
+                    setValue('instStartDate', '');
+                    setValue('instNoOfInstallments', '');
+                    setValue('instDays', '');
 
-                     const tbody = document.getElementById('selectedCoursesBody');
-                     if (tbody) {
-                         tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No courses added</td></tr>';
-                     }
+                    // Set default dates to today
+                    const today = getTodayDate();
+                    setValue('admAdmissionDate', today);
+                    setValue('instStartDate', today);
 
-                     const instBody = document.getElementById('installmentsBody');
-                     if (instBody) {
-                         instBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments generated</td></tr>';
-                     }
-                 }
+                    const tbody = document.getElementById('selectedCoursesBody');
+                    if (tbody) {
+                        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No courses added</td></tr>';
+                    }
+
+                    const instBody = document.getElementById('installmentsBody');
+                    if (instBody) {
+                        instBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments generated</td></tr>';
+                    }
+                }
 
                   function previousTab() {
                       if (currentTab > 1) {

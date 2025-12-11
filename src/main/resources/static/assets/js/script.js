@@ -27,18 +27,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!hasAccess) {
                 item.style.display = 'none';
-                console.log(`❌ Hiding menu: ${menuId}`);
+                console.log(` Hiding menu: ${menuId}`);
             } else {
                 console.log(` Showing menu: ${menuId}`);
             }
         });
     } else {
-        console.warn('⚠️ userPermissions not defined - showing all menus');
+        console.warn(' userPermissions not defined - showing all menus');
     }
     
     function checkMenuAccess(menuId) {
         if (typeof userPermissions === 'undefined') {
-            console.warn('⚠️ userPermissions not loaded');
+            console.warn(' userPermissions not loaded');
             return true;
         }
         
@@ -615,7 +615,7 @@ document.addEventListener('DOMContentLoaded', function() {
            const mainContent = document.getElementById('mainContent');
 
            if (!mainContent) {
-               console.warn('⚠️ Main content container not found');
+               console.warn(' Main content container not found');
                return;
            }
 
@@ -647,7 +647,7 @@ document.addEventListener('DOMContentLoaded', function() {
                subtree: true
            });
 
-           console.log('👁️ Content observer initialized');
+           console.log('Content observer initialized');
        }
 
        // Start observing content changes
@@ -711,7 +711,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const dropdown = document.querySelector('.topbar-right .dropdown');
 
         if (!userMenu || !dropdownMenu) {
-            console.warn('⚠️ User menu elements not found, retrying...');
+            console.warn(' User menu elements not found, retrying...');
             setTimeout(initUserDropdown, 100);
             return;
         }
@@ -727,7 +727,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const bsDropdown = bootstrap.Dropdown.getInstance(userMenu);
             if (bsDropdown) {
                 bsDropdown.dispose();
-                console.log('🗑️ Removed existing Bootstrap dropdown instance');
+                console.log(' Removed existing Bootstrap dropdown instance');
             }
         }
 
@@ -736,7 +736,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation();
 
-            console.log('👆 User menu clicked');
+            console.log(' User menu clicked');
 
             const isCurrentlyOpen = dropdownMenu.classList.contains('show');
 

@@ -50,6 +50,11 @@ public class FeeReceiptResponseDTO {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate nextDueDate;
 
+    private Double currentPendingFees;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate currentNextDueDate;
+
     private String receiptType;
     private String notes;
     private String status;

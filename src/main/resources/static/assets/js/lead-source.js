@@ -11,8 +11,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
 });
 
-let editingLeadSourceId = null;
-
 // CSRF Token Management
 function getCsrfToken() {
     const csrfCookie = document.cookie

@@ -10,7 +10,7 @@ app:
     password: ${SUPERADMIN_PASSWORD:admin@123}
 
   base-url: ${APP_BASE_URL:https://team.ttsnashik.com}  #  CHANGED: HTTPS by default
-  
+
   upload:
     courses:
       dir: ${COURSES_UPLOAD_DIR:./uploads/courses}
@@ -33,10 +33,10 @@ app:
 spring:
   main:
     allow-bean-definition-overriding: true
-  
+
   application:
     name: tts-sms
-  
+
   mail:
     host: smtp.gmail.com
     port: 587
@@ -48,9 +48,9 @@ spring:
           auth: true
           starttls:
             enable: true
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
 
   profiles:
     active: ${SPRING_PROFILE:prod}
@@ -137,10 +137,12 @@ server:
       enabled: true
       force: true
     session:
-      timeout: 30m  #  ADDED
+      timeout: 30m
       cookie:
-        http-only: true  #  ADDED: Security
-        secure: true  #  ADDED: HTTPS only cookies
+        http-only: true
+        secure: true
+      persistent: false  # Disable session persistence
+      store-type: none   # Don't store sessions on disk
 
   compression:
     enabled: true

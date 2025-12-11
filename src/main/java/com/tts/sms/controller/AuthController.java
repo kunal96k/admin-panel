@@ -2,6 +2,7 @@ package com.tts.sms.controller;
 
 import com.tts.sms.dto.CaptchaVerificationRequest;
 import com.tts.sms.dto.ForgotPasswordRequest;
+import com.tts.sms.model.User;
 import com.tts.sms.service.CaptchaService;
 import com.tts.sms.service.CustomUserDetailsService;
 import com.tts.sms.service.ForgotPasswordService;
@@ -9,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -31,6 +33,48 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> generateCaptcha() {
         Map<String, Object> captcha = captchaService.generateCaptcha();
         return ResponseEntity.ok(captcha);
+    }
+
+    /**
+     *  Get current logged-in user details
+     */
+    @GetMapping("/current-user")
+    public ResponseEntity<Map<String, Object>> getCurrentUser(Authentication authentication) {
+        log.info("GET /api/auth/current-user");
+
+        Map<String, Object> response = new HashMap<>();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            response.put("authenticated", false);
+            return ResponseEntity.ok(response);
+        }
+
+        try {
+            User user = (User) authentication.getPrincipal();
+
+            response.put("authenticated", true);
+            response.put("userId", user.getId());
+            response.put("username", user.getUsername());
+
+            if (user.getEmployee() != null) {
+                response.put("employeeId", user.getEmployee().getId());
+                response.put("employeeName", user.getEmployee().getEmployeeName());
+                response.put("email", user.getEmployee().getEmailId());
+
+                if (user.getEmployee().getRole() != null) {
+                    response.put("roleTitle", user.getEmployee().getRole().getRoleTitle());
+                }
+            }
+
+            log.info(" Current user: {}", response.get("employeeName"));
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("❌ Error fetching current user", e);
+            response.put("authenticated", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.ok(response);
+        }
     }
 
     /**

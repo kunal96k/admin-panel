@@ -216,8 +216,8 @@ public class AdmissionService {
         Admission admission = admissionMapper.toEntity(requestDTO);
         admission.setEnquiryId(enquiryId);
 
-        //  CRITICAL: Determine if this is a NEW admission or CSV import
         boolean isNewAdmission = false;
+        String importSource = "NEW_ENTRY";
 
         // Generate registration number if not provided
         if (requestDTO.getRegistrationNumber() != null && !requestDTO.getRegistrationNumber().trim().isEmpty()) {
@@ -225,15 +225,17 @@ public class AdmissionService {
 
             //  Check if this is an old CSV import (doesn't start with REG)
             isNewAdmission = requestDTO.getRegistrationNumber().startsWith("REG");
+            importSource = isNewAdmission ? "NEW_ENTRY" : "IMPORTED_OLD_DATA"; // 
         } else {
             //  Generate new REG number - This is definitely a NEW admission
             admission.setRegistrationNumber(generateRegistrationNumber());
             isNewAdmission = true;
+            importSource = "NEW_ENTRY"; 
         }
+        
+        admission.setImportSource(importSource);
 
-        // Set defaults
         admission.setCreatedBy("SYSTEM");
-
         // Save admission
         Admission savedAdmission = admissionRepository.save(admission);
         log.info("Created admission with id: {} and reg no: {}",
@@ -719,11 +721,13 @@ public class AdmissionService {
 
                 //  IMPORTANT: Determine if this is NEW or OLD format
                 boolean isNewAdmission = false;
+                importSource = "NEW_ENTRY";
 
                 String regNumber = dto.getRegistrationNumber();
                 if (regNumber != null && !regNumber.trim().isEmpty()) {
                     //  Check if it's a NEW admission (starts with REG)
                     isNewAdmission = regNumber.startsWith("REG");
+                    importSource = isNewAdmission ? "NEW_ENTRY" : "IMPORTED_OLD_DATA"; 
 
                     try {
                         Admission existing = admissionRepository
@@ -741,6 +745,7 @@ public class AdmissionService {
                     //  Generate new REG number - This is definitely NEW
                     regNumber = generateRegistrationNumber();
                     isNewAdmission = true;
+                    importSource = "NEW_ENTRY"; 
                     dto.setRegistrationNumber(regNumber);
                 }
 
@@ -748,6 +753,7 @@ public class AdmissionService {
                 admission.setEnquiryId(enquiryId);
                 admission.setCreatedBy("BULK_IMPORT");
                 admission.setRegistrationNumber(regNumber);
+                admission.setImportSource(importSource); 
 
                 try {
                     //  Pass isNewAdmission flag to save method

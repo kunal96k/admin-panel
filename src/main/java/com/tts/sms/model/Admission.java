@@ -187,6 +187,15 @@ public class Admission {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    /**
+     * Import source to distinguish new admissions from CSV imports
+     * Values: "NEW_ENTRY", "IMPORTED_OLD_DATA"
+     */
+    @Column(name = "import_source", length = 50)
+    @Builder.Default
+    private String importSource = "NEW_ENTRY";
+
+
     @Transient
     public String getFullName() {
         StringBuilder name = new StringBuilder();

@@ -1,9 +1,18 @@
+// enquiry.js
+
 (function() {
     'use strict';
 
     let importedData = [];
     let currentEnquiryId = null;
     let currentFollowUpEnquiry = null;
+
+    let coursesCache = [];
+    let packagesCache = [];
+    let employeesCache = [];
+    let leadSourcesCache = [];
+
+    let currentLoggedInUser = null;
 
     let currentPage = 0;
     let pageSize = 25;
@@ -118,6 +127,26 @@
       "CISCO CERTIFIED NETWORK ASSOCIATE",
       "NETWORKING (N+)"
     ];
+    
+    async function fetchCurrentUser() {
+        try {
+            const response = await fetch('/api/auth/current-user', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'include'
+            });
+    
+            if (response.ok) {
+                const userData = await response.json();
+                if (userData.authenticated && userData.employeeName) {
+                    currentLoggedInUser = userData.employeeName.trim();
+                    console.log(' Current user loaded:', currentLoggedInUser);
+                }
+            }
+        } catch (error) {
+            console.error(' Error fetching current user:', error);
+        }
+    }
 
     function getCsrfToken() {
         // Try cookie first (for XSRF-TOKEN)
@@ -717,7 +746,7 @@ function updateEntriesInfo() {
                        </div>
                    </td>
                    <td>${enq.source || 'N/A'}</td>
-                   <td>${enq.date || 'N/A'}</td>
+                   <td>${enq.date ? new Date(enq.date).toLocaleDateString('en-GB') : 'N/A'}</td>
                    <td>${enq.assign || 'Unassigned'}</td>
                    <td><span class="badge bg-success">${enq.status || 'New'}</span></td>
                    <td>
@@ -878,7 +907,7 @@ function updateEntriesInfo() {
             setValue('viewCollege', enquiry.college);
             setValue('viewQualification', enquiry.qualification);
             setValue('viewAadhaar', enquiry.aadhaar);
-            setValue('viewDob', enquiry.birthDate);
+            setValue('viewDob', formatDateDDMMYYYY(enquiry.birthDate));
             setValue('viewGender', enquiry.gender);
             setValue('viewCourse', enquiry.courses);
             setValue('viewPackage', enquiry.packageName);
@@ -887,7 +916,7 @@ function updateEntriesInfo() {
             setValue('viewLeadSource', enquiry.source);
             setValue('viewReferenceName', enquiry.referenceName);
             setValue('viewAssignTo', enquiry.assign);
-            setValue('viewEnquiryDate', enquiry.date);
+           setValue('viewEnquiryDate', formatDateDDMMYYYY(enquiry.date))
             setValue('viewNote', enquiry.note);
 
             const modal = new bootstrap.Modal(document.getElementById('viewModal'));
@@ -1052,6 +1081,54 @@ function updateEntriesInfo() {
         }
     }
 
+    /**
+     * Format date from YYYY-MM-DD to DD/MM/YYYY
+     * @param {string} dateStr - Date string in YYYY-MM-DD format
+     * @returns {string} - Formatted date in DD/MM/YYYY format
+     */
+    function formatDateDDMMYYYY(dateStr) {
+        // Handle null, undefined, or empty values FIRST
+        if (!dateStr) return 'N/A';
+
+        // Convert to string if needed (handles numbers, dates)
+        const str = String(dateStr);
+
+        // Handle 'N/A' or empty strings
+        if (str.trim() === '' || str === 'N/A') return str;
+
+        try {
+            // Handle ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
+            const datePart = str.split('T')[0];
+
+            // Check if already in DD/MM/YYYY format
+            if (datePart.includes('/')) {
+                const parts = datePart.split('/');
+                if (parts.length === 3 && parts[0].length <= 2) {
+                    return datePart; // Already in DD/MM/YYYY
+                }
+            }
+
+            // Parse YYYY-MM-DD format
+            const parts = datePart.split('-');
+
+            if (parts.length === 3) {
+                const [year, month, day] = parts;
+
+                // Validate parts exist and are numbers
+                if (!year || !month || !day) return str;
+                if (isNaN(year) || isNaN(month) || isNaN(day)) return str;
+
+                return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+            }
+
+            // Fallback: return original string
+            return str;
+        } catch (error) {
+            console.error('Date formatting error:', error, 'Input:', dateStr);
+            return String(dateStr); // Return as-is if error
+        }
+    }
+
     // Load Follow-Up History
     async function loadFollowUpHistory(enquiryId) {
         const tbody = document.getElementById('followUpHistoryBody');
@@ -1068,8 +1145,8 @@ function updateEntriesInfo() {
             if (history && history.length > 0) {
                 tbody.innerHTML = history.map(f => `
                     <tr data-followup-id="${f.id}">
-                        <td>${f.followUpDate || '-'}</td>
-                        <td>${f.nextFollowUpDate || '-'}</td>
+                       <td>${formatDateDDMMYYYY(f.followUpDate) || '-'}</td>
+                        <td>${formatDateDDMMYYYY(f.nextFollowUpDate) || '-'}</td>
                         <td><span class="badge bg-info">${f.mode || '-'}</span></td>
                         <td>${f.note || '-'}</td>
                         <td>
@@ -1259,7 +1336,7 @@ async function deleteFollowUp(followUpId, enquiryId) {
                        mobilePrimary: row[2],
                        courses: rawCourses,
                        leadSource: row[4] || 'Unknown',
-                       enquiryDate: validateDate(row[5]) || getTodayDate(), //  Validate date
+                       enquiryDate: validateDate(row[5]) || getTodayDate(),
                        assignTo: row[6] || null,
                        status: row[7] || 'New'
                    };
@@ -1614,29 +1691,26 @@ async function deleteFollowUp(followUpId, enquiryId) {
             };
         }
 
+       /**
+        *  Load all dropdown data (courses, packages, employees, lead sources)
+        */
+       async function loadAllDropdownData() {
+           try {
+               console.log('🔄 Loading all dropdown data...');
 
-        // ==================== ADD TO enquiry.js ====================
+               await Promise.all([
+                   loadCourses(),
+                   loadPackages(),
+                   loadEmployees(),
+                   loadLeadSources()
+               ]);
 
-        // ADD THESE CACHE VARIABLES AT TOP (after other let declarations)
-        let coursesCache = [];
-        let packagesCache = [];
-        let employeesCache = [];
-        let leadSourcesCache = [];
-
-        // ADD THIS FUNCTION - Call on page load
-        async function loadAllDropdownData() {
-            try {
-                await Promise.all([
-                    loadCourses(),
-                    loadPackages(),
-                    loadEmployees(),
-                    loadLeadSources()
-                ]);
-            } catch (error) {
-                console.error('Error loading dropdown data:', error);
-                showError('Failed to load form options. Please refresh the page.');
-            }
-        }
+               console.log(' All dropdown data loaded');
+           } catch (error) {
+               console.error('❌ Error loading dropdown data:', error);
+               throw error; // Re-throw to be caught by openAddModal
+           }
+       }
 
         // ADD THESE NEW FUNCTIONS
         async function loadCourses() {
@@ -1665,18 +1739,43 @@ async function deleteFollowUp(followUpId, enquiryId) {
             }
         }
 
-        async function loadEmployees() {
-            try {
-                const response = await fetch('/api/employees?page=0&size=1000');
-                if (!response.ok) throw new Error('Failed to load employees');
-                const data = await response.json();
-                employeesCache = data.employees || [];
-                populateEmployeeSelect();
-            } catch (error) {
-                console.error('Error loading employees:', error);
-                employeesCache = [];
-            }
-        }
+       /**
+        *  Load employees from API
+        */
+       async function loadEmployees() {
+           try {
+               console.log('🔄 Loading employees...');
+
+               const response = await fetch('/api/employees?page=0&size=1000', {
+                   method: 'GET',
+                   headers: {
+                       'Accept': 'application/json'
+                   },
+                   credentials: 'include'
+               });
+
+               if (!response.ok) {
+                   throw new Error('Failed to load employees');
+               }
+
+               const data = await response.json();
+
+               // Handle different response formats
+               employeesCache = data.employees || data.content || [];
+
+               console.log(` Loaded ${employeesCache.length} employees`);
+
+               //  Populate dropdown and auto-select current user
+               await populateEmployeeSelect();
+
+           } catch (error) {
+               console.error('❌ Error loading employees:', error);
+               employeesCache = [];
+
+               // Still populate dropdown (will show "No employees available")
+               await populateEmployeeSelect();
+           }
+       }
 
         async function loadLeadSources() {
             try {
@@ -1732,40 +1831,109 @@ async function deleteFollowUp(followUpId, enquiryId) {
             });
         }
 
-        function populateEmployeeSelect() {
+        /**
+         *  Populate employee dropdown and auto-select current logged-in user
+         */
+        async function populateEmployeeSelect() {
             const assignToSelect = document.getElementById('assignTo');
-            if (!assignToSelect) return;
-
-            assignToSelect.innerHTML = '<option value="">-- Select Employee --</option>';
-
-            if (employeesCache.length === 0) {
-                assignToSelect.innerHTML += '<option value="" disabled>No employees available</option>';
+            if (!assignToSelect) {
+                console.error('Assign To select element not found');
                 return;
             }
-
+        
+            // Show loading state
+            assignToSelect.innerHTML = '<option value="">-- Loading Employees... --</option>';
+            assignToSelect.disabled = true;
+        
+            //  Step 1: Fetch current logged-in user
+            let currentUserName = null;
+            try {
+                const userResponse = await fetch('/api/auth/current-user', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+        
+                if (userResponse.ok) {
+                    const userData = await userResponse.json();
+                    if (userData.authenticated) {
+                        // Try different name fields
+                        currentUserName = userData.employeeName || 
+                                         `${userData.firstName || ''} ${userData.lastName || ''}`.trim() ||
+                                         userData.username;
+                        
+                        console.log(' Current logged-in user:', currentUserName);
+                    }
+                } else {
+                    console.warn('⚠️ Failed to fetch current user');
+                }
+            } catch (error) {
+                console.error('Error fetching current user:', error);
+            }
+        
+            //  Step 2: Check if employees are loaded
+            if (!employeesCache || employeesCache.length === 0) {
+                assignToSelect.innerHTML = '<option value="">-- No Employees Available --</option>';
+                assignToSelect.disabled = false;
+                console.warn('⚠️ No employees in cache');
+                return;
+            }
+        
+            //  Step 3: Populate dropdown
+            assignToSelect.innerHTML = '<option value="">-- Select Employee --</option>';
+        
+            let currentUserFound = false;
+        
             employeesCache.forEach(emp => {
+                // Get employee name (try different fields)
                 let fullName = '';
-
+        
                 if (emp.employeeName && emp.employeeName.trim()) {
                     fullName = emp.employeeName.trim();
                 } else if (emp.firstName || emp.lastName) {
                     fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
-                } else {
-                    fullName = emp.emailId || 'Unknown Employee';
+                } else if (emp.emailId) {
+                    fullName = emp.emailId.split('@')[0]; // Use email prefix as fallback
                 }
-
-                if (fullName && fullName !== 'Unknown Employee') {
-                    const option = document.createElement('option');
-                    option.value = fullName;
-                    option.textContent = fullName;
-                    assignToSelect.appendChild(option);
+        
+                // Skip invalid entries
+                if (!fullName || fullName === 'Unknown Employee') {
+                    return;
                 }
+        
+                // Create option
+                const option = document.createElement('option');
+                option.value = fullName;
+                option.textContent = fullName;
+        
+                //  Step 4: Check if this is the current user (case-insensitive)
+                if (currentUserName && 
+                    fullName.toLowerCase() === currentUserName.toLowerCase()) {
+                    option.selected = true;
+                    currentUserFound = true;
+                    console.log(' Auto-selected current user:', fullName);
+                }
+        
+                assignToSelect.appendChild(option);
             });
-
-            // If still empty after processing
+        
+            //  Step 5: Validation - Log if current user not found
+            if (currentUserName && !currentUserFound) {
+                console.warn('⚠️ Current user not found in employee list:', currentUserName);
+                console.log('Available employees:', employeesCache.map(e => e.employeeName || `${e.firstName} ${e.lastName}`));
+            }
+        
+            // Enable dropdown
+            assignToSelect.disabled = false;
+        
+            // If still only has default option
             if (assignToSelect.options.length === 1) {
                 assignToSelect.innerHTML += '<option value="" disabled>No valid employees available</option>';
             }
+        
+            console.log(` Loaded ${assignToSelect.options.length - 1} employees`);
         }
 
         function populateLeadSourceSelect() {
@@ -1842,16 +2010,36 @@ async function deleteFollowUp(followUpId, enquiryId) {
             }
         }
 
-        function openAddModal() {
+        /**
+         *  Open modal for adding new enquiry
+         */
+        async function openAddModal() {
             currentEnquiryId = null;
             clearForm();
 
-            loadAllDropdownData();
-
             document.getElementById('modalTitle').innerHTML = '<i class="bi bi-person-plus me-2"></i>Add New Enquiry';
+
+            //  Show modal first
             const modal = new bootstrap.Modal(document.getElementById('enquiryModal'));
             modal.show();
             updateProgress(25);
+
+            //  Set default enquiry date to today
+            const today = getTodayDate();
+            setValue('enquiryDate', today);
+
+            //  Load dropdown data asynchronously (including current user auto-select)
+            showLoading('Loading form data...');
+
+            try {
+                await loadAllDropdownData();
+                Swal.close();
+                console.log(' Form data loaded successfully');
+            } catch (error) {
+                Swal.close();
+                console.error('❌ Error loading form data:', error);
+                showError('Failed to load form options. Please refresh and try again.');
+            }
         }
 
         function validateFormData(data) {
@@ -1870,9 +2058,10 @@ async function deleteFollowUp(followUpId, enquiryId) {
             if (!data.courses || data.courses.length === 0) {
                 errors.push('At least one Course must be selected');
             }
-            if (!data.assignTo || data.assignTo.trim().length === 0) {
-                errors.push('Assign To employee is required');
-            }
+
+             if (!data.assignTo || data.assignTo.trim().length === 0 || data.assignTo === '-- Select Employee --') {
+                    errors.push('Please select an employee to assign this enquiry');
+             }
 
             // Optional field validations
             if (data.secondaryMobile && !/^[6-9]\d{9}$/.test(data.secondaryMobile)) {

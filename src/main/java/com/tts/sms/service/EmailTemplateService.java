@@ -1,5 +1,3 @@
-// ==================== UPDATE EmailTemplateService.java ====================
-
 package com.tts.sms.service;
 
 import lombok.RequiredArgsConstructor;
@@ -7,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.core.io.ByteArrayResource;
 import org.thymeleaf.TemplateEngine;
@@ -33,8 +32,9 @@ public class EmailTemplateService {
     private String fromEmail;
 
     /**
-     *  Send fee receipt email with PDF generated from frontend
+     *  FIXED: Send fee receipt email with PDF (FULLY ASYNC)
      */
+    @Async("emailTaskExecutor")  // Use our custom thread pool
     public void sendFeeReceiptWithPDF(
             String toEmail,
             String studentName,
@@ -44,6 +44,8 @@ public class EmailTemplateService {
             String paymentMode,
             String message,
             String pdfBase64) {
+
+        log.info("📧 [ASYNC] Sending receipt email to: {}", toEmail);
 
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
@@ -57,14 +59,14 @@ public class EmailTemplateService {
             context.setVariable("receiptDate", receiptDate != null ?
                     receiptDate.format(java.time.format.DateTimeFormatter.ofPattern("MMMM dd, yyyy")) : "N/A");
             context.setVariable("paymentMode", paymentMode);
-            context.setVariable("message", message);
+            context.setVariable("message", message != null ? message : "");
             context.setVariable("year", java.time.Year.now().getValue());
 
             String htmlContent = templateEngine.process("email/receipt-email", context);
 
             helper.setFrom(fromEmail);
             helper.setTo(toEmail);
-            helper.setSubject("Fee Receipt - " + receiptNo + " - TTS");
+            helper.setSubject("Fee Receipt - " + receiptNo + " - TechnoKraft Training Solutions");
             helper.setText(htmlContent, true);
 
             // Decode base64 PDF and attach
@@ -79,21 +81,27 @@ public class EmailTemplateService {
                     );
 
                     log.info(" PDF attachment added: Fee-Receipt-{}.pdf ({} bytes)", receiptNo, pdfBytes.length);
+                } catch (IllegalArgumentException e) {
+                    log.error("❌ Invalid base64 PDF data", e);
+                    throw new RuntimeException("Failed to decode PDF: Invalid base64 format");
                 } catch (Exception e) {
-                    log.error("❌ Failed to decode/attach PDF", e);
+                    log.error("❌ Failed to attach PDF", e);
                     throw new RuntimeException("Failed to attach PDF: " + e.getMessage());
                 }
             } else {
                 log.warn("⚠️ No PDF data provided - sending email without attachment");
             }
 
+            // Send email
             mailSender.send(mimeMessage);
 
             log.info(" Fee receipt email sent successfully to: {}", toEmail);
 
         } catch (MessagingException e) {
             log.error("❌ Failed to send fee receipt email to: {}", toEmail, e);
-            throw new RuntimeException("Failed to send fee receipt email: " + e.getMessage());
+            // Don't throw - async method should not propagate exceptions
+        } catch (Exception e) {
+            log.error("❌ Unexpected error sending email to: {}", toEmail, e);
         }
     }
 
@@ -111,7 +119,7 @@ public class EmailTemplateService {
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
-            log.info("✅ HTML email sent successfully to: {}", to);
+            log.info(" HTML email sent successfully to: {}", to);
         } catch (MessagingException e) {
             log.error("❌ Failed to send HTML email to {}: {}", to, e.getMessage(), e);
             throw new RuntimeException("Failed to send email", e);
@@ -121,6 +129,7 @@ public class EmailTemplateService {
     /**
      * Send certificate email with attachment
      */
+    @Async("emailTaskExecutor")
     public void sendCertificateEmail(String toEmail, String studentName, String certificateNo,
                                      String courseName, String grade, LocalDate issueDate,
                                      LocalDate courseFromDate, LocalDate courseToDate,
@@ -164,13 +173,15 @@ public class EmailTemplateService {
 
         } catch (MessagingException e) {
             log.error("❌ Failed to send certificate email to: {}", toEmail, e);
-            throw new RuntimeException("Failed to send certificate email: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("❌ Unexpected error sending certificate email", e);
         }
     }
 
     /**
      * Send employee credentials email with HTML template
      */
+    @Async("emailTaskExecutor")
     public void sendCredentialsEmail(String toEmail, String employeeName, String username, String password) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -198,13 +209,13 @@ public class EmailTemplateService {
 
         } catch (MessagingException e) {
             log.error("❌ Failed to send credentials email to: {}", toEmail, e);
-            throw new RuntimeException("Failed to send email: " + e.getMessage());
         }
     }
 
     /**
      * Send password change notification
      */
+    @Async("emailTaskExecutor")
     public void sendPasswordChangedEmail(String toEmail, String employeeName) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -235,6 +246,7 @@ public class EmailTemplateService {
     /**
      * Send birthday wishes email
      */
+    @Async("emailTaskExecutor")
     public void sendBirthdayWishes(String toEmail, String employeeName) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -248,7 +260,7 @@ public class EmailTemplateService {
 
             helper.setFrom(fromEmail);
             helper.setTo(toEmail);
-            helper.setSubject("🎂 Happy Birthday from TechnoKraft Team!");
+            helper.setSubject(" Happy Birthday from TechnoKraft Team!");
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
@@ -257,7 +269,6 @@ public class EmailTemplateService {
 
         } catch (MessagingException e) {
             log.error("❌ Failed to send birthday wishes to: {}", toEmail, e);
-            throw new RuntimeException("Failed to send birthday email: " + e.getMessage());
         }
     }
 }

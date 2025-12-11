@@ -322,7 +322,7 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Admission Date</label>
-                                        <input type="date" class="form-control" id="admAdmissionDate">
+                                        <input type="date" class="form-control" id="admAdmissionDate" th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}">
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Lead Source <span class="required">*</span></label>
@@ -456,7 +456,7 @@
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <label class="form-label">Installment Start Date <span class="required">*</span></label>
-                                        <input type="date" class="form-control" id="instStartDate" required>
+                                        <input type="date" class="form-control" id="instStartDate" th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}" required>
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <label class="form-label">No. of Installments</label>

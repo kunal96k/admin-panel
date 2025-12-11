@@ -337,7 +337,7 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Enquiry Date</label>
-                                        <input type="date" class="form-control" id="enquiryDate">
+                                        <input type="date" class="form-control" id="enquiryDate" th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}">
                                     </div>
                                     <div class="col-12 mb-3">
                                         <label class="form-label">Note</label>
@@ -684,8 +684,6 @@
         </div>
     </div>
     </div>
-
-
 
     <script th:src="@{/assets/js/enquiry.js}" src="/assets/js/enquiry.js" defer></script>
     <script layout:fragment="page-scripts" th:if="${requiresBootstrapInit}">

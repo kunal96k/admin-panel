@@ -191,6 +191,10 @@ document.addEventListener('DOMContentLoaded', function() {
     setDefaultDates();
 });
 
+function debugAPICall(endpoint, method = 'GET') {
+    console.log(`🌐 API Call: ${method} ${API_BASE}${endpoint}`);
+}
+
 function initializeEventListeners() {
 
     loadBanks();
@@ -931,6 +935,9 @@ async function viewReceipts(regNo) {
         return;
     }
 
+    //  Store regNo globally for modal functions
+    currentStudentRegNo = regNo;
+
     try {
         showLoading('Loading receipts...');
 
@@ -951,7 +958,6 @@ async function viewReceipts(regNo) {
             tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No receipts found</td></tr>';
         } else {
             tbody.innerHTML = receipts.map(receipt => {
-                //  Check if receipt is from old data
                 const isOldData = receipt.receiptType === 'Old Imported';
                 const receiptTypeBadge = isOldData
                     ? '<span class="badge bg-secondary">Old Import</span>'
@@ -972,13 +978,13 @@ async function viewReceipts(regNo) {
                             title="View">
                             <i class="bi bi-eye"></i>
                         </button>
-                        ${!isOldData ? `
-                        <button class="btn btn-sm btn-info me-1"
-                            onclick="emailReceipt('${receipt.receiptNumber}', '${student.studentName}', '${receipt.registrationNumber}')"
-                            title="Email">
-                            <i class="bi bi-envelope"></i>
-                        </button>
-                        <button class="btn btn-sm btn-warning me-1"
+                       ${!isOldData ? `
+                       <button class="btn btn-sm btn-info me-1"
+                           onclick="emailReceipt('${receipt.receiptNumber}', '${student.studentName}', '${student.mobile}')"
+                           title="Email">
+                           <i class="bi bi-envelope"></i>
+                       </button>
+                        <button class="btn btn-sm  btn-warning me-1"
                             onclick="updateFeeReceipt(${receipt.id}, '${regNo}')"
                             title="Edit">
                             <i class="bi bi-pencil"></i>
@@ -1169,11 +1175,18 @@ function generateReceiptHTML(data) {
                                 <td><strong>Total Fees:</strong></td>
                                 <td class="text-end">₹${(data.totalFees || 0).toLocaleString()}</td>
                             </tr>
+                            ${data.pendingFees > 0.01 ? `
                             <tr>
-                                <td><strong>Pending Fees:</strong></td>
-                                <td class="text-end">₹${(data.pendingFees || 0).toLocaleString()}</td>
+                                <td><strong>Current Pending Fees:</strong></td>
+                                <td class="text-end"><strong style="color: #16a34a;">₹${(data.pendingFees || 0).toLocaleString()}</strong></td>
                             </tr>
-                            ${data.nextDueDate ? `
+                            ` : `
+                            <tr style="background-color: #f0fdf4;">
+                                <td><strong>Payment Status:</strong></td>
+                                <td class="text-end"><strong style="color: #16a34a;">✓ PAID IN FULL</strong></td>
+                            </tr>
+                            `}
+                            ${data.pendingFees > 0.01 && data.nextDueDate ? `
                             <tr>
                                 <td><strong>Next Due Date:</strong></td>
                                 <td class="text-end">${formatDate(data.nextDueDate)}</td>
@@ -1694,14 +1707,14 @@ async function saveFeeInstallments() {
     try {
         showLoading('Saving installments...');
 
-       const response = await fetch(`${API_BASE}/installments/${currentStudentRegNo}`, {
-           method: 'POST',
-           headers: getCsrfHeaders(),
-           body: JSON.stringify({
-               registrationNumber: currentStudentRegNo,
-               installments: installments
-           })
-       });
+        const response = await fetch(`${API_BASE}/installments/${currentStudentRegNo}`, {
+            method: 'POST',
+            headers: getCsrfHeaders(),
+            body: JSON.stringify({
+                registrationNumber: currentStudentRegNo,
+                installments: installments
+            })
+        });
 
         if (!response.ok) throw new Error('Failed to save installments');
 
@@ -2141,47 +2154,29 @@ async function setNextInstallmentDueDate(regNo) {
         document.getElementById('nextDueDate').value = nextDate.toISOString().split('T')[0];
     }
 }
+
 async function emailReceipt(receiptNo, studentName, mobile) {
-    // : Get regNo from the receipt data, not from student search
+    // Get regNo from the receipt data
     let studentEmail = '';
     let actualRegNo = null;
 
     try {
-        // First, try to find the receipt to get the correct registration number
-        const allReceipts = await fetch(`${API_BASE}/receipts`, {
-            headers: getCsrfHeaders()
-        });
-
-        if (allReceipts.ok) {
-            const receipts = await allReceipts.json();
-            const targetReceipt = receipts.find(r => r.receiptNumber === receiptNo);
-            
-            if (targetReceipt) {
-                actualRegNo = targetReceipt.registrationNumber;
-            }
-        }
-    } catch (error) {
-        console.error('Error finding receipt:', error);
-    }
-
-    // If we couldn't find regNo from receipt, fall back to searching by name
-    if (!actualRegNo) {
+        // First, find the student in feesData by name
         const student = feesData.find(s => s.studentName === studentName);
+
         if (student) {
             actualRegNo = student.regNo;
+            console.log(' Found regNo from feesData:', actualRegNo);
+        } else {
+            console.error(' Student not found in feesData:', studentName);
+            showError('Could not find student registration number');
+            return;
         }
-    }
 
-    if (!actualRegNo) {
-        showError('Could not find student registration number');
-        return;
-    }
-
-    // Now fetch admission data using the CORRECT registration number
-    try {
-       const admResponse = await fetch(`/api/admissions/by-regno/${actualRegNo}`, {
-           headers: getCsrfHeaders()
-       });
+        // Now fetch admission data using the CORRECT registration number
+        const admResponse = await fetch(`/api/admissions/by-regno/${actualRegNo}`, {
+            headers: getCsrfHeaders()
+        });
 
         if (admResponse.ok) {
             const admission = await admResponse.json();
@@ -2191,7 +2186,7 @@ async function emailReceipt(receiptNo, studentName, mobile) {
         console.error('Error fetching email:', error);
     }
 
-    // Close view receipts modal
+    // Close view receipts modal if open
     const viewReceiptsModal = document.getElementById('viewReceiptsModal');
     if (viewReceiptsModal) {
         const modalInstance = bootstrap.Modal.getInstance(viewReceiptsModal);
@@ -2258,13 +2253,22 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                 return false;
             }
 
+            if (!actualRegNo) {
+                Swal.showValidationMessage('Could not find registration number');
+                return false;
+            }
+
             try {
-                // : Use the correct registration number
+                console.log('🔍 Fetching receipt for regNo:', actualRegNo);
+
+                //  FIX: Fetch receipt data
                 const receiptResponse = await fetch(`${API_BASE}/receipts/${actualRegNo}`, {
                     headers: getCsrfHeaders()
                 });
 
                 if (!receiptResponse.ok) {
+                    const errorText = await receiptResponse.text();
+                    console.error(' Receipt fetch failed:', errorText);
                     Swal.showValidationMessage('Failed to load receipt data');
                     return false;
                 }
@@ -2273,18 +2277,29 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                 const receipt = receipts.find(r => r.receiptNumber === receiptNo);
 
                 if (!receipt) {
+                    console.error(' Receipt not found in response:', receiptNo);
                     Swal.showValidationMessage('Receipt not found');
                     return false;
                 }
 
+                // : Get CURRENT fees data from feesData array (already loaded)
                 const student = feesData.find(s => s.regNo === actualRegNo);
 
+                //  USE CURRENT DATA instead of receipt's historical data
                 const receiptData = {
                     ...receipt,
                     mobile: student?.mobile || mobile || 'N/A',
                     course: student?.course || 'N/A',
-                    email: email
+                    email: email,
+                    //  OVERRIDE with CURRENT pending fees and due date
+                    pendingFees: student?.feesDue || 0,
+                    nextDueDate: student?.dueDate || null
                 };
+
+                console.log(' Generating PDF with CURRENT data:', {
+                    pendingFees: receiptData.pendingFees,
+                    nextDueDate: receiptData.nextDueDate
+                });
 
                 const pdfBase64 = await generateInvoicePDF(receiptData);
 
@@ -2293,27 +2308,47 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                     return false;
                 }
 
-                const response = await fetch(`${API_BASE}/receipts/${receiptNo}/send-email`, {
-                    method: 'POST',
-                    headers: getCsrfHeaders(),
-                    body: JSON.stringify({
-                        email: email,
-                        studentName: name,
-                        message: document.getElementById('emailMessage').value,
-                        pdfData: pdfBase64
-                    })
-                });
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    Swal.showValidationMessage(errorData.message || 'Failed to send email');
+                try {
+                    console.log(' Sending email to:', email);
+
+                    const response = await fetch(`${API_BASE}/receipts/${receiptNo}/send-email`, {
+                        method: 'POST',
+                        headers: getCsrfHeaders(),
+                        body: JSON.stringify({
+                            email: email,
+                            studentName: name,
+                            message: document.getElementById('emailMessage').value,
+                            pdfData: pdfBase64
+                        }),
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        Swal.showValidationMessage(errorData.message || 'Failed to send email');
+                        return false;
+                    }
+
+                    return { email };
+                } catch (error) {
+                    clearTimeout(timeoutId);
+
+                    if (error.name === 'AbortError') {
+                        console.log(' Email request timed out - email is being sent in background');
+                        return { email };
+                    }
+
+                    Swal.showValidationMessage('Network error: ' + error.message);
                     return false;
                 }
-
-                return { email };
             } catch (error) {
-                console.error('Error sending email:', error);
-                Swal.showValidationMessage('Network error: ' + error.message);
+                console.error(' Error sending email:', error);
+                Swal.showValidationMessage('Unexpected error: ' + error.message);
                 return false;
             }
         }
@@ -2324,8 +2359,9 @@ async function emailReceipt(receiptNo, studentName, mobile) {
             icon: 'success',
             title: 'Email Sent!',
             html: `
-                <p>Receipt sent successfully to:</p>
+                <p>Receipt is being sent to:</p>
                 <p class="fw-bold text-primary">${formValues.email}</p>
+                <p class="small text-muted">Please check your inbox in a few moments</p>
             `,
             confirmButtonColor: '#667eea'
         });
@@ -2471,7 +2507,6 @@ async function updateFeeReceipt(receiptId, regNo) {
             document.getElementById('nextDueDate').value = receipt.nextDueDate;
         }
 
-        // Handle payment mode fields
         togglePaymentFields();
 
         if (receipt.bankName) document.getElementById('bankName').value = receipt.bankName;
@@ -2512,21 +2547,61 @@ async function loadInstallmentsForReceipt(regNo) {
             // Only show pending installments
             const pendingInstallments = installments.filter(i => i.status === 'Pending');
 
+            //  ADD: Store all installments for next due date calculation
+            select.dataset.allInstallments = JSON.stringify(installments);
+
             pendingInstallments.forEach(inst => {
                 const option = document.createElement('option');
                 option.value = inst.id;
                 option.textContent = `Installment ${inst.installmentNumber} - ₹${inst.amount.toFixed(2)} (Due: ${inst.dueDate})`;
+                //  ADD: Store installment number in option
+                option.dataset.installmentNumber = inst.installmentNumber;
+                option.dataset.dueDate = inst.dueDate;
                 select.appendChild(option);
             });
 
             if (pendingInstallments.length === 0) {
                 select.innerHTML = '<option value="">All installments paid</option>';
             }
+
+            //  ADD: Auto-update next due date when installment is selected
+            select.addEventListener('change', updateNextDueDateFromInstallment);
         }
     } catch (error) {
         console.error('Error loading installments:', error);
     }
 }
+
+// New function to auto-update next due date
+function updateNextDueDateFromInstallment() {
+    const select = document.getElementById('installment');
+    const nextDueDateInput = document.getElementById('nextDueDate');
+
+    const selectedOption = select.options[select.selectedIndex];
+
+    if (!selectedOption || !selectedOption.value) {
+        return; // No installment selected
+    }
+
+    const currentInstallmentNumber = parseInt(selectedOption.dataset.installmentNumber);
+    const allInstallments = JSON.parse(select.dataset.allInstallments || '[]');
+
+    //  Find the NEXT installment (current + 1)
+    const nextInstallment = allInstallments.find(
+        inst => inst.installmentNumber === currentInstallmentNumber + 1
+    );
+
+    if (nextInstallment) {
+        //  Set next installment's due date
+        nextDueDateInput.value = nextInstallment.dueDate;
+        console.log(` Auto-set next due date to Installment ${nextInstallment.installmentNumber}: ${nextInstallment.dueDate}`);
+    } else {
+        //  This is the last installment - clear next due date
+        nextDueDateInput.value = '';
+        console.log('ℹ️ Last installment - no next due date');
+    }
+}
+
 
 // Update saveRefund to use regNo
 async function saveRefund() {
@@ -2621,30 +2696,46 @@ async function saveRefund() {
 async function viewReceiptPreview(receiptNo, regNo) {
     try {
         showLoading('Loading receipt...');
-        
-        //  FETCH ACTUAL RECEIPT DATA
-       const response = await fetch(`${API_BASE}/receipts/${regNo}`, {
-           headers: getCsrfHeaders()
-       });
 
-        if (!response.ok) throw new Error('Failed to load receipt');
+        //  FIX: Use regNo parameter, not currentStudentRegNo
+        console.log('🔍 viewReceiptPreview called with:', { receiptNo, regNo });
+
+        const response = await fetch(`${API_BASE}/receipts/${regNo}`, {
+            headers: getCsrfHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: Failed to load receipt`);
+        }
 
         const receipts = await response.json();
         const receipt = receipts.find(r => r.receiptNumber === receiptNo);
 
         if (!receipt) {
-            throw new Error('Receipt not found');
+            throw new Error(`Receipt ${receiptNo} not found in response`);
         }
 
-        //  GET STUDENT DETAILS
         const student = feesData.find(s => s.regNo === regNo);
+
+        let currentPendingFees = 0;
+        let currentNextDueDate = null;
+
+        if (student) {
+            currentPendingFees = student.feesDue || 0;
+            currentNextDueDate = student.dueDate || null;
+        }
+
+        const pendingAtReceiptTime = receipt.pendingFees || 0;
 
         Swal.close();
 
         const receiptHTML = generateReceiptHTML({
             ...receipt,
             mobile: student?.mobile || 'N/A',
-            course: student?.course || 'N/A'
+            course: student?.course || 'N/A',
+            pendingFees: currentPendingFees,
+            nextDueDate: currentNextDueDate,
+            pendingFeesAtTime: pendingAtReceiptTime
         });
 
         Swal.fire({
@@ -2672,7 +2763,7 @@ async function viewReceiptPreview(receiptNo, regNo) {
 
     } catch (error) {
         Swal.close();
-        console.error('Error:', error);
+        console.error(' Error in viewReceiptPreview:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -2684,6 +2775,7 @@ async function viewReceiptPreview(receiptNo, regNo) {
 
 /**
  * Generate professional invoice PDF from receipt data
+ *  Now uses CURRENT pending fees and due date instead of historical data
  */
 async function generateInvoicePDF(receiptData) {
     return new Promise((resolve, reject) => {
@@ -2695,8 +2787,8 @@ async function generateInvoicePDF(receiptData) {
             const margin = 15;
             let y = 15;
 
-            // ===== ADD LOGO (Image Path) =====
-            const logoUrl = '/assets/images/tts-logo-ev.png'; // Update with actual path
+            // ===== ADD LOGO =====
+            const logoUrl = '/assets/images/tts-logo-ev.png';
             try {
                 doc.addImage(logoUrl, 'PNG', margin, y, 20, 25);
             } catch (e) {
@@ -2720,24 +2812,24 @@ async function generateInvoicePDF(receiptData) {
             y += 4;
             doc.text('Phone: +91 02532312447 | Email: info@tts.net.in', margin + 30, y);
 
-            y += 12; // Increased spacing
+            y += 12;
 
             // ===== TITLE BAR =====
             doc.setDrawColor(0, 0, 0);
             doc.setLineWidth(0.5);
             doc.line(margin, y, pageWidth - margin, y);
 
-            y += 10; // Increased spacing
+            y += 10;
             doc.setFontSize(14);
             doc.setFont('helvetica', 'bold');
             doc.text('FEES RECEIPT', pageWidth / 2, y, { align: 'center' });
 
             y += 6;
             doc.line(margin, y, pageWidth - margin, y);
-            y += 10; // Increased spacing
+            y += 10;
 
-            // ===== TABLE SETUP WITH INCREASED HEIGHT =====
-            const rowHeight = 9; // Increased from 7 to 9
+            // ===== TABLE SETUP =====
+            const rowHeight = 9;
             const fullWidth = pageWidth - 2 * margin;
             const halfWidth = fullWidth / 2;
             const labelWidth = 45;
@@ -2796,7 +2888,7 @@ async function generateInvoicePDF(receiptData) {
 
             y += rowHeight;
 
-            // ===== ROW 4: Contact No & Email (FULL EMAIL DISPLAY) =====
+            // ===== ROW 4: Contact No & Email =====
             doc.rect(margin, y, labelWidth, rowHeight);
             doc.setFont('helvetica', 'bold');
             doc.text('Contact No:', margin + 2, y + 6);
@@ -2865,10 +2957,7 @@ async function generateInvoicePDF(receiptData) {
                 ['Cheque Dated:', receiptData.chequeDate ? formatDate(receiptData.chequeDate) : 'NA'],
                 ['Bank Name:', receiptData.bankName || 'NA'],
                 ['IFSC Code:', receiptData.ifscCode || 'NA'],
-                ['Online Tranx. No:', receiptData.transactionNumber || 'NA'],
-                ['Due Date:', receiptData.nextDueDate ? formatDate(receiptData.nextDueDate) : 'NA'],
-                ['Due Fees:', 'Rs. ' + formatCurrency(receiptData.pendingFees || 0)],
-                ['Total Fees:', 'Rs. ' + formatCurrency(receiptData.totalFees || 0)]
+                ['Online Tranx. No:', receiptData.transactionNumber || 'NA']
             ];
 
             paymentRows.forEach(([label, value]) => {
@@ -2883,6 +2972,46 @@ async function generateInvoicePDF(receiptData) {
                 y += rowHeight;
             });
 
+            // =====  Due Date Row - Show "Paid in Full" when fees are zero =====
+            const dueDateValue = (receiptData.nextDueDate && receiptData.pendingFees > 0.01)
+                ? formatDate(receiptData.nextDueDate)
+                : 'Paid in Full';
+
+            doc.rect(margin, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Due Date:', margin + 2, y + 6);
+
+            doc.rect(margin + labelWidth, y, fullWidth - labelWidth, rowHeight);
+            doc.setFont('helvetica', 'normal');
+            doc.text(dueDateValue, margin + labelWidth + 2, y + 6);
+
+            y += rowHeight;
+
+            // =====  Due Fees Row - Show "Rs. 0.00 (Paid in Full)" when fees are zero =====
+            const dueFeesValue = receiptData.pendingFees > 0.01
+                ? 'Rs. ' + formatCurrency(receiptData.pendingFees || 0)
+                : 'Rs. 0.00 (Paid in Full)';
+
+            doc.rect(margin, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Due Fees:', margin + 2, y + 6);
+
+            doc.rect(margin + labelWidth, y, fullWidth - labelWidth, rowHeight);
+            doc.setFont('helvetica', 'normal');
+            doc.text(dueFeesValue, margin + labelWidth + 2, y + 6);
+
+            y += rowHeight;
+
+            // ===== Total Fees Row =====
+            doc.rect(margin, y, labelWidth, rowHeight);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Total Fees:', margin + 2, y + 6);
+
+            doc.rect(margin + labelWidth, y, fullWidth - labelWidth, rowHeight);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Rs. ' + formatCurrency(receiptData.totalFees || 0), margin + labelWidth + 2, y + 6);
+
+            y += rowHeight;
             y += 3; // Extra spacing before terms
 
             // ===== TERMS & CONDITIONS =====
@@ -2922,7 +3051,7 @@ async function generateInvoicePDF(receiptData) {
             resolve(pdfBase64);
 
         } catch (error) {
-            console.error('Error generating PDF:', error);
+            console.error('❌ Error generating PDF:', error);
             reject(error);
         }
     });

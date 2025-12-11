@@ -1,6 +1,7 @@
 package com.tts.sms.controller;
 
 import com.tts.sms.dto.*;
+import com.tts.sms.exception.ResourceNotFoundException;
 import com.tts.sms.service.FeesManagerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -186,8 +187,19 @@ public class FeesManagerController {
 
         log.info("GET /api/fees-manager/receipts/{}", regNo);
 
-        List<FeeReceiptResponseDTO> receipts = feesManagerService.getReceiptsByRegNo(regNo);
-        return ResponseEntity.ok(receipts);
+        if (regNo == null || regNo.trim().isEmpty()) {
+            log.error(" Registration number is empty");
+            return ResponseEntity.badRequest().build();
+        }
+
+        try {
+            List<FeeReceiptResponseDTO> receipts = feesManagerService.getReceiptsByRegNo(regNo);
+            log.info(" Returning {} receipts for regNo: {}", receipts.size(), regNo);
+            return ResponseEntity.ok(receipts);
+        } catch (Exception e) {
+            log.error(" Error fetching receipts for {}: {}", regNo, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     /**
@@ -312,6 +324,35 @@ public class FeesManagerController {
     }
 
     /**
+     *  Save fee installments (POST)
+     */
+    @PostMapping(value = "/installments/{regNo}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> saveFeeInstallments(
+            @PathVariable String regNo,
+            @Valid @RequestBody FeeInstallmentBatchDTO installmentsDTO) {
+
+        log.info("POST /api/fees-manager/installments/{} - Saving {} installments",
+                regNo, installmentsDTO.getInstallments().size());
+
+        try {
+            List<FeeInstallmentDTO> saved = feesManagerService.saveFeeInstallments(regNo, installmentsDTO);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Installments saved successfully",
+                    "installments", saved
+            ));
+        } catch (Exception e) {
+            log.error("Error saving installments", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", false,
+                            "message", e.getMessage()
+                    ));
+        }
+    }
+
+    /**
      *  Send receipt via email with PDF attachment generated from frontend
      */
     @PostMapping(value = "/receipts/{receiptNo}/send-email", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -322,43 +363,41 @@ public class FeesManagerController {
         log.info("📧 POST /api/fees-manager/receipts/{}/send-email", receiptNo);
 
         try {
+            // Validate inputs
             String email = (String) emailData.get("email");
             String message = (String) emailData.get("message");
             String studentName = (String) emailData.get("studentName");
             String pdfData = (String) emailData.get("pdfData");
 
-            // Validate required fields
             if (email == null || email.trim().isEmpty()) {
+                log.warn(" Email address is missing");
                 return ResponseEntity.badRequest()
-                        .body(Map.of(
-                                "success", "false",
-                                "message", "Email address is required"
-                        ));
+                        .body(Map.of("success", "false", "message", "Email address is required"));
             }
 
             if (pdfData == null || pdfData.trim().isEmpty()) {
+                log.warn(" PDF data is missing");
                 return ResponseEntity.badRequest()
-                        .body(Map.of(
-                                "success", "false",
-                                "message", "PDF data is missing"
-                        ));
+                        .body(Map.of("success", "false", "message", "PDF data is missing"));
             }
 
-            // Send email with PDF
+            //  Call service (async processing happens inside)
             feesManagerService.sendReceiptEmail(receiptNo, email, studentName, message, pdfData);
 
+            //  Return immediately - don't wait for email to be sent
             return ResponseEntity.ok(Map.of(
                     "success", "true",
-                    "message", "Email sent successfully to " + email
+                    "message", "Email is being sent to " + email
             ));
 
+        } catch (ResourceNotFoundException e) {
+            log.error(" Resource not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", "false", "message", e.getMessage()));
         } catch (Exception e) {
-            log.error("❌ Error sending receipt email", e);
+            log.error(" Error sending receipt email", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "success", "false",
-                            "message", "Failed to send email: " + e.getMessage()
-                    ));
+                    .body(Map.of("success", "false", "message", "Failed to send email: " + e.getMessage()));
         }
     }
 }
