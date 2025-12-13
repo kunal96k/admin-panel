@@ -116,13 +116,13 @@ public class EnquiryService {
                     log.error("Enquiry not found with id: {}", id);
                     return new ResourceNotFoundException("Enquiry not found with id: " + id);
                 });
-        if (!existingEnquiry.getMobile().equals(requestDTO.getMobile()) &&
-                enquiryRepository.existsByMobileAndIsDeletedFalse(requestDTO.getMobile())) {
-            log.warn("Mobile number {} already exists for another enquiry", requestDTO.getMobile());
-            throw new IllegalArgumentException(
-                    "Mobile number " + requestDTO.getMobile() + " already exists"
-            );
-        }
+//        if (!existingEnquiry.getMobile().equals(requestDTO.getMobile()) &&
+//                enquiryRepository.existsByMobileAndIsDeletedFalse(requestDTO.getMobile())) {
+//            log.warn("Mobile number {} already exists for another enquiry", requestDTO.getMobile());
+//            throw new IllegalArgumentException(
+//                    "Mobile number " + requestDTO.getMobile() + " already exists"
+//            );
+//        }
         enquiryMapper.updateEntityFromDTO(requestDTO, existingEnquiry);
         existingEnquiry.setUpdatedBy("SYSTEM");
         Enquiry updated = enquiryRepository.save(existingEnquiry);

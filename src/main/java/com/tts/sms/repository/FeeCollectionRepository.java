@@ -169,4 +169,12 @@ public interface FeeCollectionRepository extends JpaRepository<FeeCollection, Lo
             @Param("namePart") String namePart,
             @Param("mobile") String mobile
     );
-}
+
+    /**
+     * Find fee collections by mobile number only
+     * Most reliable for matching old student records
+     */
+    @Query("SELECT fc FROM FeeCollection fc WHERE fc.isDeleted = false " +
+            "AND fc.mobileNo = :mobile " +
+            "ORDER BY fc.receiptDate DESC")
+    List<FeeCollection> findByMobileNoAndIsDeletedFalse(@Param("mobile") String mobile);}

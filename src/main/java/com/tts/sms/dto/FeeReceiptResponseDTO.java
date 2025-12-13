@@ -55,6 +55,13 @@ public class FeeReceiptResponseDTO {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate currentNextDueDate;
 
+    /**
+     * Data source marker: "IMPORTED_OLD_DATA" or "NEW_ENTRY"
+     */
+    private String dataSource;
+
+    private String course;
+
     private String receiptType;
     private String notes;
     private String status;

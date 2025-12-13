@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -358,16 +359,26 @@ public class FeesManagerController {
     @PostMapping(value = "/receipts/{receiptNo}/send-email", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, String>> sendReceiptEmail(
             @PathVariable String receiptNo,
-            @RequestBody Map<String, Object> emailData) {
+            @RequestBody(required = false) Map<String, Object> emailData) {  // CHANGED: required = false
 
         log.info("📧 POST /api/fees-manager/receipts/{}/send-email", receiptNo);
 
         try {
+            // ADDED: Check if body is null
+            if (emailData == null || emailData.isEmpty()) {
+                log.error(" Email data is null or empty");
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", "false", "message", "Email data is required"));
+            }
+
             // Validate inputs
             String email = (String) emailData.get("email");
             String message = (String) emailData.get("message");
             String studentName = (String) emailData.get("studentName");
             String pdfData = (String) emailData.get("pdfData");
+
+            log.info("📧 Received email request - Email: {}, StudentName: {}, PDFDataLength: {}",
+                    email, studentName, (pdfData != null ? pdfData.length() : 0));
 
             if (email == null || email.trim().isEmpty()) {
                 log.warn(" Email address is missing");
@@ -381,10 +392,26 @@ public class FeesManagerController {
                         .body(Map.of("success", "false", "message", "PDF data is missing"));
             }
 
-            //  Call service (async processing happens inside)
+            // CHANGED: Better base64 validation with size check
+            if (!isValidBase64(pdfData)) {
+                log.error(" Invalid base64 PDF data (size: {})", pdfData.length());
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", "false", "message", "Invalid PDF data format"));
+            }
+
+            // ADDED: Check PDF size (warn if > 5MB)
+            int pdfSizeKB = (pdfData.length() * 3) / 4 / 1024;
+            log.info("📊 PDF size: {} KB", pdfSizeKB);
+
+            if (pdfSizeKB > 5120) { // 5MB
+                log.warn(" PDF size is large: {} KB - may cause issues", pdfSizeKB);
+            }
+
+            log.info(" Sending email to {} for receipt {}", email, receiptNo);
+
+            // Call service (async processing)
             feesManagerService.sendReceiptEmail(receiptNo, email, studentName, message, pdfData);
 
-            //  Return immediately - don't wait for email to be sent
             return ResponseEntity.ok(Map.of(
                     "success", "true",
                     "message", "Email is being sent to " + email
@@ -398,6 +425,44 @@ public class FeesManagerController {
             log.error(" Error sending receipt email", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("success", "false", "message", "Failed to send email: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Validate base64 string
+     */
+    private boolean isValidBase64(String str) {
+        if (str == null || str.isEmpty()) {
+            return false;
+        }
+
+        // CHANGED: Better validation with try-catch
+        try {
+            // Check if string contains only valid base64 characters
+            if (!str.matches("^[A-Za-z0-9+/]*={0,2}$")) {
+                log.error(" Invalid base64 characters found");
+                return false;
+            }
+
+            // Try to decode
+            byte[] decoded = Base64.getDecoder().decode(str);
+
+            // Check if decoded data is valid (should be PDF magic bytes)
+            if (decoded.length < 4) {
+                log.error(" Decoded data too small");
+                return false;
+            }
+
+            // OPTIONAL: Check PDF magic bytes (25 50 44 46 = %PDF)
+            if (decoded[0] == 0x25 && decoded[1] == 0x50 &&
+                    decoded[2] == 0x44 && decoded[3] == 0x46) {
+                log.info(" Valid PDF signature found");
+            }
+
+            return true;
+        } catch (IllegalArgumentException e) {
+            log.error(" Base64 decode failed: {}", e.getMessage());
+            return false;
         }
     }
 }

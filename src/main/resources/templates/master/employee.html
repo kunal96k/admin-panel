@@ -196,7 +196,18 @@
                                 <!-- Menu Permissions Section -->
                                 <div class="row mt-3">
                                     <div class="col-12">
-                                        <h6 class="mb-3">Menu Permissions <span class="badge bg-primary" id="menuPermissionCount">0 selected</span></h6>
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0">
+                                                Menu Permissions
+                                                <span class="badge bg-primary" id="menuPermissionCount">0 selected</span>
+                                            </h6>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="selectAllMenus">
+                                                <label class="form-check-label fw-bold" for="selectAllMenus">
+                                                    Select All
+                                                </label>
+                                            </div>
+                                        </div>
                                         <div class="row" id="menuPermissionsContainer">
                                             <div class="col-12 text-center text-muted">Loading menus...</div>
                                         </div>

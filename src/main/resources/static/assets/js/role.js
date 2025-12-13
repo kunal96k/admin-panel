@@ -37,12 +37,12 @@
 
     async function loadRoles() {
         try {
-          const response = await fetch(API_BASE_URL, {
-              headers: {
-                  'Accept': 'application/json',
-                  ...getCsrfHeaders()
-              }
-          });
+            const response = await fetch(API_BASE_URL, {
+                headers: {
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                }
+            });
 
             roles = await response.json();
             renderRoleTable();
@@ -100,14 +100,14 @@
             const url = currentRoleId ? `${API_BASE_URL}/${currentRoleId}` : API_BASE_URL;
             const method = currentRoleId ? 'PUT' : 'POST';
 
-           const response = await fetch(url, {
-               method: method,
-               headers: {
-                   'Content-Type': 'application/json',
-                   ...getCsrfHeaders()
-               },
-               body: JSON.stringify({ roleTitle })
-           });
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...getCsrfHeaders()
+                },
+                body: JSON.stringify({ roleTitle })
+            });
 
             if (!response.ok) throw new Error('Failed to save role');
 
@@ -136,6 +136,7 @@
             });
             menus = await response.json();
             renderPermissionsTable();
+            updateSelectAllState(); // Update "Select All" checkbox state
         } catch (error) {
             console.error('Error loading menus:', error);
             showError('Failed to load menu permissions');
@@ -168,7 +169,7 @@
                                    type="checkbox"
                                    data-menu-id="${menu.id}"
                                    ${menu.hasAccess ? 'checked' : ''}
-                                   onchange="updateMenuPermission(${menu.id}, this.checked)">
+                                   onchange="updateMenuPermission(${menu.id}, this.checked); updateSelectAllState();">
                         </div>
                     </td>
                 </tr>
@@ -178,16 +179,42 @@
         tbody.innerHTML = html;
     }
 
+    /**
+     * Update "Select All" checkbox based on individual checkbox states
+     */
+    function updateSelectAllState() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.menu-checkbox');
+        const checkedBoxes = document.querySelectorAll('.menu-checkbox:checked');
+
+        if (checkboxes.length === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        } else if (checkedBoxes.length === checkboxes.length) {
+            // All checked
+            selectAll.checked = true;
+            selectAll.indeterminate = false;
+        } else if (checkedBoxes.length > 0) {
+            // Some checked (indeterminate state)
+            selectAll.checked = false;
+            selectAll.indeterminate = true;
+        } else {
+            // None checked
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        }
+    }
+
     window.updateMenuPermission = async function(menuId, hasAccess) {
         try {
-           const response = await fetch(`${API_BASE_URL}/${currentRoleId}/permissions`, {
-               method: 'POST',
-               headers: {
-                   'Content-Type': 'application/json',
-                   ...getCsrfHeaders()
-               },
-               body: JSON.stringify({ menuId, hasAccess })
-           });
+            const response = await fetch(`${API_BASE_URL}/${currentRoleId}/permissions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...getCsrfHeaders()
+                },
+                body: JSON.stringify({ menuId, hasAccess })
+            });
 
             if (!response.ok) throw new Error('Failed to update permission');
         } catch (error) {
@@ -202,6 +229,7 @@
             cb.checked = e.target.checked;
             updateMenuPermission(parseInt(cb.dataset.menuId), cb.checked);
         });
+        updateSelectAllState(); // Update state after toggling all
     }
 
     window.editRole = async function(id) {
@@ -265,6 +293,10 @@
         document.getElementById('saveRoleBtn').innerHTML =
             '<i class="bi bi-check-circle me-2"></i>Save';
         document.getElementById('permissionsSection').style.display = 'none';
+
+        // Reset "Select All" checkbox
+        document.getElementById('selectAll').checked = false;
+        document.getElementById('selectAll').indeterminate = false;
     }
 
     function showSuccess(message) {
@@ -285,4 +317,7 @@
             confirmButtonColor: '#ef4444'
         });
     }
+
+    // Expose function to global scope for use in HTML
+    window.updateSelectAllState = updateSelectAllState;
 })();

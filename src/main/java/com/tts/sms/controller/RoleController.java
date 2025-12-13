@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/roles")
@@ -16,6 +17,15 @@ import java.util.List;
 public class RoleController {
 
     private final RoleService roleService;
+
+    /**
+     * Get role permissions (for auto-loading in employee form)
+     */
+    @GetMapping("/{roleId}/permissions")
+    public ResponseEntity<List<Map<String, Object>>> getRolePermissions(@PathVariable Long roleId) {
+        List<Map<String, Object>> permissions = roleService.getRolePermissions(roleId);
+        return ResponseEntity.ok(permissions);
+    }
 
     @GetMapping
     public ResponseEntity<List<RoleResponseDTO>> getAllRoles() {

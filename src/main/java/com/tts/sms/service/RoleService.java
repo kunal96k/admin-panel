@@ -10,7 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -147,5 +149,26 @@ public class RoleService {
                 .isActive(role.getIsActive())
                 .createdDate(role.getCreatedDate())
                 .build();
+    }
+
+    /**
+     * Get all permissions for a role (for auto-loading in employee form)
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getRolePermissions(Long roleId) {
+        Role role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
+
+        List<RoleMenuPermission> rolePermissions =
+                roleMenuPermissionRepository.findByRole(role);
+
+        return rolePermissions.stream()
+                .map(perm -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("menuId", perm.getMenu().getId());
+                    map.put("hasAccess", perm.getHasAccess());
+                    return map;
+                })
+                .collect(Collectors.toList());
     }
 }

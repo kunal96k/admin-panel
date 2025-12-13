@@ -76,6 +76,17 @@
             }
         });
 
+        function toggleAllMenuPermissions() {
+            const selectAll = document.getElementById('selectAllMenus');
+            const checkboxes = document.querySelectorAll('.menu-permission-checkbox');
+
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+
+            updateMenuCount();
+        }
+
         async function loadRoles() {
             try {
                 const response = await fetch(`${ROLE_API_URL}/active`, {
@@ -110,6 +121,12 @@
             document.getElementById('captureBtn').addEventListener('click', capturePhoto);
             document.getElementById('photoUpload').addEventListener('change', handlePhotoUpload);
 
+            // Select All checkbox listener
+            document.getElementById('selectAllMenus').addEventListener('change', toggleAllMenuPermissions);
+
+            // ADD THIS: Role change listener to auto-load permissions
+            document.getElementById('role').addEventListener('change', handleRoleChange);
+
             // Modal cleanup
             const employeeModalElement = document.getElementById('employeeModal');
             employeeModalElement.addEventListener('hidden.bs.modal', function() {
@@ -122,6 +139,55 @@
 
             setupPasswordValidation();
             setupUserCredentialsToggle();
+        }
+
+        /**
+         * Handle role change - Load role-based permissions
+         */
+        async function handleRoleChange(event) {
+            const roleId = event.target.value;
+
+            if (!roleId) {
+                // If no role selected, uncheck all permissions
+                document.querySelectorAll('.menu-permission-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+                updateMenuCount();
+                return;
+            }
+
+            try {
+                // Show loading state
+                const container = document.getElementById('menuPermissionsContainer');
+                container.innerHTML = '<div class="col-12 text-center text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading role permissions...</div>';
+
+                // Fetch role permissions from backend
+                const response = await fetch(`${ROLE_API_URL}/${roleId}/permissions`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load role permissions');
+                }
+
+                const rolePermissions = await response.json();
+
+                // Re-render menu permissions with role permissions pre-selected
+                renderMenuPermissions(rolePermissions);
+
+                console.log(`✅ Loaded ${rolePermissions.filter(p => p.hasAccess).length} permissions for role ${roleId}`);
+
+            } catch (error) {
+                console.error('Error loading role permissions:', error);
+
+                // On error, just render empty permissions
+                renderMenuPermissions([]);
+
+                showError('Could not load role permissions. You can manually select them.');
+            }
         }
 
         function setupUserCredentialsToggle() {
@@ -154,6 +220,9 @@
 
             // Uncheck all menu permissions
             document.querySelectorAll('.menu-permission-checkbox').forEach(cb => cb.checked = false);
+
+            document.getElementById('selectAllMenus').checked = false;
+
             updateMenuCount();
         }
 
@@ -427,7 +496,7 @@
             }
         }
 
-        function renderMenuPermissions() {
+        function renderMenuPermissions(employeePermissions = []) {
             const container = document.getElementById('menuPermissionsContainer');
 
             if (allMenus.length === 0) {
@@ -448,30 +517,59 @@
                             <strong>${mainMenu}</strong>
                         </div>
                         <div class="card-body">
-                            ${menus.map(menu => `
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input menu-permission-checkbox"
-                                           type="checkbox"
-                                           id="menu_${menu.id}"
-                                           data-menu-id="${menu.id}"
-                                           onchange="updateMenuCount()">
-                                    <label class="form-check-label" for="menu_${menu.id}">
-                                        ${menu.submenu}
-                                    </label>
-                                </div>
-                            `).join('')}
+                            ${menus.map(menu => {
+                                // Check if this menu has access in employee/role permissions
+                                const empPerm = employeePermissions.find(p => p.menuId === menu.id);
+                                const isChecked = empPerm ? empPerm.hasAccess : false;
+
+                                return `
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input menu-permission-checkbox"
+                                               type="checkbox"
+                                               id="menu_${menu.id}"
+                                               data-menu-id="${menu.id}"
+                                               ${isChecked ? 'checked' : ''}
+                                               onchange="updateMenuCount()">
+                                        <label class="form-check-label" for="menu_${menu.id}">
+                                            ${menu.submenu}
+                                        </label>
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 </div>
             `).join('');
 
             updateMenuCount();
+            updateSelectAllCheckbox();
         }
 
-        function updateMenuCount() {
-            const checked = document.querySelectorAll('.menu-permission-checkbox:checked').length;
-            document.getElementById('menuPermissionCount').textContent = `${checked} selected`;
+        function updateSelectAllCheckbox() {
+            const selectAll = document.getElementById('selectAllMenus');
+            const checkboxes = document.querySelectorAll('.menu-permission-checkbox');
+            const checkedBoxes = document.querySelectorAll('.menu-permission-checkbox:checked');
+
+            if (checkboxes.length === 0) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+            } else if (checkedBoxes.length === checkboxes.length) {
+                selectAll.checked = true;
+                selectAll.indeterminate = false;
+            } else if (checkedBoxes.length > 0) {
+                selectAll.checked = false;
+                selectAll.indeterminate = true;
+            } else {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+            }
         }
+
+       function updateMenuCount() {
+           const checked = document.querySelectorAll('.menu-permission-checkbox:checked').length;
+           document.getElementById('menuPermissionCount').textContent = `${checked} selected`;
+           updateSelectAllCheckbox();
+       }
 
         function nextStep() {
             if (validateCurrentStep()) {
@@ -771,12 +869,24 @@
         }
 
         function clearPasswordFields() {
-            document.getElementById('username').value = '';
+            // Clear username field and remove readonly attribute
+            const usernameField = document.getElementById('username');
+            usernameField.value = '';
+            usernameField.removeAttribute('readonly');
+
+            // Remove any existing info message
+            const existingInfo = usernameField.parentElement.querySelector('.text-info');
+            if (existingInfo) {
+                existingInfo.remove();
+            }
+
+            // Clear password fields
             document.getElementById('password').value = '';
             document.getElementById('confirmPassword').value = '';
             document.getElementById('confirmPassword').style.borderColor = '';
             document.getElementById('confirmPassword').style.boxShadow = '';
 
+            // Clear password validation indicators
             const indicator = document.getElementById('passwordStrengthIndicator');
             if (indicator) indicator.innerHTML = '';
 
@@ -787,13 +897,16 @@
             if (feedback) feedback.innerHTML = '';
         }
 
-        function openAddEmployeeModal() {
-            resetForm();
-            document.getElementById('employeeModalTitle').innerHTML =
-                '<i class="bi bi-plus-circle me-2"></i>Add New Employee';
-            loadMenus();
-            if (employeeModal) employeeModal.show();
-        }
+       async function openAddEmployeeModal() {
+           resetForm();
+           document.getElementById('employeeModalTitle').innerHTML =
+               '<i class="bi bi-plus-circle me-2"></i>Add New Employee';
+
+           await loadMenus();
+           renderMenuPermissions([]);
+
+           if (employeeModal) employeeModal.show();
+       }
 
         function showSuccess(message) {
             Swal.fire({
@@ -934,10 +1047,10 @@
 
         async function editEmployee(id) {
             try {
-                //  STEP 1: Check permission BEFORE loading any data
+                // STEP 1: Check permission BEFORE loading any data
                 const hasPermission = await checkEmployeeModifyPermission(id, 'update');
                 if (!hasPermission) {
-                    return; // Stop execution if no permission
+                    return;
                 }
 
                 // STEP 2: Show loading
@@ -963,16 +1076,21 @@
 
                 const employee = await response.json();
 
-                // STEP 4: Load menus and permissions
+                // STEP 4: Load menus FIRST
                 await loadMenus();
-                await loadEmployeePermissions(id);
+
+                // STEP 5: Load employee permissions
+                const employeePermissions = await loadEmployeePermissions(id);
+
+                // STEP 6: Render menu permissions with employee data
+                renderMenuPermissions(employeePermissions);
 
                 editingEmployeeId = id;
 
                 document.getElementById('employeeModalTitle').innerHTML =
                     '<i class="bi bi-pencil-square me-2"></i>Edit Employee';
 
-                // STEP 5: Fill form fields with existing data
+                // STEP 7: Fill form fields with existing data
                 document.getElementById('employeeName').value = employee.employeeName || '';
                 document.getElementById('mobileNumber').value = employee.mobileNumber || '';
                 document.getElementById('emailId').value = employee.emailId || '';
@@ -983,7 +1101,7 @@
                 document.getElementById('role').value = employee.roleId || '';
                 document.getElementById('zoomLink').value = employee.zoomLink || '';
 
-                // STEP 6: Fill mobile permissions checkboxes
+                // STEP 8: Fill mobile permissions checkboxes
                 document.getElementById('newAdmission').checked = employee.newAdmission || false;
                 document.getElementById('viewAdmission').checked = employee.viewAdmission || false;
                 document.getElementById('newEnquiry').checked = employee.newEnquiry || false;
@@ -1005,15 +1123,13 @@
                 document.getElementById('liveLecture').checked = employee.liveLecture || false;
                 document.getElementById('offlineExam').checked = employee.offlineExam || false;
 
-                // STEP 7: Hide user credentials section on edit (only show if they want to update)
-                document.getElementById('addUserCheckbox').checked = false;
-                document.getElementById('userCredentialsSection').style.display = 'none';
-                clearPasswordFields();
+                // STEP 9: Load username if exists
+                await loadUserCredentials(id);
 
                 currentStep = 1;
                 showStep(1);
 
-                // STEP 8: Close loading and show modal
+                // STEP 10: Close loading and show modal
                 Swal.close();
 
                 const modal = new bootstrap.Modal(document.getElementById('employeeModal'));
@@ -1027,6 +1143,37 @@
                     text: error.message || 'Failed to load employee details',
                     confirmButtonColor: '#ef4444'
                 });
+            }
+        }
+
+        async function loadUserCredentials(employeeId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/${employeeId}/user-credentials`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
+
+                if (response.ok) {
+                    const userData = await response.json();
+
+                    if (userData && userData.username) {
+                        // Show username in read-only field
+                        document.getElementById('username').value = userData.username;
+                        document.getElementById('username').setAttribute('readonly', 'readonly');
+
+                        // Add info message
+                        const usernameField = document.getElementById('username');
+                        const infoDiv = document.createElement('div');
+                        infoDiv.className = 'text-info mt-1';
+                        infoDiv.style.fontSize = '0.85rem';
+                        infoDiv.innerHTML = '<i class="bi bi-info-circle"></i> Username cannot be changed. Leave password blank to keep existing password.';
+                        usernameField.parentElement.appendChild(infoDiv);
+                    }
+                }
+            } catch (error) {
+                console.log('No existing credentials found');
             }
         }
 
@@ -1109,21 +1256,15 @@
                         ...getCsrfHeaders()
                     }
                 });
-                if (!response.ok) return; // Skip if endpoint doesn't exist yet
+
+                if (!response.ok) return [];
 
                 const permissions = await response.json();
+                return permissions; // Return permissions for use in renderMenuPermissions
 
-                // Set menu permission checkboxes
-                permissions.forEach(perm => {
-                    const checkbox = document.querySelector(`[data-menu-id="${perm.menuId}"]`);
-                    if (checkbox) {
-                        checkbox.checked = perm.hasAccess;
-                    }
-                });
-
-                updateMenuCount();
             } catch (error) {
                 console.warn('Could not load employee permissions:', error);
+                return [];
             }
         }
 

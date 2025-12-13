@@ -935,7 +935,6 @@ async function viewReceipts(regNo) {
         return;
     }
 
-    //  Store regNo globally for modal functions
     currentStudentRegNo = regNo;
 
     try {
@@ -958,7 +957,10 @@ async function viewReceipts(regNo) {
             tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No receipts found</td></tr>';
         } else {
             tbody.innerHTML = receipts.map(receipt => {
-                const isOldData = receipt.receiptType === 'Old Imported';
+                //  Check data source to determine if it's old imported data
+                const isOldData = receipt.dataSource === 'IMPORTED_OLD_DATA' || 
+                                 receipt.receiptType === 'Old Imported';
+                
                 const receiptTypeBadge = isOldData
                     ? '<span class="badge bg-secondary">Old Import</span>'
                     : '<span class="badge bg-success">Regular</span>';
@@ -984,7 +986,7 @@ async function viewReceipts(regNo) {
                            title="Email">
                            <i class="bi bi-envelope"></i>
                        </button>
-                        <button class="btn btn-sm  btn-warning me-1"
+                        <button class="btn btn-sm btn-warning me-1"
                             onclick="updateFeeReceipt(${receipt.id}, '${regNo}')"
                             title="Edit">
                             <i class="bi bi-pencil"></i>
@@ -994,7 +996,7 @@ async function viewReceipts(regNo) {
                             title="Delete">
                             <i class="bi bi-trash"></i>
                         </button>
-                        ` : '<span class="text-muted small">Read Only</span>'}
+                        ` : '<span class="text-muted small">View Only</span>'}
                     </td>
                 </tr>
             `}).join('');
@@ -2239,6 +2241,7 @@ async function emailReceipt(receiptNo, studentName, mobile) {
             const email = document.getElementById('emailAddress').value.trim();
             const name = document.getElementById('emailStudentName').value.trim();
 
+            // Validation
             if (!email) {
                 Swal.showValidationMessage('Please enter an email address');
                 return false;
@@ -2261,7 +2264,7 @@ async function emailReceipt(receiptNo, studentName, mobile) {
             try {
                 console.log('🔍 Fetching receipt for regNo:', actualRegNo);
 
-                //  FIX: Fetch receipt data
+                // Fetch receipt data
                 const receiptResponse = await fetch(`${API_BASE}/receipts/${actualRegNo}`, {
                     headers: getCsrfHeaders()
                 });
@@ -2282,25 +2285,26 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                     return false;
                 }
 
-                // : Get CURRENT fees data from feesData array (already loaded)
+                // Get CURRENT fees data from feesData array
                 const student = feesData.find(s => s.regNo === actualRegNo);
 
-                //  USE CURRENT DATA instead of receipt's historical data
+                // Use CURRENT data instead of receipt's historical data
                 const receiptData = {
                     ...receipt,
                     mobile: student?.mobile || mobile || 'N/A',
                     course: student?.course || 'N/A',
                     email: email,
-                    //  OVERRIDE with CURRENT pending fees and due date
+                    // Override with CURRENT pending fees and due date
                     pendingFees: student?.feesDue || 0,
                     nextDueDate: student?.dueDate || null
                 };
 
-                console.log(' Generating PDF with CURRENT data:', {
+                console.log('📄 Generating PDF with CURRENT data:', {
                     pendingFees: receiptData.pendingFees,
                     nextDueDate: receiptData.nextDueDate
                 });
 
+                // Generate PDF
                 const pdfBase64 = await generateInvoicePDF(receiptData);
 
                 if (!pdfBase64) {
@@ -2308,11 +2312,33 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                     return false;
                 }
 
+                // Validate PDF size
+                const pdfSizeKB = Math.round((pdfBase64.length * 3 / 4) / 1024);
+                console.log(`📊 PDF size: ${pdfSizeKB} KB (${pdfBase64.length} chars base64)`);
+                
+                if (pdfSizeKB > 8192) { // 8MB limit for safety
+                    Swal.showValidationMessage(`PDF too large (${pdfSizeKB}KB). Maximum 8MB allowed.`);
+                    return false;
+                }
+
+                // Show progress for large PDFs
+                if (pdfSizeKB > 2048) { // > 2MB
+                    console.log('⏳ Large PDF detected, sending may take longer...');
+                }
+
+                // Increase timeout for large PDFs
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                const timeoutMs = 60000; // 60 seconds
+                const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
                 try {
-                    console.log(' Sending email to:', email);
+                    console.log('📧 Sending email to:', email);
+                    console.log('📤 Request payload size:', JSON.stringify({
+                        email: email,
+                        studentName: name,
+                        message: document.getElementById('emailMessage').value,
+                        pdfData: pdfBase64.substring(0, 100) + '...' // Log first 100 chars only
+                    }).length, 'bytes');
 
                     const response = await fetch(`${API_BASE}/receipts/${receiptNo}/send-email`, {
                         method: 'POST',
@@ -2328,26 +2354,66 @@ async function emailReceipt(receiptNo, studentName, mobile) {
 
                     clearTimeout(timeoutId);
 
+                    // Better error handling
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        Swal.showValidationMessage(errorData.message || 'Failed to send email');
+                        const contentType = response.headers.get('content-type');
+                        let errorMessage = 'Failed to send email';
+                        
+                        console.error(' Server response status:', response.status);
+                        console.error(' Server response headers:', 
+                            Object.fromEntries(response.headers.entries()));
+                        
+                        if (contentType && contentType.includes('application/json')) {
+                            try {
+                                const errorData = await response.json();
+                                errorMessage = errorData.message || errorMessage;
+                                console.error(' Server error JSON:', errorData);
+                            } catch (jsonError) {
+                                console.error(' Failed to parse error JSON:', jsonError);
+                            }
+                        } else {
+                            const errorText = await response.text();
+                            console.error(' Server error text:', errorText.substring(0, 500));
+                            
+                            // Check for specific error patterns
+                            if (errorText.includes('JSON parse error')) {
+                                errorMessage = 'Failed to process PDF. Please try again or contact support.';
+                            } else if (errorText.includes('Unexpected end-of-input')) {
+                                errorMessage = 'PDF data was truncated. Please try again.';
+                            }
+                        }
+                        
+                        Swal.showValidationMessage(errorMessage);
                         return false;
                     }
 
-                    return { email };
+                    const result = await response.json();
+                    console.log(' Email API response:', result);
+
+                    return { email, result };
+
                 } catch (error) {
                     clearTimeout(timeoutId);
 
                     if (error.name === 'AbortError') {
-                        console.log(' Email request timed out - email is being sent in background');
-                        return { email };
+                        console.log('⏱ Email request timed out after', timeoutMs/1000, 'seconds');
+                        console.log('ℹ️ Email is likely being processed in background');
+                        // Don't fail - return success as email is processing
+                        return { email, timeout: true };
                     }
 
+                    console.error(' Network error:', error);
+                    console.error(' Error name:', error.name);
+                    console.error(' Error message:', error.message);
+                    console.error(' Error stack:', error.stack);
+                    
                     Swal.showValidationMessage('Network error: ' + error.message);
                     return false;
                 }
             } catch (error) {
-                console.error(' Error sending email:', error);
+                console.error(' Error in email process:', error);
+                console.error(' Error type:', error.constructor.name);
+                console.error(' Error details:', error);
                 Swal.showValidationMessage('Unexpected error: ' + error.message);
                 return false;
             }
@@ -2355,14 +2421,18 @@ async function emailReceipt(receiptNo, studentName, mobile) {
     });
 
     if (isConfirmed && formValues) {
+        let message = `Receipt is being sent to: <p class="fw-bold text-primary">${formValues.email}</p>`;
+        
+        if (formValues.timeout) {
+            message += '<p class="small text-muted">⏳ Request timed out but email is being processed in background.</p>';
+        } else {
+            message += '<p class="small text-muted">Please check your inbox in a few moments</p>';
+        }
+
         Swal.fire({
             icon: 'success',
             title: 'Email Sent!',
-            html: `
-                <p>Receipt is being sent to:</p>
-                <p class="fw-bold text-primary">${formValues.email}</p>
-                <p class="small text-muted">Please check your inbox in a few moments</p>
-            `,
+            html: message,
             confirmButtonColor: '#667eea'
         });
     }
@@ -3051,7 +3121,7 @@ async function generateInvoicePDF(receiptData) {
             resolve(pdfBase64);
 
         } catch (error) {
-            console.error('❌ Error generating PDF:', error);
+            console.error(' Error generating PDF:', error);
             reject(error);
         }
     });

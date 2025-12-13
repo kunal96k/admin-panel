@@ -127,6 +127,39 @@
       "CISCO CERTIFIED NETWORK ASSOCIATE",
       "NETWORKING (N+)"
     ];
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if mobile was passed from admission page
+        const enquiryMobile = sessionStorage.getItem('enquiryMobile');
+
+        if (enquiryMobile) {
+            // Pre-fill mobile number
+            const mobileField = document.getElementById('enquiryMobile');
+            if (mobileField) {
+                mobileField.value = enquiryMobile;
+
+                // Highlight the field
+                mobileField.style.backgroundColor = '#fef3c7';
+                setTimeout(() => {
+                    mobileField.style.backgroundColor = '';
+                }, 2000);
+
+                // Show helpful message
+                Swal.fire({
+                    title: 'Mobile Number Pre-filled',
+                    text: `Mobile: ${enquiryMobile}`,
+                    icon: 'info',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+            }
+
+            // Clear from session storage
+            sessionStorage.removeItem('enquiryMobile');
+        }
+    });
     
     async function fetchCurrentUser() {
         try {

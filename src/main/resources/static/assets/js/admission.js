@@ -347,12 +347,12 @@ async function openNewAdmissionModal() {
                        pattern="[6-9][0-9]{9}">
                 <small class="text-muted d-block mt-2">
                     <i class="bi bi-info-circle me-1"></i>
-                    We'll check if an enquiry exists to pre-fill the form
+                    We'll check if an enquiry exists for this student
                 </small>
             `,
             showCancelButton: true,
             confirmButtonText: 'Check & Continue',
-            cancelButtonText: 'Skip & Create New',
+            cancelButtonText: 'Cancel',
             confirmButtonColor: '#667eea',
             preConfirm: () => {
                 const mobileInput = document.getElementById('swalMobile').value;
@@ -395,87 +395,69 @@ async function openNewAdmissionModal() {
                     setValue('admAdmissionDate', today);
                     setValue('instStartDate', today);
                     window.location.reload();
-                    window.location.reload();
                 } else {
+                    // ⚠️ NO ENQUIRY FOUND - REDIRECT TO ENQUIRY PAGE
                     Swal.close();
-                    await Swal.fire({
+
+                    const result = await Swal.fire({
                         title: 'No Enquiry Found',
                         html: `
-                            <div class="alert alert-info">
-                                <strong><i class="bi bi-info-circle me-2"></i>Create New Admission</strong>
+                            <div class="alert alert-warning">
+                                <strong><i class="bi bi-exclamation-triangle me-2"></i>Create Enquiry First</strong>
                                 <p class="mb-2 mt-3">No enquiry found for mobile: <strong>${mobile}</strong></p>
-                                <p class="mb-0">You can still create a new admission by filling the form manually.</p>
+                                <p class="mb-0">You must create an enquiry before admission.</p>
                             </div>
                         `,
-                        icon: 'info',
-                        confirmButtonText: 'Continue',
-                        confirmButtonColor: '#3b82f6',
-                        timer: 2500
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Go to Enquiry',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#f59e0b',
+                        cancelButtonColor: '#64748b'
                     });
 
-                    currentTab = 1;
-                    clearForms();
-                    setValue('admMobilePrimary', mobile);
-                    
-                    //  Set default dates
-                    const today = new Date().toISOString().split('T')[0];
-                    setValue('admAdmissionDate', today);
-                    setValue('instStartDate', today);
-                    
-                    updateNavigationButtons();
-                    updateProgress(16.66);
-                    const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
-                    modal.show();
+                    if (result.isConfirmed) {
+                        // Redirect to enquiry page with mobile number pre-filled
+                        sessionStorage.setItem('enquiryMobile', mobile);
+                        window.location.href = '/students/enquiry';
+                    }
                 }
             } catch (error) {
                 Swal.close();
                 console.error('Error:', error);
 
-                await Swal.fire({
-                    title: 'Notice',
-                    text: 'Could not check enquiry status. You can still create admission manually.',
-                    icon: 'info',
-                    confirmButtonColor: '#3b82f6'
+                const result = await Swal.fire({
+                    title: 'Error Checking Enquiry',
+                    html: `
+                        <div class="alert alert-danger">
+                            <strong><i class="bi bi-x-circle me-2"></i>System Error</strong>
+                            <p class="mb-2 mt-3">Could not verify enquiry status.</p>
+                            <p class="mb-0">Please try again or contact support.</p>
+                        </div>
+                    `,
+                    icon: 'error',
+                    showCancelButton: true,
+                    confirmButtonText: 'Go to Enquiry',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#ef4444'
                 });
 
-                currentTab = 1;
-                clearForms();
-                setValue('admMobilePrimary', mobile);
-                
-                //  Set default dates
-                const today = new Date().toISOString().split('T')[0];
-                setValue('admAdmissionDate', today);
-                setValue('instStartDate', today);
-                
-                updateNavigationButtons();
-                updateProgress(16.66);
-                const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
-                modal.show();
+                if (result.isConfirmed) {
+                    sessionStorage.setItem('enquiryMobile', mobile);
+                    window.location.href = '/students/enquiry';
+                }
             }
-        } else if (mobile === null) {
-            currentTab = 1;
-            clearForms();
-            
-            //  Set default dates
-            const today = new Date().toISOString().split('T')[0];
-            setValue('admAdmissionDate', today);
-            setValue('instStartDate', today);
-            
-            updateNavigationButtons();
-            updateProgress(16.66);
-            const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
-            modal.show();
         }
         return;
     }
 
+    // If coming from enquiry, open modal directly
     currentTab = 1;
     clearForms();
-    
-   //  Set default dates
-   const today = new Date().toISOString().split('T')[0];
-   setValue('admAdmissionDate', today);
-   setValue('instStartDate', today);
+
+    const today = new Date().toISOString().split('T')[0];
+    setValue('admAdmissionDate', today);
+    setValue('instStartDate', today);
     
     updateNavigationButtons();
     updateProgress(16.66);

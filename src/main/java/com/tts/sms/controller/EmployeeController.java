@@ -23,6 +23,15 @@ public class EmployeeController {
     private final EmployeeService employeeService;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Get user credentials for an employee
+     */
+    @GetMapping("/{id}/user-credentials")
+    public ResponseEntity<Map<String, String>> getUserCredentials(@PathVariable Long id) {
+        Map<String, String> credentials = employeeService.getUserCredentials(id);
+        return ResponseEntity.ok(credentials);
+    }
+
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllEmployees(
             @RequestParam(defaultValue = "0") int page,

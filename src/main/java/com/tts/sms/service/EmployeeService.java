@@ -578,4 +578,22 @@ public class EmployeeService {
         }
     }
 
+    /**
+     * Get username for an employee (password is NEVER returned)
+     */
+    @Transactional(readOnly = true)
+    public Map<String, String> getUserCredentials(Long employeeId) {
+        Map<String, String> result = new HashMap<>();
+
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+
+        userRepository.findByEmployee(employee).ifPresent(user -> {
+            result.put("username", user.getUsername());
+            result.put("hasCredentials", "true");
+            // NEVER return password - security best practice
+        });
+
+        return result;
+    }
 }

@@ -32,6 +32,18 @@ server:
   http2:
     enabled: true
 
+  # : Increase max HTTP header and body size
+  max-http-header-size: 48KB
+  
+  tomcat:
+    max-swallow-size: 30MB
+    max-http-post-size: 30MB
+    connection-timeout: 60000
+    threads:
+      max: 200
+      min-spare: 10
+    accept-count: 100
+
 spring:
   config:
     activate:
@@ -58,7 +70,6 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        # Use MySQL8Dialect for better JSON support
         dialect: org.hibernate.dialect.MariaDB103Dialect
         format_sql: false
         jdbc:
@@ -66,10 +77,31 @@ spring:
           batch_size: 20
         order_inserts: true
         order_updates: true
-        # CRITICAL: Enable JSON type handling
         type:
           json_format_mapper: jackson
         generate_statistics: false
+
+  # : Jackson JSON configuration for large payloads
+  jackson:
+    parser:
+      allow-unquoted-field-names: false
+      allow-single-quotes: false
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+      fail-on-ignored-properties: false
+    default-property-inclusion: non_null
+
+  # : Increase max request size for large PDFs
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 25MB
+      max-request-size: 30MB
+      file-size-threshold: 5MB
+      location: ${java.io.tmpdir}
 
   thymeleaf:
     cache: true
@@ -85,6 +117,23 @@ spring:
   security:
     require-ssl: true
 
+  # : Mail configuration
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:kunalpatil192001@gmail.com}
+    password: ${MAIL_PASSWORD:ijpb zhfr ufcw jnpn}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 20000
+          timeout: 20000
+          writetimeout: 20000
+        debug: false
+
 app:
   upload:
     courses:
@@ -98,6 +147,9 @@ app:
   security:
     cors:
       allowed-origins: "https://team.ttsnashik.com,https://www.ttsnashik.com"
+      allowed-methods: "GET,POST,PUT,DELETE,OPTIONS,PATCH"
+      allowed-headers: "*"
+      max-age: 3600
 
 logging:
   level:
@@ -106,6 +158,7 @@ logging:
     org.springframework: INFO
     org.springframework.web: WARN
     org.springframework.security: INFO
+    org.springframework.mail: DEBUG
 
   file:
     name: logs/sms-application.log
@@ -114,3 +167,4 @@ logging:
   
   pattern:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

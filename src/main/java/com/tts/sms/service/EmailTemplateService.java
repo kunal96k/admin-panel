@@ -32,9 +32,9 @@ public class EmailTemplateService {
     private String fromEmail;
 
     /**
-     *  FIXED: Send fee receipt email with PDF (FULLY ASYNC)
+     *  Send fee receipt email with PDF (FULLY ASYNC)
      */
-    @Async("emailTaskExecutor")  // Use our custom thread pool
+    @Async("emailTaskExecutor")
     public void sendFeeReceiptWithPDF(
             String toEmail,
             String studentName,
@@ -45,7 +45,13 @@ public class EmailTemplateService {
             String message,
             String pdfBase64) {
 
-        log.info("📧 [ASYNC] Sending receipt email to: {}", toEmail);
+        log.info(" [ASYNC] Sending receipt email to: {}", toEmail);
+
+        // ADDED: Log PDF size
+        if (pdfBase64 != null) {
+            int sizeKB = (pdfBase64.length() * 3 / 4) / 1024;
+            log.info("📊 PDF attachment size: {} KB", sizeKB);
+        }
 
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
@@ -72,7 +78,11 @@ public class EmailTemplateService {
             // Decode base64 PDF and attach
             if (pdfBase64 != null && !pdfBase64.isEmpty()) {
                 try {
+                    log.info("🔄 Decoding PDF base64 (length: {})", pdfBase64.length());
+
                     byte[] pdfBytes = Base64.getDecoder().decode(pdfBase64);
+
+                    log.info(" PDF decoded successfully: {} bytes", pdfBytes.length);
 
                     helper.addAttachment(
                             "Fee-Receipt-" + receiptNo + ".pdf",
@@ -82,26 +92,26 @@ public class EmailTemplateService {
 
                     log.info(" PDF attachment added: Fee-Receipt-{}.pdf ({} bytes)", receiptNo, pdfBytes.length);
                 } catch (IllegalArgumentException e) {
-                    log.error("❌ Invalid base64 PDF data", e);
+                    log.error(" Invalid base64 PDF data: {}", e.getMessage(), e);
                     throw new RuntimeException("Failed to decode PDF: Invalid base64 format");
                 } catch (Exception e) {
-                    log.error("❌ Failed to attach PDF", e);
+                    log.error(" Failed to attach PDF: {}", e.getMessage(), e);
                     throw new RuntimeException("Failed to attach PDF: " + e.getMessage());
                 }
             } else {
-                log.warn("⚠️ No PDF data provided - sending email without attachment");
+                log.warn("No PDF data provided - sending email without attachment");
             }
 
             // Send email
+            log.info(" Sending email...");
             mailSender.send(mimeMessage);
 
             log.info(" Fee receipt email sent successfully to: {}", toEmail);
 
         } catch (MessagingException e) {
-            log.error("❌ Failed to send fee receipt email to: {}", toEmail, e);
-            // Don't throw - async method should not propagate exceptions
+            log.error(" Failed to send fee receipt email to: {} - {}", toEmail, e.getMessage(), e);
         } catch (Exception e) {
-            log.error("❌ Unexpected error sending email to: {}", toEmail, e);
+            log.error(" Unexpected error sending email to: {} - {}", toEmail, e.getMessage(), e);
         }
     }
 
@@ -121,7 +131,7 @@ public class EmailTemplateService {
             mailSender.send(message);
             log.info(" HTML email sent successfully to: {}", to);
         } catch (MessagingException e) {
-            log.error("❌ Failed to send HTML email to {}: {}", to, e.getMessage(), e);
+            log.error(" Failed to send HTML email to {}: {}", to, e.getMessage(), e);
             throw new RuntimeException("Failed to send email", e);
         }
     }
@@ -172,9 +182,9 @@ public class EmailTemplateService {
             log.info(" Certificate email sent successfully to: {}", toEmail);
 
         } catch (MessagingException e) {
-            log.error("❌ Failed to send certificate email to: {}", toEmail, e);
+            log.error(" Failed to send certificate email to: {}", toEmail, e);
         } catch (Exception e) {
-            log.error("❌ Unexpected error sending certificate email", e);
+            log.error(" Unexpected error sending certificate email", e);
         }
     }
 
@@ -208,7 +218,7 @@ public class EmailTemplateService {
             log.info(" Credentials email sent successfully to: {}", toEmail);
 
         } catch (MessagingException e) {
-            log.error("❌ Failed to send credentials email to: {}", toEmail, e);
+            log.error(" Failed to send credentials email to: {}", toEmail, e);
         }
     }
 
@@ -239,7 +249,7 @@ public class EmailTemplateService {
             log.info(" Password change notification sent to: {}", toEmail);
 
         } catch (MessagingException e) {
-            log.error("❌ Failed to send password change email to: {}", toEmail, e);
+            log.error(" Failed to send password change email to: {}", toEmail, e);
         }
     }
 
@@ -268,7 +278,7 @@ public class EmailTemplateService {
             log.info(" Birthday wishes sent successfully to: {}", toEmail);
 
         } catch (MessagingException e) {
-            log.error("❌ Failed to send birthday wishes to: {}", toEmail, e);
+            log.error(" Failed to send birthday wishes to: {}", toEmail, e);
         }
     }
 }
