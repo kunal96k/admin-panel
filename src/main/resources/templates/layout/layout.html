@@ -496,6 +496,12 @@
                     <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i> Settings</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
+                        <a class="dropdown-item" href="#" id="resetPasswordBtn">
+                            <i class="bi bi-shield-lock me-2"></i> Reset Password
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
                         <form th:action="@{/logout}" method="post" id="logoutForm" style="display: none;"></form>
                         <a class="dropdown-item text-danger" href="#" id="logoutBtn">
                             <i class="bi bi-box-arrow-right me-2"></i> Logout
@@ -527,6 +533,129 @@
         </div>
     </footer>
 
+</div>
+
+<!-- Reset Password Model -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="bi bi-shield-lock me-2"></i>Reset Password
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="resetPasswordForm">
+                    <!-- Current Password -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Current Password <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="password"
+                                   class="form-control"
+                                   id="currentPassword"
+                                   name="currentPassword"
+                                   placeholder="Enter current password"
+                                   required>
+                            <button class="btn btn-outline-secondary"
+                                    type="button"
+                                    onclick="togglePassword('currentPassword')">
+                                <i class="bi bi-eye" id="currentPassword-icon"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback" id="currentPassword-error"></div>
+                    </div>
+
+                    <!-- New Password -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            New Password <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="password"
+                                   class="form-control"
+                                   id="newPassword"
+                                   name="newPassword"
+                                   placeholder="Enter new password"
+                                   required>
+                            <button class="btn btn-outline-secondary"
+                                    type="button"
+                                    onclick="togglePassword('newPassword')">
+                                <i class="bi bi-eye" id="newPassword-icon"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback" id="newPassword-error"></div>
+
+                        <!-- Password Strength Indicator -->
+                        <div class="mt-2">
+                            <small class="text-muted">Password Strength: </small>
+                            <span id="passwordStrength" class="badge bg-secondary">Not Set</span>
+                        </div>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Confirm New Password <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="password"
+                                   class="form-control"
+                                   id="confirmPassword"
+                                   name="confirmPassword"
+                                   placeholder="Re-enter new password"
+                                   required>
+                            <button class="btn btn-outline-secondary"
+                                    type="button"
+                                    onclick="togglePassword('confirmPassword')">
+                                <i class="bi bi-eye" id="confirmPassword-icon"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback" id="confirmPassword-error"></div>
+                    </div>
+
+                    <!-- Password Requirements -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading mb-2">
+                            <i class="bi bi-info-circle me-1"></i>Password Requirements:
+                        </h6>
+                        <ul class="mb-0 small" style="list-style-position: inside; padding-left: 0;">
+                            <li id="req-length">
+                                <i class="bi bi-circle text-muted"></i>
+                                At least 8 characters
+                            </li>
+                            <li id="req-uppercase">
+                                <i class="bi bi-circle text-muted"></i>
+                                One uppercase letter
+                            </li>
+                            <li id="req-lowercase">
+                                <i class="bi bi-circle text-muted"></i>
+                                One lowercase letter
+                            </li>
+                            <li id="req-number">
+                                <i class="bi bi-circle text-muted"></i>
+                                One number
+                            </li>
+                            <li id="req-special">
+                                <i class="bi bi-circle text-muted"></i>
+                                One special character (!@#$%^&*)
+                            </li>
+                        </ul>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-warning" id="submitResetPassword">
+                    <i class="bi bi-shield-check me-1"></i> Reset Password
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script th:inline="javascript">

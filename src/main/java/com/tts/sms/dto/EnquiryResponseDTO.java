@@ -56,7 +56,8 @@ public class EnquiryResponseDTO {
     // Enquiry details
     private String source;
     private String referenceName;
-    private LocalDate date;  // enquiryDate
+    private LocalDate date;  // enquiryDate - ALIAS FIELD
+    private LocalDate enquiryDate;
     private LocalDate followupDate;
     private String assign;  // assignTo
     private String status;

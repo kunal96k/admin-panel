@@ -373,12 +373,18 @@ async function openNewAdmissionModal() {
                     const enquiry = await enquiryResponse.json();
                     Swal.close();
 
+                    // ✅ Show enquiry details with date
+                    const enquiryDate = enquiry.enquiryDate
+                        ? new Date(enquiry.enquiryDate).toLocaleDateString('en-IN')
+                        : 'Unknown';
+
                     await Swal.fire({
                         title: 'Enquiry Found!',
                         html: `
                             <div class="alert alert-success">
                                 <strong><i class="bi bi-check-circle me-2"></i>Form will be pre-filled</strong>
                                 <p class="mb-2 mt-3">Found enquiry for: <strong>${enquiry.firstName} ${enquiry.lastName}</strong></p>
+                                <p class="mb-1 text-muted"><small>Enquiry Date: ${enquiryDate}</small></p>
                                 <p class="mb-0">The admission form will be pre-filled with enquiry details.</p>
                             </div>
                         `,
@@ -417,7 +423,6 @@ async function openNewAdmissionModal() {
                     });
 
                     if (result.isConfirmed) {
-                        // Redirect to enquiry page with mobile number pre-filled
                         sessionStorage.setItem('enquiryMobile', mobile);
                         window.location.href = '/students/enquiry';
                     }

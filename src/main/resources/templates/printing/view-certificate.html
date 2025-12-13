@@ -44,59 +44,76 @@
             align-items: center;
             gap: 8px;
         }
-        @media print {
-            body {
-                background: white;
-                padding: 0;
-            }
-            .certificate-container {
-                box-shadow: none;
-                padding: 0;
-            }
-            .action-buttons {
-                display: none !important;
-            }
-        }
 
-                @media print {
-            body {
-                background: white;
-                padding: 0;
+        /* ✅ CRITICAL: Print Optimization */
+        @media print {
+            @page {
+                size: A4 landscape;
                 margin: 0;
             }
-            .certificate-container {
-                box-shadow: none;
-                padding: 0;
-                max-width: 100%;
-                margin: 0;
-            }
-            .action-buttons {
-                display: none !important;
-            }
-            #canvas {
-                border: none;
+
+            html, body {
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
                 width: 100%;
-                max-width: 100%;
-                page-break-inside: avoid;
+                height: 100%;
             }
-            /* Hide everything except certificate */
+
+            /* Hide everything except canvas */
             body > *:not(.certificate-container) {
                 display: none !important;
             }
+
+            .certificate-container {
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                background: white !important;
+                border-radius: 0 !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            /* Hide header and buttons */
+            .certificate-container > div:first-child,
+            .action-buttons,
             h2, p.text-muted {
                 display: none !important;
             }
+
+            /* Canvas optimization */
+            #canvas {
+                border: none !important;
+                border-radius: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                display: block !important;
+                page-break-inside: avoid !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
         }
 
-        /* Print button visibility control */
-        .print-btn {
-            display: inline-flex;
+        .certificate-header {
+            display: block;
+        }
+
+        @media print {
+            .certificate-header {
+                display: none !important;
+            }
         }
     </style>
 </head>
 <body>
 <div class="certificate-container">
-    <div th:unless="${isPrintMode}" class="text-center mb-4">
+    <!-- Hide header completely in print mode -->
+    <div class="certificate-header text-center mb-4">
         <h2><i class="bi bi-award-fill text-primary"></i> Certificate of Completion</h2>
         <p class="text-muted">Certificate No: <strong th:text="${certificateNo}">CERT2025001</strong></p>
     </div>

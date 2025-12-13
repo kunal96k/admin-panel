@@ -31,7 +31,7 @@ public class Admission {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "registration_number", length = 50)
+    @Column(name = "registration_number", unique = true, length = 50)
     private String registrationNumber;
 
     @Column(name = "roll_number", length = 50)

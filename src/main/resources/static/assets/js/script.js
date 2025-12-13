@@ -1159,3 +1159,330 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log(' Profile & Settings module loaded');
 
 })();
+
+// ========================================
+// RESET PASSWORD MODULE
+// ========================================
+
+(function() {
+    'use strict';
+
+    console.log('🔐 Initializing Reset Password module...');
+
+    // Wait for DOM to be ready
+    function initResetPassword() {
+        const resetPasswordBtn = document.getElementById('resetPasswordBtn');
+        const submitBtn = document.getElementById('submitResetPassword');
+        const newPasswordInput = document.getElementById('newPassword');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+
+        if (!resetPasswordBtn) {
+            console.warn('⚠️ Reset Password button not found, retrying...');
+            setTimeout(initResetPassword, 100);
+            return;
+        }
+
+        // Open modal
+        resetPasswordBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('🔓 Opening Reset Password modal');
+
+            const modal = new bootstrap.Modal(document.getElementById('resetPasswordModal'));
+            modal.show();
+
+            // Reset form when opening
+            resetForm();
+        });
+
+        // Real-time password strength check
+        if (newPasswordInput) {
+            newPasswordInput.addEventListener('input', function() {
+                checkPasswordStrength(this.value);
+                validatePasswordMatch();
+            });
+        }
+
+        // Real-time confirm password check
+        if (confirmPasswordInput) {
+            confirmPasswordInput.addEventListener('input', validatePasswordMatch);
+        }
+
+        // Submit form
+        if (submitBtn) {
+            submitBtn.addEventListener('click', handlePasswordReset);
+        }
+
+        console.log('✅ Reset Password module initialized');
+    }
+
+    // Toggle password visibility
+    window.togglePassword = function(fieldId) {
+        const field = document.getElementById(fieldId);
+        const icon = document.getElementById(fieldId + '-icon');
+
+        if (field.type === 'password') {
+            field.type = 'text';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        } else {
+            field.type = 'password';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    };
+
+    // Check password strength
+    function checkPasswordStrength(password) {
+        const strengthBadge = document.getElementById('passwordStrength');
+
+        if (!password) {
+            strengthBadge.textContent = 'Not Set';
+            strengthBadge.className = 'badge bg-secondary';
+            resetRequirements();
+            return;
+        }
+
+        let strength = 0;
+        const requirements = {
+            length: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /\d/.test(password),
+            special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+        };
+
+        // Update requirement indicators
+        updateRequirement('req-length', requirements.length);
+        updateRequirement('req-uppercase', requirements.uppercase);
+        updateRequirement('req-lowercase', requirements.lowercase);
+        updateRequirement('req-number', requirements.number);
+        updateRequirement('req-special', requirements.special);
+
+        // Calculate strength
+        Object.values(requirements).forEach(met => {
+            if (met) strength++;
+        });
+
+        // Update badge
+        if (strength === 5) {
+            strengthBadge.textContent = 'Strong';
+            strengthBadge.className = 'badge bg-success';
+        } else if (strength >= 3) {
+            strengthBadge.textContent = 'Medium';
+            strengthBadge.className = 'badge bg-warning text-dark';
+        } else {
+            strengthBadge.textContent = 'Weak';
+            strengthBadge.className = 'badge bg-danger';
+        }
+    }
+
+    // Update requirement indicator
+    function updateRequirement(reqId, met) {
+        const element = document.getElementById(reqId);
+        const icon = element.querySelector('i');
+
+        if (met) {
+            icon.className = 'bi bi-check-circle-fill text-success';
+        } else {
+            icon.className = 'bi bi-circle text-muted';
+        }
+    }
+
+    // Reset requirement indicators
+    function resetRequirements() {
+        ['req-length', 'req-uppercase', 'req-lowercase', 'req-number', 'req-special'].forEach(reqId => {
+            const element = document.getElementById(reqId);
+            const icon = element.querySelector('i');
+            icon.className = 'bi bi-circle text-muted';
+        });
+    }
+
+    // Validate password match
+    function validatePasswordMatch() {
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const errorDiv = document.getElementById('confirmPassword-error');
+        const confirmField = document.getElementById('confirmPassword');
+
+        if (confirmPassword && newPassword !== confirmPassword) {
+            confirmField.classList.add('is-invalid');
+            errorDiv.textContent = 'Passwords do not match';
+        } else {
+            confirmField.classList.remove('is-invalid');
+            errorDiv.textContent = '';
+        }
+    }
+
+    // Handle password reset
+    async function handlePasswordReset() {
+        console.log('🔐 Attempting password reset...');
+
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
+        // Clear previous errors
+        clearErrors();
+
+        // Validate fields
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            showError('All fields are required');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showFieldError('confirmPassword', 'Passwords do not match');
+            return;
+        }
+
+        // Check password strength
+        const isStrong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/.test(newPassword);
+        if (!isStrong) {
+            showFieldError('newPassword', 'Password does not meet security requirements');
+            return;
+        }
+
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+        const submitBtn = document.getElementById('submitResetPassword');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Resetting...';
+
+        try {
+            const response = await fetch('/api/auth/reset-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [csrfHeader]: csrfToken
+                },
+                body: JSON.stringify({
+                    currentPassword,
+                    newPassword,
+                    confirmPassword
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Success
+                const modal = bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal'));
+                modal.hide();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Password Reset Successful',
+                    html: `
+                        <p>${data.message}</p>
+                        <p class="text-muted small">You will be redirected to login page in 3 seconds...</p>
+                    `,
+                    timer: 3000,
+                    showConfirmButton: false,
+                    allowOutsideClick: false
+                }).then(() => {
+                    // Logout and redirect
+                    const logoutForm = document.getElementById('logoutForm');
+                    if (logoutForm) {
+                        logoutForm.submit();
+                    } else {
+                        window.location.href = '/logout';
+                    }
+                });
+
+            } else {
+                // Error handling
+                if (response.status === 401) {
+                    // Incorrect current password
+                    showFieldError('currentPassword', 'Current password is incorrect');
+                } else if (data.field === 'currentPassword') {
+                    // Field-specific error
+                    showFieldError('currentPassword', data.message);
+                } else if (data.message.includes('Current password')) {
+                    showFieldError('currentPassword', data.message);
+                } else if (data.message.includes('do not match')) {
+                    showFieldError('confirmPassword', data.message);
+                } else if (data.message.includes('security requirements')) {
+                    showFieldError('newPassword', data.message);
+                } else {
+                    // General error
+                    showError(data.message);
+                }
+            }
+
+        } catch (error) {
+            console.error('❌ Password reset error:', error);
+            showError('Failed to reset password. Please try again.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-shield-check me-1"></i> Reset Password';
+        }
+    }
+
+    // Show field error
+    function showFieldError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        const errorDiv = document.getElementById(fieldId + '-error');
+
+        field.classList.add('is-invalid');
+        errorDiv.textContent = message;
+    }
+
+    // Show general error
+    function showError(message) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Reset Failed',
+            text: message,
+            confirmButtonColor: '#dc3545'
+        });
+    }
+
+    // Clear all errors
+    function clearErrors() {
+        ['currentPassword', 'newPassword', 'confirmPassword'].forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            const errorDiv = document.getElementById(fieldId + '-error');
+
+            field.classList.remove('is-invalid');
+            if (errorDiv) errorDiv.textContent = '';
+        });
+    }
+
+    // Reset form
+    function resetForm() {
+        const form = document.getElementById('resetPasswordForm');
+        if (form) {
+            form.reset();
+            clearErrors();
+            resetRequirements();
+
+            const strengthBadge = document.getElementById('passwordStrength');
+            if (strengthBadge) {
+                strengthBadge.textContent = 'Not Set';
+                strengthBadge.className = 'badge bg-secondary';
+            }
+
+            // Reset password field types to password
+            ['currentPassword', 'newPassword', 'confirmPassword'].forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                const icon = document.getElementById(fieldId + '-icon');
+
+                if (field) field.type = 'password';
+                if (icon) {
+                    icon.classList.remove('bi-eye-slash');
+                    icon.classList.add('bi-eye');
+                }
+            });
+        }
+    }
+
+    // Initialize
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initResetPassword);
+    } else {
+        initResetPassword();
+    }
+
+})();

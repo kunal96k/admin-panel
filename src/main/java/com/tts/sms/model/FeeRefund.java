@@ -107,6 +107,16 @@ public class FeeRefund {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Transient
+    public String getIssuedByName() {
+        return this.createdBy != null ? this.createdBy : "SYSTEM";
+    }
+
+    @Transient
+    public String getIssuedByUsername() {
+        return this.createdBy;
+    }
+
     @PrePersist
     private void prePersist() {
         if (refundDate == null) {

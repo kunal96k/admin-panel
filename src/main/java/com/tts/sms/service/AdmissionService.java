@@ -199,16 +199,31 @@ public class AdmissionService {
     public AdmissionResponseDTO createAdmission(AdmissionRequestDTO requestDTO) {
         log.debug("Creating new admission for mobile: {}", requestDTO.getMobilePrimary());
 
-        // Check if enquiry exists (optional for bulk import)
-        Long enquiryId = null;
-        Optional<Enquiry> enquiryOpt = enquiryRepository
-                .findByMobileAndIsDeletedFalse(requestDTO.getMobilePrimary());
+        //  FIX: Use findAllByMobileAndIsDeletedFalse() instead of findByMobileAndIsDeletedFalse()
+        Long enquiryId;
+        List<Enquiry> enquiries = enquiryRepository
+                .findAllByMobileAndIsDeletedFalse(requestDTO.getMobilePrimary());
 
-        if (enquiryOpt.isPresent()) {
-            enquiryId = enquiryOpt.get().getId();
-            log.info("Found enquiry with ID: {} for mobile: {}", enquiryId, requestDTO.getMobilePrimary());
+        if (!enquiries.isEmpty()) {
+            //  Get the latest enquiry (first in list, already sorted by date DESC)
+            Enquiry latestEnquiry = enquiries.stream()
+                    .max(Comparator.comparing(e -> e.getEnquiryDate() != null
+                            ? e.getEnquiryDate()
+                            : LocalDate.MIN))
+                    .orElse(enquiries.get(0));
+
+            enquiryId = latestEnquiry.getId();
+
+            if (enquiries.size() > 1) {
+                log.info(" Found {} enquiries for mobile: {}, using latest (ID: {})",
+                        enquiries.size(), requestDTO.getMobilePrimary(), enquiryId);
+            } else {
+                log.info(" Found 1 enquiry with ID: {} for mobile: {}",
+                        enquiryId, requestDTO.getMobilePrimary());
+            }
         } else {
-            log.warn("No enquiry found for mobile: {} - Creating admission without enquiry link",
+            enquiryId = null;
+            log.warn("⚠️ No enquiry found for mobile: {} - Creating admission without enquiry link",
                     requestDTO.getMobilePrimary());
         }
 
@@ -223,34 +238,41 @@ public class AdmissionService {
         if (requestDTO.getRegistrationNumber() != null && !requestDTO.getRegistrationNumber().trim().isEmpty()) {
             admission.setRegistrationNumber(requestDTO.getRegistrationNumber());
 
-            //  Check if this is an old CSV import (doesn't start with REG)
+            // Check if this is an old CSV import (doesn't start with REG)
             isNewAdmission = requestDTO.getRegistrationNumber().startsWith("REG");
-            importSource = isNewAdmission ? "NEW_ENTRY" : "IMPORTED_OLD_DATA"; // 
+            importSource = isNewAdmission ? "NEW_ENTRY" : "IMPORTED_OLD_DATA";
         } else {
-            //  Generate new REG number - This is definitely a NEW admission
+            // Generate new REG number - This is definitely a NEW admission
             admission.setRegistrationNumber(generateRegistrationNumber());
             isNewAdmission = true;
-            importSource = "NEW_ENTRY"; 
+            importSource = "NEW_ENTRY";
         }
-        
-        admission.setImportSource(importSource);
 
+        admission.setImportSource(importSource);
         admission.setCreatedBy("SYSTEM");
+
         // Save admission
         Admission savedAdmission = admissionRepository.save(admission);
-        log.info("Created admission with id: {} and reg no: {}",
+        log.info(" Created admission with id: {} and reg no: {}",
                 savedAdmission.getId(), savedAdmission.getRegistrationNumber());
 
         // Update enquiry status if exists
         if (enquiryId != null) {
-            Enquiry enquiry = enquiryOpt.get();
-            enquiry.setStatus("Admitted");
-            enquiryRepository.save(enquiry);
+            Enquiry enquiry = enquiries.stream()
+                    .filter(e -> e.getId().equals(enquiryId))
+                    .findFirst()
+                    .orElse(null);
+
+            if (enquiry != null) {
+                enquiry.setStatus("Admitted");
+                enquiryRepository.save(enquiry);
+                log.info(" Updated enquiry {} status to 'Admitted'", enquiryId);
+            }
         }
 
-        //  ONLY create fees record for NEW admissions (REG* numbers)
+        // ONLY create fees record for NEW admissions (REG* numbers)
         if (isNewAdmission) {
-            log.info(" NEW ADMISSION: Creating fees record for regNo: {}",
+            log.info("📝 NEW ADMISSION: Creating fees record for regNo: {}",
                     savedAdmission.getRegistrationNumber());
             createFeesRecord(savedAdmission);
         } else {
@@ -472,27 +494,48 @@ public class AdmissionService {
     public EnquiryResponseDTO getEnquiryForAdmission(String mobileNumber) {
         log.debug("Fetching enquiry data for mobile: {}", mobileNumber);
 
-        Enquiry enquiry = enquiryRepository
-                .findByMobileAndIsDeletedFalse(mobileNumber)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "No enquiry found for mobile: " + mobileNumber));
+        List<Enquiry> enquiries = enquiryRepository
+                .findAllByMobileAndIsDeletedFalse(mobileNumber);
+
+        if (enquiries.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "No enquiry found for mobile: " + mobileNumber);
+        }
+
+        //  Handle multiple enquiries - always use latest
+        Enquiry latestEnquiry = enquiries.stream()
+                .max(Comparator.comparing(e -> e.getEnquiryDate() != null
+                        ? e.getEnquiryDate()
+                        : LocalDate.MIN))
+                .orElse(enquiries.get(0));
+
+        if (enquiries.size() > 1) {
+            log.warn("⚠️ Found {} enquiries for mobile: {}. Using latest from {}",
+                    enquiries.size(), mobileNumber,
+                    latestEnquiry.getEnquiryDate() != null
+                            ? latestEnquiry.getEnquiryDate()
+                            : "unknown date");
+        } else {
+            log.info(" Found 1 enquiry for mobile: {}", mobileNumber);
+        }
 
         return EnquiryResponseDTO.builder()
-                .id(enquiry.getId())
-                .firstName(enquiry.getFirstName())
-                .middleName(enquiry.getMiddleName())
-                .lastName(enquiry.getLastName())
-                .mobile(enquiry.getMobile())
-                .secondaryMobile(enquiry.getSecondaryMobile())
-                .email(enquiry.getEmail())
-                .currentAddress(enquiry.getCurrentAddress())
-                .college(enquiry.getCollege())
-                .qualification(enquiry.getQualification())
-                .aadhaar(enquiry.getAadhaar())
-                .birthDate(enquiry.getBirthDate())
-                .gender(enquiry.getGender())
-                .coursesList(enquiry.getCourses())
-                .source(enquiry.getSource())
+                .id(latestEnquiry.getId())
+                .firstName(latestEnquiry.getFirstName())
+                .middleName(latestEnquiry.getMiddleName())
+                .lastName(latestEnquiry.getLastName())
+                .mobile(latestEnquiry.getMobile())
+                .secondaryMobile(latestEnquiry.getSecondaryMobile())
+                .email(latestEnquiry.getEmail())
+                .currentAddress(latestEnquiry.getCurrentAddress())
+                .college(latestEnquiry.getCollege())
+                .qualification(latestEnquiry.getQualification())
+                .aadhaar(latestEnquiry.getAadhaar())
+                .birthDate(latestEnquiry.getBirthDate())
+                .gender(latestEnquiry.getGender())
+                .coursesList(latestEnquiry.getCourses())
+                .source(latestEnquiry.getSource())
+                .date(latestEnquiry.getEnquiryDate())
                 .build();
     }
 

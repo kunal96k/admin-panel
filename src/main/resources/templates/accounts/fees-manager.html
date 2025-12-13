@@ -474,8 +474,9 @@
                                         <input type="text" class="form-control" id="refundTransactionNo" maxlength="16">
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Notes</label>
-                                        <textarea class="form-control" id="refundNotes" rows="3" maxlength="250"></textarea>
+                                        <label class="form-label">Notes <span class="required">*</span></label>
+                                        <textarea class="form-control" id="refundNotes" rows="3" maxlength="250" required></textarea>
+                                        <small class="text-muted">Required: Reason for refund</small>
                                     </div>
                                 </div>
 
@@ -535,6 +536,8 @@
                                         <th>Date</th>
                                         <th>Amount</th>
                                         <th>Mode</th>
+                                        <th>Note</th>
+                                        <th>Issued By</th>
                                         <th>Status</th>
                                     </tr>
                                     </thead>

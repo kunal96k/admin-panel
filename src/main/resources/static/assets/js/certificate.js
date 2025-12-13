@@ -603,8 +603,22 @@ function printCertificate(id) {
                 });
                 return;
             }
-            // Open print view in new window
-            window.open(`/certificates/print/${id}`, '_blank', 'width=1400,height=900');
+            
+            //  Open in new window with print-optimized settings
+            const printWindow = window.open(
+                `/certificates/print/${id}`, 
+                'CertificatePrint',
+                'width=1400,height=900,menubar=no,toolbar=no,location=no,status=no'
+            );
+            
+            //  Auto-trigger print when loaded
+            if (printWindow) {
+                printWindow.onload = function() {
+                    setTimeout(() => {
+                        printWindow.print();
+                    }, 500);
+                };
+            }
         })
         .catch(error => {
             console.error('Error checking certificate status:', error);

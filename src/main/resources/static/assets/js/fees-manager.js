@@ -840,14 +840,16 @@ async function loadRefundHistory(regNo) {
             const tbody = document.getElementById('refundHistoryBody');
 
             if (refunds.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No refund records found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No refund records found</td></tr>';
             } else {
                 tbody.innerHTML = refunds.map(ref => `
                     <tr>
                         <td><strong>${ref.refundNumber}</strong></td>
                         <td>${formatDate(ref.refundDate)}</td>
-                        <td class="text-danger">-₹${ref.refundAmount.toFixed(2)}</td>
+                        <td class="text-danger"><strong>-₹${ref.refundAmount.toFixed(2)}</strong></td>
                         <td><span class="badge bg-info">${ref.paymentMode}</span></td>
+                        <td class="small">${ref.notes || '-'}</td>
+                        <td class="small">${ref.issuedBy || ref.createdBy || 'SYSTEM'}</td>
                         <td><span class="badge bg-danger">Refunded</span></td>
                     </tr>
                 `).join('');
@@ -877,48 +879,80 @@ function renderTable() {
     const end = start + entriesPerPage;
     const paginatedData = filteredData.slice(start, end);
 
-    tbody.innerHTML = paginatedData.map(item => `
-        <tr>
-            <td><strong>${item.regNo || 'N/A'}</strong></td>
-            <td>${item.studentName || 'N/A'}</td>
-            <td>${item.mobile || 'N/A'}</td>
-            <td>₹${(item.totalFees || 0).toLocaleString()}</td>
-            <td>₹${(item.feesDue || 0).toLocaleString()}</td>
-            <td>₹${(item.totalPaid || 0).toLocaleString()}</td>
-            <td>${item.dueDate ? formatDate(item.dueDate) : '-'}</td>
-            <td><span class="badge ${item.status === 'Clear' ? 'bg-success' : 'bg-warning'}">${item.status || 'Pending'}</span></td>
-            <td><span class="badge bg-primary">${item.course || 'N/A'}</span></td>
-            <td>
-                <div class="action-dropdown">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" onclick="toggleActionMenu(event)">
-                        <i class="bi bi-three-dots-vertical"></i>
-                    </button>
-                    <div class="action-menu">
-                        <button class="action-menu-item" onclick="openFeeReceipt('${item.regNo}')">
-                            <i class="bi bi-receipt text-primary"></i>
-                            <span>New Fee Receipt</span>
+    tbody.innerHTML = paginatedData.map(item => {
+        //  Database stores NET paid, so just use it directly
+        const netPaid = item.totalPaid || 0;
+        const totalRefund = item.feesRefund || 0;
+        
+        //  Calculate gross paid (for display only)
+        const grossPaid = netPaid + totalRefund;
+        
+        //  Fees Due is already correct in database
+        const actualDue = item.feesDue || 0;
+        
+        //  Determine correct status
+        let statusBadge = 'bg-warning';
+        let statusText = item.status || 'Pending';
+        
+        if (totalRefund > 0 && actualDue > 0.01) {
+            statusBadge = 'bg-danger';
+            statusText = 'Refund';
+        } else if (actualDue <= 0.01) {
+            statusBadge = 'bg-success';
+            statusText = 'Clear';
+        } else if (item.status === 'Overdue') {
+            statusBadge = 'bg-danger';
+        }
+        
+        return `
+            <tr>
+                <td><strong>${item.regNo || 'N/A'}</strong></td>
+                <td>${item.studentName || 'N/A'}</td>
+                <td>${item.mobile || 'N/A'}</td>
+                <td>₹${(item.totalFees || 0).toLocaleString()}</td>
+                <td class="${actualDue > 0 ? 'text-danger' : 'text-success'}">
+                    <strong>₹${actualDue.toLocaleString()}</strong>
+                    ${totalRefund > 0 ? `<br><small class="text-muted">(Refund: ₹${totalRefund.toLocaleString()})</small>` : ''}
+                </td>
+                <td>
+                    ₹${netPaid.toLocaleString()}
+                    ${totalRefund > 0 ? `<br><small class="text-muted">(Gross: ₹${grossPaid.toLocaleString()})</small>` : ''}
+                </td>
+                <td>${item.dueDate ? formatDate(item.dueDate) : '-'}</td>
+                <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                <td><span class="badge bg-primary">${item.course || 'N/A'}</span></td>
+                <td>
+                    <div class="action-dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" onclick="toggleActionMenu(event)">
+                            <i class="bi bi-three-dots-vertical"></i>
                         </button>
-                        <button class="action-menu-item" onclick="viewReceipts('${item.regNo}')">
-                            <i class="bi bi-receipt-cutoff text-info"></i>
-                            <span>View Receipts</span>
-                        </button>
-                        <button class="action-menu-item" onclick="openFeeInstallments('${item.regNo}')">
-                            <i class="bi bi-cash-stack text-success"></i>
-                            <span>Fee Installments</span>
-                        </button>
-                        <button class="action-menu-item" onclick="changeFeesStatus('${item.regNo}')">
-                            <i class="bi bi-arrow-repeat text-warning"></i>
-                            <span>Change Status</span>
-                        </button>
-                        <button class="action-menu-item" onclick="feesRefund('${item.regNo}')">
-                            <i class="bi bi-arrow-counterclockwise text-danger"></i>
-                            <span>Fees Refund</span>
-                        </button>
+                        <div class="action-menu">
+                            <button class="action-menu-item" onclick="openFeeReceipt('${item.regNo}')">
+                                <i class="bi bi-receipt text-primary"></i>
+                                <span>New Fee Receipt</span>
+                            </button>
+                            <button class="action-menu-item" onclick="viewReceipts('${item.regNo}')">
+                                <i class="bi bi-receipt-cutoff text-info"></i>
+                                <span>View Receipts</span>
+                            </button>
+                            <button class="action-menu-item" onclick="openFeeInstallments('${item.regNo}')">
+                                <i class="bi bi-cash-stack text-success"></i>
+                                <span>Fee Installments</span>
+                            </button>
+                            <button class="action-menu-item" onclick="changeFeesStatus('${item.regNo}')">
+                                <i class="bi bi-arrow-repeat text-warning"></i>
+                                <span>Change Status</span>
+                            </button>
+                            <button class="action-menu-item" onclick="feesRefund('${item.regNo}')">
+                                <i class="bi bi-arrow-counterclockwise text-danger"></i>
+                                <span>Fees Refund</span>
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+                </td>
+            </tr>
+        `;
+    }).join('');
 
     updatePagination();
 }
@@ -2672,8 +2706,8 @@ function updateNextDueDateFromInstallment() {
     }
 }
 
+// ==================== Save Refund ====================
 
-// Update saveRefund to use regNo
 async function saveRefund() {
     const regNo = currentStudentRegNo;
 
@@ -2698,6 +2732,19 @@ async function saveRefund() {
         });
         return;
     }
+
+    // VALIDATE NOTE FIELD
+    const notes = document.getElementById('refundNotes').value?.trim();
+    if (!notes || notes.length === 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Validation Error',
+            text: 'Please enter a note/reason for the refund',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
 
     const refundData = {
         regNo: regNo,

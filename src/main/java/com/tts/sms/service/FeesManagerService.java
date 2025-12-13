@@ -8,6 +8,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -420,29 +422,36 @@ public class FeesManagerService {
             List<FeeRefund> refunds = feeRefundRepository
                     .findByRegistrationNumberAndIsDeletedFalseOrderByRefundDateDesc(regNo);
 
-            // Calculate totals
-            Double totalPaid = receipts.stream()
+            // Calculate gross total paid (sum of all receipts)
+            Double grossTotalPaid = receipts.stream()
                     .mapToDouble(r -> r.getAmountReceived() != null ? r.getAmountReceived() : 0.0)
                     .sum();
 
+            // Calculate total refunds
             Double totalRefund = refunds.stream()
                     .mapToDouble(r -> r.getRefundAmount() != null ? r.getRefundAmount() : 0.0)
                     .sum();
 
+            log.info("📊 Gross Paid: ₹{}, Total Refund: ₹{}", grossTotalPaid, totalRefund);
+
             // Update fees record
             feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo)
                     .ifPresent(fees -> {
-                        //  Correct calculation
-                        Double netTotalPaid = totalPaid - totalRefund;
+                        //  Net amount = Gross Paid - Refunds
+                        Double netTotalPaid = grossTotalPaid - totalRefund;
+
+                        //  Store NET paid in database (what student actually paid)
                         fees.setTotalPaid(Math.max(0, netTotalPaid));
+
+                        //  Store refund amount separately
                         fees.setFeesRefund(totalRefund);
 
-                        //  Fees Due = Total Fees - Net Total Paid
+                        //  Fees Due = Total Fees - Net Paid
                         Double feesDue = fees.getTotalFees() - netTotalPaid;
                         fees.setFeesDue(Math.max(0, feesDue));
 
-                        // Auto-update status
-                        if (totalRefund > 0) {
+                        //  Auto-update status
+                        if (totalRefund > 0 && feesDue > 0.01) {
                             fees.setStatus("Refund");
                         } else if (feesDue <= 0.01) {
                             fees.setStatus("Clear");
@@ -455,12 +464,13 @@ public class FeesManagerService {
                         fees.setUpdatedBy("SYSTEM");
                         feesRepository.save(fees);
 
-                        log.info(" Recalculated: TotalPaid=₹{}, Refund=₹{}, NetPaid=₹{}, Due=₹{}, Status={}",
-                                totalPaid, totalRefund, netTotalPaid, feesDue, fees.getStatus());
+                        log.info(" Updated Fees - RegNo: {}, TotalFees: ₹{}, NetPaid: ₹{}, Due: ₹{}, Refund: ₹{}, Status: {}",
+                                regNo, fees.getTotalFees(), netTotalPaid, feesDue, totalRefund, fees.getStatus());
                     });
 
         } catch (Exception e) {
             log.error(" Failed to recalculate fees for {}", regNo, e);
+            throw new RuntimeException("Failed to recalculate fees: " + e.getMessage(), e);
         }
     }
 
@@ -732,12 +742,12 @@ public class FeesManagerService {
                                 }
                             }
                         } else {
-                            log.error("❌ No admission found for OLD regNo: {}", regNo);
+                            log.error(" No admission found for OLD regNo: {}", regNo);
                         }
                     }
 
                 } catch (Exception e) {
-                    log.error("❌ Error fetching from fee_collections for {}: {}", regNo, e.getMessage(), e);
+                    log.error(" Error fetching from fee_collections for {}: {}", regNo, e.getMessage(), e);
                 }
 
             } else {
@@ -769,7 +779,7 @@ public class FeesManagerService {
             return allReceipts;
 
         } catch (Exception e) {
-            log.error("❌ Error in getReceiptsByRegNo for {}: {}", regNo, e.getMessage(), e);
+            log.error(" Error in getReceiptsByRegNo for {}: {}", regNo, e.getMessage(), e);
             throw new RuntimeException("Failed to fetch receipts: " + e.getMessage(), e);
         }
     }
@@ -923,9 +933,26 @@ public class FeesManagerService {
     public FeeRefundResponseDTO createFeeRefund(FeeRefundRequestDTO requestDTO) {
         log.debug("Creating fee refund for regNo: {}", requestDTO.getRegNo());
 
+        // Validate note field
+        if (requestDTO.getNotes() == null || requestDTO.getNotes().trim().isEmpty()) {
+            throw new IllegalArgumentException("Note is required for refund");
+        }
+
         Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(requestDTO.getRegNo());
         if (admission == null) {
             throw new ResourceNotFoundException("Admission not found: " + requestDTO.getRegNo());
+        }
+
+        // Get current user
+        String currentUser = "SYSTEM";
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated()) {
+                User user = (User) auth.getPrincipal();
+                currentUser = user.getEmployee().getEmployeeName();
+            }
+        } catch (Exception e) {
+            log.warn("Could not get current user: {}", e.getMessage());
         }
 
         FeeRefund refund = FeeRefund.builder()
@@ -945,41 +972,18 @@ public class FeesManagerService {
                 .onlinePaymentMode(requestDTO.getOnlinePaymentMode())
                 .paymentClear(requestDTO.getPaymentClear() != null ? requestDTO.getPaymentClear() : false)
                 .notes(requestDTO.getNotes())
-                .createdBy("SYSTEM")
+                .createdBy(currentUser)
                 .build();
 
         FeeRefund saved = feeRefundRepository.save(refund);
+
+        //  Create refund installment
         createRefundInstallment(requestDTO.getRegNo(), saved);
+
+        //  Recalculate ALL fees from transactions (this uses the correct formula)
         recalculateFeesFromTransactions(requestDTO.getRegNo());
 
-
-        //  Update Fees table: reduce totalPaid and update feesDue
-        feesRepository.findByRegistrationNumberAndIsDeletedFalse(requestDTO.getRegNo())
-                .ifPresent(fees -> {
-                    fees.setFeesRefund(requestDTO.getRefundAmount());
-
-                    //  Reduce total paid by refund amount
-                    Double newTotalPaid = fees.getTotalPaid() - requestDTO.getRefundAmount();
-                    fees.setTotalPaid(Math.max(0, newTotalPaid));
-
-                    // Recalculate: feesDue = totalFees - totalPaid
-                    Double newFeesDue = fees.getTotalFees() - fees.getTotalPaid();
-                    fees.setFeesDue(Math.max(0, newFeesDue));
-
-                    //  Update status to "Refund"
-                    fees.setStatus("Refund");
-
-                    fees.setUpdatedBy("SYSTEM");
-                    feesRepository.save(fees);
-
-                    log.info(" Updated fees after refund for regNo: {} - New Total Paid: ₹{}, Status: Refund",
-                            requestDTO.getRegNo(), fees.getTotalPaid());
-                });
-
-        //  Create installment record for refund
-        createRefundInstallment(requestDTO.getRegNo(), saved);
-
-        log.info(" Created fee refund: {}", saved.getRefundNumber());
+        log.info(" Created fee refund: {} by {}", saved.getRefundNumber(), currentUser);
         return toRefundResponseDTO(saved, admission);
     }
 
@@ -1165,11 +1169,12 @@ public class FeesManagerService {
                 .build();
     }
 
+    // FIND this method and UPDATE:
     private FeeRefundResponseDTO toRefundResponseDTO(FeeRefund refund, Admission admission) {
         return FeeRefundResponseDTO.builder()
                 .id(refund.getId())
                 .refundNumber(refund.getRefundNumber())
-                .registrationNumber(refund.getRegistrationNumber()) // CHANGED
+                .registrationNumber(refund.getRegistrationNumber())
                 .studentName(admission.getFullName())
                 .refundDate(refund.getRefundDate())
                 .refundAmount(refund.getRefundAmount())
@@ -1186,6 +1191,8 @@ public class FeesManagerService {
                 .paymentClear(refund.getPaymentClear())
                 .notes(refund.getNotes())
                 .status(refund.getStatus())
+                .issuedBy(refund.getCreatedBy())
+                .createdBy(refund.getCreatedBy())
                 .build();
     }
 
