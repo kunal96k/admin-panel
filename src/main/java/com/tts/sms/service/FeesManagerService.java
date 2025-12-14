@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,6 +36,8 @@ public class FeesManagerService {
     private final FeeInstallmentRepository feeInstallmentRepository;
     private final CSVService csvService;
     private final FeesManagerMapper feesManagerMapper;
+    private final SystemConfigurationService systemConfigurationService;
+    private final StudentCategoryService studentCategoryService;
 
     // ==================== FEES SUMMARY ====================
 
@@ -976,6 +979,24 @@ public class FeesManagerService {
                 .build();
 
         FeeRefund saved = feeRefundRepository.save(refund);
+
+        try {
+
+            if (admission != null) {
+                LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
+                String newCategory = studentCategoryService.determineCategory(admission, cutoffDate);
+
+                if (!newCategory.equals(admission.getStudentCategory())) {
+                    admission.setStudentCategory(newCategory);
+                    admission.setCategoryUpdatedAt(LocalDateTime.now());
+                    admissionRepository.save(admission);
+
+                    log.info(" Admission {} marked as {}", requestDTO.getRegNo(), newCategory);
+                }
+            }
+        } catch (Exception e) {
+            log.error("⚠️ Could not update admission status: {}", e.getMessage());
+        }
 
         //  Create refund installment
         createRefundInstallment(requestDTO.getRegNo(), saved);

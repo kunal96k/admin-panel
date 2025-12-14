@@ -90,4 +90,6 @@ public class AdmissionResponseDTO {
     private Integer daysBetweenInstallments;
     private Double totalInstallmentAmount;
 
+    private String studentCategory;
+    private LocalDateTime categoryUpdatedAt;
 }

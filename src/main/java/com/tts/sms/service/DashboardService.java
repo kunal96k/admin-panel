@@ -22,50 +22,91 @@ public class DashboardService {
     private final CertificateRepository certificateRepository;
     private final FeeReceiptRepository feeReceiptRepository;
     private final FeeCollectionRepository feeCollectionRepository;
+    private final FeeRefundRepository feeRefundRepository;
+    private final SystemConfigurationService systemConfigurationService;
 
+    /**
+     * ✅ FIXED: Dashboard stats FROM CUTOFF DATE onwards
+     * Total Collected = Total Paid - Total Refunds
+     */
     public Map<String, Object> getDashboardStats() {
         Map<String, Object> stats = new HashMap<>();
 
-        // Total Students
+        // Get cutoff date from system config
+        LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
+        log.info("📊 Dashboard stats calculated from cutoff date: {}", cutoffDate);
+
+        // ========== TOTAL STUDENTS (ALL TIME - NO FILTER) ==========
         Long totalStudents = admissionRepository.countTotalAdmissions();
         stats.put("totalStudents", totalStudents != null ? totalStudents : 0L);
+        log.info("👥 Total Students: {}", totalStudents);
 
-        // Total Enquiries
+        // ========== TOTAL ENQUIRIES (ALL TIME - NO FILTER) ==========
         Long totalEnquiries = enquiryRepository.count();
         stats.put("totalEnquiries", totalEnquiries != null ? totalEnquiries : 0L);
+        log.info("📋 Total Enquiries: {}", totalEnquiries);
 
-        // Total Fees Collected
-        // 1. New students (REG*) - Get totalPaid from Fees table
-        Double newStudentFees = feesRepository.findByIsDeletedFalse()
+        // ========== FEES CALCULATIONS (FROM CUTOFF DATE) ==========
+
+        // 1️⃣ Get ALL fees records FROM cutoff date onwards (using created_at)
+        List<Fees> feesFromCutoff = feesRepository.findByIsDeletedFalse()
                 .stream()
-                .filter(f -> f.getRegistrationNumber() != null &&
-                        f.getRegistrationNumber().startsWith("REG"))
+                .filter(f -> f.getCreatedAt() != null &&
+                        !f.getCreatedAt().toLocalDate().isBefore(cutoffDate))
+                .collect(Collectors.toList());
+
+        log.info("📊 Found {} fees records from cutoff date {}", feesFromCutoff.size(), cutoffDate);
+
+        // 2️⃣ Calculate GROSS total paid (sum of totalPaid from fees table)
+        Double grossTotalPaid = feesFromCutoff.stream()
                 .mapToDouble(f -> f.getTotalPaid() != null ? f.getTotalPaid() : 0.0)
                 .sum();
 
-        // 2. Old students (CSV import) - Get paidFees from FeeCollection table
-        Double oldStudentFees = feeCollectionRepository.findByIsDeletedFalse(null)
+        // 3️⃣ Get ALL refunds FROM cutoff date onwards (using created_at)
+        List<FeeRefund> refundsFromCutoff = feeRefundRepository.findByIsDeletedFalse(null)
                 .stream()
-                .mapToDouble(c -> c.getPaidFees() != null ? c.getPaidFees() : 0.0)
+                .filter(r -> r.getCreatedAt() != null &&
+                        !r.getCreatedAt().toLocalDate().isBefore(cutoffDate))
+                .collect(Collectors.toList());
+
+        log.info("📊 Found {} refund records from cutoff date {}", refundsFromCutoff.size(), cutoffDate);
+
+        // 4️⃣ Calculate total refunds
+        Double totalRefunds = refundsFromCutoff.stream()
+                .mapToDouble(r -> r.getRefundAmount() != null ? r.getRefundAmount() : 0.0)
                 .sum();
 
-        Double totalFeesCollected = newStudentFees + oldStudentFees;
+        // 5️⃣ ✅ CORRECT FORMULA: Net Collected = Gross Paid - Refunds
+        Double netCollected = grossTotalPaid - totalRefunds;
 
-        stats.put("totalFeesCollected", totalFeesCollected);
-        stats.put("totalFeesCollectedFormatted", formatCurrency(totalFeesCollected));
+        // 6️⃣ Calculate total pending (sum of feesDue)
+        Double totalPending = feesFromCutoff.stream()
+                .mapToDouble(f -> f.getFeesDue() != null ? f.getFeesDue() : 0.0)
+                .sum();
 
-        log.info(" Total Fees: New Students (REG*): ₹{}, Old Students: ₹{}, Total: ₹{}",
-                newStudentFees, oldStudentFees, totalFeesCollected);
+        // Store results
+        stats.put("totalFeesCollected", Math.max(0, netCollected));
+        stats.put("totalFeesCollectedFormatted", formatCurrency(Math.max(0, netCollected)));
+        stats.put("cutoffDate", cutoffDate.toString());
+        stats.put("cutoffDateFormatted", cutoffDate.format(DateTimeFormatter.ofPattern("dd-MMM-yyyy")));
 
-        // Certificates Issued
-        Long certificatesIssued = certificateRepository.countByStatus("ISSUED");
-        stats.put("certificatesIssued", certificatesIssued != null ? certificatesIssued : 0L);
+        stats.put("pendingFees", Math.max(0, totalPending));
+        stats.put("pendingFeesFormatted", formatCurrency(Math.max(0, totalPending)));
+
+        // Debug logging
+        log.info("💰 FINAL CALCULATIONS:");
+        log.info("   - Gross Paid: ₹{} (from {} fees records)", grossTotalPaid, feesFromCutoff.size());
+        log.info("   - Total Refunds: ₹{} (from {} refund records)", totalRefunds, refundsFromCutoff.size());
+        log.info("   - NET Collected: ₹{}", netCollected);
+        log.info("   - Pending Fees: ₹{}", totalPending);
+        log.info("   - Cutoff Date: {}", cutoffDate);
 
         return stats;
     }
 
     /**
-     * Revenue chart - Include both new and old student fees
+     * ✅ FIXED: Revenue chart - FROM CUTOFF DATE onwards
+     * Shows NET revenue (Paid - Refunds)
      */
     public Map<String, Object> getRevenueChartData(String period) {
         Map<String, Object> chartData = new HashMap<>();
@@ -117,79 +158,112 @@ public class DashboardService {
                 groupByMonth = true;
         }
 
-        //  Get receipts for NEW students (REG*) only
-        List<FeeReceipt> newStudentReceipts = feeReceiptRepository.findByDateRange(startDate, endDate)
+        // Get cutoff date
+        LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
+
+        // Use the LATER of startDate or cutoffDate
+        LocalDate effectiveStartDate = startDate.isBefore(cutoffDate) ? cutoffDate : startDate;
+
+        log.info("📊 Revenue chart: period={}, requestedStart={}, cutoff={}, effectiveStart={}",
+                period, startDate, cutoffDate, effectiveStartDate);
+
+        // Get ALL fees records from effective start date
+        List<Fees> feesRecords = feesRepository.findByIsDeletedFalse()
                 .stream()
-                .filter(r -> r.getRegistrationNumber() != null &&
-                        r.getRegistrationNumber().startsWith("REG"))
+                .filter(f -> f.getCreatedAt() != null &&
+                        !f.getCreatedAt().toLocalDate().isBefore(effectiveStartDate) &&
+                        !f.getCreatedAt().toLocalDate().isAfter(endDate))
                 .collect(Collectors.toList());
 
-        //  Get all old student collections (imported data)
-        List<FeeCollection> oldStudentCollections = feeCollectionRepository.findByFiltersAsList(
-                startDate, endDate, null, null
-        );
+        // Get ALL refunds from effective start date
+        List<FeeRefund> refundRecords = feeRefundRepository.findByIsDeletedFalse(null)
+                .stream()
+                .filter(r -> r.getCreatedAt() != null &&
+                        !r.getCreatedAt().toLocalDate().isBefore(effectiveStartDate) &&
+                        !r.getCreatedAt().toLocalDate().isAfter(endDate))
+                .collect(Collectors.toList());
 
         List<String> labels = new ArrayList<>();
         List<Double> data = new ArrayList<>();
 
         if (groupByMonth) {
             // Group by month
-            Map<YearMonth, Double> monthlyRevenue = new TreeMap<>();
+            Map<YearMonth, Double> monthlyPaid = new TreeMap<>();
+            Map<YearMonth, Double> monthlyRefunds = new TreeMap<>();
 
-            // Add NEW student receipts
-            for (FeeReceipt receipt : newStudentReceipts) {
-                if (receipt.getReceiptDate() != null && receipt.getAmountReceived() != null) {
-                    YearMonth yearMonth = YearMonth.from(receipt.getReceiptDate());
-                    monthlyRevenue.merge(yearMonth, receipt.getAmountReceived(), Double::sum);
+            // Collect payments by month
+            for (Fees fee : feesRecords) {
+                if (fee.getCreatedAt() != null && fee.getTotalPaid() != null && fee.getTotalPaid() > 0) {
+                    YearMonth yearMonth = YearMonth.from(fee.getCreatedAt().toLocalDate());
+                    monthlyPaid.merge(yearMonth, fee.getTotalPaid(), Double::sum);
                 }
             }
 
-            // Add OLD student collections
-            for (FeeCollection collection : oldStudentCollections) {
-                if (collection.getReceiptDate() != null && collection.getPaidFees() != null) {
-                    YearMonth yearMonth = YearMonth.from(collection.getReceiptDate());
-                    monthlyRevenue.merge(yearMonth, collection.getPaidFees(), Double::sum);
+            // Collect refunds by month
+            for (FeeRefund refund : refundRecords) {
+                if (refund.getCreatedAt() != null && refund.getRefundAmount() != null) {
+                    YearMonth yearMonth = YearMonth.from(refund.getCreatedAt().toLocalDate());
+                    monthlyRefunds.merge(yearMonth, refund.getRefundAmount(), Double::sum);
                 }
             }
+
+            // Calculate NET revenue (Paid - Refunds) for each month
+            Set<YearMonth> allMonths = new TreeSet<>(monthlyPaid.keySet());
+            allMonths.addAll(monthlyRefunds.keySet());
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM yyyy");
-            for (Map.Entry<YearMonth, Double> entry : monthlyRevenue.entrySet()) {
-                labels.add(entry.getKey().format(formatter));
-                data.add(entry.getValue());
+            for (YearMonth month : allMonths) {
+                Double paid = monthlyPaid.getOrDefault(month, 0.0);
+                Double refunds = monthlyRefunds.getOrDefault(month, 0.0);
+                Double netRevenue = paid - refunds;
+
+                labels.add(month.format(formatter));
+                data.add(Math.max(0, netRevenue)); // Don't show negative
             }
         } else {
             // Group by day
-            Map<LocalDate, Double> dailyRevenue = new TreeMap<>();
+            Map<LocalDate, Double> dailyPaid = new TreeMap<>();
+            Map<LocalDate, Double> dailyRefunds = new TreeMap<>();
 
-            // Add NEW student receipts
-            for (FeeReceipt receipt : newStudentReceipts) {
-                if (receipt.getReceiptDate() != null && receipt.getAmountReceived() != null) {
-                    dailyRevenue.merge(receipt.getReceiptDate(), receipt.getAmountReceived(), Double::sum);
+            // Collect payments by day
+            for (Fees fee : feesRecords) {
+                if (fee.getCreatedAt() != null && fee.getTotalPaid() != null && fee.getTotalPaid() > 0) {
+                    LocalDate date = fee.getCreatedAt().toLocalDate();
+                    dailyPaid.merge(date, fee.getTotalPaid(), Double::sum);
                 }
             }
 
-            // Add OLD student collections
-            for (FeeCollection collection : oldStudentCollections) {
-                if (collection.getReceiptDate() != null && collection.getPaidFees() != null) {
-                    dailyRevenue.merge(collection.getReceiptDate(), collection.getPaidFees(), Double::sum);
+            // Collect refunds by day
+            for (FeeRefund refund : refundRecords) {
+                if (refund.getCreatedAt() != null && refund.getRefundAmount() != null) {
+                    LocalDate date = refund.getCreatedAt().toLocalDate();
+                    dailyRefunds.merge(date, refund.getRefundAmount(), Double::sum);
                 }
             }
+
+            // Calculate NET revenue (Paid - Refunds) for each day
+            Set<LocalDate> allDates = new TreeSet<>(dailyPaid.keySet());
+            allDates.addAll(dailyRefunds.keySet());
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM");
-            for (Map.Entry<LocalDate, Double> entry : dailyRevenue.entrySet()) {
-                labels.add(entry.getKey().format(formatter));
-                data.add(entry.getValue());
+            for (LocalDate date : allDates) {
+                Double paid = dailyPaid.getOrDefault(date, 0.0);
+                Double refunds = dailyRefunds.getOrDefault(date, 0.0);
+                Double netRevenue = paid - refunds;
+
+                labels.add(date.format(formatter));
+                data.add(Math.max(0, netRevenue)); // Don't show negative
             }
         }
 
         chartData.put("labels", labels);
         chartData.put("data", data);
         chartData.put("period", period);
+        chartData.put("cutoffDate", cutoffDate.toString());
 
         double totalRevenue = data.stream().mapToDouble(Double::doubleValue).sum();
-        log.info(" Revenue chart for {}: {} data points, Total: ₹{} (New: {}, Old: {})",
-                period, data.size(), totalRevenue,
-                newStudentReceipts.size(), oldStudentCollections.size());
+        log.info("📈 Revenue chart: {} data points, Total NET Revenue: ₹{} (from {})",
+                data.size(), totalRevenue, effectiveStartDate);
 
         return chartData;
     }
@@ -233,11 +307,14 @@ public class DashboardService {
         chartData.put("data", data);
         chartData.put("colors", colors);
 
-        log.info("Course distribution: {} courses found", sortedCourses.size());
+        log.info("📊 Course distribution: {} courses found", sortedCourses.size());
 
         return chartData;
     }
 
+    /**
+     * Generate colors for pie chart
+     */
     private List<String> generateColors(int count) {
         String[] colorPalette = {
                 "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF",
@@ -252,6 +329,9 @@ public class DashboardService {
         return colors;
     }
 
+    /**
+     * Format currency with Indian notation
+     */
     private String formatCurrency(Double amount) {
         if (amount == null || amount == 0) {
             return "₹0";

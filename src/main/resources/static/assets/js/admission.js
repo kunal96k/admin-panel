@@ -16,124 +16,124 @@
        let totalPages = 0;
        let totalElements = 0;
 
-       function getCsrfToken() {
-           // Try cookie first (for XSRF-TOKEN)
-           const cookieValue = document.cookie
-               .split('; ')
-               .find(row => row.startsWith('XSRF-TOKEN='))
-               ?.split('=')[1];
+   function getCsrfToken() {
+       // Try cookie first (for XSRF-TOKEN)
+       const cookieValue = document.cookie
+           .split('; ')
+           .find(row => row.startsWith('XSRF-TOKEN='))
+           ?.split('=')[1];
 
-           if (cookieValue) return cookieValue;
+       if (cookieValue) return cookieValue;
 
-           // Fallback to meta tag
-           const metaTag = document.querySelector('meta[name="_csrf"]');
-           return metaTag ? metaTag.getAttribute('content') : null;
-       }
+       // Fallback to meta tag
+       const metaTag = document.querySelector('meta[name="_csrf"]');
+       return metaTag ? metaTag.getAttribute('content') : null;
+   }
 
-       function getCsrfHeader() {
-           return 'X-CSRF-TOKEN';
-       }
+   function getCsrfHeader() {
+       return 'X-CSRF-TOKEN';
+   }
 
 
-    // Initialize on page load
-       document.addEventListener('DOMContentLoaded', function() {
-           initializeEventListeners();
-           loadAdmissions();
-           loadDropdownData();
-           checkEnquiryPreFill();
-           initializeCourseSearch();
+// Initialize on page load
+   document.addEventListener('DOMContentLoaded', function() {
+       initializeEventListeners();
+       loadAdmissions();
+       loadDropdownData();
+       checkEnquiryPreFill();
+       initializeCourseSearch();
+   });
+
+   function initializeEventListeners() {
+       // Main buttons
+       document.getElementById('btnNewAdmission')?.addEventListener('click', openNewAdmissionModal);
+       document.getElementById('btnImportAdmissions')?.addEventListener('click', openImportModal);
+
+       // Modal navigation -  : Use proper function names
+       document.getElementById('btnNext')?.addEventListener('click', navigateNext);
+       document.getElementById('btnPrevious')?.addEventListener('click', navigatePrevious);
+       document.getElementById('btnFinish')?.addEventListener('click', saveAdmission);
+
+       // Tab switching
+       document.querySelectorAll('#admissionTabs .nav-link').forEach((tab, index) => {
+           tab.addEventListener('shown.bs.tab', function() {
+               currentTab = index + 1;
+               updateNavigationButtons();
+               const progress = this.getAttribute('data-progress');
+               updateProgress(progress);
+           });
        });
 
-       function initializeEventListeners() {
-           // Main buttons
-           document.getElementById('btnNewAdmission')?.addEventListener('click', openNewAdmissionModal);
-           document.getElementById('btnImportAdmissions')?.addEventListener('click', openImportModal);
-
-           // Modal navigation -  : Use proper function names
-           document.getElementById('btnNext')?.addEventListener('click', navigateNext);
-           document.getElementById('btnPrevious')?.addEventListener('click', navigatePrevious);
-           document.getElementById('btnFinish')?.addEventListener('click', saveAdmission);
-
-           // Tab switching
-           document.querySelectorAll('#admissionTabs .nav-link').forEach((tab, index) => {
-               tab.addEventListener('shown.bs.tab', function() {
-                   currentTab = index + 1;
-                   updateNavigationButtons();
-                   const progress = this.getAttribute('data-progress');
-                   updateProgress(progress);
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+           if (pageSizeSelect) {
+               pageSizeSelect.addEventListener('change', function(e) {
+                   const newSize = parseInt(e.target.value);
+                   if (!isNaN(newSize) && newSize > 0) {
+                       pageSize = newSize;
+                       currentPage = 0; // Reset to first page
+                       loadAdmissions(0, pageSize);
+                   }
                });
-           });
+           }
 
-            const pageSizeSelect = document.getElementById('pageSizeSelect');
-               if (pageSizeSelect) {
-                   pageSizeSelect.addEventListener('change', function(e) {
-                       const newSize = parseInt(e.target.value);
-                       if (!isNaN(newSize) && newSize > 0) {
-                           pageSize = newSize;
-                           currentPage = 0; // Reset to first page
-                           loadAdmissions(0, pageSize);
-                       }
-                   });
-               }
+       // Import functionality
+       document.getElementById('btnBrowseAdmFile')?.addEventListener('click', () => {
+           document.getElementById('admCsvFileInput').click();
+       });
 
-           // Import functionality
-           document.getElementById('btnBrowseAdmFile')?.addEventListener('click', () => {
-               document.getElementById('admCsvFileInput').click();
-           });
+       document.getElementById('admCsvFileInput')?.addEventListener('change', function(e) {
+           handleCSVFile(e.target.files[0]);
+       });
 
-           document.getElementById('admCsvFileInput')?.addEventListener('change', function(e) {
-               handleCSVFile(e.target.files[0]);
-           });
+       document.getElementById('btnImportAdmData')?.addEventListener('click', importAdmissions);
 
-           document.getElementById('btnImportAdmData')?.addEventListener('click', importAdmissions);
+       // Import type change
+       document.querySelectorAll('input[name="admImportType"]').forEach(radio => {
+           radio.addEventListener('change', handleImportTypeChange);
+       });
 
-           // Import type change
-           document.querySelectorAll('input[name="admImportType"]').forEach(radio => {
-               radio.addEventListener('change', handleImportTypeChange);
-           });
+       // Camera & Photo
+       document.getElementById('btnCapturePhoto')?.addEventListener('click', capturePhoto);
+       document.getElementById('admPhotoUpload')?.addEventListener('change', function(e) {
+           handlePhotoUpload(e.target.files[0]);
+       });
 
-           // Camera & Photo
-           document.getElementById('btnCapturePhoto')?.addEventListener('click', capturePhoto);
-           document.getElementById('admPhotoUpload')?.addEventListener('change', function(e) {
-               handlePhotoUpload(e.target.files[0]);
-           });
+       // Generate installments
+       document.getElementById('btnGenerateInstallments')?.addEventListener('click', generateInstallments);
 
-           // Generate installments
-           document.getElementById('btnGenerateInstallments')?.addEventListener('click', generateInstallments);
+        // Search
+        document.getElementById('searchInput')?.addEventListener('input', debounce(searchAdmissions, 800));
+       // Package selection
+       document.getElementById('admPackage')?.addEventListener('change', handlePackageChange);
 
-            // Search
-            document.getElementById('searchInput')?.addEventListener('input', debounce(searchAdmissions, 800));
-           // Package selection
-           document.getElementById('admPackage')?.addEventListener('change', handlePackageChange);
+       // Course selection
+       document.getElementById('admCourse')?.addEventListener('change', handleCourseAdd);
 
-           // Course selection
-           document.getElementById('admCourse')?.addEventListener('change', handleCourseAdd);
+       // Discount calculations
+       document.getElementById('admDiscountPercent')?.addEventListener('input', calculateDiscount);
+       document.getElementById('admDiscountAmount')?.addEventListener('input', calculateDiscountFromAmount);
+   }
 
-           // Discount calculations
-           document.getElementById('admDiscountPercent')?.addEventListener('input', calculateDiscount);
-           document.getElementById('admDiscountAmount')?.addEventListener('input', calculateDiscountFromAmount);
+   function navigateNext() {
+           if (currentTab < totalTabs) {
+               currentTab++;
+               showTab(currentTab);
+               updateNavigationButtons();
+           }
        }
 
-       function navigateNext() {
-               if (currentTab < totalTabs) {
-                   currentTab++;
-                   showTab(currentTab);
-                   updateNavigationButtons();
-               }
+       function navigatePrevious() {
+           if (currentTab > 1) {
+               currentTab--;
+               showTab(currentTab);
+               updateNavigationButtons();
            }
+       }
 
-           function navigatePrevious() {
-               if (currentTab > 1) {
-                   currentTab--;
-                   showTab(currentTab);
-                   updateNavigationButtons();
-               }
-           }
-
-        function updateProgress(width) {
-            const bar = document.getElementById('admissionProgressBar');
-            if (bar) bar.style.width = width + '%';
-        }
+    function updateProgress(width) {
+        const bar = document.getElementById('admissionProgressBar');
+        if (bar) bar.style.width = width + '%';
+    }
 
     // Check for enquiry pre-fill
    function checkEnquiryPreFill() {
@@ -186,8 +186,8 @@ async function loadAdmissions(page = 0, size = 25) {
     try {
         showLoading('Loading admissions...');
 
-        // : Sort by createdAt DESC (latest first)
-        const response = await fetch(`/api/admissions?page=${page}&size=${size}`, {
+        // Sort by admission_date DESC (latest first)
+        const response = await fetch(`/api/admissions?page=${page}&size=${size}&sort=admission_date,desc`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -218,122 +218,299 @@ async function loadAdmissions(page = 0, size = 25) {
         showError('Failed to load admissions');
     }
 }
-    // Render Admissions Table
-    function renderAdmissionsTable(admissions) {
-        const tbody = document.querySelector('#admissionsTable tbody');
 
-        if (!admissions || admissions.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center py-5">
-                        <i class="bi bi-inbox" style="font-size: 3rem; color: #94a3b8;"></i>
-                        <p class="mt-3 mb-0 text-muted">No admissions found</p>
-                        <button class="btn btn-sm btn-primary mt-2" onclick="document.getElementById('btnNewAdmission').click()">
-                            <i class="bi bi-plus-circle me-1"></i>Add First Admission
+// ==================== GET CATEGORY BADGE ====================
+
+/**
+ * Get category badge HTML with color coding (NO ICONS)
+ */
+function getCategoryBadge(category) {
+    // Default to PURSUING if category is null or undefined
+    if (!category) {
+        category = 'PURSUING';
+    }
+
+    const badges = {
+        'OLD_STUDENT': '<span class="badge bg-secondary" title="Student admitted before cutoff date">Old Student</span>',
+        'NEW_STUDENT': '<span class="badge bg-primary" title="New CRM entry with REG number">New Student</span>',
+        'PURSUING': '<span class="badge bg-info text-dark" title="Currently enrolled and pursuing course">Pursuing</span>',
+        'COMPLETED': '<span class="badge bg-success" title="All course certificates issued">Completed</span>',
+        'CANCELLED': '<span class="badge bg-danger" title="Admission cancelled - has fee refund">Cancelled</span>'
+    };
+
+    return badges[category] || '<span class="badge bg-secondary">Unknown</span>';
+}
+
+// ==================== RENDER ADMISSIONS TABLE ====================
+
+function renderAdmissionsTable(admissions) {
+    const tbody = document.querySelector('#admissionsTable tbody');
+
+    if (!admissions || admissions.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #94a3b8;"></i>
+                    <p class="mt-3 mb-0 text-muted">No admissions found</p>
+                    <button class="btn btn-sm btn-primary mt-2" onclick="document.getElementById('btnNewAdmission').click()">
+                        <i class="bi bi-plus-circle me-1"></i>Add First Admission
+                    </button>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = admissions.map(adm => {
+        // : Log the category data
+        console.log('🔍 Rendering:', adm.registrationNumber, 'Category:', adm.studentCategory);
+
+        // Format courses
+        const courses = adm.coursesList && adm.coursesList.length > 0
+            ? adm.coursesList.join(', ')
+            : (adm.courses || 'N/A');
+
+        //  Get category badge - USE ACTUAL FIELD VALUE
+        const category = adm.studentCategory || 'PURSUING'; // Default to PURSUING if null
+        const categoryBadge = getCategoryBadge(category);
+
+        // Format student name with category badge
+        const studentNameWithBadge = `
+            <div>
+                <strong>${adm.studentName || `${adm.firstName || ''} ${adm.lastName || ''}`.trim()}</strong>
+                <div class="mt-1">${categoryBadge}</div>
+            </div>
+        `;
+
+        return `
+            <tr data-id="${adm.id}">
+                <td><strong>${adm.registrationNumber || '-'}</strong></td>
+                <td>${studentNameWithBadge}</td>
+                <td>${adm.mobilePrimary || 'N/A'}</td>
+                <td><span class="badge bg-primary">${courses}</span></td>
+                <td>${adm.admissionDate ? new Date(adm.admissionDate).toLocaleDateString('en-GB') : 'N/A'}</td>
+                <td>
+                    <div class="action-dropdown">
+                        <button class="btn btn-sm btn-light action-menu-trigger">
+                            <i class="bi bi-three-dots-vertical"></i>
                         </button>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-
-        tbody.innerHTML = admissions.map(adm => {
-            const courses = adm.coursesList && adm.coursesList.length > 0
-                ? adm.coursesList.join(', ')
-                : (adm.courses || 'N/A');
-
-            return `
-                <tr data-id="${adm.id}">
-                    <td><strong>${adm.registrationNumber || '-'}</strong></td>
-                    <td>${adm.studentName || `${adm.firstName} ${adm.lastName}`}</td>
-                    <td>${adm.mobilePrimary || 'N/A'}</td>
-                    <td><span class="badge bg-primary">${courses}</span></td>
-                    <td>${adm.admissionDate ? new Date(adm.admissionDate).toLocaleDateString('en-GB') : 'N/A'}</td>
-                    <td>
-                        <div class="action-dropdown">
-                            <button class="btn btn-sm btn-light action-menu-trigger">
-                                <i class="bi bi-three-dots-vertical"></i>
+                        <div class="action-menu">
+                            <button class="action-menu-item" data-action="update" data-id="${adm.id}">
+                                <i class="bi bi-pencil-square"></i><span>Update</span>
                             </button>
-                            <div class="action-menu">
-                                <button class="action-menu-item" data-action="update" data-id="${adm.id}">
-                                    <i class="bi bi-pencil-square"></i><span>Update</span>
-                                </button>
-                                <button class="action-menu-item" data-action="installments" data-id="${adm.id}">
-                                    <i class="bi bi-cash-stack"></i><span>Fee Installments</span>
-                                </button>
-                                <button class="action-menu-item" data-action="view" data-id="${adm.id}">
-                                    <i class="bi bi-eye"></i><span>View Details</span>
-                                </button>
-                                <button class="action-menu-item" data-action="transfer" data-id="${adm.id}">
-                                    <i class="bi bi-arrow-left-right"></i><span>Transfer Admission</span>
-                                </button>
-                                <button class="action-menu-item" data-action="print" data-id="${adm.id}">
-                                    <i class="bi bi-printer"></i><span>Print Form</span>
-                                </button>
-                                <button class="action-menu-item" data-action="delete" data-id="${adm.id}">
-                                    <i class="bi bi-trash"></i><span>Remove</span>
-                                </button>
-                            </div>
+                            <button class="action-menu-item" data-action="change-status" data-id="${adm.id}">
+                                <i class="bi bi-arrow-repeat"></i><span>Change Status</span>
+                            </button>
+                            <button class="action-menu-item" data-action="view" data-id="${adm.id}">
+                                <i class="bi bi-eye"></i><span>View Details</span>
+                            </button>
+                            <button class="action-menu-item" data-action="installments" data-id="${adm.id}">
+                                <i class="bi bi-cash-stack"></i><span>Fee Installments</span>
+                            </button>
+                            <button class="action-menu-item" data-action="transfer" data-id="${adm.id}">
+                                <i class="bi bi-arrow-left-right"></i><span>Transfer Admission</span>
+                            </button>
+                            <button class="action-menu-item" data-action="print" data-id="${adm.id}">
+                                <i class="bi bi-printer"></i><span>Print Form</span>
+                            </button>
+                            <button class="action-menu-item" data-action="delete" data-id="${adm.id}">
+                                <i class="bi bi-trash"></i><span>Remove</span>
+                            </button>
                         </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
 
-        attachTableEventListeners(tbody);
-    }
+    attachTableEventListeners(tbody);
+}
 
-    // Attach Table Event Listeners
-    function attachTableEventListeners(tbody) {
-        tbody.querySelectorAll('.action-menu-trigger').forEach(trigger => {
-            trigger.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const menu = this.nextElementSibling;
-                document.querySelectorAll('.action-menu').forEach(m => {
-                    if (m !== menu) m.classList.remove('show');
-                });
-                menu.classList.toggle('show');
-            });
+/**
+ * ✨ CHANGE STUDENT CATEGORY STATUS
+ */
+async function changeStudentStatus(admissionId) {
+    try {
+        showLoading('Loading current status...');
+
+        // Fetch current admission data
+        const response = await fetch(`/api/admissions/${admissionId}`);
+        if (!response.ok) throw new Error('Failed to load admission');
+
+        const admission = await response.json();
+        Swal.close();
+
+        // Show status change modal
+        const { value: newCategory } = await Swal.fire({
+            title: 'Change Student Status',
+            html: `
+                <div class="text-start">
+                    <p><strong>Student:</strong> ${admission.studentName}</p>
+                    <p><strong>Reg No:</strong> ${admission.registrationNumber}</p>
+                    <p><strong>Current Status:</strong> ${getCategoryBadge(admission.studentCategory)}</p>
+                    <hr>
+                    <label class="form-label fw-bold">Select New Status:</label>
+                    <select id="newCategorySelect" class="form-select">
+                        <option value="OLD_STUDENT" ${admission.studentCategory === 'OLD_STUDENT' ? 'selected' : ''}>Old Student</option>
+                        <option value="NEW_STUDENT" ${admission.studentCategory === 'NEW_STUDENT' ? 'selected' : ''}>New Student</option>
+                        <option value="PURSUING" ${admission.studentCategory === 'PURSUING' ? 'selected' : ''}>Pursuing</option>
+                        <option value="COMPLETED" ${admission.studentCategory === 'COMPLETED' ? 'selected' : ''}>Completed</option>
+                        <option value="CANCELLED" ${admission.studentCategory === 'CANCELLED' ? 'selected' : ''}>Cancelled</option>
+                    </select>
+                    <small class="text-muted d-block mt-2">
+                        <i class="bi bi-info-circle me-1"></i>
+                        This will override the automatic categorization
+                    </small>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Update Status',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#3b82f6',
+            preConfirm: () => {
+                return document.getElementById('newCategorySelect').value;
+            }
         });
 
-        tbody.querySelectorAll('.action-menu-item').forEach(item => {
-            item.addEventListener('click', function() {
-                const action = this.getAttribute('data-action');
-                const id = this.getAttribute('data-id');
-                handleAction(action, id);
-            });
+        if (!newCategory) return;
+
+        // Confirm change
+        const confirmed = await Swal.fire({
+            title: 'Confirm Status Change',
+            html: `
+                <p>Change status from:</p>
+                <p>${getCategoryBadge(admission.studentCategory)}</p>
+                <p><i class="bi bi-arrow-down"></i></p>
+                <p>${getCategoryBadge(newCategory)}</p>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Change',
+            cancelButtonText: 'Cancel'
         });
 
-        document.addEventListener('click', () => {
-            document.querySelectorAll('.action-menu').forEach(menu => {
-                menu.classList.remove('show');
-            });
-        });
-    }
+        if (!confirmed.isConfirmed) return;
 
-    // Handle Actions
-    async function handleAction(action, id) {
-        switch(action) {
-            case 'update':
-                await loadAdmissionForEdit(id);
-                break;
-            case 'view':
-                await viewAdmission(id);
-                break;
-            case 'installments':
-                await openFeeInstallments(id);
-                break;
-            case 'transfer':
-                await openTransferModal(id);
-                break;
-            case 'print':
-                await printAdmission(id);
-                break;
-            case 'delete':
-                await deleteAdmission(id);
-                break;
+        // Update status
+        showLoading('Updating status...');
+
+        const csrfToken = getCsrfToken();
+        const headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        };
+        if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
+        const updateResponse = await fetch(`/api/admissions/${admissionId}/category`, {
+            method: 'PUT',
+            headers: headers,
+            credentials: 'include',
+            body: JSON.stringify({ category: newCategory })
+        });
+
+        if (!updateResponse.ok) {
+            throw new Error('Failed to update status');
         }
+
+        Swal.close();
+
+        await Swal.fire({
+            icon: 'success',
+            title: 'Status Updated!',
+            html: `
+                <p>Student status changed successfully</p>
+                ${getCategoryBadge(newCategory)}
+            `,
+            confirmButtonColor: '#10b981',
+            timer: 2000
+        });
+
+        // Reload table
+        loadAdmissions(currentPage, pageSize);
+
+    } catch (error) {
+        Swal.close();
+        console.error('Error changing status:', error);
+        showError('Failed to change status: ' + error.message);
     }
+}
+
+// Make globally available
+window.changeStudentStatus = changeStudentStatus;
+
+/**
+ * Attach Table Event Listeners
+ */
+function attachTableEventListeners(tbody) {
+    // Action menu toggle
+    tbody.querySelectorAll('.action-menu-trigger').forEach(trigger => {
+        trigger.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const menu = this.nextElementSibling;
+
+            // Close all other menus
+            document.querySelectorAll('.action-menu').forEach(m => {
+                if (m !== menu) m.classList.remove('show');
+            });
+
+            // Toggle current menu
+            menu.classList.toggle('show');
+        });
+    });
+
+    // Action menu items
+    tbody.querySelectorAll('.action-menu-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const action = this.getAttribute('data-action');
+            const id = this.getAttribute('data-id');
+
+            // Close menu
+            this.closest('.action-menu').classList.remove('show');
+
+            // Handle action
+            handleAction(action, id);
+        });
+    });
+
+    // Close menus when clicking outside
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.action-menu').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    });
+}
+
+function handleAction(action, id) {
+    switch(action) {
+        case 'update':
+            loadAdmissionForEdit(id);
+            break;
+        case 'change-status':
+            changeStudentStatus(id);
+            break;
+        case 'view':
+            viewAdmission(id);
+            break;
+        case 'installments':
+            openFeeInstallments(id);
+            break;
+        case 'transfer':
+            openTransferModal(id);
+            break;
+        case 'print':
+            printAdmission(id);
+            break;
+        case 'delete':
+            deleteAdmission(id);
+            break;
+        default:
+            console.warn('Unknown action:', action);
+    }
+}
+
+// Make getCategoryBadge globally available
+window.getCategoryBadge = getCategoryBadge;
 
 async function openNewAdmissionModal() {
     const fromEnquiry = sessionStorage.getItem('admissionFromEnquiry');
@@ -373,7 +550,7 @@ async function openNewAdmissionModal() {
                     const enquiry = await enquiryResponse.json();
                     Swal.close();
 
-                    // ✅ Show enquiry details with date
+                    //  Show enquiry details with date
                     const enquiryDate = enquiry.enquiryDate
                         ? new Date(enquiry.enquiryDate).toLocaleDateString('en-IN')
                         : 'Unknown';

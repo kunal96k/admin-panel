@@ -195,6 +195,18 @@ public class Admission {
     @Builder.Default
     private String importSource = "NEW_ENTRY";
 
+    /**
+     * Student category badge: OLD_STUDENT, NEW_STUDENT, PURSUING, COMPLETED, CANCELLED
+     */
+    @Column(name = "student_category", length = 50)
+    @Builder.Default
+    private String studentCategory = "PURSUING";
+
+    /**
+     * Last category update timestamp
+     */
+    @Column(name = "category_updated_at")
+    private LocalDateTime categoryUpdatedAt;
 
     @Transient
     public String getFullName() {

@@ -157,7 +157,7 @@
         }
 
         /* ========================================
-       USER PROFILE DROPDOWN
+        USER PROFILE DROPDOWN
        ======================================== */
 
         /*  dropdown positioning in mobile */
@@ -202,6 +202,28 @@
 
         /* small helper */
         .muted { color:var(--muted); font-size:13px; }
+        /* Pending Fees Card Styling */
+
+        .stat-icon.bg-danger {
+            background: #dc3545;
+            color: #fff;
+        }
+
+        /* Small date labels */
+        .stat-info small.text-muted {
+            color: #6c757d !important;
+            font-size: 10px;
+            line-height: 1.2;
+            margin-top: 4px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .stat-info small.text-muted {
+                font-size: 9px;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -213,6 +235,7 @@
 
     <!-- Quick Stats -->
     <div class="quick-stats" aria-live="polite">
+        <!-- Total Students Card (NO DATE FILTER) -->
         <div class="stat-card" role="article" aria-label="Total students">
             <div class="stat-icon bg-primary" aria-hidden="true">
                 <i class="bi bi-people-fill"></i>
@@ -223,6 +246,7 @@
             </div>
         </div>
 
+        <!--  Fees Collected Card (FROM CUTOFF DATE) -->
         <div class="stat-card" role="article" aria-label="Fees collected">
             <div class="stat-icon bg-success" aria-hidden="true">
                 <i class="bi bi-cash-stack"></i>
@@ -230,9 +254,13 @@
             <div class="stat-info">
                 <h3 id="totalFeesCollected">₹0</h3>
                 <p>Fees Collected</p>
+                <small class="text-muted" id="cutoffDateLabel" style="font-size: 10px; display: block; margin-top: 4px;">
+                    From: <span id="cutoffDateText">-</span>
+                </small>
             </div>
         </div>
 
+        <!-- Total Enquiries Card (NO DATE FILTER) -->
         <div class="stat-card" role="article" aria-label="Total enquiries">
             <div class="stat-icon bg-warning" aria-hidden="true">
                 <i class="bi bi-file-earmark-text"></i>
@@ -243,13 +271,17 @@
             </div>
         </div>
 
-        <div class="stat-card" role="article" aria-label="Certificates issued">
-            <div class="stat-icon bg-info" aria-hidden="true">
-                <i class="bi bi-award-fill"></i>
+        <!--  Pending Fees Card (FROM CUTOFF DATE) -->
+        <div class="stat-card" role="article" aria-label="Pending fees">
+            <div class="stat-icon bg-danger" aria-hidden="true">
+                <i class="bi bi-exclamation-triangle-fill"></i>
             </div>
             <div class="stat-info">
-                <h3 id="certificatesIssued">0</h3>
-                <p>Certificates Issued</p>
+                <h3 id="pendingFees">₹0</h3>
+                <p>Pending Fees</p>
+                <small class="text-muted" id="pendingCutoffLabel" style="font-size: 10px; display: block; margin-top: 4px;">
+                    From: <span id="pendingCutoffText">-</span>
+                </small>
             </div>
         </div>
     </div>
@@ -321,18 +353,35 @@
         }
 
         async function loadDashboardStats() {
-            try {
-                const response = await fetch('/api/dashboard/stats');
-                const stats = await response.json();
+    try {
+        const response = await fetch('/api/dashboard/stats');
+        const stats = await response.json();
 
-                setTextIfExists('totalStudents', stats.totalStudents || 0);
-                setTextIfExists('totalFeesCollected', stats.totalFeesCollectedFormatted || '₹0');
-                setTextIfExists('totalEnquiries', stats.totalEnquiries || 0);
-                setTextIfExists('certificatesIssued', stats.certificatesIssued || 0);
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
-        }
+        //  Total Students (no date filter)
+        setTextIfExists('totalStudents', stats.totalStudents || 0);
+
+        //  Fees Collected (from cutoff date)
+        setTextIfExists('totalFeesCollected', stats.totalFeesCollectedFormatted || '₹0');
+        setTextIfExists('cutoffDateText', stats.cutoffDateFormatted || '-');
+
+        //  Total Enquiries (no date filter)
+        setTextIfExists('totalEnquiries', stats.totalEnquiries || 0);
+
+        //  Pending Fees (from cutoff date)
+        setTextIfExists('pendingFees', stats.pendingFeesFormatted || '₹0');
+        setTextIfExists('pendingCutoffText', stats.cutoffDateFormatted || '-');
+
+        console.log('📊 Dashboard stats loaded:', {
+            students: stats.totalStudents,
+            collected: stats.totalFeesCollected,
+            pending: stats.pendingFees,
+            cutoffDate: stats.cutoffDate
+        });
+
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
 
         // Removed writing to #totalRevenue and #dataPoints because these elements are not required.
         async function loadRevenueChart(period = '6M') {

@@ -38,6 +38,31 @@ public class AdmissionController {
     }
 
     /**
+     *  Manually change student category (Admin override)
+     */
+    @PutMapping(value = "/{id}/category", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<AdmissionResponseDTO> updateStudentCategory(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+
+        String newCategory = request.get("category");
+
+        log.info("PUT /api/admissions/{}/category - {}", id, newCategory);
+
+        if (newCategory == null || newCategory.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        try {
+            AdmissionResponseDTO updated = admissionService.updateStudentCategory(id, newCategory);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid category: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
      * Get all admissions for export (with fees data)
      */
     @GetMapping(value = "/export", produces = MediaType.APPLICATION_JSON_VALUE)

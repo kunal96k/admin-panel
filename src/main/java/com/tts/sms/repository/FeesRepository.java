@@ -122,4 +122,29 @@ public interface FeesRepository extends JpaRepository<Fees, Long> {
     Double getTotalRevenueByDateRange(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    /**
+     *  Get all fees records created from a specific date onwards
+     */
+    @Query("SELECT f FROM Fees f WHERE f.isDeleted = false " +
+            "AND f.createdAt >= :fromDate " +
+            "ORDER BY f.createdAt DESC")
+    List<Fees> findByCreatedAtAfter(@Param("fromDate") LocalDate fromDate);
+
+    /**
+     *  Get total collected from cutoff date
+     */
+    @Query("SELECT COALESCE(SUM(f.totalPaid), 0.0) FROM Fees f " +
+            "WHERE f.isDeleted = false " +
+            "AND f.createdAt >= :fromDate")
+    Double getTotalCollectedFromDate(@Param("fromDate") LocalDate fromDate);
+
+    /**
+     *  Get total pending from cutoff date
+     */
+    @Query("SELECT COALESCE(SUM(f.feesDue), 0.0) FROM Fees f " +
+            "WHERE f.isDeleted = false " +
+            "AND f.createdAt >= :fromDate " +
+            "AND f.feesDue > 0")
+    Double getTotalPendingFromDate(@Param("fromDate") LocalDate fromDate);
 }

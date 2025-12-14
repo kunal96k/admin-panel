@@ -59,59 +59,6 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
     List<Admission> findAllByRegistrationNumberAndIsDeletedFalse(@Param("regNo") String registrationNumber);
 
     /**
-     * : Advanced search - Use created_at instead of createdAt
-     */
-    @Query(value = """
-        SELECT a.* FROM admissions a
-        WHERE a.is_deleted = false
-        AND (
-            ?1 IS NULL OR 
-            LOWER(a.first_name) LIKE LOWER(CONCAT('%', ?2, '%')) OR
-            LOWER(a.last_name) LIKE LOWER(CONCAT('%', ?3, '%')) OR
-            LOWER(a.mobile_primary) LIKE LOWER(CONCAT('%', ?4, '%')) OR
-            LOWER(a.registration_number) LIKE LOWER(CONCAT('%', ?5, '%')) OR
-            LOWER(a.email_primary) LIKE LOWER(CONCAT('%', ?6, '%'))
-        )
-        AND (?7 IS NULL OR a.status = ?8)
-        AND (?9 IS NULL OR JSON_CONTAINS(a.courses, JSON_QUOTE(?10)))
-        AND (?11 IS NULL OR JSON_CONTAINS(a.batches, JSON_QUOTE(?12)))
-        AND (?13 IS NULL OR a.academic_year = ?14)
-        AND (?15 IS NULL OR a.admission_date >= ?16)
-        AND (?17 IS NULL OR a.admission_date <= ?18)
-        ORDER BY a.admission_date DESC, a.created_at DESC
-            """,
-            countQuery = """
-        SELECT COUNT(*) FROM admissions a
-        WHERE a.is_deleted = false
-        AND (
-            ?1 IS NULL OR 
-            LOWER(a.first_name) LIKE LOWER(CONCAT('%', ?2, '%')) OR
-            LOWER(a.last_name) LIKE LOWER(CONCAT('%', ?3, '%')) OR
-            LOWER(a.mobile_primary) LIKE LOWER(CONCAT('%', ?4, '%')) OR
-            LOWER(a.registration_number) LIKE LOWER(CONCAT('%', ?5, '%')) OR
-            LOWER(a.email_primary) LIKE LOWER(CONCAT('%', ?6, '%'))
-        )
-        AND (?7 IS NULL OR a.status = ?8)
-        AND (?9 IS NULL OR JSON_CONTAINS(a.courses, JSON_QUOTE(?10)))
-        AND (?11 IS NULL OR JSON_CONTAINS(a.batches, JSON_QUOTE(?12)))
-        AND (?13 IS NULL OR a.academic_year = ?14)
-        AND (?15 IS NULL OR a.admission_date >= ?16)
-        AND (?17 IS NULL OR a.admission_date <= ?18)
-        """,
-            nativeQuery = true)
-    Page<Admission> advancedSearch(
-            String searchTerm1, String searchTerm2, String searchTerm3,
-            String searchTerm4, String searchTerm5, String searchTerm6,
-            String status1, String status2,
-            String course1, String course2,
-            String batch1, String batch2,
-            String academicYear1, String academicYear2,
-            LocalDate admissionDateFrom1, LocalDate admissionDateFrom2,
-            LocalDate admissionDateTo1, LocalDate admissionDateTo2,
-            Pageable pageable
-    );
-
-    /**
      * Find max registration number for prefix
      */
     @Query("SELECT MAX(a.registrationNumber) FROM Admission a " +
@@ -171,18 +118,71 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
     List<Admission> findRecentAdmissions(Pageable pageable);
 
     /**
-     * : Find all with pagination - Use created_at
-     */
-    @Query(value = "SELECT * FROM admissions a WHERE a.is_deleted = false " +
-            "ORDER BY a.created_at DESC",
-            countQuery = "SELECT COUNT(*) FROM admissions a WHERE a.is_deleted = false",
-            nativeQuery = true)
-    Page<Admission> findByIsDeletedFalse(Pageable pageable);
-
-    /**
      * Find all non-deleted admissions
      */
     List<Admission> findByIsDeletedFalse();
 
     List<Admission> findAllByOrderByCreatedAtDesc();
+
+    /**
+     * Advanced search - Sort by ADMISSION_DATE DESC, then CREATED_AT DESC
+     */
+    @Query(value = """
+    SELECT a.* FROM admissions a
+    WHERE a.is_deleted = false
+    AND (
+        ?1 IS NULL OR 
+        LOWER(a.first_name) LIKE LOWER(CONCAT('%', ?2, '%')) OR
+        LOWER(a.last_name) LIKE LOWER(CONCAT('%', ?3, '%')) OR
+        LOWER(a.mobile_primary) LIKE LOWER(CONCAT('%', ?4, '%')) OR
+        LOWER(a.registration_number) LIKE LOWER(CONCAT('%', ?5, '%')) OR
+        LOWER(a.email_primary) LIKE LOWER(CONCAT('%', ?6, '%'))
+    )
+    AND (?7 IS NULL OR a.status = ?8)
+    AND (?9 IS NULL OR JSON_CONTAINS(a.courses, JSON_QUOTE(?10)))
+    AND (?11 IS NULL OR JSON_CONTAINS(a.batches, JSON_QUOTE(?12)))
+    AND (?13 IS NULL OR a.academic_year = ?14)
+    AND (?15 IS NULL OR a.admission_date >= ?16)
+    AND (?17 IS NULL OR a.admission_date <= ?18)
+    ORDER BY a.admission_date DESC, a.created_at DESC
+        """,
+            countQuery = """
+    SELECT COUNT(*) FROM admissions a
+    WHERE a.is_deleted = false
+    AND (
+        ?1 IS NULL OR 
+        LOWER(a.first_name) LIKE LOWER(CONCAT('%', ?2, '%')) OR
+        LOWER(a.last_name) LIKE LOWER(CONCAT('%', ?3, '%')) OR
+        LOWER(a.mobile_primary) LIKE LOWER(CONCAT('%', ?4, '%')) OR
+        LOWER(a.registration_number) LIKE LOWER(CONCAT('%', ?5, '%')) OR
+        LOWER(a.email_primary) LIKE LOWER(CONCAT('%', ?6, '%'))
+    )
+    AND (?7 IS NULL OR a.status = ?8)
+    AND (?9 IS NULL OR JSON_CONTAINS(a.courses, JSON_QUOTE(?10)))
+    AND (?11 IS NULL OR JSON_CONTAINS(a.batches, JSON_QUOTE(?12)))
+    AND (?13 IS NULL OR a.academic_year = ?14)
+    AND (?15 IS NULL OR a.admission_date >= ?16)
+    AND (?17 IS NULL OR a.admission_date <= ?18)
+    """,
+            nativeQuery = true)
+    Page<Admission> advancedSearch(
+            String searchTerm1, String searchTerm2, String searchTerm3,
+            String searchTerm4, String searchTerm5, String searchTerm6,
+            String status1, String status2,
+            String course1, String course2,
+            String batch1, String batch2,
+            String academicYear1, String academicYear2,
+            LocalDate admissionDateFrom1, LocalDate admissionDateFrom2,
+            LocalDate admissionDateTo1, LocalDate admissionDateTo2,
+            Pageable pageable
+    );
+
+    /**
+     * Find all with pagination - Sort by ADMISSION_DATE DESC
+     */
+    @Query(value = "SELECT * FROM admissions a WHERE a.is_deleted = false " +
+            "ORDER BY a.admission_date DESC, a.created_at DESC",
+            countQuery = "SELECT COUNT(*) FROM admissions a WHERE a.is_deleted = false",
+            nativeQuery = true)
+    Page<Admission> findByIsDeletedFalse(Pageable pageable);
 }

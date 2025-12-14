@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,6 +34,8 @@ public class AdmissionService {
     private final FeesRepository feesRepository;
     private final AdmissionMapper admissionMapper;
     private final CSVService csvService;
+    private final StudentCategoryService studentCategoryService;
+    private final SystemConfigurationService systemConfigurationService;
 
     private static final AtomicInteger registrationCounter = new AtomicInteger(8000);
     private static final String REGISTRATION_PREFIX = "REG";
@@ -49,6 +52,52 @@ public class AdmissionService {
         return admissions.stream()
                 .map(this::mapToExportDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Update student category based on current rules
+     */
+    @Transactional
+    public void updateStudentCategory(Long admissionId) {
+        Admission admission = admissionRepository.findById(admissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admission not found"));
+
+        LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
+        String newCategory = studentCategoryService.determineCategory(admission, cutoffDate);
+
+        admission.setStudentCategory(newCategory);
+        admission.setCategoryUpdatedAt(LocalDateTime.now());
+
+        admissionRepository.save(admission);
+        log.info(" Updated category for {} to: {}", admission.getRegistrationNumber(), newCategory);
+    }
+
+    /**
+     * For admins to override category
+     */
+    @Transactional
+    public AdmissionResponseDTO updateStudentCategory(Long admissionId, String newCategory) {
+        log.info("🔧 Manual category change for admission: {} to {}", admissionId, newCategory);
+
+        Admission admission = admissionRepository.findById(admissionId)
+                .filter(a -> !a.getIsDeleted())
+                .orElseThrow(() -> new ResourceNotFoundException("Admission not found: " + admissionId));
+
+        // Validate category
+        List<String> validCategories = List.of("OLD_STUDENT", "NEW_STUDENT", "PURSUING", "COMPLETED", "CANCELLED");
+        if (!validCategories.contains(newCategory)) {
+            throw new IllegalArgumentException("Invalid category: " + newCategory);
+        }
+
+        // Update category
+        admission.setStudentCategory(newCategory);
+        admission.setCategoryUpdatedAt(LocalDateTime.now());
+        admission.setUpdatedBy("MANUAL_OVERRIDE");
+
+        Admission updated = admissionRepository.save(admission);
+        log.info("✅ Category updated: {} -> {}", admission.getRegistrationNumber(), newCategory);
+
+        return toResponseDTOWithInstallments(updated);
     }
 
     private AdmissionExportDTO mapToExportDTO(Admission admission) {
@@ -199,13 +248,12 @@ public class AdmissionService {
     public AdmissionResponseDTO createAdmission(AdmissionRequestDTO requestDTO) {
         log.debug("Creating new admission for mobile: {}", requestDTO.getMobilePrimary());
 
-        //  FIX: Use findAllByMobileAndIsDeletedFalse() instead of findByMobileAndIsDeletedFalse()
+        // Find enquiry
         Long enquiryId;
         List<Enquiry> enquiries = enquiryRepository
                 .findAllByMobileAndIsDeletedFalse(requestDTO.getMobilePrimary());
 
         if (!enquiries.isEmpty()) {
-            //  Get the latest enquiry (first in list, already sorted by date DESC)
             Enquiry latestEnquiry = enquiries.stream()
                     .max(Comparator.comparing(e -> e.getEnquiryDate() != null
                             ? e.getEnquiryDate()
@@ -215,10 +263,10 @@ public class AdmissionService {
             enquiryId = latestEnquiry.getId();
 
             if (enquiries.size() > 1) {
-                log.info(" Found {} enquiries for mobile: {}, using latest (ID: {})",
+                log.info("✅ Found {} enquiries for mobile: {}, using latest (ID: {})",
                         enquiries.size(), requestDTO.getMobilePrimary(), enquiryId);
             } else {
-                log.info(" Found 1 enquiry with ID: {} for mobile: {}",
+                log.info("✅ Found 1 enquiry with ID: {} for mobile: {}",
                         enquiryId, requestDTO.getMobilePrimary());
             }
         } else {
@@ -237,12 +285,9 @@ public class AdmissionService {
         // Generate registration number if not provided
         if (requestDTO.getRegistrationNumber() != null && !requestDTO.getRegistrationNumber().trim().isEmpty()) {
             admission.setRegistrationNumber(requestDTO.getRegistrationNumber());
-
-            // Check if this is an old CSV import (doesn't start with REG)
             isNewAdmission = requestDTO.getRegistrationNumber().startsWith("REG");
             importSource = isNewAdmission ? "NEW_ENTRY" : "IMPORTED_OLD_DATA";
         } else {
-            // Generate new REG number - This is definitely a NEW admission
             admission.setRegistrationNumber(generateRegistrationNumber());
             isNewAdmission = true;
             importSource = "NEW_ENTRY";
@@ -251,10 +296,16 @@ public class AdmissionService {
         admission.setImportSource(importSource);
         admission.setCreatedBy("SYSTEM");
 
+        // ✅ SET CATEGORY BEFORE FIRST SAVE
+        LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
+        String category = studentCategoryService.determineCategory(admission, cutoffDate);
+        admission.setStudentCategory(category);
+        admission.setCategoryUpdatedAt(LocalDateTime.now());
+
         // Save admission
         Admission savedAdmission = admissionRepository.save(admission);
-        log.info(" Created admission with id: {} and reg no: {}",
-                savedAdmission.getId(), savedAdmission.getRegistrationNumber());
+        log.info("✅ Created admission with id: {} and reg no: {} - Category: {}",
+                savedAdmission.getId(), savedAdmission.getRegistrationNumber(), category);
 
         // Update enquiry status if exists
         if (enquiryId != null) {
@@ -266,7 +317,7 @@ public class AdmissionService {
             if (enquiry != null) {
                 enquiry.setStatus("Admitted");
                 enquiryRepository.save(enquiry);
-                log.info(" Updated enquiry {} status to 'Admitted'", enquiryId);
+                log.info("✅ Updated enquiry {} status to 'Admitted'", enquiryId);
             }
         }
 
@@ -796,7 +847,12 @@ public class AdmissionService {
                 admission.setEnquiryId(enquiryId);
                 admission.setCreatedBy("BULK_IMPORT");
                 admission.setRegistrationNumber(regNumber);
-                admission.setImportSource(importSource); 
+                admission.setImportSource(importSource);
+
+                LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
+                String category = studentCategoryService.determineCategory(admission, cutoffDate);
+                admission.setStudentCategory(category);
+                admission.setCategoryUpdatedAt(LocalDateTime.now());
 
                 try {
                     //  Pass isNewAdmission flag to save method
@@ -991,7 +1047,7 @@ public class AdmissionService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveAdmissionInNewTransaction(Admission admission, boolean isNewAdmission) {
         try {
-            //  VALIDATE BEFORE SAVE
+            // VALIDATE BEFORE SAVE
             if (admission.getRegistrationNumber() == null || admission.getRegistrationNumber().trim().isEmpty()) {
                 throw new IllegalArgumentException("Registration number cannot be null");
             }
@@ -1005,20 +1061,29 @@ public class AdmissionService {
                 throw new IllegalArgumentException("Mobile number cannot be null");
             }
 
-            //  SAVE ADMISSION
+            // ✅ ENSURE CATEGORY IS SET BEFORE SAVE
+            if (admission.getStudentCategory() == null || admission.getStudentCategory().isEmpty()) {
+                LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
+                String category = studentCategoryService.determineCategory(admission, cutoffDate);
+                admission.setStudentCategory(category);
+                admission.setCategoryUpdatedAt(LocalDateTime.now());
+                log.debug("✅ Set category during save: {} -> {}", admission.getRegistrationNumber(), category);
+            }
+
+            // SAVE ADMISSION
             Admission saved = admissionRepository.save(admission);
             admissionRepository.flush();
 
-            log.debug(" Saved admission for regNo: {}", saved.getRegistrationNumber());
+            log.debug("✅ Saved admission for regNo: {} with category: {}",
+                    saved.getRegistrationNumber(), saved.getStudentCategory());
 
-            //  ONLY create fees record for NEW admissions (REG* numbers)
+            // ONLY create fees record for NEW admissions (REG* numbers)
             if (isNewAdmission && saved.getRegistrationNumber().startsWith("REG")) {
                 try {
                     createFeesRecordInNewTransaction(saved);
                 } catch (Exception feesEx) {
                     log.error("❌ Failed to create fees for regNo: {} - {}",
                             saved.getRegistrationNumber(), feesEx.getMessage());
-                    // Don't throw - admission is saved, fees creation failure is logged
                 }
             } else {
                 log.debug("⏭️ Skipping fees creation for regNo: {}", saved.getRegistrationNumber());

@@ -1212,7 +1212,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.addEventListener('click', handlePasswordReset);
         }
 
-        console.log('✅ Reset Password module initialized');
+        console.log(' Reset Password module initialized');
     }
 
     // Toggle password visibility
@@ -1412,7 +1412,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
         } catch (error) {
-            console.error('❌ Password reset error:', error);
+            console.error(' Password reset error:', error);
             showError('Failed to reset password. Please try again.');
         } finally {
             submitBtn.disabled = false;
@@ -1485,4 +1485,209 @@ document.addEventListener('DOMContentLoaded', function() {
         initResetPassword();
     }
 
+})();
+
+// ========================================
+// SUPER ADMIN: CUTOFF DATE CONFIGURATION
+// ========================================
+
+(function() {
+    'use strict';
+
+    const btnConfigureCutoffDate = document.getElementById('btnConfigureCutoffDate');
+    const cutoffDateModal = document.getElementById('cutoffDateModal');
+    const cutoffDateInput = document.getElementById('cutoffDateInput');
+    const btnSaveCutoffDate = document.getElementById('btnSaveCutoffDate');
+
+    if (!btnConfigureCutoffDate) {
+        console.log('⏭️ Cutoff date button not found (user is not SUPER_ADMIN)');
+        return;
+    }
+
+    // Open modal and load current cutoff date
+    btnConfigureCutoffDate.addEventListener('click', async function(e) {
+        e.preventDefault();
+        console.log('📅 Opening cutoff date configuration modal');
+
+        try {
+            const response = await fetch('/api/system-config/cutoff-date', {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                cutoffDateInput.value = data.cutoffDate;
+                console.log(' Loaded current cutoff date:', data.cutoffDate);
+            } else {
+                cutoffDateInput.value = '2025-08-01';
+            }
+        } catch (error) {
+            console.error('Error loading cutoff date:', error);
+            cutoffDateInput.value = '2025-08-01';
+        }
+
+        //  Create modal with NO backdrop blocking
+        const modal = new bootstrap.Modal(cutoffDateModal, {
+            backdrop: 'static',
+            keyboard: false,
+            focus: true
+        });
+
+        modal.show();
+
+        //  Remove backdrop and enable input
+        setTimeout(() => {
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.style.display = 'none';
+            }
+
+            cutoffDateInput.focus();
+            cutoffDateInput.disabled = false;
+            cutoffDateInput.readOnly = false;
+
+            console.log(' Date input is now fully interactive');
+        }, 300);
+    });
+
+    //  Direct click handler on input
+    if (cutoffDateInput) {
+        cutoffDateInput.addEventListener('click', function(e) {
+            e.stopPropagation();
+            console.log('📅 Date input clicked');
+
+            try {
+                this.showPicker();
+            } catch (err) {
+                console.log('ℹ️ Browser does not support showPicker()');
+            }
+        });
+
+        cutoffDateInput.addEventListener('focus', function() {
+            console.log('📅 Date input focused');
+            this.style.backgroundColor = '#fff';
+        });
+
+        cutoffDateInput.addEventListener('change', function() {
+            console.log('📅 Date changed to:', this.value);
+        });
+    }
+
+    // Save cutoff date
+    btnSaveCutoffDate.addEventListener('click', async function() {
+        const cutoffDate = cutoffDateInput.value;
+
+        if (!cutoffDate) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Validation Error',
+                text: 'Please select a cutoff date',
+                confirmButtonColor: '#ef4444'
+            });
+            return;
+        }
+
+        const confirmed = await Swal.fire({
+            title: 'Confirm Recategorization',
+            html: `
+                <div class="text-start">
+                    <p><strong>Cutoff Date:</strong> ${new Date(cutoffDate).toLocaleDateString('en-GB')}</p>
+                    <p class="text-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        This will automatically recategorize ALL students based on their admission date.
+                    </p>
+                    <ul class="mt-2 text-muted small">
+                        <li>Before cutoff: <strong>OLD_STUDENT</strong></li>
+                        <li>After cutoff: <strong>PURSUING</strong></li>
+                        <li>REG* numbers: <strong>NEW_STUDENT</strong></li>
+                        <li>All certificates issued: <strong>COMPLETED</strong></li>
+                        <li>Has refund: <strong>CANCELLED</strong></li>
+                    </ul>
+                    <p>Are you sure you want to proceed?</p>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Recategorize All',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#3b82f6'
+        });
+
+        if (!confirmed.isConfirmed) return;
+
+        Swal.fire({
+            title: 'Processing...',
+            html: 'Recategorizing all students based on admission dates. This may take a few moments.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        try {
+            const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+            const response = await fetch('/api/system-config/cutoff-date', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [csrfHeader]: csrfToken
+                },
+                body: JSON.stringify({ cutoffDate })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to update cutoff date');
+            }
+
+            const result = await response.json();
+
+            Swal.close();
+
+            // Close modal manually
+            const modalInstance = bootstrap.Modal.getInstance(cutoffDateModal);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+            cutoffDateModal.classList.remove('show');
+            cutoffDateModal.style.display = 'none';
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                html: `
+                    <div class="text-start">
+                        <p>${result.message}</p>
+                        <p class="text-muted"><small>Cutoff Date: ${new Date(result.cutoffDate).toLocaleDateString('en-GB')}</small></p>
+                        <p class="text-info"><small>Students are categorized based on their admission date (not created/updated date)</small></p>
+                    </div>
+                `,
+                confirmButtonColor: '#10b981',
+                timer: 4000
+            }).then(() => {
+                // Reload admission page if currently on it
+                if (window.location.pathname.includes('/admission')) {
+                    location.reload();
+                }
+            });
+
+        } catch (error) {
+            Swal.close();
+            console.error('Error updating cutoff date:', error);
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Update Failed',
+                text: error.message || 'Failed to update cutoff date',
+                confirmButtonColor: '#ef4444'
+            });
+        }
+    });
+
+    console.log(' Cutoff date configuration module loaded (SUPER_ADMIN only)');
 })();

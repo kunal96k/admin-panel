@@ -48,6 +48,7 @@ public class CertificateService {
     private final CertificateCSVService csvService;
     private final EmailTemplateService emailTemplateService;
     private final CourseRepository courseRepository;
+    private final AutoCertificateService autoCertificateService;
 
     /**
      * Send certificate email with pre-rendered image from frontend
@@ -688,8 +689,13 @@ public class CertificateService {
         certificate.setStatus("Issued");
 
         Certificate savedCertificate = certificateRepository.save(certificate);
-        log.info(" Certificate issued: {} for student: {}",
+        log.info("Certificate issued: {} for student: {}",
                 savedCertificate.getCertificateNo(), savedCertificate.getStudentName());
+
+        // ✨ TRIGGER ADMISSION STATUS UPDATE
+        autoCertificateService.updateAdmissionStatusAfterCertificate(
+                savedCertificate.getRegistrationNo()
+        );
 
         return convertToDTO(savedCertificate);
     }

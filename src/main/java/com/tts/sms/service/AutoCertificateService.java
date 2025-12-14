@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +27,41 @@ public class AutoCertificateService {
     private final CourseRepository courseRepository;
     private final ManualCertificateLogRepository manualCertificateLogRepository;
     private final EmployeeRepository employeeRepository;
+    private final SystemConfigurationService systemConfigurationService;
+    private final StudentCategoryService studentCategoryService;
+
+    /**
+     * Update admission status to COMPLETED when all certificates issued
+     */
+    @Transactional
+    public void updateAdmissionStatusAfterCertificate(String registrationNumber) {
+        log.info("🔍 Checking if {} should be marked COMPLETED", registrationNumber);
+
+        try {
+            Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(registrationNumber);
+
+            if (admission == null) {
+                log.warn("⚠️ Admission not found: {}", registrationNumber);
+                return;
+            }
+
+            // Recalculate category
+            LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
+            String newCategory = studentCategoryService.determineCategory(admission, cutoffDate);
+
+            if (!newCategory.equals(admission.getStudentCategory())) {
+                admission.setStudentCategory(newCategory);
+                admission.setCategoryUpdatedAt(LocalDateTime.now());
+                admissionRepository.save(admission);
+
+                log.info("✅ Updated {} category: {} -> {}",
+                        registrationNumber, admission.getStudentCategory(), newCategory);
+            }
+
+        } catch (Exception e) {
+            log.error("❌ Error updating admission status for {}: {}", registrationNumber, e.getMessage());
+        }
+    }
 
     /**
      *  AUTO-GENERATE CERTIFICATES FROM CLEARED FEES

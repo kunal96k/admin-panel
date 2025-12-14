@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 @Component
 public class AdmissionMapper {
 
-    public Admission toEntity(AdmissionRequestDTO dto) {
+    public static Admission toEntity(AdmissionRequestDTO dto) {
         if (dto == null) return null;
 
         return Admission.builder()
@@ -85,6 +85,8 @@ public class AdmissionMapper {
                 .emailPrimary(admission.getEmailPrimary())
                 .emailSecondary(admission.getEmailSecondary())
                 .currentAddress(admission.getCurrentAddress())
+                .studentCategory(admission.getStudentCategory())
+                .categoryUpdatedAt(admission.getCategoryUpdatedAt())
                 .permanentAddress(admission.getPermanentAddress())
                 .pinCodeCurrent(admission.getPinCodeCurrent())
                 .pinCodePermanent(admission.getPinCodePermanent())

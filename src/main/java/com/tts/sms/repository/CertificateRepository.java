@@ -14,6 +14,14 @@ import java.util.Optional;
 @Repository
 public interface CertificateRepository extends JpaRepository<Certificate, Long> {
 
+    /**
+     * Find certificates by registration number and status
+     */
+    List<Certificate> findByRegistrationNoAndStatusAndIsActiveTrue(
+            String registrationNo,
+            String status
+    );
+
     List<Certificate> findByRegistrationNoAndIsActiveTrue(String registrationNo);
     
     // Check if registration number exists
