@@ -15,6 +15,12 @@ import java.util.Optional;
 public interface CertificateRepository extends JpaRepository<Certificate, Long> {
 
     /**
+     * Find all issued certificates for batch processing
+     */
+    @Query("SELECT c FROM Certificate c WHERE c.status = :status AND c.isActive = true")
+    List<Certificate> findByStatusAndIsActiveTrue(@Param("status") String status);
+
+    /**
      * Find certificates by registration number and status
      */
     List<Certificate> findByRegistrationNoAndStatusAndIsActiveTrue(

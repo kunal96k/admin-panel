@@ -16,12 +16,17 @@ import java.util.Optional;
 public interface FeeRefundRepository extends JpaRepository<FeeRefund, Long> {
 
     /**
-     * Find all non-deleted refunds with pagination
+     * : Find all non-deleted refunds as List (for batch processing)
+     */
+    List<FeeRefund> findByIsDeletedFalse();
+
+    /**
+     * : Find all non-deleted refunds with pagination
      */
     Page<FeeRefund> findByIsDeletedFalse(Pageable pageable);
 
     /**
-     *  : Find refunds by registration number
+     * Find refunds by registration number
      */
     List<FeeRefund> findByRegistrationNumberAndIsDeletedFalseOrderByRefundDateDesc(String registrationNumber);
 
@@ -48,7 +53,7 @@ public interface FeeRefundRepository extends JpaRepository<FeeRefund, Long> {
     );
 
     /**
-     *  : Get total refund amount by registration number
+     * Get total refund amount by registration number
      */
     @Query("SELECT COALESCE(SUM(r.refundAmount), 0.0) FROM FeeRefund r " +
             "WHERE r.registrationNumber = :registrationNumber AND r.isDeleted = false")
@@ -66,7 +71,7 @@ public interface FeeRefundRepository extends JpaRepository<FeeRefund, Long> {
     );
 
     /**
-     *  : Count refunds by registration number
+     * Count refunds by registration number
      */
     @Query("SELECT COUNT(r) FROM FeeRefund r " +
             "WHERE r.registrationNumber = :registrationNumber AND r.isDeleted = false")
@@ -81,7 +86,7 @@ public interface FeeRefundRepository extends JpaRepository<FeeRefund, Long> {
     List<Object[]> getRefundStatsByPaymentMode();
 
     /**
-     *  NEW: Find refunds by multiple registration numbers
+     * Find refunds by multiple registration numbers (for batch processing)
      */
     @Query("SELECT r FROM FeeRefund r WHERE r.registrationNumber IN :registrationNumbers " +
             "AND r.isDeleted = false")

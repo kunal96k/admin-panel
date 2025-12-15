@@ -19,15 +19,16 @@ public class DashboardService {
     private final AdmissionRepository admissionRepository;
     private final EnquiryRepository enquiryRepository;
     private final FeesRepository feesRepository;
-    private final CertificateRepository certificateRepository;
     private final FeeReceiptRepository feeReceiptRepository;
-    private final FeeCollectionRepository feeCollectionRepository;
     private final FeeRefundRepository feeRefundRepository;
     private final SystemConfigurationService systemConfigurationService;
 
     /**
-     * ✅ FIXED: Dashboard stats FROM CUTOFF DATE onwards
-     * Total Collected = Total Paid - Total Refunds
+     *  FIXED: Dashboard stats based on ADMISSION DATE (not created_at)
+     *
+     * CORRECT FORMULA:
+     * - Total Collected = SUM(totalPaid) - SUM(refunds) [from admissions >= cutoff]
+     * - Pending Fees = SUM(feesDue) [from admissions >= cutoff]
      */
     public Map<String, Object> getDashboardStats() {
         Map<String, Object> stats = new HashMap<>();
@@ -46,40 +47,57 @@ public class DashboardService {
         stats.put("totalEnquiries", totalEnquiries != null ? totalEnquiries : 0L);
         log.info("📋 Total Enquiries: {}", totalEnquiries);
 
-        // ========== FEES CALCULATIONS (FROM CUTOFF DATE) ==========
+        // ==========  FEES CALCULATIONS (FROM CUTOFF DATE - BASED ON ADMISSION DATE) ==========
 
-        // 1️⃣ Get ALL fees records FROM cutoff date onwards (using created_at)
-        List<Fees> feesFromCutoff = feesRepository.findByIsDeletedFalse()
+        // 1️⃣ Get ALL admissions FROM cutoff date onwards (using admission_date)
+        List<Admission> admissionsFromCutoff = admissionRepository.findByIsDeletedFalse()
                 .stream()
-                .filter(f -> f.getCreatedAt() != null &&
-                        !f.getCreatedAt().toLocalDate().isBefore(cutoffDate))
+                .filter(a -> a.getAdmissionDate() != null &&
+                        !a.getAdmissionDate().isBefore(cutoffDate))
                 .collect(Collectors.toList());
 
-        log.info("📊 Found {} fees records from cutoff date {}", feesFromCutoff.size(), cutoffDate);
+        log.info("📊 Found {} admissions from cutoff date {} (based on admission_date)",
+                admissionsFromCutoff.size(), cutoffDate);
 
-        // 2️⃣ Calculate GROSS total paid (sum of totalPaid from fees table)
+        // 2️⃣ Get registration numbers for these admissions
+        Set<String> regNosFromCutoff = admissionsFromCutoff.stream()
+                .map(Admission::getRegistrationNumber)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        log.info("📊 Processing fees for {} registration numbers", regNosFromCutoff.size());
+
+        // 3️⃣ Get ONLY fees records for these admissions
+        List<Fees> feesFromCutoff = feesRepository.findByIsDeletedFalse()
+                .stream()
+                .filter(f -> regNosFromCutoff.contains(f.getRegistrationNumber()))
+                .collect(Collectors.toList());
+
+        log.info("📊 Found {} fees records for admissions from cutoff date", feesFromCutoff.size());
+
+        // 4️⃣ Calculate GROSS total paid (sum of totalPaid from fees table)
         Double grossTotalPaid = feesFromCutoff.stream()
                 .mapToDouble(f -> f.getTotalPaid() != null ? f.getTotalPaid() : 0.0)
                 .sum();
 
-        // 3️⃣ Get ALL refunds FROM cutoff date onwards (using created_at)
+        // 5️⃣ Get ALL refunds for these registration numbers
         List<FeeRefund> refundsFromCutoff = feeRefundRepository.findByIsDeletedFalse(null)
                 .stream()
-                .filter(r -> r.getCreatedAt() != null &&
-                        !r.getCreatedAt().toLocalDate().isBefore(cutoffDate))
+                .filter(r -> regNosFromCutoff.contains(r.getRegistrationNumber()))
                 .collect(Collectors.toList());
 
-        log.info("📊 Found {} refund records from cutoff date {}", refundsFromCutoff.size(), cutoffDate);
+        log.info("📊 Found {} refund records for admissions from cutoff date",
+                refundsFromCutoff.size());
 
-        // 4️⃣ Calculate total refunds
+        // 6️⃣ Calculate total refunds
         Double totalRefunds = refundsFromCutoff.stream()
                 .mapToDouble(r -> r.getRefundAmount() != null ? r.getRefundAmount() : 0.0)
                 .sum();
 
-        // 5️⃣ ✅ CORRECT FORMULA: Net Collected = Gross Paid - Refunds
+        // 7️⃣  CORRECT FORMULA: Net Collected = Gross Paid - Refunds
         Double netCollected = grossTotalPaid - totalRefunds;
 
-        // 6️⃣ Calculate total pending (sum of feesDue)
+        // 8️⃣ Calculate total pending (sum of feesDue)
         Double totalPending = feesFromCutoff.stream()
                 .mapToDouble(f -> f.getFeesDue() != null ? f.getFeesDue() : 0.0)
                 .sum();
@@ -95,6 +113,8 @@ public class DashboardService {
 
         // Debug logging
         log.info("💰 FINAL CALCULATIONS:");
+        log.info("   - Admissions from cutoff: {} (based on admission_date >= {})",
+                admissionsFromCutoff.size(), cutoffDate);
         log.info("   - Gross Paid: ₹{} (from {} fees records)", grossTotalPaid, feesFromCutoff.size());
         log.info("   - Total Refunds: ₹{} (from {} refund records)", totalRefunds, refundsFromCutoff.size());
         log.info("   - NET Collected: ₹{}", netCollected);
@@ -105,8 +125,8 @@ public class DashboardService {
     }
 
     /**
-     * ✅ FIXED: Revenue chart - FROM CUTOFF DATE onwards
-     * Shows NET revenue (Paid - Refunds)
+     *  FIXED: Revenue chart - FROM CUTOFF DATE onwards (based on admission date)
+     * Shows NET revenue (Paid - Refunds) for admissions from cutoff date
      */
     public Map<String, Object> getRevenueChartData(String period) {
         Map<String, Object> chartData = new HashMap<>();
@@ -116,46 +136,17 @@ public class DashboardService {
 
         // Determine date range
         switch (period.toUpperCase()) {
-            case "1M":
-                startDate = endDate.minusMonths(1);
-                break;
-            case "2M":
-                startDate = endDate.minusMonths(2);
-                break;
-            case "3M":
-                startDate = endDate.minusMonths(3);
-                break;
-            case "4M":
-                startDate = endDate.minusMonths(4);
-                groupByMonth = true;
-                break;
-            case "5M":
-                startDate = endDate.minusMonths(5);
-                groupByMonth = true;
-                break;
-            case "6M":
-                startDate = endDate.minusMonths(6);
-                groupByMonth = true;
-                break;
-            case "1Y":
-                startDate = endDate.minusYears(1);
-                groupByMonth = true;
-                break;
-            case "2Y":
-                startDate = endDate.minusYears(2);
-                groupByMonth = true;
-                break;
-            case "3Y":
-                startDate = endDate.minusYears(3);
-                groupByMonth = true;
-                break;
-            case "5Y":
-                startDate = endDate.minusYears(5);
-                groupByMonth = true;
-                break;
-            default:
-                startDate = endDate.minusMonths(6);
-                groupByMonth = true;
+            case "1M": startDate = endDate.minusMonths(1); break;
+            case "2M": startDate = endDate.minusMonths(2); break;
+            case "3M": startDate = endDate.minusMonths(3); break;
+            case "4M": startDate = endDate.minusMonths(4); groupByMonth = true; break;
+            case "5M": startDate = endDate.minusMonths(5); groupByMonth = true; break;
+            case "6M": startDate = endDate.minusMonths(6); groupByMonth = true; break;
+            case "1Y": startDate = endDate.minusYears(1); groupByMonth = true; break;
+            case "2Y": startDate = endDate.minusYears(2); groupByMonth = true; break;
+            case "3Y": startDate = endDate.minusYears(3); groupByMonth = true; break;
+            case "5Y": startDate = endDate.minusYears(5); groupByMonth = true; break;
+            default: startDate = endDate.minusMonths(6); groupByMonth = true;
         }
 
         // Get cutoff date
@@ -167,17 +158,31 @@ public class DashboardService {
         log.info("📊 Revenue chart: period={}, requestedStart={}, cutoff={}, effectiveStart={}",
                 period, startDate, cutoffDate, effectiveStartDate);
 
-        // Get ALL fees records from effective start date
+        //  Get admissions from cutoff date (based on admission_date)
+        List<Admission> admissionsFromCutoff = admissionRepository.findByIsDeletedFalse()
+                .stream()
+                .filter(a -> a.getAdmissionDate() != null &&
+                        !a.getAdmissionDate().isBefore(cutoffDate))
+                .collect(Collectors.toList());
+
+        Set<String> regNosFromCutoff = admissionsFromCutoff.stream()
+                .map(Admission::getRegistrationNumber)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        // Get fees records for date range (using created_at for chart timeline)
         List<Fees> feesRecords = feesRepository.findByIsDeletedFalse()
                 .stream()
+                .filter(f -> regNosFromCutoff.contains(f.getRegistrationNumber()))
                 .filter(f -> f.getCreatedAt() != null &&
                         !f.getCreatedAt().toLocalDate().isBefore(effectiveStartDate) &&
                         !f.getCreatedAt().toLocalDate().isAfter(endDate))
                 .collect(Collectors.toList());
 
-        // Get ALL refunds from effective start date
+        // Get refunds for date range
         List<FeeRefund> refundRecords = feeRefundRepository.findByIsDeletedFalse(null)
                 .stream()
+                .filter(r -> regNosFromCutoff.contains(r.getRegistrationNumber()))
                 .filter(r -> r.getCreatedAt() != null &&
                         !r.getCreatedAt().toLocalDate().isBefore(effectiveStartDate) &&
                         !r.getCreatedAt().toLocalDate().isAfter(endDate))
@@ -191,7 +196,6 @@ public class DashboardService {
             Map<YearMonth, Double> monthlyPaid = new TreeMap<>();
             Map<YearMonth, Double> monthlyRefunds = new TreeMap<>();
 
-            // Collect payments by month
             for (Fees fee : feesRecords) {
                 if (fee.getCreatedAt() != null && fee.getTotalPaid() != null && fee.getTotalPaid() > 0) {
                     YearMonth yearMonth = YearMonth.from(fee.getCreatedAt().toLocalDate());
@@ -199,7 +203,6 @@ public class DashboardService {
                 }
             }
 
-            // Collect refunds by month
             for (FeeRefund refund : refundRecords) {
                 if (refund.getCreatedAt() != null && refund.getRefundAmount() != null) {
                     YearMonth yearMonth = YearMonth.from(refund.getCreatedAt().toLocalDate());
@@ -207,7 +210,6 @@ public class DashboardService {
                 }
             }
 
-            // Calculate NET revenue (Paid - Refunds) for each month
             Set<YearMonth> allMonths = new TreeSet<>(monthlyPaid.keySet());
             allMonths.addAll(monthlyRefunds.keySet());
 
@@ -218,14 +220,13 @@ public class DashboardService {
                 Double netRevenue = paid - refunds;
 
                 labels.add(month.format(formatter));
-                data.add(Math.max(0, netRevenue)); // Don't show negative
+                data.add(Math.max(0, netRevenue));
             }
         } else {
             // Group by day
             Map<LocalDate, Double> dailyPaid = new TreeMap<>();
             Map<LocalDate, Double> dailyRefunds = new TreeMap<>();
 
-            // Collect payments by day
             for (Fees fee : feesRecords) {
                 if (fee.getCreatedAt() != null && fee.getTotalPaid() != null && fee.getTotalPaid() > 0) {
                     LocalDate date = fee.getCreatedAt().toLocalDate();
@@ -233,7 +234,6 @@ public class DashboardService {
                 }
             }
 
-            // Collect refunds by day
             for (FeeRefund refund : refundRecords) {
                 if (refund.getCreatedAt() != null && refund.getRefundAmount() != null) {
                     LocalDate date = refund.getCreatedAt().toLocalDate();
@@ -241,7 +241,6 @@ public class DashboardService {
                 }
             }
 
-            // Calculate NET revenue (Paid - Refunds) for each day
             Set<LocalDate> allDates = new TreeSet<>(dailyPaid.keySet());
             allDates.addAll(dailyRefunds.keySet());
 
@@ -252,7 +251,7 @@ public class DashboardService {
                 Double netRevenue = paid - refunds;
 
                 labels.add(date.format(formatter));
-                data.add(Math.max(0, netRevenue)); // Don't show negative
+                data.add(Math.max(0, netRevenue));
             }
         }
 
@@ -262,8 +261,8 @@ public class DashboardService {
         chartData.put("cutoffDate", cutoffDate.toString());
 
         double totalRevenue = data.stream().mapToDouble(Double::doubleValue).sum();
-        log.info("📈 Revenue chart: {} data points, Total NET Revenue: ₹{} (from {})",
-                data.size(), totalRevenue, effectiveStartDate);
+        log.info("📈 Revenue chart: {} data points, Total NET Revenue: ₹{} (from admissions >= {})",
+                data.size(), totalRevenue, cutoffDate);
 
         return chartData;
     }
@@ -312,9 +311,6 @@ public class DashboardService {
         return chartData;
     }
 
-    /**
-     * Generate colors for pie chart
-     */
     private List<String> generateColors(int count) {
         String[] colorPalette = {
                 "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF",
@@ -329,9 +325,6 @@ public class DashboardService {
         return colors;
     }
 
-    /**
-     * Format currency with Indian notation
-     */
     private String formatCurrency(Double amount) {
         if (amount == null || amount == 0) {
             return "₹0";
