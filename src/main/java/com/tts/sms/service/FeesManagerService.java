@@ -133,7 +133,7 @@ public class FeesManagerService {
             title.setAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
             document.add(title);
 
-            document.add(new com.itextpdf.text.Paragraph(" ")); // Spacer
+            document.add(new com.itextpdf.text.Paragraph(" "));
 
             // Receipt details
             document.add(new com.itextpdf.text.Paragraph("Receipt No: " + receipt.getReceiptNumber(), normalFont));

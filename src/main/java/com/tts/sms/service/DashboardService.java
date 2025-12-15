@@ -24,8 +24,7 @@ public class DashboardService {
     private final SystemConfigurationService systemConfigurationService;
 
     /**
-     *  FIXED: Dashboard stats based on ADMISSION DATE (not created_at)
-     *
+     *  Dashboard stats based on ADMISSION DATE (not created_at)
      * CORRECT FORMULA:
      * - Total Collected = SUM(totalPaid) - SUM(refunds) [from admissions >= cutoff]
      * - Pending Fees = SUM(feesDue) [from admissions >= cutoff]
@@ -112,7 +111,7 @@ public class DashboardService {
         stats.put("pendingFeesFormatted", formatCurrency(Math.max(0, totalPending)));
 
         // Debug logging
-        log.info("💰 FINAL CALCULATIONS:");
+        log.info("FINAL CALCULATIONS:");
         log.info("   - Admissions from cutoff: {} (based on admission_date >= {})",
                 admissionsFromCutoff.size(), cutoffDate);
         log.info("   - Gross Paid: ₹{} (from {} fees records)", grossTotalPaid, feesFromCutoff.size());
@@ -125,7 +124,7 @@ public class DashboardService {
     }
 
     /**
-     *  FIXED: Revenue chart - FROM CUTOFF DATE onwards (based on admission date)
+     *   Revenue chart - FROM CUTOFF DATE onwards (based on admission date)
      * Shows NET revenue (Paid - Refunds) for admissions from cutoff date
      */
     public Map<String, Object> getRevenueChartData(String period) {

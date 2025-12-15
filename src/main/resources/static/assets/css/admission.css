@@ -1299,7 +1299,9 @@
 }
 
 #admissionsTable tbody td:nth-child(2) strong {
-    font-size: 0.95rem;
+    white-space: normal;
+    word-wrap: break-word;
+    font-size: 0.75rem;
     color: #1e293b;
 }
 
