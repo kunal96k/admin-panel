@@ -489,3 +489,383 @@ java.lang.Exception: Apparent connection leak detected
 2025-12-15 00:32:38 [https-jsse-nio-8443-exec-3] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active courses
 2025-12-15 00:57:11 [File Watcher] INFO  o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 348 class path changes (0 additions, 348 deletions, 0 modifications)
 2025-12-15 00:57:12 [Thread-5] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-12-15 08:38:03 [restartedMain] INFO  com.tts.sms.SmsApplication - Starting SmsApplication using Java 22.0.2 with PID 1564 (D:\tts-sms\sms\target\classes started by KUNAL in D:\tts-sms\sms)
+2025-12-15 08:38:03 [restartedMain] INFO  com.tts.sms.SmsApplication - The following 1 profile is active: "prod"
+2025-12-15 08:38:04 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-12-15 08:38:04 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-12-15 08:38:09 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-12-15 08:38:09 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 403 ms. Found 24 JPA repository interfaces.
+2025-12-15 08:38:11 [restartedMain] INFO  com.tts.sms.config.WebConfig - 🔒 HTTPS/SSL is ENABLED - Production mode
+2025-12-15 08:38:11 [restartedMain] INFO  com.tts.sms.config.WebConfig - 🔧 Configuring MIME type mappings for production
+2025-12-15 08:38:11 [restartedMain] INFO  com.tts.sms.config.WebConfig -  MIME type mappings configured for production with UTF-8
+2025-12-15 08:38:12 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8443 (https)
+2025-12-15 08:38:13 [restartedMain] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 8601 ms
+2025-12-15 08:38:15 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000025: MariaDB103Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-12-15 08:38:15 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000026: MariaDB103Dialect has been deprecated; use org.hibernate.dialect.MariaDBDialect instead
+2025-12-15 08:38:15 [restartedMain] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-12-15 08:38:21 [restartedMain] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-12-15 08:38:21 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Application timezone set to: Asia/Kolkata (India Standard Time)
+2025-12-15 08:38:21 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Current time in IST: 2025-12-15T08:38:21.457694400+05:30[Asia/Kolkata]
+2025-12-15 08:38:21 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - ===========================================
+2025-12-15 08:38:21 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Database Configuration:
+2025-12-15 08:38:21 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - Auto-create enabled: createDatabaseIfNotExist=true
+2025-12-15 08:38:21 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - Timezone: Asia/Kolkata (IST)
+2025-12-15 08:38:21 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - DDL Auto: update (will create tables automatically)
+2025-12-15 08:38:21 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - ===========================================
+2025-12-15 08:38:22 [restartedMain] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-12-15 08:38:30 [restartedMain] INFO  c.tts.sms.service.FileStorageService - 📏 Max file size: 5242880 bytes (5MB)
+2025-12-15 08:38:30 [restartedMain] INFO  c.tts.sms.service.FileStorageService - 📝 Allowed extensions: [jpg, jpeg, png, gif, webp]
+2025-12-15 08:38:31 [restartedMain] INFO  c.t.s.c.ContentNegotiationConfig - 🔧 Configuring Content Negotiation for HTTPS Production
+2025-12-15 08:38:31 [restartedMain] INFO  c.t.s.c.ContentNegotiationConfig - ✅ Content Negotiation configured for HTTPS production
+2025-12-15 08:38:31 [restartedMain] INFO  com.tts.sms.config.SecurityConfig - Configuring security with FULL CSRF protection…
+2025-12-15 08:38:31 [restartedMain] INFO  com.tts.sms.config.SecurityConfig - Configuring CORS with allowed origins: https://team.ttsnashik.com,https://www.ttsnashik.com
+2025-12-15 08:38:31 [restartedMain] INFO  c.t.s.c.ContentNegotiationConfig - ✅ Path matching configured for production
+2025-12-15 08:38:31 [restartedMain] INFO  c.t.sms.config.SecurityHeadersConfig - ✅ Security headers interceptor registered (SSL: true)
+2025-12-15 08:38:31 [restartedMain] INFO  com.tts.sms.config.WebConfig - 🌐 Configuring CORS for production
+2025-12-15 08:38:31 [restartedMain] INFO  com.tts.sms.config.WebConfig -  CORS configured for /api/** endpoints
+2025-12-15 08:38:32 [restartedMain] INFO  com.tts.sms.config.WebConfig - 📦 Configuring resource handlers for HTTPS production
+2025-12-15 08:38:32 [restartedMain] INFO  com.tts.sms.config.WebConfig -  Resource handlers configured with Google Analytics support
+2025-12-15 08:38:32 [restartedMain] INFO  com.tts.sms.config.WebConfig -  Resource handlers configured for production
+2025-12-15 08:38:32 [restartedMain] INFO  com.tts.sms.config.WebConfig -  Course images: D:\tts-sms\sms\.\uploads\courses
+2025-12-15 08:38:32 [restartedMain] INFO  com.tts.sms.config.WebConfig -  CSV uploads: D:\tts-sms\sms\.\uploads\csv
+2025-12-15 08:38:32 [restartedMain] INFO  o.s.s.w.a.c.ChannelProcessingFilter - Validated configuration attributes
+2025-12-15 08:38:32 [restartedMain] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@53d3b64a, org.springframework.security.web.access.channel.ChannelProcessingFilter@1e17091c, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@77a54ebe, org.springframework.security.web.context.SecurityContextHolderFilter@7d49fe6b, org.springframework.security.web.header.HeaderWriterFilter@6078cb61, org.springframework.web.filter.CorsFilter@d39c11f, org.springframework.security.web.csrf.CsrfFilter@86fae62, org.springframework.security.web.authentication.logout.LogoutFilter@301a761f, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@6e85ff37, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@4032f992, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@42a252ac, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@2846447c, org.springframework.security.web.session.SessionManagementFilter@6a614b8, org.springframework.security.web.access.ExceptionTranslationFilter@672065f7, org.springframework.security.web.access.intercept.AuthorizationFilter@33ff7d0b]
+2025-12-15 08:38:34 [restartedMain] INFO  o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2025-12-15 08:38:34 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8443 (https) with context path ''
+2025-12-15 08:38:34 [restartedMain] INFO  com.tts.sms.SmsApplication - Started SmsApplication in 33.836 seconds (process running for 36.156)
+2025-12-15 08:38:35 [restartedMain] INFO  com.tts.sms.config.CourseDataLoader - ✅ Courses already exist in database. Skipping data initialization.
+2025-12-15 08:38:35 [restartedMain] INFO  c.t.sms.config.LeadSourceDataLoader - Lead source data already exists. Skipping default data load.
+2025-12-15 08:38:35 [restartedMain] INFO  com.tts.sms.config.BankDataLoader - Bank data already exists. Skipping default data load.
+2025-12-15 08:38:35 [restartedMain] INFO  com.tts.sms.config.DataLoader -  Super Admin already exists
+2025-12-15 08:38:35 [restartedMain] INFO  com.tts.sms.config.UserDataLoader - ✅ Default admin user already exists
+2025-12-15 08:38:35 [restartedMain] INFO  com.tts.sms.SmsApplication - 
+----------------------------------------------------------
+Application 'tts-sms' is running!
+Profile(s): prod
+Access URLs:
+  Local:      https://localhost:8443/
+  External:   https://192.168.208.1:8443/
+----------------------------------------------------------
+2025-12-15 08:38:55 [https-jsse-nio-8443-exec-4] WARN  o.s.w.s.h.HandlerMappingIntrospector - Cache miss for REQUEST dispatch to '/assets/images/tts-logo-ev.png' (previous null). Performing MatchableHandlerMapping lookup. This is logged once only at WARN level, and every time at TRACE.
+2025-12-15 08:39:07 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:39:07 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:39:07 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:39:07 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:39:07 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2025-07-01
+2025-12-15 08:39:07 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7002
+2025-12-15 08:39:07 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 08:39:10 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 📊 Found 269 admissions from cutoff date 2025-07-01 (based on admission_date)
+2025-12-15 08:39:10 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 269 registration numbers
+2025-12-15 08:39:11 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 📊 Found 2 fees records for admissions from cutoff date
+2025-12-15 08:39:11 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 📊 Found 1 refund records for admissions from cutoff date
+2025-12-15 08:39:11 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 💰 FINAL CALCULATIONS:
+2025-12-15 08:39:11 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 269 (based on admission_date >= 2025-07-01)
+2025-12-15 08:39:11 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹30000.0 (from 2 fees records)
+2025-12-15 08:39:11 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹20000.0 (from 1 refund records)
+2025-12-15 08:39:11 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹10000.0
+2025-12-15 08:39:11 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹20000.0
+2025-12-15 08:39:11 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2025-07-01
+2025-12-15 08:39:14 [https-jsse-nio-8443-exec-5] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/stats
+2025-12-15 08:39:14 [https-jsse-nio-8443-exec-2] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/revenue-chart - period: 6M
+2025-12-15 08:39:14 [https-jsse-nio-8443-exec-7] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/course-distribution
+2025-12-15 08:39:14 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2025-07-01
+2025-12-15 08:39:14 [https-jsse-nio-8443-exec-2] INFO  c.tts.sms.service.DashboardService - 📊 Revenue chart: period=6M, requestedStart=2025-06-15, cutoff=2025-07-01, effectiveStart=2025-07-01
+2025-12-15 08:39:14 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7002
+2025-12-15 08:39:14 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📊 Found 269 admissions from cutoff date 2025-07-01 (based on admission_date)
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 269 registration numbers
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Course distribution: 10 courses found
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📊 Found 2 fees records for admissions from cutoff date
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📊 Found 1 refund records for admissions from cutoff date
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 💰 FINAL CALCULATIONS:
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 269 (based on admission_date >= 2025-07-01)
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹30000.0 (from 2 fees records)
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹20000.0 (from 1 refund records)
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹10000.0
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹20000.0
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2025-07-01
+2025-12-15 08:39:16 [https-jsse-nio-8443-exec-2] INFO  c.tts.sms.service.DashboardService - 📈 Revenue chart: 1 data points, Total NET Revenue: ₹10000.0 (from admissions >= 2025-07-01)
+2025-12-15 08:39:54 [https-jsse-nio-8443-exec-7] INFO  c.t.s.c.SystemConfigurationController - 📅 SUPER_ADMIN admin changing cutoff date to: 2025-11-01
+2025-12-15 08:39:54 [https-jsse-nio-8443-exec-7] INFO  c.t.s.s.SystemConfigurationService - 🔧 Setting cutoff date to: 2025-11-01 by admin
+2025-12-15 08:39:54 [https-jsse-nio-8443-exec-7] INFO  c.t.s.c.SystemConfigurationController - 🔄 Triggering mass recategorization...
+2025-12-15 08:39:54 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 🔄 Starting mass recategorization with BATCH processing...
+2025-12-15 08:39:54 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📅 Using cutoff date: 2025-11-01
+2025-12-15 08:39:55 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📊 Total admissions to process: 7002
+2025-12-15 08:39:55 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📥 Loading all refunds...
+2025-12-15 08:39:55 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService -  Loaded 4 refund records for 4 students
+2025-12-15 08:39:55 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📥 Loading all issued certificates...
+2025-12-15 08:39:55 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService -  Loaded 33 certificate records for 33 students
+2025-12-15 08:39:55 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 1/15 (500 records)...
+2025-12-15 08:39:55 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 2/15 (500 records)...
+2025-12-15 08:39:55 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 1000 admissions so far
+2025-12-15 08:39:55 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 3/15 (500 records)...
+2025-12-15 08:39:55 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 4/15 (500 records)...
+2025-12-15 08:39:55 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 2000 admissions so far
+2025-12-15 08:39:55 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 5/15 (500 records)...
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 6/15 (500 records)...
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 3000 admissions so far
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 7/15 (500 records)...
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 8/15 (500 records)...
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 4000 admissions so far
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 9/15 (500 records)...
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 10/15 (500 records)...
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 5000 admissions so far
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 11/15 (500 records)...
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 12/15 (500 records)...
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 6000 admissions so far
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 13/15 (500 records)...
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 14/15 (500 records)...
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 7000 admissions so far
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 15/15 (2 records)...
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService -  Recategorization complete: 247 admissions updated
+2025-12-15 08:39:56 [https-jsse-nio-8443-exec-7] INFO  c.t.s.service.StudentCategoryService - 📊 Final counts - CANCELLED: 1, COMPLETED: 12, NEW_STUDENT: 0, OLD_STUDENT: 6969, PURSUING: 20
+2025-12-15 08:40:04 [https-jsse-nio-8443-exec-1] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:40:04 [https-jsse-nio-8443-exec-1] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:40:04 [https-jsse-nio-8443-exec-1] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:40:04 [https-jsse-nio-8443-exec-1] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:40:06 [https-jsse-nio-8443-exec-10] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:40:06 [https-jsse-nio-8443-exec-10] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:40:06 [https-jsse-nio-8443-exec-10] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:40:06 [https-jsse-nio-8443-exec-10] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:40:07 [https-jsse-nio-8443-exec-4] INFO  c.t.s.c.FeesManagerController - GET /api/fees-manager - page: 0, size: 100000
+2025-12-15 08:40:07 [https-jsse-nio-8443-exec-8] INFO  c.t.s.c.OnlinePaymentModeController - REST request to get active payment modes
+2025-12-15 08:40:07 [https-jsse-nio-8443-exec-6] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active courses
+2025-12-15 08:40:07 [https-jsse-nio-8443-exec-8] INFO  c.t.s.s.OnlinePaymentModeService - Fetching active payment modes
+2025-12-15 08:41:34 [https-jsse-nio-8443-exec-6] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:41:34 [https-jsse-nio-8443-exec-6] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:41:34 [https-jsse-nio-8443-exec-6] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:41:34 [https-jsse-nio-8443-exec-6] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:41:36 [https-jsse-nio-8443-exec-8] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active courses
+2025-12-15 08:41:36 [https-jsse-nio-8443-exec-5] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active packages with courses
+2025-12-15 08:41:36 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.AdmissionService - Retrieved 25 admissions out of 7002 total
+2025-12-15 08:42:23 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:42:23 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:42:23 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:42:23 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:42:24 [https-jsse-nio-8443-exec-3] INFO  c.t.s.c.OnlinePaymentModeController - REST request to get active payment modes
+2025-12-15 08:42:24 [https-jsse-nio-8443-exec-2] INFO  c.t.s.c.FeesManagerController - GET /api/fees-manager - page: 0, size: 100000
+2025-12-15 08:42:24 [https-jsse-nio-8443-exec-4] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active courses
+2025-12-15 08:42:24 [https-jsse-nio-8443-exec-3] INFO  c.t.s.s.OnlinePaymentModeService - Fetching active payment modes
+2025-12-15 08:42:27 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:42:27 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:42:27 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:42:27 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:42:27 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2025-11-01
+2025-12-15 08:42:27 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7002
+2025-12-15 08:42:27 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 08:42:28 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 📊 Found 22 admissions from cutoff date 2025-11-01 (based on admission_date)
+2025-12-15 08:42:28 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 22 registration numbers
+2025-12-15 08:42:28 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 📊 Found 2 fees records for admissions from cutoff date
+2025-12-15 08:42:28 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 📊 Found 1 refund records for admissions from cutoff date
+2025-12-15 08:42:28 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService - 💰 FINAL CALCULATIONS:
+2025-12-15 08:42:28 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 22 (based on admission_date >= 2025-11-01)
+2025-12-15 08:42:28 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹30000.0 (from 2 fees records)
+2025-12-15 08:42:28 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹20000.0 (from 1 refund records)
+2025-12-15 08:42:28 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹10000.0
+2025-12-15 08:42:28 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹20000.0
+2025-12-15 08:42:28 [https-jsse-nio-8443-exec-8] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2025-11-01
+2025-12-15 08:42:29 [https-jsse-nio-8443-exec-3] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/stats
+2025-12-15 08:42:29 [https-jsse-nio-8443-exec-10] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/revenue-chart - period: 6M
+2025-12-15 08:42:29 [https-jsse-nio-8443-exec-5] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/course-distribution
+2025-12-15 08:42:29 [https-jsse-nio-8443-exec-10] INFO  c.tts.sms.service.DashboardService - 📊 Revenue chart: period=6M, requestedStart=2025-06-15, cutoff=2025-11-01, effectiveStart=2025-11-01
+2025-12-15 08:42:29 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2025-11-01
+2025-12-15 08:42:29 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7002
+2025-12-15 08:42:29 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 08:42:30 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📊 Course distribution: 10 courses found
+2025-12-15 08:42:30 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📊 Found 22 admissions from cutoff date 2025-11-01 (based on admission_date)
+2025-12-15 08:42:30 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 22 registration numbers
+2025-12-15 08:42:31 [https-jsse-nio-8443-exec-10] INFO  c.tts.sms.service.DashboardService - 📈 Revenue chart: 1 data points, Total NET Revenue: ₹10000.0 (from admissions >= 2025-11-01)
+2025-12-15 08:42:31 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📊 Found 2 fees records for admissions from cutoff date
+2025-12-15 08:42:31 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📊 Found 1 refund records for admissions from cutoff date
+2025-12-15 08:42:31 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 💰 FINAL CALCULATIONS:
+2025-12-15 08:42:31 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 22 (based on admission_date >= 2025-11-01)
+2025-12-15 08:42:31 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹30000.0 (from 2 fees records)
+2025-12-15 08:42:31 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹20000.0 (from 1 refund records)
+2025-12-15 08:42:31 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹10000.0
+2025-12-15 08:42:31 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹20000.0
+2025-12-15 08:42:31 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2025-11-01
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2025-11-01
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7002
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Found 22 admissions from cutoff date 2025-11-01 (based on admission_date)
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 22 registration numbers
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Found 2 fees records for admissions from cutoff date
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Found 1 refund records for admissions from cutoff date
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 💰 FINAL CALCULATIONS:
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 22 (based on admission_date >= 2025-11-01)
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹30000.0 (from 2 fees records)
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹20000.0 (from 1 refund records)
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹10000.0
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹20000.0
+2025-12-15 08:42:37 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2025-11-01
+2025-12-15 08:42:38 [https-jsse-nio-8443-exec-9] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/stats
+2025-12-15 08:42:38 [https-jsse-nio-8443-exec-1] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/revenue-chart - period: 6M
+2025-12-15 08:42:38 [https-jsse-nio-8443-exec-2] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/course-distribution
+2025-12-15 08:42:38 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2025-11-01
+2025-12-15 08:42:38 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService - 📊 Revenue chart: period=6M, requestedStart=2025-06-15, cutoff=2025-11-01, effectiveStart=2025-11-01
+2025-12-15 08:42:38 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7002
+2025-12-15 08:42:38 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 📊 Found 22 admissions from cutoff date 2025-11-01 (based on admission_date)
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 22 registration numbers
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-2] INFO  c.tts.sms.service.DashboardService - 📊 Course distribution: 10 courses found
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 📊 Found 2 fees records for admissions from cutoff date
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 📊 Found 1 refund records for admissions from cutoff date
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 💰 FINAL CALCULATIONS:
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 22 (based on admission_date >= 2025-11-01)
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹30000.0 (from 2 fees records)
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹20000.0 (from 1 refund records)
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹10000.0
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹20000.0
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2025-11-01
+2025-12-15 08:42:40 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService - 📈 Revenue chart: 1 data points, Total NET Revenue: ₹10000.0 (from admissions >= 2025-11-01)
+2025-12-15 08:42:54 [https-jsse-nio-8443-exec-10] INFO  c.t.s.c.SystemConfigurationController - 📅 SUPER_ADMIN admin changing cutoff date to: 2016-12-26
+2025-12-15 08:42:54 [https-jsse-nio-8443-exec-10] INFO  c.t.s.s.SystemConfigurationService - 🔧 Setting cutoff date to: 2016-12-26 by admin
+2025-12-15 08:42:54 [https-jsse-nio-8443-exec-10] INFO  c.t.s.c.SystemConfigurationController - 🔄 Triggering mass recategorization...
+2025-12-15 08:42:54 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 🔄 Starting mass recategorization with BATCH processing...
+2025-12-15 08:42:54 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📅 Using cutoff date: 2016-12-26
+2025-12-15 08:42:54 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📊 Total admissions to process: 7002
+2025-12-15 08:42:54 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📥 Loading all refunds...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService -  Loaded 4 refund records for 4 students
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📥 Loading all issued certificates...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService -  Loaded 33 certificate records for 33 students
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 1/15 (500 records)...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 2/15 (500 records)...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 1000 admissions so far
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 3/15 (500 records)...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 4/15 (500 records)...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 2000 admissions so far
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 5/15 (500 records)...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 6/15 (500 records)...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 3000 admissions so far
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 7/15 (500 records)...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 8/15 (500 records)...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 4000 admissions so far
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 9/15 (500 records)...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 10/15 (500 records)...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 5000 admissions so far
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 11/15 (500 records)...
+2025-12-15 08:42:55 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 12/15 (500 records)...
+2025-12-15 08:42:56 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 6000 admissions so far
+2025-12-15 08:42:56 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 13/15 (500 records)...
+2025-12-15 08:42:56 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 14/15 (500 records)...
+2025-12-15 08:42:56 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 💾 Checkpoint: Processed 7000 admissions so far
+2025-12-15 08:42:56 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📦 Processing batch 15/15 (2 records)...
+2025-12-15 08:42:56 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService -  Recategorization complete: 6969 admissions updated
+2025-12-15 08:42:56 [https-jsse-nio-8443-exec-10] INFO  c.t.s.service.StudentCategoryService - 📊 Final counts - CANCELLED: 1, COMPLETED: 12, NEW_STUDENT: 0, OLD_STUDENT: 0, PURSUING: 6989
+2025-12-15 08:43:20 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:43:20 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:43:20 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:43:20 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:43:20 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2016-12-26
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7002
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📊 Found 7002 admissions from cutoff date 2016-12-26 (based on admission_date)
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 7002 registration numbers
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📊 Found 5002 fees records for admissions from cutoff date
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 📊 Found 1 refund records for admissions from cutoff date
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService - 💰 FINAL CALCULATIONS:
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 7002 (based on admission_date >= 2016-12-26)
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹4.38778E7 (from 5002 fees records)
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹20000.0 (from 1 refund records)
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹4.38578E7
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹5420600.0
+2025-12-15 08:43:21 [https-jsse-nio-8443-exec-5] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2016-12-26
+2025-12-15 08:43:22 [https-jsse-nio-8443-exec-9] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/revenue-chart - period: 6M
+2025-12-15 08:43:22 [https-jsse-nio-8443-exec-6] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/stats
+2025-12-15 08:43:22 [https-jsse-nio-8443-exec-3] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/course-distribution
+2025-12-15 08:43:22 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2016-12-26
+2025-12-15 08:43:22 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 📊 Revenue chart: period=6M, requestedStart=2025-06-15, cutoff=2016-12-26, effectiveStart=2025-06-15
+2025-12-15 08:43:22 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7002
+2025-12-15 08:43:22 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 08:43:23 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 📊 Found 7002 admissions from cutoff date 2016-12-26 (based on admission_date)
+2025-12-15 08:43:23 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 7002 registration numbers
+2025-12-15 08:43:23 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📊 Course distribution: 10 courses found
+2025-12-15 08:43:23 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 📊 Found 5002 fees records for admissions from cutoff date
+2025-12-15 08:43:24 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 📊 Found 1 refund records for admissions from cutoff date
+2025-12-15 08:43:24 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 💰 FINAL CALCULATIONS:
+2025-12-15 08:43:24 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 7002 (based on admission_date >= 2016-12-26)
+2025-12-15 08:43:24 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹4.38778E7 (from 5002 fees records)
+2025-12-15 08:43:24 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹20000.0 (from 1 refund records)
+2025-12-15 08:43:24 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹4.38578E7
+2025-12-15 08:43:24 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹5420600.0
+2025-12-15 08:43:24 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2016-12-26
+2025-12-15 08:43:24 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 📈 Revenue chart: 1 data points, Total NET Revenue: ₹4.38578E7 (from admissions >= 2016-12-26)
+2025-12-15 08:43:33 [https-jsse-nio-8443-exec-1] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:43:33 [https-jsse-nio-8443-exec-1] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:43:33 [https-jsse-nio-8443-exec-1] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:43:33 [https-jsse-nio-8443-exec-1] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:43:33 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2016-12-26
+2025-12-15 08:43:33 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7002
+2025-12-15 08:43:33 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 08:43:34 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService - 📊 Found 7002 admissions from cutoff date 2016-12-26 (based on admission_date)
+2025-12-15 08:43:34 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 7002 registration numbers
+2025-12-15 08:43:34 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService - 📊 Found 5002 fees records for admissions from cutoff date
+2025-12-15 08:43:34 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService - 📊 Found 1 refund records for admissions from cutoff date
+2025-12-15 08:43:34 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService - 💰 FINAL CALCULATIONS:
+2025-12-15 08:43:34 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 7002 (based on admission_date >= 2016-12-26)
+2025-12-15 08:43:34 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹4.38778E7 (from 5002 fees records)
+2025-12-15 08:43:34 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹20000.0 (from 1 refund records)
+2025-12-15 08:43:34 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹4.38578E7
+2025-12-15 08:43:34 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹5420600.0
+2025-12-15 08:43:34 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2016-12-26
+2025-12-15 08:43:35 [https-jsse-nio-8443-exec-3] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/stats
+2025-12-15 08:43:35 [https-jsse-nio-8443-exec-9] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/revenue-chart - period: 6M
+2025-12-15 08:43:35 [https-jsse-nio-8443-exec-2] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/course-distribution
+2025-12-15 08:43:35 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2016-12-26
+2025-12-15 08:43:35 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 📊 Revenue chart: period=6M, requestedStart=2025-06-15, cutoff=2016-12-26, effectiveStart=2025-06-15
+2025-12-15 08:43:35 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7002
+2025-12-15 08:43:35 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 08:43:36 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📊 Found 7002 admissions from cutoff date 2016-12-26 (based on admission_date)
+2025-12-15 08:43:36 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 7002 registration numbers
+2025-12-15 08:43:36 [https-jsse-nio-8443-exec-2] INFO  c.tts.sms.service.DashboardService - 📊 Course distribution: 10 courses found
+2025-12-15 08:43:37 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📊 Found 5002 fees records for admissions from cutoff date
+2025-12-15 08:43:37 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📊 Found 1 refund records for admissions from cutoff date
+2025-12-15 08:43:37 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 💰 FINAL CALCULATIONS:
+2025-12-15 08:43:37 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 7002 (based on admission_date >= 2016-12-26)
+2025-12-15 08:43:37 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹4.38778E7 (from 5002 fees records)
+2025-12-15 08:43:37 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹20000.0 (from 1 refund records)
+2025-12-15 08:43:37 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹4.38578E7
+2025-12-15 08:43:37 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹5420600.0
+2025-12-15 08:43:37 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2016-12-26
+2025-12-15 08:43:37 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 📈 Revenue chart: 1 data points, Total NET Revenue: ₹4.38578E7 (from admissions >= 2016-12-26)
+2025-12-15 08:44:05 [https-jsse-nio-8443-exec-2] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:44:05 [https-jsse-nio-8443-exec-2] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:44:05 [https-jsse-nio-8443-exec-2] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:44:05 [https-jsse-nio-8443-exec-2] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:44:05 [https-jsse-nio-8443-exec-5] INFO  c.t.s.c.OnlinePaymentModeController - REST request to get active payment modes
+2025-12-15 08:44:05 [https-jsse-nio-8443-exec-1] INFO  c.t.s.c.FeesManagerController - GET /api/fees-manager - page: 0, size: 100000
+2025-12-15 08:44:05 [https-jsse-nio-8443-exec-2] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active courses
+2025-12-15 08:44:05 [https-jsse-nio-8443-exec-5] INFO  c.t.s.s.OnlinePaymentModeService - Fetching active payment modes
+2025-12-15 08:44:32 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:44:32 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:44:32 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:44:32 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:44:32 [https-jsse-nio-8443-exec-9] INFO  c.t.s.c.OnlinePaymentModeController - REST request to get active payment modes
+2025-12-15 08:44:32 [https-jsse-nio-8443-exec-1] INFO  c.t.s.c.FeesManagerController - GET /api/fees-manager - page: 0, size: 100000
+2025-12-15 08:44:32 [https-jsse-nio-8443-exec-9] INFO  c.t.s.s.OnlinePaymentModeService - Fetching active payment modes
+2025-12-15 08:44:32 [https-jsse-nio-8443-exec-4] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active courses
+2025-12-15 08:44:35 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:44:35 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:44:35 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:44:35 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:44:36 [https-jsse-nio-8443-exec-5] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active packages with courses
+2025-12-15 08:44:36 [https-jsse-nio-8443-exec-10] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active courses
+2025-12-15 08:44:36 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.AdmissionService - Retrieved 25 admissions out of 7002 total
+2025-12-15 08:44:51 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:44:51 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:44:51 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:44:51 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:45:42 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 08:45:42 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 08:45:42 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 08:45:42 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 08:45:42 [https-jsse-nio-8443-exec-9] INFO  c.t.s.c.OnlinePaymentModeController - REST request to get active payment modes
+2025-12-15 08:45:42 [https-jsse-nio-8443-exec-1] INFO  c.t.s.c.FeesManagerController - GET /api/fees-manager - page: 0, size: 100000
+2025-12-15 08:45:42 [https-jsse-nio-8443-exec-9] INFO  c.t.s.s.OnlinePaymentModeService - Fetching active payment modes
+2025-12-15 08:45:42 [https-jsse-nio-8443-exec-4] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active courses
+2025-12-15 08:47:43 [https-jsse-nio-8443-exec-4] INFO  c.t.s.c.FeesManagerController - POST /api/fees-manager/bulk-import-json - 1000 records
+2025-12-15 08:47:43 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.FeesManagerService - 🔄 Processing 1000 fees records
