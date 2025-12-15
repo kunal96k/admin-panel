@@ -9334,3 +9334,419 @@ Access URLs:
 2025-12-15 12:20:11 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.AdmissionService - Fetching all admissions for export with fees data
 2025-12-15 12:24:26 [https-jsse-nio-8443-exec-2] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [org.springframework.web.servlet.resource.NoResourceFoundException: No static resource appspecific/com.chrome.devtools.json.]
 2025-12-15 12:27:24 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-12-15 12:27:42 [restartedMain] INFO  com.tts.sms.SmsApplication - Starting SmsApplication using Java 22.0.2 with PID 2860 (D:\tts-sms\sms\target\classes started by KUNAL in D:\tts-sms\sms)
+2025-12-15 12:27:42 [restartedMain] INFO  com.tts.sms.SmsApplication - The following 1 profile is active: "prod"
+2025-12-15 12:27:43 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-12-15 12:27:43 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-12-15 12:27:48 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-12-15 12:27:48 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 506 ms. Found 24 JPA repository interfaces.
+2025-12-15 12:27:51 [restartedMain] INFO  com.tts.sms.config.WebConfig - 🔒 HTTPS/SSL is ENABLED - Production mode
+2025-12-15 12:27:51 [restartedMain] INFO  com.tts.sms.config.WebConfig - 🔧 Configuring MIME type mappings for production
+2025-12-15 12:27:51 [restartedMain] INFO  com.tts.sms.config.WebConfig -  MIME type mappings configured for production with UTF-8
+2025-12-15 12:27:52 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8443 (https)
+2025-12-15 12:27:52 [restartedMain] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 9075 ms
+2025-12-15 12:27:56 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000025: MariaDB103Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-12-15 12:27:56 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000026: MariaDB103Dialect has been deprecated; use org.hibernate.dialect.MariaDBDialect instead
+2025-12-15 12:27:57 [restartedMain] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-12-15 12:28:06 [restartedMain] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-12-15 12:28:06 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - ===========================================
+2025-12-15 12:28:06 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Database Configuration:
+2025-12-15 12:28:06 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - Auto-create enabled: createDatabaseIfNotExist=true
+2025-12-15 12:28:06 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - Timezone: Asia/Kolkata (IST)
+2025-12-15 12:28:06 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - DDL Auto: update (will create tables automatically)
+2025-12-15 12:28:06 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - ===========================================
+2025-12-15 12:28:06 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Application timezone set to: Asia/Kolkata (India Standard Time)
+2025-12-15 12:28:06 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Current time in IST: 2025-12-15T12:28:06.652796600+05:30[Asia/Kolkata]
+2025-12-15 12:28:07 [restartedMain] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-12-15 12:28:18 [restartedMain] INFO  c.tts.sms.service.FileStorageService - 📏 Max file size: 5242880 bytes (5MB)
+2025-12-15 12:28:18 [restartedMain] INFO  c.tts.sms.service.FileStorageService - 📝 Allowed extensions: [jpg, jpeg, png, gif, webp]
+2025-12-15 12:28:19 [restartedMain] INFO  c.t.s.c.ContentNegotiationConfig - 🔧 Configuring Content Negotiation for HTTPS Production
+2025-12-15 12:28:19 [restartedMain] INFO  c.t.s.c.ContentNegotiationConfig - ✅ Content Negotiation configured for HTTPS production
+2025-12-15 12:28:20 [restartedMain] INFO  com.tts.sms.config.SecurityConfig - Configuring security with FULL CSRF protection…
+2025-12-15 12:28:20 [restartedMain] INFO  com.tts.sms.config.SecurityConfig - Configuring CORS with allowed origins: https://team.ttsnashik.com,https://www.ttsnashik.com
+2025-12-15 12:28:20 [restartedMain] INFO  c.t.s.c.ContentNegotiationConfig - ✅ Path matching configured for production
+2025-12-15 12:28:20 [restartedMain] INFO  c.t.sms.config.SecurityHeadersConfig - ✅ Security headers interceptor registered (SSL: true)
+2025-12-15 12:28:20 [restartedMain] INFO  com.tts.sms.config.WebConfig - 🌐 Configuring CORS for production
+2025-12-15 12:28:20 [restartedMain] INFO  com.tts.sms.config.WebConfig -  CORS configured for /api/** endpoints
+2025-12-15 12:28:21 [restartedMain] INFO  com.tts.sms.config.WebConfig - 📦 Configuring resource handlers for HTTPS production
+2025-12-15 12:28:21 [restartedMain] INFO  com.tts.sms.config.WebConfig -  Resource handlers configured with Google Analytics support
+2025-12-15 12:28:21 [restartedMain] INFO  com.tts.sms.config.WebConfig -  Resource handlers configured for production
+2025-12-15 12:28:21 [restartedMain] INFO  com.tts.sms.config.WebConfig -  Course images: D:\tts-sms\sms\.\uploads\courses
+2025-12-15 12:28:21 [restartedMain] INFO  com.tts.sms.config.WebConfig -  CSV uploads: D:\tts-sms\sms\.\uploads\csv
+2025-12-15 12:28:21 [restartedMain] INFO  o.s.s.w.a.c.ChannelProcessingFilter - Validated configuration attributes
+2025-12-15 12:28:21 [restartedMain] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@567a1af2, org.springframework.security.web.access.channel.ChannelProcessingFilter@3644444c, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@3859619d, org.springframework.security.web.context.SecurityContextHolderFilter@674afb90, org.springframework.security.web.header.HeaderWriterFilter@791a539c, org.springframework.web.filter.CorsFilter@5a59448c, org.springframework.security.web.csrf.CsrfFilter@70e8ec3e, org.springframework.security.web.authentication.logout.LogoutFilter@6469e311, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@363686a8, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@399cd894, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@16c40c58, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@5ad7d984, org.springframework.security.web.session.SessionManagementFilter@411e49d6, org.springframework.security.web.access.ExceptionTranslationFilter@36151a52, org.springframework.security.web.access.intercept.AuthorizationFilter@554b7fab]
+2025-12-15 12:28:22 [restartedMain] INFO  o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2025-12-15 12:28:23 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8443 (https) with context path ''
+2025-12-15 12:28:23 [restartedMain] INFO  com.tts.sms.SmsApplication - Started SmsApplication in 43.494 seconds (process running for 45.453)
+2025-12-15 12:28:24 [restartedMain] INFO  com.tts.sms.config.CourseDataLoader - ✅ Courses already exist in database. Skipping data initialization.
+2025-12-15 12:28:24 [restartedMain] INFO  c.t.sms.config.LeadSourceDataLoader - Lead source data already exists. Skipping default data load.
+2025-12-15 12:28:24 [restartedMain] INFO  com.tts.sms.config.BankDataLoader - Bank data already exists. Skipping default data load.
+2025-12-15 12:28:24 [restartedMain] INFO  com.tts.sms.config.DataLoader -  Super Admin already exists
+2025-12-15 12:28:24 [restartedMain] INFO  com.tts.sms.config.UserDataLoader - ✅ Default admin user already exists
+2025-12-15 12:28:24 [restartedMain] INFO  com.tts.sms.SmsApplication - 
+----------------------------------------------------------
+Application 'tts-sms' is running!
+Profile(s): prod
+Access URLs:
+  Local:      https://localhost:8443/
+  External:   https://172.20.144.1:8443/
+----------------------------------------------------------
+2025-12-15 12:28:43 [https-jsse-nio-8443-exec-10] WARN  o.s.w.s.h.HandlerMappingIntrospector - Cache miss for REQUEST dispatch to '/students/admission' (previous null). Performing MatchableHandlerMapping lookup. This is logged once only at WARN level, and every time at TRACE.
+2025-12-15 12:29:17 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 12:29:17 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 12:29:17 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 12:29:17 [https-jsse-nio-8443-exec-7] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 12:29:17 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2025-08-01
+2025-12-15 12:29:17 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7016
+2025-12-15 12:29:17 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 12:29:19 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Found 165 admissions from cutoff date 2025-08-01 (based on admission_date)
+2025-12-15 12:29:19 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 165 registration numbers
+2025-12-15 12:29:20 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Found 165 fees records for admissions from cutoff date
+2025-12-15 12:29:20 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Found 0 refund records for admissions from cutoff date
+2025-12-15 12:29:20 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - FINAL CALCULATIONS:
+2025-12-15 12:29:20 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 165 (based on admission_date >= 2025-08-01)
+2025-12-15 12:29:20 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹2507800.0 (from 165 fees records)
+2025-12-15 12:29:21 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹0.0 (from 0 refund records)
+2025-12-15 12:29:21 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹2507800.0
+2025-12-15 12:29:21 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹1313900.0
+2025-12-15 12:29:21 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2025-08-01
+2025-12-15 12:29:26 [https-jsse-nio-8443-exec-4] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [org.springframework.web.servlet.resource.NoResourceFoundException: No static resource appspecific/com.chrome.devtools.json.]
+2025-12-15 12:29:26 [https-jsse-nio-8443-exec-7] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/stats
+2025-12-15 12:29:26 [https-jsse-nio-8443-exec-3] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/course-distribution
+2025-12-15 12:29:26 [https-jsse-nio-8443-exec-9] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/revenue-chart - period: 6M
+2025-12-15 12:29:26 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2025-08-01
+2025-12-15 12:29:26 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7016
+2025-12-15 12:29:26 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 📊 Revenue chart: period=6M, requestedStart=2025-06-15, cutoff=2025-08-01, effectiveStart=2025-08-01
+2025-12-15 12:29:26 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 12:29:29 [https-jsse-nio-8443-exec-3] INFO  c.tts.sms.service.DashboardService - 📊 Course distribution: 10 courses found
+2025-12-15 12:29:29 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Found 165 admissions from cutoff date 2025-08-01 (based on admission_date)
+2025-12-15 12:29:29 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 165 registration numbers
+2025-12-15 12:29:30 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Found 165 fees records for admissions from cutoff date
+2025-12-15 12:29:30 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - 📊 Found 0 refund records for admissions from cutoff date
+2025-12-15 12:29:30 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService - FINAL CALCULATIONS:
+2025-12-15 12:29:30 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 165 (based on admission_date >= 2025-08-01)
+2025-12-15 12:29:30 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹2507800.0 (from 165 fees records)
+2025-12-15 12:29:30 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹0.0 (from 0 refund records)
+2025-12-15 12:29:30 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹2507800.0
+2025-12-15 12:29:30 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹1313900.0
+2025-12-15 12:29:30 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2025-08-01
+2025-12-15 12:29:30 [https-jsse-nio-8443-exec-9] INFO  c.tts.sms.service.DashboardService - 📈 Revenue chart: 1 data points, Total NET Revenue: ₹2507800.0 (from admissions >= 2025-08-01)
+2025-12-15 12:30:37 [https-jsse-nio-8443-exec-4] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 12:30:38 [https-jsse-nio-8443-exec-4] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 12:30:38 [https-jsse-nio-8443-exec-4] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 12:30:38 [https-jsse-nio-8443-exec-4] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 12:30:38 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2025-08-01
+2025-12-15 12:30:38 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7016
+2025-12-15 12:30:38 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 12:30:38 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService - 📊 Found 165 admissions from cutoff date 2025-08-01 (based on admission_date)
+2025-12-15 12:30:38 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 165 registration numbers
+2025-12-15 12:30:39 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService - 📊 Found 165 fees records for admissions from cutoff date
+2025-12-15 12:30:39 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService - 📊 Found 0 refund records for admissions from cutoff date
+2025-12-15 12:30:39 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService - FINAL CALCULATIONS:
+2025-12-15 12:30:39 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 165 (based on admission_date >= 2025-08-01)
+2025-12-15 12:30:39 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹2507800.0 (from 165 fees records)
+2025-12-15 12:30:39 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹0.0 (from 0 refund records)
+2025-12-15 12:30:39 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹2507800.0
+2025-12-15 12:30:39 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹1313900.0
+2025-12-15 12:30:39 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2025-08-01
+2025-12-15 12:30:42 [https-jsse-nio-8443-exec-6] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/stats
+2025-12-15 12:30:42 [https-jsse-nio-8443-exec-4] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/revenue-chart - period: 6M
+2025-12-15 12:30:42 [https-jsse-nio-8443-exec-1] INFO  c.t.s.c.DashboardRestController - GET /api/dashboard/course-distribution
+2025-12-15 12:30:42 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 📊 Dashboard stats calculated from cutoff date: 2025-08-01
+2025-12-15 12:30:42 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService - 📊 Revenue chart: period=6M, requestedStart=2025-06-15, cutoff=2025-08-01, effectiveStart=2025-08-01
+2025-12-15 12:30:42 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 👥 Total Students: 7016
+2025-12-15 12:30:43 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 📋 Total Enquiries: 1003
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-1] INFO  c.tts.sms.service.DashboardService - 📊 Course distribution: 10 courses found
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 📊 Found 165 admissions from cutoff date 2025-08-01 (based on admission_date)
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 📊 Processing fees for 165 registration numbers
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-4] INFO  c.tts.sms.service.DashboardService - 📈 Revenue chart: 1 data points, Total NET Revenue: ₹2507800.0 (from admissions >= 2025-08-01)
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 📊 Found 165 fees records for admissions from cutoff date
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - 📊 Found 0 refund records for admissions from cutoff date
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService - FINAL CALCULATIONS:
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService -    - Admissions from cutoff: 165 (based on admission_date >= 2025-08-01)
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService -    - Gross Paid: ₹2507800.0 (from 165 fees records)
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService -    - Total Refunds: ₹0.0 (from 0 refund records)
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService -    - NET Collected: ₹2507800.0
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService -    - Pending Fees: ₹1313900.0
+2025-12-15 12:30:44 [https-jsse-nio-8443-exec-6] INFO  c.tts.sms.service.DashboardService -    - Cutoff Date: 2025-08-01
+2025-12-15 12:30:45 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 12:30:45 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 12:30:45 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 12:30:45 [https-jsse-nio-8443-exec-5] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 12:30:46 [https-jsse-nio-8443-exec-9] INFO  c.t.s.c.OnlinePaymentModeController - REST request to get active payment modes
+2025-12-15 12:30:46 [https-jsse-nio-8443-exec-2] INFO  c.t.s.c.FeesManagerController - GET /api/fees-manager - page: 0, size: 100000
+2025-12-15 12:30:46 [https-jsse-nio-8443-exec-9] INFO  c.t.s.s.OnlinePaymentModeService - Fetching active payment modes
+2025-12-15 12:30:46 [https-jsse-nio-8443-exec-5] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active courses
+2025-12-15 12:30:49 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - 🔑 Loading permissions for user: admin (Role: SUPER_ADMIN)
+2025-12-15 12:30:49 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - 📋 Found 15 employee-specific permissions
+2025-12-15 12:30:49 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - 👥 Found 15 role-based permissions
+2025-12-15 12:30:49 [https-jsse-nio-8443-exec-8] INFO  c.t.sms.controller.LayoutController - ✅ User has access to 15 menus: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2025-12-15 12:30:50 [https-jsse-nio-8443-exec-10] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active courses
+2025-12-15 12:30:50 [https-jsse-nio-8443-exec-2] INFO  c.t.s.s.AdmissionEnhancedService - Fetching active packages with courses
+2025-12-15 12:30:50 [https-jsse-nio-8443-exec-7] INFO  c.tts.sms.service.AdmissionService - Retrieved 25 admissions out of 7016 total
+2025-12-15 12:34:42 [File Watcher] INFO  o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 348 class path changes (0 additions, 348 deletions, 0 modifications)
+2025-12-15 12:34:42 [Thread-5] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-12-15 12:34:43 [restartedMain] INFO  com.tts.sms.SmsApplication - Starting SmsApplication using Java 22.0.2 with PID 2860 (D:\tts-sms\sms\target\classes started by KUNAL in D:\tts-sms\sms)
+2025-12-15 12:34:43 [restartedMain] INFO  com.tts.sms.SmsApplication - The following 1 profile is active: "prod"
+2025-12-15 12:34:45 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-12-15 12:34:45 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 2 ms. Found 0 JPA repository interfaces.
+2025-12-15 12:34:45 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8443 (https)
+2025-12-15 12:34:46 [restartedMain] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 2447 ms
+2025-12-15 12:34:46 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000025: MariaDB103Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-12-15 12:34:46 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000026: MariaDB103Dialect has been deprecated; use org.hibernate.dialect.MariaDBDialect instead
+2025-12-15 12:34:46 [restartedMain] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-12-15 12:34:46 [restartedMain] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-12-15 12:34:48 [restartedMain] WARN  o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
+
+Using generated security password: 165c8cd7-92af-4d5c-b6f6-c99dbf24226b
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2025-12-15 12:34:48 [restartedMain] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@888a255, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@259e3405, org.springframework.security.web.context.SecurityContextHolderFilter@e879dcc, org.springframework.security.web.header.HeaderWriterFilter@1aa082e1, org.springframework.web.filter.CorsFilter@3384af7e, org.springframework.security.web.csrf.CsrfFilter@581d78e, org.springframework.security.web.authentication.logout.LogoutFilter@67e9138f, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@71aa1b8, org.springframework.security.web.authentication.ui.DefaultLoginPageGeneratingFilter@2d6c2d98, org.springframework.security.web.authentication.ui.DefaultLogoutPageGeneratingFilter@69724d6d, org.springframework.security.web.authentication.www.BasicAuthenticationFilter@122900bb, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@5b10635, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@33c5068b, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@2425d01c, org.springframework.security.web.access.ExceptionTranslationFilter@125492ca, org.springframework.security.web.access.intercept.AuthorizationFilter@53356cec]
+2025-12-15 12:34:48 [restartedMain] INFO  o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2025-12-15 12:34:49 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8443 (https) with context path ''
+2025-12-15 12:34:49 [restartedMain] INFO  com.tts.sms.SmsApplication - Started SmsApplication in 6.221 seconds (process running for 431.19)
+2025-12-15 12:34:49 [restartedMain] INFO  o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation delta:
+
+
+==========================
+CONDITION EVALUATION DELTA
+==========================
+
+
+Positive matches:
+-----------------
+
+   JacksonAutoConfiguration.JacksonObjectMapperConfiguration#jacksonObjectMapper matched:
+      - @ConditionalOnMissingBean (types: com.fasterxml.jackson.databind.ObjectMapper; SearchStrategy: all) did not find any beans (OnBeanCondition)
+
+   SpringBootWebSecurityConfiguration.SecurityFilterChainConfiguration matched:
+      - AllNestedConditions 2 matched 0 did not; NestedCondition on DefaultWebSecurityCondition.Beans @ConditionalOnMissingBean (types: org.springframework.security.web.SecurityFilterChain; SearchStrategy: all) did not find any beans; NestedCondition on DefaultWebSecurityCondition.Classes @ConditionalOnClass found required classes 'org.springframework.security.web.SecurityFilterChain', 'org.springframework.security.config.annotation.web.builders.HttpSecurity' (DefaultWebSecurityCondition)
+
+   SpringBootWebSecurityConfiguration.WebSecurityEnablerConfiguration matched:
+      - @ConditionalOnClass found required class 'org.springframework.security.config.annotation.web.configuration.EnableWebSecurity' (OnClassCondition)
+      - @ConditionalOnMissingBean (names: springSecurityFilterChain; SearchStrategy: all) did not find any beans (OnBeanCondition)
+
+   TaskExecutorConfigurations.TaskExecutorConfiguration matched:
+      - @ConditionalOnMissingBean (types: java.util.concurrent.Executor; SearchStrategy: all) did not find any beans (OnBeanCondition)
+
+   TaskExecutorConfigurations.TaskExecutorConfiguration#applicationTaskExecutor matched:
+      - @ConditionalOnThreading found PLATFORM (OnThreadingCondition)
+
+   TransactionAutoConfiguration.EnableTransactionManagementConfiguration matched:
+      - @ConditionalOnBean (types: org.springframework.transaction.TransactionManager; SearchStrategy: all) found bean 'transactionManager'; @ConditionalOnMissingBean (types: org.springframework.transaction.annotation.AbstractTransactionManagementConfiguration; SearchStrategy: all) did not find any beans (OnBeanCondition)
+
+   TransactionAutoConfiguration.EnableTransactionManagementConfiguration.CglibAutoProxyConfiguration matched:
+      - @ConditionalOnProperty (spring.aop.proxy-target-class=true) matched (OnPropertyCondition)
+
+   UserDetailsServiceAutoConfiguration matched:
+      - @ConditionalOnClass found required class 'org.springframework.security.authentication.AuthenticationManager'; @ConditionalOnMissingClass did not find unwanted classes 'org.springframework.security.oauth2.client.registration.ClientRegistrationRepository', 'org.springframework.security.oauth2.server.resource.introspection.OpaqueTokenIntrospector', 'org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistrationRepository' (OnClassCondition)
+      - @ConditionalOnBean (types: org.springframework.security.config.annotation.ObjectPostProcessor; SearchStrategy: all) found bean 'objectPostProcessor'; @ConditionalOnMissingBean (types: org.springframework.security.authentication.AuthenticationManager,org.springframework.security.authentication.AuthenticationProvider,org.springframework.security.core.userdetails.UserDetailsService,org.springframework.security.authentication.AuthenticationManagerResolver,org.springframework.security.oauth2.jwt.JwtDecoder; SearchStrategy: all) did not find any beans (OnBeanCondition)
+
+
+Negative matches:
+-----------------
+
+   TaskExecutorConfigurations.TaskExecutorConfiguration#applicationTaskExecutorVirtualThreads:
+      Did not match:
+         - @ConditionalOnThreading did not find VIRTUAL (OnThreadingCondition)
+
+
+Exclusions:
+-----------
+
+    None
+
+
+Unconditional classes:
+----------------------
+
+    None
+
+
+
+2025-12-15 12:34:49 [restartedMain] INFO  com.tts.sms.SmsApplication - 
+----------------------------------------------------------
+Application 'tts-sms' is running!
+Profile(s): prod
+Access URLs:
+  Local:      https://localhost:8443/
+  External:   https://172.20.144.1:8443/
+----------------------------------------------------------
+2025-12-15 12:34:50 [File Watcher] INFO  o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 83 class path changes (83 additions, 0 deletions, 0 modifications)
+2025-12-15 12:34:50 [Thread-7] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-12-15 12:34:51 [restartedMain] INFO  com.tts.sms.SmsApplication - Starting SmsApplication using Java 22.0.2 with PID 2860 (D:\tts-sms\sms\target\classes started by KUNAL in D:\tts-sms\sms)
+2025-12-15 12:34:51 [restartedMain] INFO  com.tts.sms.SmsApplication - The following 1 profile is active: "prod"
+2025-12-15 12:34:54 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-12-15 12:34:54 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 7 ms. Found 0 JPA repository interfaces.
+2025-12-15 12:34:55 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8443 (https)
+2025-12-15 12:34:55 [restartedMain] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 3902 ms
+2025-12-15 12:34:55 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000025: MariaDB103Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-12-15 12:34:55 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000026: MariaDB103Dialect has been deprecated; use org.hibernate.dialect.MariaDBDialect instead
+2025-12-15 12:34:55 [restartedMain] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-12-15 12:34:56 [restartedMain] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-12-15 12:34:57 [restartedMain] WARN  o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
+
+Using generated security password: 8e90e20e-38fa-4e95-9ac6-b98e2ceed303
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2025-12-15 12:34:57 [restartedMain] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@5aa6d50d, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@1a89bb04, org.springframework.security.web.context.SecurityContextHolderFilter@b90e097, org.springframework.security.web.header.HeaderWriterFilter@51d3fc7e, org.springframework.web.filter.CorsFilter@2517a2cc, org.springframework.security.web.csrf.CsrfFilter@1218c780, org.springframework.security.web.authentication.logout.LogoutFilter@6d83de24, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@5afcbbb2, org.springframework.security.web.authentication.ui.DefaultLoginPageGeneratingFilter@3e31e4d8, org.springframework.security.web.authentication.ui.DefaultLogoutPageGeneratingFilter@6102e85a, org.springframework.security.web.authentication.www.BasicAuthenticationFilter@668472b, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@5fe002a2, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@704fd6a3, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@de057ca, org.springframework.security.web.access.ExceptionTranslationFilter@45fd4fa2, org.springframework.security.web.access.intercept.AuthorizationFilter@297d2247]
+2025-12-15 12:34:57 [restartedMain] INFO  o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2025-12-15 12:34:57 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8443 (https) with context path ''
+2025-12-15 12:34:57 [restartedMain] INFO  com.tts.sms.SmsApplication - Started SmsApplication in 6.963 seconds (process running for 439.655)
+2025-12-15 12:34:57 [restartedMain] INFO  o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2025-12-15 12:34:57 [restartedMain] INFO  com.tts.sms.SmsApplication - 
+----------------------------------------------------------
+Application 'tts-sms' is running!
+Profile(s): prod
+Access URLs:
+  Local:      https://localhost:8443/
+  External:   https://172.20.144.1:8443/
+----------------------------------------------------------
+2025-12-15 12:35:35 [File Watcher] INFO  o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 265 class path changes (265 additions, 0 deletions, 0 modifications)
+2025-12-15 12:35:35 [Thread-11] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-12-15 12:35:36 [restartedMain] INFO  com.tts.sms.SmsApplication - Starting SmsApplication using Java 22.0.2 with PID 2860 (D:\tts-sms\sms\target\classes started by KUNAL in D:\tts-sms\sms)
+2025-12-15 12:35:36 [restartedMain] INFO  com.tts.sms.SmsApplication - The following 1 profile is active: "prod"
+2025-12-15 12:35:39 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-12-15 12:35:39 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 538 ms. Found 24 JPA repository interfaces.
+2025-12-15 12:35:40 [restartedMain] INFO  com.tts.sms.config.WebConfig - 🔒 HTTPS/SSL is ENABLED - Production mode
+2025-12-15 12:35:40 [restartedMain] INFO  com.tts.sms.config.WebConfig - 🔧 Configuring MIME type mappings for production
+2025-12-15 12:35:40 [restartedMain] INFO  com.tts.sms.config.WebConfig -  MIME type mappings configured for production with UTF-8
+2025-12-15 12:35:40 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8443 (https)
+2025-12-15 12:35:41 [restartedMain] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 4466 ms
+2025-12-15 12:35:41 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000025: MariaDB103Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-12-15 12:35:41 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000026: MariaDB103Dialect has been deprecated; use org.hibernate.dialect.MariaDBDialect instead
+2025-12-15 12:35:41 [restartedMain] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-12-15 12:35:52 [restartedMain] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-12-15 12:35:52 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - ===========================================
+2025-12-15 12:35:52 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Database Configuration:
+2025-12-15 12:35:52 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - Auto-create enabled: createDatabaseIfNotExist=true
+2025-12-15 12:35:52 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - Timezone: Asia/Kolkata (IST)
+2025-12-15 12:35:52 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - - DDL Auto: update (will create tables automatically)
+2025-12-15 12:35:52 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - ===========================================
+2025-12-15 12:35:52 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Application timezone set to: Asia/Kolkata (India Standard Time)
+2025-12-15 12:35:52 [restartedMain] INFO  c.tts.sms.config.ApplicationConfig - Current time in IST: 2025-12-15T12:35:52.677682100+05:30[Asia/Kolkata]
+2025-12-15 12:35:57 [restartedMain] INFO  c.tts.sms.service.FileStorageService - 📏 Max file size: 5242880 bytes (5MB)
+2025-12-15 12:35:57 [restartedMain] INFO  c.tts.sms.service.FileStorageService - 📝 Allowed extensions: [jpg, jpeg, png, gif, webp]
+2025-12-15 12:35:58 [restartedMain] INFO  c.t.s.c.ContentNegotiationConfig - 🔧 Configuring Content Negotiation for HTTPS Production
+2025-12-15 12:35:58 [restartedMain] INFO  c.t.s.c.ContentNegotiationConfig - ✅ Content Negotiation configured for HTTPS production
+2025-12-15 12:35:58 [restartedMain] INFO  com.tts.sms.config.SecurityConfig - Configuring security with FULL CSRF protection…
+2025-12-15 12:35:58 [restartedMain] INFO  com.tts.sms.config.SecurityConfig - Configuring CORS with allowed origins: https://team.ttsnashik.com,https://www.ttsnashik.com
+2025-12-15 12:35:58 [restartedMain] INFO  c.t.s.c.ContentNegotiationConfig - ✅ Path matching configured for production
+2025-12-15 12:35:58 [restartedMain] INFO  c.t.sms.config.SecurityHeadersConfig - ✅ Security headers interceptor registered (SSL: true)
+2025-12-15 12:35:58 [restartedMain] INFO  com.tts.sms.config.WebConfig - 🌐 Configuring CORS for production
+2025-12-15 12:35:58 [restartedMain] INFO  com.tts.sms.config.WebConfig -  CORS configured for /api/** endpoints
+2025-12-15 12:35:58 [restartedMain] INFO  com.tts.sms.config.WebConfig - 📦 Configuring resource handlers for HTTPS production
+2025-12-15 12:35:58 [restartedMain] INFO  com.tts.sms.config.WebConfig -  Resource handlers configured with Google Analytics support
+2025-12-15 12:35:58 [restartedMain] INFO  com.tts.sms.config.WebConfig -  Resource handlers configured for production
+2025-12-15 12:35:58 [restartedMain] INFO  com.tts.sms.config.WebConfig -  Course images: D:\tts-sms\sms\.\uploads\courses
+2025-12-15 12:35:58 [restartedMain] INFO  com.tts.sms.config.WebConfig -  CSV uploads: D:\tts-sms\sms\.\uploads\csv
+2025-12-15 12:35:59 [restartedMain] INFO  o.s.s.w.a.c.ChannelProcessingFilter - Validated configuration attributes
+2025-12-15 12:35:59 [restartedMain] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@6a9fee8c, org.springframework.security.web.access.channel.ChannelProcessingFilter@4833bac0, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@4c8c0def, org.springframework.security.web.context.SecurityContextHolderFilter@75fab0a6, org.springframework.security.web.header.HeaderWriterFilter@1dd091b6, org.springframework.web.filter.CorsFilter@6b063b21, org.springframework.security.web.csrf.CsrfFilter@c744573, org.springframework.security.web.authentication.logout.LogoutFilter@53aa9b6b, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@31a42f15, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@68f3a404, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@7137d58d, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@3eb6693b, org.springframework.security.web.session.SessionManagementFilter@5b8b3979, org.springframework.security.web.access.ExceptionTranslationFilter@39a49613, org.springframework.security.web.access.intercept.AuthorizationFilter@6958f47f]
+2025-12-15 12:35:59 [restartedMain] INFO  o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2025-12-15 12:35:59 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8443 (https) with context path ''
+2025-12-15 12:36:00 [restartedMain] INFO  com.tts.sms.SmsApplication - Started SmsApplication in 23.621 seconds (process running for 501.706)
+2025-12-15 12:36:00 [restartedMain] INFO  com.tts.sms.config.CourseDataLoader - ✅ Courses already exist in database. Skipping data initialization.
+2025-12-15 12:36:00 [restartedMain] INFO  c.t.sms.config.LeadSourceDataLoader - Lead source data already exists. Skipping default data load.
+2025-12-15 12:36:00 [restartedMain] INFO  com.tts.sms.config.BankDataLoader - Bank data already exists. Skipping default data load.
+2025-12-15 12:36:00 [restartedMain] INFO  com.tts.sms.config.DataLoader -  Super Admin already exists
+2025-12-15 12:36:00 [restartedMain] INFO  com.tts.sms.config.UserDataLoader - ✅ Default admin user already exists
+2025-12-15 12:36:00 [restartedMain] INFO  o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation delta:
+
+
+==========================
+CONDITION EVALUATION DELTA
+==========================
+
+
+Positive matches:
+-----------------
+
+    None
+
+
+Negative matches:
+-----------------
+
+   JacksonAutoConfiguration.JacksonObjectMapperConfiguration#jacksonObjectMapper:
+      Did not match:
+         - @ConditionalOnMissingBean (types: com.fasterxml.jackson.databind.ObjectMapper; SearchStrategy: all) found beans of type 'com.fasterxml.jackson.databind.ObjectMapper' objectMapper (OnBeanCondition)
+
+   SpringBootWebSecurityConfiguration.SecurityFilterChainConfiguration:
+      Did not match:
+         - AllNestedConditions 1 matched 1 did not; NestedCondition on DefaultWebSecurityCondition.Beans @ConditionalOnMissingBean (types: org.springframework.security.web.SecurityFilterChain; SearchStrategy: all) found beans of type 'org.springframework.security.web.SecurityFilterChain' securityFilterChain; NestedCondition on DefaultWebSecurityCondition.Classes @ConditionalOnClass found required classes 'org.springframework.security.web.SecurityFilterChain', 'org.springframework.security.config.annotation.web.builders.HttpSecurity' (DefaultWebSecurityCondition)
+
+   SpringBootWebSecurityConfiguration.WebSecurityEnablerConfiguration:
+      Did not match:
+         - @ConditionalOnMissingBean (names: springSecurityFilterChain; SearchStrategy: all) found beans named springSecurityFilterChain (OnBeanCondition)
+      Matched:
+         - @ConditionalOnClass found required class 'org.springframework.security.config.annotation.web.configuration.EnableWebSecurity' (OnClassCondition)
+
+   TaskExecutorConfigurations.TaskExecutorConfiguration:
+      Did not match:
+         - @ConditionalOnMissingBean (types: java.util.concurrent.Executor; SearchStrategy: all) found beans of type 'java.util.concurrent.Executor' emailTaskExecutor (OnBeanCondition)
+
+   TransactionAutoConfiguration.EnableTransactionManagementConfiguration:
+      Did not match:
+         - @ConditionalOnMissingBean (types: org.springframework.transaction.annotation.AbstractTransactionManagementConfiguration; SearchStrategy: all) found beans of type 'org.springframework.transaction.annotation.AbstractTransactionManagementConfiguration' org.springframework.transaction.annotation.ProxyTransactionManagementConfiguration (OnBeanCondition)
+
+   TransactionAutoConfiguration.EnableTransactionManagementConfiguration.CglibAutoProxyConfiguration:
+      Did not match:
+         - Ancestor org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration$EnableTransactionManagementConfiguration did not match (ConditionEvaluationReport.AncestorsMatchedCondition)
+      Matched:
+         - @ConditionalOnProperty (spring.aop.proxy-target-class=true) matched (OnPropertyCondition)
+
+   UserDetailsServiceAutoConfiguration:
+      Did not match:
+         - @ConditionalOnMissingBean (types: org.springframework.security.authentication.AuthenticationManager,org.springframework.security.authentication.AuthenticationProvider,org.springframework.security.core.userdetails.UserDetailsService,org.springframework.security.authentication.AuthenticationManagerResolver,org.springframework.security.oauth2.jwt.JwtDecoder; SearchStrategy: all) found beans of type 'org.springframework.security.authentication.AuthenticationManager' authenticationManager and found beans of type 'org.springframework.security.core.userdetails.UserDetailsService' customUserDetailsService and found beans of type 'org.springframework.security.authentication.AuthenticationProvider' authenticationProvider (OnBeanCondition)
+      Matched:
+         - @ConditionalOnClass found required class 'org.springframework.security.authentication.AuthenticationManager'; @ConditionalOnMissingClass did not find unwanted classes 'org.springframework.security.oauth2.client.registration.ClientRegistrationRepository', 'org.springframework.security.oauth2.server.resource.introspection.OpaqueTokenIntrospector', 'org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistrationRepository' (OnClassCondition)
+
+
+Exclusions:
+-----------
+
+    None
+
+
+Unconditional classes:
+----------------------
+
+    None
+
+
+
+2025-12-15 12:36:00 [restartedMain] INFO  com.tts.sms.SmsApplication - 
+================================================================================
+   ████████╗███████╗ ██████╗██╗  ██╗███╗   ██╗ ██████╗ ██╗  ██╗██████╗  █████╗ ███████╗████████╗
+   ╚══██╔══╝██╔════╝██╔════╝██║  ██║████╗  ██║██╔═══██╗██║ ██╔╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝
+      ██║   █████╗  ██║     ███████║██╔██╗ ██║██║   ██║█████╔╝ ██████╔╝███████║█████╗     ██║   
+      ██║   ██╔══╝  ██║     ██╔══██║██║╚██╗██║██║   ██║██╔═██╗ ██╔══██╗██╔══██║██╔══╝     ██║   
+      ██║   ███████╗╚██████╗██║  ██║██║ ╚████║╚██████╔╝██║  ██╗██║  ██║██║  ██║██║        ██║   
+      ╚═╝   ╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝        ╚═╝   
+================================================================================
+   Application    : tts-sms
+   Version        : 1.0.2
+   Started At     : 2025-12-15 12:36:00
+   Active Profile : prod
+--------------------------------------------------------------------------------
+   Access URLs:
+   - Local        : http://localhost:8443/
+   - Network      : http://172.20.144.1:8443/
+   - Hostname     : http://Adi:8443/
+--------------------------------------------------------------------------------
+   System Info:
+   - Host         : Adi (172.20.144.1)
+   - Java Version : 22.0.2
+   - OS           : Windows 10 10.0
+--------------------------------------------------------------------------------
+   Memory Info:
+   - Max Memory   : 2020 MB
+   - Total Memory : 187 MB
+   - Free Memory  : 27 MB
+--------------------------------------------------------------------------------
+   Developers     : Sneha Ghatol | Kunal Patil
+   Organization   : TechnoKraft Training & Solution Pvt. Ltd.
+================================================================================
+
