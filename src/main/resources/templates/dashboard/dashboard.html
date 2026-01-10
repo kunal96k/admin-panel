@@ -4,7 +4,6 @@
       layout:decorate="~{layout/layout}"
       lang="en">
 <head>
-
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XJW830CMEM"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -18,7 +17,6 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Dashboard - TechnoKraft Admin</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <!-- optional: bootstrap icons CDN (you used bi-* classes) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
         :root{
@@ -28,6 +26,8 @@
             --accent:#007bff;
             --shadow: 0 2px 10px rgba(0,0,0,0.08);
             --radius:12px;
+            --chart-gradient-start: rgba(13, 110, 253, 0.15);
+            --chart-gradient-end: rgba(13, 110, 253, 0.01);
         }
 
         body{
@@ -88,6 +88,7 @@
         .stat-icon.bg-success{ background:#198754; }
         .stat-icon.bg-warning{ background:#ffc107; color:#212529;}
         .stat-icon.bg-info{ background:#0dcaf0; color:#212529;}
+        .stat-icon.bg-danger { background: #dc3545; color: #fff; }
 
         .stat-info h3{
             margin:0;
@@ -98,6 +99,12 @@
             margin:0;
             color:var(--muted);
             font-size:12px;
+        }
+        .stat-info small.text-muted {
+            color: #6c757d !important;
+            font-size: 10px;
+            line-height: 1.2;
+            margin-top: 4px;
         }
 
         /* Charts section */
@@ -111,80 +118,113 @@
             background:var(--card);
             border-radius:var(--radius);
             box-shadow:var(--shadow);
-            padding:18px;
+            padding:20px;
             transition:transform .15s, box-shadow .15s;
             display:flex;
             flex-direction:column;
         }
-        .chart-card:hover{ transform: translateY(-4px); box-shadow:0 8px 30px rgba(0,0,0,0.12); }
+        .chart-card:hover{
+            box-shadow:0 8px 30px rgba(0,0,0,0.12);
+        }
 
         .chart-card h3{
-            margin:0 0 12px 0;
-            font-size:16px;
+            margin:0 0 16px 0;
+            font-size:17px;
             display:flex;
             align-items:center;
-            gap:8px;
+            gap:10px;
             color:#222;
+            font-weight:600;
         }
+        .chart-card h3 i{
+            font-size:20px;
+            color:var(--accent);
+        }
+
         .chart-controls{
             display:flex;
             gap:12px;
             align-items:center;
             flex-wrap:wrap;
-            margin-bottom:12px;
+            margin-bottom:16px;
+            padding-bottom:16px;
+            border-bottom: 1px solid #e6e9ef;
+        }
+        .chart-controls label{
+            font-weight:500;
+            color:#495057;
+            font-size:14px;
         }
         .period-select{
-            padding:8px 12px;
-            border:1px solid #e6e9ef;
+            padding:8px 14px;
+            border:2px solid #e6e9ef;
             background:#fff;
             border-radius:8px;
             cursor:pointer;
             font-size:14px;
-            min-width:150px;
+            min-width:160px;
+            transition: all 0.2s;
+            outline:none;
+        }
+        .period-select:hover{
+            border-color:#0d6efd;
+        }
+        .period-select:focus{
+            border-color:#0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
         }
 
         .chart-info{
-            display:none;
-            gap:12px;
+            display:flex;
+            gap:20px;
             justify-content:space-between;
             align-items:center;
-            margin-bottom:12px;
-            padding:10px;
-            background:#fbfcfe;
+            margin-bottom:16px;
+            padding:12px;
+            background:#f8f9fa;
             border-radius:8px;
             font-size:13px;
             color:var(--muted);
         }
-
-        /* ========================================
-        USER PROFILE DROPDOWN
-       ======================================== */
-
-        /*  dropdown positioning in mobile */
-        @media (max-width: 767px) {
-            .topbar-right .dropdown-menu {
-                position: ed !important;
-                top: 60px !important;
-                right: 10px !important;
-                left: auto !important;
-                transform: none !important;
-                min-width: 240px;
-                max-width: calc(100vw - 20px);
-                z-index: 9999;
-            }
-
-            .topbar-right .dropdown-menu.show {
-                display: block;
-            }
+        .chart-info-item{
+            display:flex;
+            flex-direction:column;
+            gap:4px;
+        }
+        .chart-info-label{
+            font-size:11px;
+            text-transform:uppercase;
+            letter-spacing:0.5px;
+            color:#6c757d;
+        }
+        .chart-info-value{
+            font-size:16px;
+            font-weight:600;
+            color:#212529;
         }
 
         .chart-container{
             position:relative;
-            height:360px; /* desktop height */
-            padding:6px 6px 0 6px;
+            height:360px;
+            padding:6px;
         }
 
-        .chart-card .chart-container canvas{ width:100% !important; height:100% !important; }
+        .chart-card .chart-container canvas{
+            width:100% !important;
+            height:100% !important;
+        }
+
+        /* Loading state */
+        .chart-loading{
+            display:none;
+            justify-content:center;
+            align-items:center;
+            height:360px;
+            color:#6c757d;
+        }
+        .chart-loading.active{
+            display:flex;
+        }
 
         /* Responsive behaviour */
         @media (max-width: 1000px) {
@@ -198,32 +238,11 @@
             .chart-controls{ flex-direction:column; align-items:stretch; gap:8px; }
             .period-select{ width:100%; min-width:unset; }
             .chart-container{ height:300px; padding:0; }
+            .stat-info small.text-muted { font-size: 9px; }
+            .chart-info{ flex-direction:column; gap:12px; }
         }
 
-        /* small helper */
         .muted { color:var(--muted); font-size:13px; }
-        /* Pending Fees Card Styling */
-
-        .stat-icon.bg-danger {
-            background: #dc3545;
-            color: #fff;
-        }
-
-        /* Small date labels */
-        .stat-info small.text-muted {
-            color: #6c757d !important;
-            font-size: 10px;
-            line-height: 1.2;
-            margin-top: 4px;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 640px) {
-            .stat-info small.text-muted {
-                font-size: 9px;
-            }
-        }
-
     </style>
 </head>
 <body>
@@ -235,7 +254,6 @@
 
     <!-- Quick Stats -->
     <div class="quick-stats" aria-live="polite">
-        <!-- Total Students Card (NO DATE FILTER) -->
         <div class="stat-card" role="article" aria-label="Total students">
             <div class="stat-icon bg-primary" aria-hidden="true">
                 <i class="bi bi-people-fill"></i>
@@ -246,7 +264,6 @@
             </div>
         </div>
 
-        <!--  Fees Collected Card (FROM CUTOFF DATE) -->
         <div class="stat-card" role="article" aria-label="Fees collected">
             <div class="stat-icon bg-success" aria-hidden="true">
                 <i class="bi bi-cash-stack"></i>
@@ -260,7 +277,6 @@
             </div>
         </div>
 
-        <!-- Total Enquiries Card (NO DATE FILTER) -->
         <div class="stat-card" role="article" aria-label="Total enquiries">
             <div class="stat-icon bg-warning" aria-hidden="true">
                 <i class="bi bi-file-earmark-text"></i>
@@ -271,7 +287,6 @@
             </div>
         </div>
 
-        <!--  Pending Fees Card (FROM CUTOFF DATE) -->
         <div class="stat-card" role="article" aria-label="Pending fees">
             <div class="stat-icon bg-danger" aria-hidden="true">
                 <i class="bi bi-exclamation-triangle-fill"></i>
@@ -291,12 +306,12 @@
         <!-- Revenue Chart -->
         <div class="chart-card" aria-labelledby="revenueHeading">
             <h3 id="revenueHeading">
-                <i class="bi bi-graph-up"></i>
+                <i class="bi bi-graph-up-arrow"></i>
                 Revenue Trend
             </h3>
 
             <div class="chart-controls" role="toolbar" aria-label="Chart controls">
-                <label for="periodSelect" style="font-weight:500; color:#495057;">Time Period:</label>
+                <label for="periodSelect">Time Period:</label>
                 <select id="periodSelect" class="period-select" aria-controls="revenueChart">
                     <option value="1M">Last 1 Month</option>
                     <option value="2M">Last 2 Months</option>
@@ -311,7 +326,23 @@
                 </select>
             </div>
 
-            <div class="chart-container">
+            <div class="chart-info">
+                <div class="chart-info-item">
+                    <span class="chart-info-label">Total Revenue</span>
+                    <span class="chart-info-value" id="totalRevenue">₹0</span>
+                </div>
+                <div class="chart-info-item">
+                    <span class="chart-info-label">Data Points</span>
+                    <span class="chart-info-value" id="dataPoints">0</span>
+                </div>
+            </div>
+
+            <div class="chart-loading" id="revenueLoading">
+                <i class="bi bi-arrow-repeat" style="font-size:24px;animation:spin 1s linear infinite;"></i>
+                <span style="margin-left:10px;">Loading chart...</span>
+            </div>
+
+            <div class="chart-container" id="revenueChartContainer">
                 <canvas id="revenueChart" aria-label="Revenue chart" role="img"></canvas>
             </div>
         </div>
@@ -319,18 +350,18 @@
         <!-- Course Distribution Chart -->
         <div class="chart-card" aria-labelledby="courseHeading">
             <h3 id="courseHeading">
-                <i class="bi bi-pie-chart"></i>
+                <i class="bi bi-pie-chart-fill"></i>
                 Course Distribution
             </h3>
 
-            <div class="chart-info" aria-hidden="true">
-                <div>
-                    <div class="muted">Total Students</div>
-                    <div class="muted" id="courseStudents">0</div>
+            <div class="chart-info">
+                <div class="chart-info-item">
+                    <span class="chart-info-label">Total Students</span>
+                    <span class="chart-info-value" id="courseStudents">0</span>
                 </div>
-                <div>
-                    <div class="muted">Total Courses</div>
-                    <div class="muted" id="totalCourses">0</div>
+                <div class="chart-info-item">
+                    <span class="chart-info-label">Total Courses</span>
+                    <span class="chart-info-value" id="totalCourses">0</span>
                 </div>
             </div>
 
@@ -340,52 +371,41 @@
         </div>
     </div>
 
-
-
     <script th:inline="javascript">
         let revenueChart = null;
         let courseChart = null;
 
-        // helper to set text only if element exists
         function setTextIfExists(id, txt) {
             const el = document.getElementById(id);
             if (el) el.textContent = txt;
         }
 
         async function loadDashboardStats() {
-    try {
-        const response = await fetch('/api/dashboard/stats');
-        const stats = await response.json();
-
-        //  Total Students (no date filter)
-        setTextIfExists('totalStudents', stats.totalStudents || 0);
-
-        //  Fees Collected (from cutoff date)
-        setTextIfExists('totalFeesCollected', stats.totalFeesCollectedFormatted || '₹0');
-        setTextIfExists('cutoffDateText', stats.cutoffDateFormatted || '-');
-
-        //  Total Enquiries (no date filter)
-        setTextIfExists('totalEnquiries', stats.totalEnquiries || 0);
-
-        //  Pending Fees (from cutoff date)
-        setTextIfExists('pendingFees', stats.pendingFeesFormatted || '₹0');
-        setTextIfExists('pendingCutoffText', stats.cutoffDateFormatted || '-');
-
-        console.log('📊 Dashboard stats loaded:', {
-            students: stats.totalStudents,
-            collected: stats.totalFeesCollected,
-            pending: stats.pendingFees,
-            cutoffDate: stats.cutoffDate
-        });
-
-    } catch (error) {
-        console.error('Error loading stats:', error);
-    }
-}
-
-        // Removed writing to #totalRevenue and #dataPoints because these elements are not required.
-        async function loadRevenueChart(period = '6M') {
             try {
+                const response = await fetch('/api/dashboard/stats');
+                const stats = await response.json();
+
+                setTextIfExists('totalStudents', stats.totalStudents || 0);
+                setTextIfExists('totalFeesCollected', stats.totalFeesCollectedFormatted || '₹0');
+                setTextIfExists('cutoffDateText', stats.cutoffDateFormatted || '-');
+                setTextIfExists('totalEnquiries', stats.totalEnquiries || 0);
+                setTextIfExists('pendingFees', stats.pendingFeesFormatted || '₹0');
+                setTextIfExists('pendingCutoffText', stats.cutoffDateFormatted || '-');
+
+                console.log('📊 Dashboard stats loaded:', stats);
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadRevenueChart(period = '6M') {
+            const loading = document.getElementById('revenueLoading');
+            const container = document.getElementById('revenueChartContainer');
+
+            try {
+                loading.classList.add('active');
+                container.style.display = 'none';
+
                 const response = await fetch(`/api/dashboard/revenue-chart?period=${period}`);
                 const data = await response.json();
 
@@ -395,6 +415,11 @@
                     revenueChart.destroy();
                 }
 
+                // Create gradient
+                const gradient = ctx.createLinearGradient(0, 0, 0, 360);
+                gradient.addColorStop(0, 'rgba(13, 110, 253, 0.15)');
+                gradient.addColorStop(1, 'rgba(13, 110, 253, 0.01)');
+
                 revenueChart = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -402,26 +427,59 @@
                         datasets: [{
                             label: 'Revenue (₹)',
                             data: data.data,
-                            borderColor: '#007bff',
-                            backgroundColor: 'rgba(0, 123, 255, 0.08)',
-                            tension: 0.35,
+                            borderColor: '#0d6efd',
+                            backgroundColor: gradient,
+                            tension: 0.4,
                             fill: true,
-                            pointRadius: 3,
-                            pointHoverRadius: 6,
-                            pointBackgroundColor: '#007bff',
+                            pointRadius: 4,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#0d6efd',
                             pointBorderColor: '#fff',
-                            pointBorderWidth: 2
+                            pointBorderWidth: 2,
+                            pointHoverBackgroundColor: '#0d6efd',
+                            pointHoverBorderColor: '#fff',
+                            pointHoverBorderWidth: 3,
+                            borderWidth: 3
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
                         plugins: {
-                            legend: { display: true, position: 'top' },
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15,
+                                    font: {
+                                        size: 13,
+                                        weight: '500'
+                                    }
+                                }
+                            },
                             tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                titleFont: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                bodyFont: {
+                                    size: 13
+                                },
+                                cornerRadius: 8,
+                                displayColors: true,
                                 callbacks: {
                                     label: function(context) {
-                                        return '₹' + Number(context.parsed.y || 0).toLocaleString('en-IN');
+                                        return '₹' + Number(context.parsed.y || 0).toLocaleString('en-IN', {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        });
                                     }
                                 }
                             }
@@ -429,19 +487,53 @@
                         scales: {
                             y: {
                                 beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)',
+                                    drawBorder: false
+                                },
                                 ticks: {
+                                    padding: 10,
                                     callback: function(value) {
-                                        return '₹' + Number(value).toLocaleString('en-IN');
+                                        if (value >= 100000) {
+                                            return '₹' + (value / 100000).toFixed(1) + 'L';
+                                        } else if (value >= 1000) {
+                                            return '₹' + (value / 1000).toFixed(1) + 'K';
+                                        }
+                                        return '₹' + value.toLocaleString('en-IN');
                                     }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false,
+                                    drawBorder: false
+                                },
+                                ticks: {
+                                    padding: 10,
+                                    maxRotation: 45,
+                                    minRotation: 0
                                 }
                             }
                         }
                     }
                 });
 
-                console.log('Revenue chart loaded:', (data.labels || []).length, 'points');
+                // Update info
+                const totalRevenue = (data.data || []).reduce((a, b) => a + b, 0);
+                setTextIfExists('totalRevenue', '₹' + totalRevenue.toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }));
+                setTextIfExists('dataPoints', (data.labels || []).length);
+
+                loading.classList.remove('active');
+                container.style.display = 'block';
+
+                console.log('📈 Revenue chart loaded:', data.labels.length, 'points');
             } catch (error) {
                 console.error('Error loading revenue chart:', error);
+                loading.classList.remove('active');
+                container.style.display = 'block';
             }
         }
 
@@ -450,7 +542,6 @@
                 const response = await fetch('/api/dashboard/course-distribution');
                 const data = await response.json();
 
-                // guarded updates for info badges
                 setTextIfExists('totalCourses', (data.labels || []).length);
                 setTextIfExists('courseStudents', (data.data || []).reduce((a, b) => a + b, 0));
 
@@ -460,8 +551,10 @@
                     courseChart.destroy();
                 }
 
-                // If backend supplies colors, use them, otherwise fallback to Chart.js default palette
-                const colors = Array.isArray(data.colors) && data.colors.length === data.data.length ? data.colors : undefined;
+                const colors = data.colors || [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                    '#FF9F40', '#E7E9ED', '#8E44AD', '#3498DB', '#E74C3C'
+                ];
 
                 courseChart = new Chart(ctx, {
                     type: 'doughnut',
@@ -470,16 +563,32 @@
                         datasets: [{
                             data: data.data,
                             backgroundColor: colors,
-                            borderWidth: 2,
-                            borderColor: '#fff'
+                            borderWidth: 3,
+                            borderColor: '#fff',
+                            hoverBorderWidth: 4,
+                            hoverBorderColor: '#fff'
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { display: true, position: 'right' },
+                            legend: {
+                                display: true,
+                                position: 'right',
+                                labels: {
+                                    padding: 12,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
                             tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                cornerRadius: 8,
                                 callbacks: {
                                     label: function(context) {
                                         const label = context.label || '';
@@ -494,7 +603,7 @@
                     }
                 });
 
-                console.log('Course chart loaded:', (data.labels || []).length, 'courses');
+                console.log('📊 Course chart loaded:', data.labels.length, 'courses');
             } catch (error) {
                 console.error('Error loading course chart:', error);
             }
@@ -508,12 +617,10 @@
                 });
             }
 
-            // initial load
             loadDashboardStats();
             loadRevenueChart('6M');
             loadCourseChart();
 
-            // make charts resize cleanly when orientation changes on mobile
             window.addEventListener('orientationchange', () => {
                 setTimeout(() => {
                     if (revenueChart) revenueChart.resize();
@@ -521,6 +628,16 @@
                 }, 250);
             });
         });
+
+        // Add spinning animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </main>
 </body>

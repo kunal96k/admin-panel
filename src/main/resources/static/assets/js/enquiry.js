@@ -11,6 +11,7 @@
     let packagesCache = [];
     let employeesCache = [];
     let leadSourcesCache = [];
+    let selectedCourses = []; // Track selected courses
 
     let currentLoggedInUser = null;
 
@@ -207,76 +208,185 @@
     });
 
     function initializeCourseSelector() {
-        const courseSelect = document.getElementById('course');
-        if (courseSelect) {
-            courseSelect.addEventListener('change', updateSelectedCoursesDisplay);
-        }
-    }
+        const searchInput = document.getElementById('courseSearchInput');
+        const dropdown = document.getElementById('courseDropdown');
 
-    function updateSelectedCoursesDisplay() {
-        const courseSelect = document.getElementById('course');
-        const selectedCourses = Array.from(courseSelect.selectedOptions).map(opt => opt.value);
+        if (!searchInput || !dropdown) return;
 
-        // Optional: Add visual feedback below select
-        let displayArea = document.getElementById('selectedCoursesDisplay');
-        if (!displayArea) {
-            displayArea = document.createElement('div');
-            displayArea.id = 'selectedCoursesDisplay';
-            displayArea.className = 'mt-2';
-            courseSelect.parentElement.appendChild(displayArea);
-        }
+        // Load courses on init
+        loadCoursesForSearch();
 
-        if (selectedCourses.length > 0) {
-            displayArea.innerHTML = `
-                <div class="d-flex flex-wrap gap-1">
-                    ${selectedCourses.map(course => `
-                        <span class="badge bg-primary" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
-                            ${course}
-                            <i class="bi bi-x-circle ms-1" style="cursor: pointer;" onclick="window.removeCourseTag('${course.replace(/'/g, "\\'")}')"></i>
-                        </span>
-                    `).join('')}
-                </div>
-            `;
-        } else {
-            displayArea.innerHTML = '';
-        }
-    }
+        // Search input events
+        searchInput.addEventListener('focus', () => {
+            dropdown.style.display = 'block';
+            renderCourseDropdown('');
+        });
 
-    window.removeCourseTag = function(courseName) {
-        const courseSelect = document.getElementById('course');
-        Array.from(courseSelect.options).forEach(option => {
-            if (option.value === courseName) {
-                option.selected = false;
+        searchInput.addEventListener('input', debounce(function() {
+            const searchTerm = this.value.toLowerCase();
+            renderCourseDropdown(searchTerm);
+        }, 300));
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
             }
         });
+    }
+
+
+/**
+ * Load courses from API for search dropdown
+ */
+async function loadCoursesForSearch() {
+    const dropdownLoading = document.getElementById('courseDropdownLoading');
+    const dropdownEmpty = document.getElementById('courseDropdownEmpty');
+    const dropdownList = document.getElementById('courseDropdownList');
+
+    if (dropdownLoading) dropdownLoading.style.display = 'block';
+    if (dropdownEmpty) dropdownEmpty.style.display = 'none';
+    if (dropdownList) dropdownList.innerHTML = '';
+
+    try {
+        const response = await fetch('/api/courses/dropdown', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to load courses');
+
+        coursesCache = await response.json();
+        console.log(` Loaded ${coursesCache.length} courses`);
+
+        renderCourseDropdown('');
+
+    } catch (error) {
+        console.error('❌ Error loading courses:', error);
+        coursesCache = [];
+
+        if (dropdownEmpty) {
+            dropdownEmpty.style.display = 'block';
+            dropdownEmpty.innerHTML = '<i class="bi bi-exclamation-triangle"></i><span>Failed to load courses</span>';
+        }
+    } finally {
+        if (dropdownLoading) dropdownLoading.style.display = 'none';
+    }
+}
+
+    /**
+     * Render course dropdown with search filter
+     */
+    function renderCourseDropdown(searchTerm) {
+        const dropdownList = document.getElementById('courseDropdownList');
+        const dropdownEmpty = document.getElementById('courseDropdownEmpty');
+        const dropdownLoading = document.getElementById('courseDropdownLoading');
+
+        if (!dropdownList) return;
+
+        // Hide loading
+        if (dropdownLoading) dropdownLoading.style.display = 'none';
+
+        // Filter courses
+        const filteredCourses = coursesCache.filter(course =>
+            course.courseName.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        if (filteredCourses.length === 0) {
+            dropdownList.innerHTML = '';
+            if (dropdownEmpty) dropdownEmpty.style.display = 'block';
+            return;
+        }
+
+        if (dropdownEmpty) dropdownEmpty.style.display = 'none';
+
+        // Render course items
+        dropdownList.innerHTML = filteredCourses.map(course => {
+            const isSelected = selectedCourses.some(c => c.id === course.id);
+            return `
+                <div class="course-dropdown-item ${isSelected ? 'selected' : ''}"
+                     data-course-id="${course.id}"
+                     data-course-name="${course.courseName}"
+                     data-course-fee="${course.courseFees || 0}">
+                    <div>
+                        <span class="course-name">${course.courseName}</span>
+                        ${course.courseFees ? `<span class="course-fee">₹${course.courseFees}</span>` : ''}
+                    </div>
+                    ${isSelected ? '<i class="bi bi-check-circle-fill checkmark"></i>' : ''}
+                </div>
+            `;
+        }).join('');
+
+        // Attach click handlers
+        dropdownList.querySelectorAll('.course-dropdown-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const courseId = parseInt(this.getAttribute('data-course-id'));
+                const courseName = this.getAttribute('data-course-name');
+                const courseFee = parseFloat(this.getAttribute('data-course-fee'));
+
+                toggleCourseSelection({ id: courseId, courseName, courseFees: courseFee });
+            });
+        });
+    }
+
+    /**
+     * Toggle course selection
+     */
+    function toggleCourseSelection(course) {
+        const index = selectedCourses.findIndex(c => c.id === course.id);
+
+        if (index > -1) {
+            // Remove course
+            selectedCourses.splice(index, 1);
+        } else {
+            // Add course
+            selectedCourses.push(course);
+        }
+
         updateSelectedCoursesDisplay();
-    };
+        renderCourseDropdown(document.getElementById('courseSearchInput').value.toLowerCase());
 
-   function matchCourseName(csvCourseName) {
-       if (!csvCourseName) return null;
+        // Update hidden input for validation
+        const hiddenInput = document.getElementById('courseHiddenInput');
+        if (hiddenInput) {
+            hiddenInput.value = selectedCourses.length > 0 ? 'valid' : '';
+        }
+    }
 
-       const normalized = csvCourseName.trim().toUpperCase();
 
-       // Exact match
-       for (let course of COURSE_NAMES) {
-           if (course.toUpperCase() === normalized) {
-               return course;
-           }
-       }
+    /**
+     * Display selected courses as badges
+     */
+    function updateSelectedCoursesDisplay() {
+        const container = document.getElementById('selectedCoursesContainer');
+        if (!container) return;
 
-       // Partial match
-       for (let course of COURSE_NAMES) {
-           if (course.toUpperCase().includes(normalized) ||
-               normalized.includes(course.toUpperCase())) {
-               return course;
-           }
-       }
+        if (selectedCourses.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
 
-       // **NEW: If no match found, return the original course name**
-       // This allows importing courses not in the predefined list
-       console.warn(`Course not in predefined list, using as-is: ${csvCourseName}`);
-       return csvCourseName.trim();
-   }
+        container.innerHTML = selectedCourses.map(course => `
+            <div class="selected-course-badge">
+                <span>${course.courseName}</span>
+                <i class="bi bi-x-circle remove-course"
+                   data-course-id="${course.id}"
+                   title="Remove course"></i>
+            </div>
+        `).join('');
+
+        // Attach remove handlers
+        container.querySelectorAll('.remove-course').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const courseId = parseInt(this.getAttribute('data-course-id'));
+                const course = selectedCourses.find(c => c.id === courseId);
+                if (course) toggleCourseSelection(course);
+            });
+        });
+    }
 
     function initializeEventListeners() {
         // Action menu triggers
@@ -886,11 +996,27 @@ function updateEntriesInfo() {
                             ? enquiry.courses.split(',').map(c => c.trim()).filter(Boolean)
                             : []);
 
-            if (courseSelect) {
-                Array.from(courseSelect.options).forEach(option => {
-                    option.selected = courses.includes(option.value);
-                });
-                updateSelectedCoursesDisplay();
+            selectedCourses = [];
+            courses.forEach(courseName => {
+                const course = coursesCache.find(c => c.courseName === courseName);
+                if (course) {
+                    selectedCourses.push(course);
+                } else {
+                    // Handle courses not in cache (legacy data)
+                    selectedCourses.push({
+                        id: Date.now() + Math.random(),
+                        courseName: courseName,
+                        courseFees: null
+                    });
+                }
+            });
+
+            updateSelectedCoursesDisplay();
+
+            // Update hidden input
+            const hiddenInput = document.getElementById('courseHiddenInput');
+            if (hiddenInput) {
+                hiddenInput.value = selectedCourses.length > 0 ? 'valid' : '';
             }
 
             // Other enquiry details
@@ -1683,10 +1809,17 @@ async function deleteFollowUp(followUpId, enquiryId) {
                 document.getElementById(id)?.reset();
             });
 
-            const displayArea = document.getElementById('selectedCoursesDisplay');
-            if (displayArea) {
-                displayArea.innerHTML = '';
-            }
+            // Clear selected courses
+            selectedCourses = [];
+            updateSelectedCoursesDisplay();
+
+            // Clear search input
+            const searchInput = document.getElementById('courseSearchInput');
+            if (searchInput) searchInput.value = '';
+
+            // Clear hidden input
+            const hiddenInput = document.getElementById('courseHiddenInput');
+            if (hiddenInput) hiddenInput.value = '';
         }
 
         function closeModal(modalId) {
@@ -2132,8 +2265,8 @@ async function deleteFollowUp(followUpId, enquiryId) {
         }
 
         function collectFormData() {
-            const courseSelect = document.getElementById('course');
-            const selectedCourses = Array.from(courseSelect.selectedOptions).map(option => option.value);
+            // Get selected course names
+            const courseNames = selectedCourses.map(c => c.courseName);
 
             return {
                 firstName: getValue('firstName')?.trim(),
@@ -2152,7 +2285,7 @@ async function deleteFollowUp(followUpId, enquiryId) {
                 aadhaar: getValue('aadhaar')?.trim(),
                 birthDate: getValue('dob') || null,
                 gender: getValue('gender'),
-                courses: selectedCourses,
+                courses: courseNames,
                 packageName: getValue('package'),
                 demoLectureRequired: getValue('demoLecture') === 'true',
                 interestLevel: getValue('interestLevel'),

@@ -2106,6 +2106,9 @@ async function openFeeReceipt(regNo) {
         return;
     }
 
+    //  Check if this is an old student
+    const isOldStudent = !regNo.startsWith('REG');
+
     //  RESET MODAL TITLE FOR NEW RECEIPT
     document.querySelector('#feeReceiptModal .modal-title').innerHTML =
         '<i class="bi bi-receipt me-2"></i>New Fee Receipt';
@@ -2136,11 +2139,38 @@ async function openFeeReceipt(regNo) {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('receiptDate').value = today;
 
-    // Load installments
-    await loadInstallmentsForReceipt(regNo);
+    // ✅ Handle installments based on student type
+    if (isOldStudent) {
+        // For old students: Make installment optional
+        const installmentLabel = document.querySelector('label[for="installment"]');
+        if (installmentLabel) {
+            // Remove required indicator
+            const requiredSpan = installmentLabel.querySelector('.required');
+            if (requiredSpan) {
+                requiredSpan.remove();
+            }
+        }
+
+        // Set default "Not Applicable" option
+        const installmentSelect = document.getElementById('installment');
+        installmentSelect.innerHTML = '<option value="" selected>Not Applicable (Old Student)</option>';
+        installmentSelect.disabled = false; // Keep enabled but with NA option
+
+        console.log('ℹ️ Old student - Installment field set to optional');
+    } else {
+        // For new students (REG*): Load installments normally
+        await loadInstallmentsForReceipt(regNo);
+    }
 
     // Set next due date automatically
-    setNextInstallmentDueDate(regNo);
+    if (!isOldStudent) {
+        setNextInstallmentDueDate(regNo);
+    } else {
+        // For old students, set next due date to 30 days from now
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + 30);
+        document.getElementById('nextDueDate').value = nextDate.toISOString().split('T')[0];
+    }
 
     new bootstrap.Modal(document.getElementById('feeReceiptModal')).show();
 }
@@ -2189,6 +2219,24 @@ async function setNextInstallmentDueDate(regNo) {
         nextDate.setDate(nextDate.getDate() + 30);
         document.getElementById('nextDueDate').value = nextDate.toISOString().split('T')[0];
     }
+}
+
+/**
+ *  Helper: Check if student is old (imported)
+ */
+function isOldStudent(regNo) {
+    return regNo && !regNo.startsWith('REG');
+}
+
+/**
+ *  Helper: Show/hide installment hint
+ */
+function toggleInstallmentHint(isOld) {
+    const hint = document.getElementById('installmentHint');
+    const required = document.getElementById('installmentRequired');
+
+    if (hint) hint.style.display = isOld ? 'block' : 'none';
+    if (required) required.style.display = isOld ? 'none' : 'inline';
 }
 
 async function emailReceipt(receiptNo, studentName, mobile) {

@@ -227,10 +227,13 @@
                                         <input type="number" class="form-control" id="nowReceiving" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Installment <span class="required">*</span></label>
-                                        <select class="form-select" id="installment" required>
+                                        <label class="form-label">Installment <span class="required" id="installmentRequired">*</span></label>
+                                        <select class="form-select" id="installment">
                                             <option value="">-- Select Installment --</option>
                                         </select>
+                                        <small class="text-muted" id="installmentHint" style="display:none;">
+                                            Not applicable for old imported students
+                                        </small>
                                     </div>
                                     <div class="mb-3" id="cgstField" style="display:none;">
                                         <label class="form-label">CGST (%)</label>

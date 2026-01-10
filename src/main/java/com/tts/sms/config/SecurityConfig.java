@@ -25,6 +25,7 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.http.HttpMethod;
 
 import java.util.Arrays;
 
@@ -98,9 +99,6 @@ public class SecurityConfig {
 
                         //  ADMIN ROUTES
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-
-                        //  FEE INSTALLMENTS
-                        .requestMatchers("/api/fees-manager/installments/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
 
                         //  ALL OTHER API ROUTES
                         .requestMatchers("/api/**").authenticated()

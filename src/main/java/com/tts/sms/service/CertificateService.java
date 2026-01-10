@@ -294,7 +294,7 @@ public class CertificateService {
             g2d.setFont(smallFont);
             g2d.setColor(Color.BLACK);
             g2d.drawString(certificate.getIssueDate().toString(), 1135, 1226);
-            g2d.drawString("TTS-" + certificate.getCertificateNo(), 550, 1279);
+            g2d.drawString(certificate.getCertificateNo(), 550, 1279);
 
             g2d.dispose();
 
@@ -512,7 +512,7 @@ public class CertificateService {
 
             // ========== 4. CERTIFICATE NUMBER ==========
             String certNo = certificate.getCertificateNo() != null ? certificate.getCertificateNo() : "";
-            String certNoDisplay = "TTS-" + certNo;
+            String certNoDisplay = certNo;
 
             g2d.setFont(dateFont);
             g2d.setColor(Color.BLACK);
@@ -692,7 +692,7 @@ public class CertificateService {
         log.info("Certificate issued: {} for student: {}",
                 savedCertificate.getCertificateNo(), savedCertificate.getStudentName());
 
-        // ✨ TRIGGER ADMISSION STATUS UPDATE
+        // TRIGGER ADMISSION STATUS UPDATE
         autoCertificateService.updateAdmissionStatusAfterCertificate(
                 savedCertificate.getRegistrationNo()
         );
