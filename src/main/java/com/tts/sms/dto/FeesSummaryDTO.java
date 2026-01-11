@@ -35,6 +35,9 @@ public class FeesSummaryDTO {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dueDate; // CAN BE NULL
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate nextDueDate; // Computed next pending installment date (preferred)
+
     private String status; // Pending, Clear
 
     // Installment info
@@ -43,6 +46,14 @@ public class FeesSummaryDTO {
     private Integer paidInstallments;
 
     private Integer pendingInstallments;
+
+    // Installment defaults (from Fees/Admission)
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate installmentStartDate;
+
+    private Integer numberOfInstallments;
+
+    private Integer daysBetweenInstallments;
 
     // Computed properties
     public Boolean isOverdue() {

@@ -28,6 +28,17 @@ public class FeesManagerController {
 
     // ==================== FEES SUMMARY (MISSING ENDPOINT) ====================
 
+    /**
+     * Get installment configuration for a student
+     */
+    @GetMapping(value = "/installment-config/{regNo}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> getInstallmentConfig(@PathVariable String regNo) {
+        log.info("GET /api/fees-manager/installment-config/{}", regNo);
+
+        Map<String, Object> config = feesManagerService.getInstallmentConfig(regNo);
+        return ResponseEntity.ok(config);
+    }
+
     @PutMapping(value = "/status", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, String>> updateStatus(
             @Valid @RequestBody FeeStatusUpdateDTO statusDTO) {
@@ -246,12 +257,19 @@ public class FeesManagerController {
 
     /**
      * Get installments by registration number
+     *  Only returns installments for NEW students (REG* numbers)
      */
     @GetMapping(value = "/installments/{regNo}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<FeeInstallmentDTO>> getInstallmentsByRegNo(
             @PathVariable String regNo) {
 
         log.info("GET /api/fees-manager/installments/{}", regNo);
+
+        // Check if this is a NEW student (REG* number)
+        if (!regNo.startsWith("REG")) {
+            log.info(" Skipping installments for old student: {}", regNo);
+            return ResponseEntity.ok(List.of());
+        }
 
         List<FeeInstallmentDTO> installments = feesManagerService.getInstallmentsByRegNo(regNo);
         return ResponseEntity.ok(installments);

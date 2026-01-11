@@ -5,6 +5,7 @@ import com.tts.sms.exception.ResourceNotFoundException;
 import com.tts.sms.model.*;
 import com.tts.sms.repository.*;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
@@ -52,6 +53,28 @@ public class FeesManagerService {
     }
 
     private FeesSummaryDTO toFeesSummaryDTO(Fees fees) {
+        // Compute next due date from pending installments
+        LocalDate computedNextDueDate = null;
+
+        if (fees.getFeesDue() != null && fees.getFeesDue() > 0.01) {
+            // Only compute for students with pending fees
+            try {
+                List<FeeInstallment> installments = feeInstallmentRepository
+                        .findByRegistrationNumberOrderByDueDateAsc(fees.getRegistrationNumber());
+
+                // Find first pending installment
+                computedNextDueDate = installments.stream()
+                        .filter(i -> "Pending".equals(i.getStatus()))
+                        .map(FeeInstallment::getDueDate)
+                        .findFirst()
+                        .orElse(fees.getDueDate()); // Fallback to fees.dueDate
+
+            } catch (Exception e) {
+                log.warn(" Could not compute next due date for {}", fees.getRegistrationNumber());
+                computedNextDueDate = fees.getDueDate();
+            }
+        }
+
         return FeesSummaryDTO.builder()
                 .admissionId(fees.getAdmissionId())
                 .registrationNumber(fees.getRegistrationNumber())
@@ -62,7 +85,7 @@ public class FeesManagerService {
                 .totalPaid(fees.getTotalPaid())
                 .feesDue(fees.getFeesDue())
                 .feesRefund(fees.getFeesRefund())
-                .dueDate(fees.getDueDate())
+                .dueDate(computedNextDueDate)
                 .status(fees.getStatus())
                 .totalInstallments(0)
                 .paidInstallments(0)
@@ -440,24 +463,46 @@ public class FeesManagerService {
             // Update fees record
             feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo)
                     .ifPresent(fees -> {
-                        //  Net amount = Gross Paid - Refunds
+                        // Net amount = Gross Paid - Refunds
                         Double netTotalPaid = grossTotalPaid - totalRefund;
 
-                        //  Store NET paid in database (what student actually paid)
+                        // Store NET paid in database
                         fees.setTotalPaid(Math.max(0, netTotalPaid));
 
-                        //  Store refund amount separately
+                        // Store refund amount separately
                         fees.setFeesRefund(totalRefund);
 
-                        //  Fees Due = Total Fees - Net Paid
+                        // Fees Due = Total Fees - Net Paid
                         Double feesDue = fees.getTotalFees() - netTotalPaid;
                         fees.setFeesDue(Math.max(0, feesDue));
 
-                        //  Auto-update status
+                        //   Update due date based on pending installments
+                        LocalDate nextDueDate = null;
+                        if (feesDue > 0.01) {
+                            // Find next pending installment
+                            try {
+                                List<FeeInstallment> installments = feeInstallmentRepository
+                                        .findByRegistrationNumberOrderByDueDateAsc(regNo);
+
+                                nextDueDate = installments.stream()
+                                        .filter(i -> "Pending".equals(i.getStatus()))
+                                        .map(FeeInstallment::getDueDate)
+                                        .findFirst()
+                                        .orElse(null);
+
+                                log.info("🗓️ Next due date for {}: {}", regNo, nextDueDate);
+                            } catch (Exception e) {
+                                log.warn("Could not get next installment date: {}", e.getMessage());
+                            }
+                        }
+                        fees.setDueDate(nextDueDate); // Set to null if clear
+
+                        // Auto-update status
                         if (totalRefund > 0 && feesDue > 0.01) {
                             fees.setStatus("Refund");
                         } else if (feesDue <= 0.01) {
                             fees.setStatus("Clear");
+                            fees.setDueDate(null); //  Clear due date when paid
                         } else if (fees.getDueDate() != null && fees.getDueDate().isBefore(LocalDate.now())) {
                             fees.setStatus("Overdue");
                         } else {
@@ -467,12 +512,12 @@ public class FeesManagerService {
                         fees.setUpdatedBy("SYSTEM");
                         feesRepository.save(fees);
 
-                        log.info(" Updated Fees - RegNo: {}, TotalFees: ₹{}, NetPaid: ₹{}, Due: ₹{}, Refund: ₹{}, Status: {}",
-                                regNo, fees.getTotalFees(), netTotalPaid, feesDue, totalRefund, fees.getStatus());
+                        log.info(" Updated Fees - RegNo: {}, TotalFees: ₹{}, NetPaid: ₹{}, Due: ₹{}, Refund: ₹{}, Status: {}, NextDue: {}",
+                                regNo, fees.getTotalFees(), netTotalPaid, feesDue, totalRefund, fees.getStatus(), nextDueDate);
                     });
 
         } catch (Exception e) {
-            log.error(" Failed to recalculate fees for {}", regNo, e);
+            log.error("❌ Failed to recalculate fees for {}", regNo, e);
             throw new RuntimeException("Failed to recalculate fees: " + e.getMessage(), e);
         }
     }
@@ -481,7 +526,7 @@ public class FeesManagerService {
     public FeeReceiptResponseDTO createFeeReceipt(FeeReceiptRequestDTO requestDTO) {
         log.debug("Creating fee receipt for regNo: {}", requestDTO.getRegNo());
 
-        //  ADD: Detect old vs new student
+        // Detect old vs new student
         boolean isOldStudent = !requestDTO.getRegNo().startsWith("REG");
 
         if (isOldStudent) {
@@ -490,12 +535,12 @@ public class FeesManagerService {
             log.info(" Processing receipt for NEW STUDENT: {}", requestDTO.getRegNo());
         }
 
-        // Verify admission exists (works for both old and new)
+        // Verify admission exists
         Admission admission = admissionRepository
                 .findByRegistrationNumberAndIsDeletedFalse(requestDTO.getRegNo());
 
         if (admission == null) {
-            log.error(" Admission not found with registration number: {}", requestDTO.getRegNo());
+            log.error("❌ Admission not found with registration number: {}", requestDTO.getRegNo());
             throw new ResourceNotFoundException(
                     "Admission not found with registration number: " + requestDTO.getRegNo());
         }
@@ -506,11 +551,23 @@ public class FeesManagerService {
         String receiptNumber = generateReceiptNumber();
         log.debug("Generated receipt number: {}", receiptNumber);
 
+        //  Get current user for audit trail
+        String currentUser = "SYSTEM";
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof User) {
+                User user = (User) auth.getPrincipal();
+                currentUser = user.getEmployee().getEmployeeName();
+            }
+        } catch (Exception e) {
+            log.warn("Could not get current user: {}", e.getMessage());
+        }
+
         // Create receipt entity
         FeeReceipt receipt = feesManagerMapper.toReceiptEntity(requestDTO);
         receipt.setReceiptNumber(receiptNumber);
         receipt.setRegistrationNumber(requestDTO.getRegNo());
-        receipt.setCreatedBy("SYSTEM");
+        receipt.setCreatedBy(currentUser); //  Set creator
 
         // Generate invoice number
         if (Boolean.TRUE.equals(requestDTO.getGstEnabled())) {
@@ -519,42 +576,75 @@ public class FeesManagerService {
             log.debug("Generated invoice number: {}", invoiceNumber);
         }
 
-        //  Handle installment only for new students
+        // Handle installment only for new students
         if (!isOldStudent && requestDTO.getInstallmentId() != null) {
-            log.debug(" Linking receipt to installment: {}", requestDTO.getInstallmentId());
+            log.debug("🔗 Linking receipt to installment: {}", requestDTO.getInstallmentId());
+            receipt.setInstallmentId(requestDTO.getInstallmentId()); //  CRITICAL: Set installment ID
         } else if (isOldStudent) {
             log.info("⏭️ Skipping installment link for old student");
-            receipt.setInstallmentId(null); // Explicitly set to null
+            receipt.setInstallmentId(null);
         }
 
         // Save receipt
         FeeReceipt savedReceipt = feeReceiptRepository.save(receipt);
         log.info(" Created fee receipt: {} for regNo: {}", receiptNumber, requestDTO.getRegNo());
 
-        //  Update Fees table - WORKS FOR BOTH OLD AND NEW STUDENTS
-        try {
-            updateFeesTableAfterReceipt(requestDTO.getRegNo(), requestDTO.getAmountReceived());
-            log.info(" Updated fees table for regNo: {}", requestDTO.getRegNo());
-        } catch (Exception e) {
-            log.error(" Failed to update fees table for regNo: {}", requestDTO.getRegNo(), e);
-            // Don't throw - receipt is already saved
-        }
-
-        //  Update installment ONLY if provided and student is new
+        //  CRITICAL FIX: Update installment BEFORE updating fees
         if (!isOldStudent && requestDTO.getInstallmentId() != null) {
             try {
-                updateInstallmentStatus(requestDTO.getInstallmentId(), requestDTO.getAmountReceived());
+                updateInstallmentStatus(
+                        requestDTO.getInstallmentId(),
+                        requestDTO.getAmountReceived(),
+                        currentUser //  Pass current user
+                );
                 log.info(" Updated installment: {}", requestDTO.getInstallmentId());
             } catch (Exception e) {
-                log.error(" Failed to update installment: {}", requestDTO.getInstallmentId(), e);
+                log.error("❌ Failed to update installment: {}", requestDTO.getInstallmentId(), e);
+                // Don't throw - receipt is already saved
             }
         } else if (isOldStudent) {
             log.info("⏭️ Skipped installment update for old student");
         }
 
+        // Update Fees table - WORKS FOR BOTH OLD AND NEW STUDENTS
+        try {
+            updateFeesTableAfterReceipt(requestDTO.getRegNo(), requestDTO.getAmountReceived());
+            log.info(" Updated fees table for regNo: {}", requestDTO.getRegNo());
+        } catch (Exception e) {
+            log.error("❌ Failed to update fees table for regNo: {}", requestDTO.getRegNo(), e);
+        }
+
         return feesManagerMapper.toReceiptResponseDTO(savedReceipt);
     }
 
+    /**
+     *  Update installment status after payment
+     */
+    private void updateInstallmentStatus(Long installmentId, Double amountReceived, String updatedBy) {
+        log.info("🔄 Updating installment {} with amount: ₹{}", installmentId, amountReceived);
+
+        feeInstallmentRepository.findById(installmentId)
+                .ifPresent(installment -> {
+                    installment.setPaidAmount(amountReceived);
+                    installment.setPaidDate(LocalDate.now());
+                    installment.setStatus("Paid");
+                    installment.setUpdatedBy(updatedBy); //  Set updater
+
+                    //  CRITICAL: Save and flush immediately
+                    FeeInstallment saved = feeInstallmentRepository.saveAndFlush(installment);
+
+                    log.info(" Installment {} marked as Paid (Amount: ₹{}, Date: {}, UpdatedBy: {})",
+                            installmentId, amountReceived, LocalDate.now(), updatedBy);
+
+                    //  Verify save
+                    if (saved.getStatus().equals("Paid")) {
+                        log.info(" Verified: Installment {} status confirmed as Paid in DB", installmentId);
+                    } else {
+                        log.error("❌ CRITICAL: Installment {} status NOT updated in DB!", installmentId);
+                    }
+                });
+    }
+    
     /**
      *  Generate receipt number (e.g., REC0001, REC0002)
      */
@@ -613,7 +703,7 @@ public class FeesManagerService {
             log.debug(" Found existing fees record");
         } else {
             //  Create fees record if missing (for old imported students)
-            log.warn("⚠️ No fees record found for {}. Creating new record.", registrationNumber);
+            log.warn(" No fees record found for {}. Creating new record.", registrationNumber);
 
             Admission admission = admissionRepository
                     .findByRegistrationNumberAndIsDeletedFalse(registrationNumber);
@@ -639,7 +729,7 @@ public class FeesManagerService {
             log.info(" Created new fees record for: {}", registrationNumber);
         }
 
-        //  CHANGE: Calculate TOTAL paid from ALL receipts in fee_receipts table
+        //   Calculate TOTAL paid from ALL receipts in fee_receipts table
         Double totalPaidFromReceipts = feeReceiptRepository
                 .getTotalReceivedByRegistrationNumber(registrationNumber);
 
@@ -663,7 +753,7 @@ public class FeesManagerService {
                     log.debug("📊 Total from fee_collections: ₹{}", totalPaidFromOldRecords);
                 }
             } catch (Exception e) {
-                log.warn("⚠️ Could not fetch old records: {}", e.getMessage());
+                log.warn(" Could not fetch old records: {}", e.getMessage());
             }
         }
 
@@ -717,13 +807,66 @@ public class FeesManagerService {
     }
 
     @Transactional(readOnly = true)
+    public Map<String, Object> getInstallmentConfig(String regNo) {
+        log.debug("🔍 Fetching installment config for regNo: {}", regNo);
+
+        Map<String, Object> config = new HashMap<>();
+
+        try {
+            // Get from fee_installments table (most recent config)
+            List<FeeInstallment> installments = feeInstallmentRepository
+                    .findByRegistrationNumberOrderByDueDateAsc(regNo);
+
+            if (!installments.isEmpty()) {
+                FeeInstallment first = installments.get(0);
+
+                config.put("startDate", first.getInstallmentStartDate());
+                config.put("numberOfInstallments", first.getNumberOfInstallments());
+                config.put("daysBetween", first.getDaysBetweenInstallments());
+                config.put("totalAmount", first.getTotalAmount());
+                config.put("hasExisting", true);
+
+                log.info(" Found installment config from fee_installments");
+                return config;
+            }
+
+            // Fallback: Get from fees table
+            Optional<Fees> feesOpt = feesRepository
+                    .findByRegistrationNumberAndIsDeletedFalse(regNo);
+
+            if (feesOpt.isPresent()) {
+                Fees fees = feesOpt.get();
+
+                config.put("startDate", fees.getInstallmentStartDate());
+                config.put("numberOfInstallments", fees.getNumberOfInstallments());
+                config.put("daysBetween", fees.getDaysBetweenInstallments());
+                config.put("totalAmount", fees.getTotalFees());
+                config.put("hasExisting", false);
+
+                log.info(" Found installment config from fees table");
+                return config;
+            }
+
+            // No config found
+            config.put("hasExisting", false);
+            log.warn(" No installment config found for {}", regNo);
+
+        } catch (Exception e) {
+            log.error("❌ Error fetching installment config: {}", e.getMessage());
+            config.put("hasExisting", false);
+        }
+
+        return config;
+    }
+
+    @Transactional(readOnly = true)
     public List<FeeReceiptResponseDTO> getReceiptsByRegNo(String regNo) {
         log.debug("📋 Fetching receipts for regNo: {}", regNo);
 
         List<FeeReceiptResponseDTO> allReceipts = new ArrayList<>();
 
         try {
-            //  CHANGE: Check if this is an OLD imported student (non-REG numbers)
+            //   Check if this is an OLD imported student (non-REG numbers)
             boolean isOldStudent = (regNo != null && !regNo.startsWith("REG"));
 
             //  ALWAYS fetch NEW receipts from fee_receipts table FIRST
@@ -787,13 +930,13 @@ public class FeesManagerService {
 
                                 allReceipts.addAll(oldReceipts);
                             } else {
-                                log.warn("⚠️ No fee_collections records found for mobile: {}", mobile);
+                                log.warn(" No fee_collections records found for mobile: {}", mobile);
                             }
                         } else {
-                            log.warn("⚠️ Mobile number is null/empty/N/A for regNo: {}", regNo);
+                            log.warn(" Mobile number is null/empty/N/A for regNo: {}", regNo);
                         }
                     } else {
-                        log.warn("⚠️ No fees record found for OLD regNo: {}", regNo);
+                        log.warn(" No fees record found for OLD regNo: {}", regNo);
                     }
 
                 } catch (Exception e) {
@@ -898,7 +1041,7 @@ public class FeesManagerService {
                 .status(receipt.getStatus())
                 .build();
     }
-    
+
     /**
      * Get receipts from fee_collections table (old imported data)
      * Converts FeeCollection records to FeeReceiptResponseDTO for display
@@ -1029,7 +1172,7 @@ public class FeesManagerService {
                 }
             }
         } catch (Exception e) {
-            log.error("⚠️ Could not update admission status: {}", e.getMessage());
+            log.error(" Could not update admission status: {}", e.getMessage());
         }
 
         //  Create refund installment

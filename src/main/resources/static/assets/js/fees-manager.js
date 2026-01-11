@@ -646,13 +646,13 @@ async function changeFeesStatus(regNo) {
         //  Get current status
         const student = feesData.find(s => s.regNo === regNo);
         const currentStatus = student?.status || 'Pending';
-        
+
         //  Set dropdown value
         const statusSelect = document.getElementById('paymentStatus');
         if (statusSelect) {
             statusSelect.value = currentStatus;
         }
-        
+
         new bootstrap.Modal(document.getElementById('changeStatusModal')).show();
     }, 300);
 }
@@ -674,8 +674,8 @@ async function openFeeInstallments(regNo) {
     try {
         showLoading('Loading installments...');
 
-        //  Fetch admission data for installment config
-        const admResponse = await fetch(`/api/admissions/by-regno/${regNo}`, {
+        //  STEP 1: Fetch installment config from backend
+        const configResponse = await fetch(`${API_BASE}/installment-config/${regNo}`, {
             headers: getCsrfHeaders()
         });
 
@@ -686,25 +686,22 @@ async function openFeeInstallments(regNo) {
             totalAmount: student.totalFees || 0
         };
 
-        if (admResponse.ok) {
-            const admission = await admResponse.json();
+        if (configResponse.ok) {
+            const config = await configResponse.json();
 
-            //  Use config from admission if available
-            if (admission.installmentStartDate) {
-                installmentConfig.startDate = admission.installmentStartDate;
-            }
-            if (admission.numberOfInstallments) {
-                installmentConfig.numberOfInstallments = admission.numberOfInstallments;
-            }
-            if (admission.daysBetweenInstallments) {
-                installmentConfig.daysBetween = admission.daysBetweenInstallments;
-            }
-            if (admission.totalInstallmentAmount) {
-                installmentConfig.totalAmount = admission.totalInstallmentAmount;
+            if (config.hasExisting) {
+                installmentConfig = {
+                    startDate: config.startDate,
+                    numberOfInstallments: config.numberOfInstallments,
+                    daysBetween: config.daysBetween,
+                    totalAmount: config.totalAmount || student.totalFees
+                };
+
+                console.log(' Loaded installment config from backend:', installmentConfig);
             }
         }
 
-        // Fetch existing installments
+        //  STEP 2: Fetch existing installments
         const response = await fetch(`${API_BASE}/installments/${regNo}`, {
             headers: getCsrfHeaders()
         });
@@ -719,7 +716,7 @@ async function openFeeInstallments(regNo) {
         document.getElementById('feeInstTotalAmount').value = installmentConfig.totalAmount;
         document.getElementById('feeInstTotalInstAmount').value = installmentConfig.totalAmount;
 
-        //  Pre-fill config fields with proper defaults
+        //  Pre-fill config fields
         if (installmentConfig.startDate) {
             document.getElementById('feeInstStartDate').value = installmentConfig.startDate;
         } else {
@@ -728,27 +725,22 @@ async function openFeeInstallments(regNo) {
 
         if (installmentConfig.numberOfInstallments) {
             document.getElementById('feeInstNoOfInstallments').value = installmentConfig.numberOfInstallments;
-        } else {
-            document.getElementById('feeInstNoOfInstallments').value = ''; //  Empty if not set
         }
 
         if (installmentConfig.daysBetween) {
             document.getElementById('feeInstDays').value = installmentConfig.daysBetween;
-        } else {
-            document.getElementById('feeInstDays').value = ''; //  Empty if not set
         }
 
-        // Display installments
+        // Display installments table (same as before)
         const tbody = document.getElementById('feeInstallmentsBody');
         if (installments.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments found. Click Generate to create installments.</td></tr>';
         } else {
             tbody.innerHTML = installments.map(inst => {
-                // Show refund status with red badge
-                const statusBadge = inst.status === 'Refund' 
+                const statusBadge = inst.status === 'Refund'
                     ? '<span class="badge bg-danger">Refund</span>'
                     : `<span class="badge bg-${inst.status === 'Paid' ? 'success' : 'warning'}">${inst.status}</span>`;
-                
+
                 return `
                 <tr>
                     <td>${inst.dueDate}</td>
@@ -880,20 +872,27 @@ function renderTable() {
     const paginatedData = filteredData.slice(start, end);
 
     tbody.innerHTML = paginatedData.map(item => {
-        //  Database stores NET paid, so just use it directly
         const netPaid = item.totalPaid || 0;
         const totalRefund = item.feesRefund || 0;
-        
-        //  Calculate gross paid (for display only)
         const grossPaid = netPaid + totalRefund;
-        
-        //  Fees Due is already correct in database
         const actualDue = item.feesDue || 0;
-        
-        //  Determine correct status
+
+        //  CHANGE: Determine due date display
+        let dueDateDisplay = '-'; // Default for clear fees
+
+        if (actualDue > 0.01) {
+            // Fees pending - show due date
+            if (item.dueDate) {
+                dueDateDisplay = formatDate(item.dueDate);
+            } else {
+                dueDateDisplay = '<span class="text-muted">Not Set</span>';
+            }
+        }
+
+        // Determine status
         let statusBadge = 'bg-warning';
         let statusText = item.status || 'Pending';
-        
+
         if (totalRefund > 0 && actualDue > 0.01) {
             statusBadge = 'bg-danger';
             statusText = 'Refund';
@@ -903,7 +902,7 @@ function renderTable() {
         } else if (item.status === 'Overdue') {
             statusBadge = 'bg-danger';
         }
-        
+
         return `
             <tr>
                 <td><strong>${item.regNo || 'N/A'}</strong></td>
@@ -918,7 +917,7 @@ function renderTable() {
                     ₹${netPaid.toLocaleString()}
                     ${totalRefund > 0 ? `<br><small class="text-muted">(Gross: ₹${grossPaid.toLocaleString()})</small>` : ''}
                 </td>
-                <td>${item.dueDate ? formatDate(item.dueDate) : '-'}</td>
+                <td>${dueDateDisplay}</td>
                 <td><span class="badge ${statusBadge}">${statusText}</span></td>
                 <td><span class="badge bg-primary">${item.course || 'N/A'}</span></td>
                 <td>
@@ -992,9 +991,9 @@ async function viewReceipts(regNo) {
         } else {
             tbody.innerHTML = receipts.map(receipt => {
                 //  Check data source to determine if it's old imported data
-                const isOldData = receipt.dataSource === 'IMPORTED_OLD_DATA' || 
+                const isOldData = receipt.dataSource === 'IMPORTED_OLD_DATA' ||
                                  receipt.receiptType === 'Old Imported';
-                
+
                 const receiptTypeBadge = isOldData
                     ? '<span class="badge bg-secondary">Old Import</span>'
                     : '<span class="badge bg-success">Regular</span>';
@@ -1596,7 +1595,7 @@ async function saveReceipt() {
 
     const receiptData = {
         regNo: regNo,
-        installmentId: installmentId ? parseInt(installmentId) : null,
+        installmentId: installmentId ? parseInt(installmentId) : null, //   Include installment ID
         receiptDate: document.getElementById('receiptDate').value,
         amountReceived: nowReceiving,
         previousPaid: parseFloat(document.getElementById('receivedFees').value) || 0,
@@ -1618,22 +1617,23 @@ async function saveReceipt() {
         notes: document.getElementById('receiptNotes').value || null
     };
 
+    console.log('💾 Saving receipt with installmentId:', installmentId); //  Debug log
+
     try {
         showLoading(isUpdate ? 'Updating receipt...' : 'Saving receipt...');
 
         const url = isUpdate ? `/api/fees-manager/receipts/${receiptId}` : '/api/fees-manager/receipts';
         const method = isUpdate ? 'PUT' : 'POST';
 
-       const response = await fetch(url, {
-           method: method,
-           headers: getCsrfHeaders(),
-           body: JSON.stringify(receiptData)
-       });
+        const response = await fetch(url, {
+            method: method,
+            headers: getCsrfHeaders(),
+            body: JSON.stringify(receiptData)
+        });
 
         const result = await response.json();
         Swal.close();
 
-        // In saveReceipt function, after successful save:
         if (response.ok) {
             await updateFeesTotalPaid(regNo);
 
@@ -1646,7 +1646,7 @@ async function saveReceipt() {
 
             bootstrap.Modal.getInstance(document.getElementById('feeReceiptModal')).hide();
 
-            //  FORCE RELOAD TO SHOW UPDATED TOTAL PAID
+            // Reload data
             await loadFeesFromBackend();
         } else {
             throw new Error(result.message || `Failed to ${isUpdate ? 'update' : 'save'} receipt`);
@@ -2139,7 +2139,7 @@ async function openFeeReceipt(regNo) {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('receiptDate').value = today;
 
-    // ✅ Handle installments based on student type
+    //  Handle installments based on student type
     if (isOldStudent) {
         // For old students: Make installment optional
         const installmentLabel = document.querySelector('label[for="installment"]');
@@ -2397,7 +2397,7 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                 // Validate PDF size
                 const pdfSizeKB = Math.round((pdfBase64.length * 3 / 4) / 1024);
                 console.log(`📊 PDF size: ${pdfSizeKB} KB (${pdfBase64.length} chars base64)`);
-                
+
                 if (pdfSizeKB > 8192) { // 8MB limit for safety
                     Swal.showValidationMessage(`PDF too large (${pdfSizeKB}KB). Maximum 8MB allowed.`);
                     return false;
@@ -2440,11 +2440,11 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                     if (!response.ok) {
                         const contentType = response.headers.get('content-type');
                         let errorMessage = 'Failed to send email';
-                        
+
                         console.error(' Server response status:', response.status);
-                        console.error(' Server response headers:', 
+                        console.error(' Server response headers:',
                             Object.fromEntries(response.headers.entries()));
-                        
+
                         if (contentType && contentType.includes('application/json')) {
                             try {
                                 const errorData = await response.json();
@@ -2456,7 +2456,7 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                         } else {
                             const errorText = await response.text();
                             console.error(' Server error text:', errorText.substring(0, 500));
-                            
+
                             // Check for specific error patterns
                             if (errorText.includes('JSON parse error')) {
                                 errorMessage = 'Failed to process PDF. Please try again or contact support.';
@@ -2464,7 +2464,7 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                                 errorMessage = 'PDF data was truncated. Please try again.';
                             }
                         }
-                        
+
                         Swal.showValidationMessage(errorMessage);
                         return false;
                     }
@@ -2488,7 +2488,7 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                     console.error(' Error name:', error.name);
                     console.error(' Error message:', error.message);
                     console.error(' Error stack:', error.stack);
-                    
+
                     Swal.showValidationMessage('Network error: ' + error.message);
                     return false;
                 }
@@ -2504,7 +2504,7 @@ async function emailReceipt(receiptNo, studentName, mobile) {
 
     if (isConfirmed && formValues) {
         let message = `Receipt is being sent to: <p class="fw-bold text-primary">${formValues.email}</p>`;
-        
+
         if (formValues.timeout) {
             message += '<p class="small text-muted">⏳ Request timed out but email is being processed in background.</p>';
         } else {

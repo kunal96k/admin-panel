@@ -973,3 +973,47 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'tts_database.admissions' doe
 2026-01-10 16:53:41 [main] INFO  com.tts.sms.config.UserDataLoader - ✅ Default admin user already exists
 2026-01-10 16:53:48 [email-async-1] INFO  c.t.sms.service.EmailTemplateService -  Credentials email sent successfully to: kunalpatil192001@gmail.com
 2026-01-10 16:53:48 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-01-10 19:38:28 [main] INFO  com.tts.sms.SmsApplicationTests - Starting SmsApplicationTests using Java 22.0.2 with PID 11148 (started by KUNAL in D:\tts-sms\sms)
+2026-01-10 19:38:28 [main] INFO  com.tts.sms.SmsApplicationTests - The following 1 profile is active: "prod"
+2026-01-10 19:38:33 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-10 19:38:34 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 967 ms. Found 24 JPA repository interfaces.
+2026-01-10 19:38:39 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: MariaDB103Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-01-10 19:38:39 [main] WARN  org.hibernate.orm.deprecation - HHH90000026: MariaDB103Dialect has been deprecated; use org.hibernate.dialect.MariaDBDialect instead
+2026-01-10 19:38:39 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-10 19:38:44 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-10 19:38:45 [main] INFO  c.tts.sms.config.ApplicationConfig - ===========================================
+2026-01-10 19:38:45 [main] INFO  c.tts.sms.config.ApplicationConfig - Database Configuration:
+2026-01-10 19:38:45 [main] INFO  c.tts.sms.config.ApplicationConfig - - Auto-create enabled: createDatabaseIfNotExist=true
+2026-01-10 19:38:45 [main] INFO  c.tts.sms.config.ApplicationConfig - - Timezone: Asia/Kolkata (IST)
+2026-01-10 19:38:45 [main] INFO  c.tts.sms.config.ApplicationConfig - - DDL Auto: update (will create tables automatically)
+2026-01-10 19:38:45 [main] INFO  c.tts.sms.config.ApplicationConfig - ===========================================
+2026-01-10 19:38:45 [main] INFO  c.tts.sms.config.ApplicationConfig - Application timezone set to: Asia/Kolkata (India Standard Time)
+2026-01-10 19:38:45 [main] INFO  c.tts.sms.config.ApplicationConfig - Current time in IST: 2026-01-10T19:38:45.072887500+05:30[Asia/Kolkata]
+2026-01-10 19:38:47 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-01-10 19:38:54 [main] INFO  com.tts.sms.config.WebConfig - 🔒 HTTPS/SSL is ENABLED - Production mode
+2026-01-10 19:38:59 [main] INFO  c.tts.sms.service.FileStorageService - 📏 Max file size: 5242880 bytes (5MB)
+2026-01-10 19:38:59 [main] INFO  c.tts.sms.service.FileStorageService - 📝 Allowed extensions: [jpg, jpeg, png, gif, webp]
+2026-01-10 19:39:01 [main] INFO  c.t.s.c.ContentNegotiationConfig - 🔧 Configuring Content Negotiation for HTTPS Production
+2026-01-10 19:39:01 [main] INFO  c.t.s.c.ContentNegotiationConfig - ✅ Content Negotiation configured for HTTPS production
+2026-01-10 19:39:02 [main] INFO  com.tts.sms.config.SecurityConfig - Configuring security with FULL CSRF protection…
+2026-01-10 19:39:02 [main] INFO  com.tts.sms.config.SecurityConfig - Configuring CORS with allowed origins: https://team.ttsnashik.com,https://www.ttsnashik.com
+2026-01-10 19:39:02 [main] INFO  c.t.s.c.ContentNegotiationConfig - ✅ Path matching configured for production
+2026-01-10 19:39:02 [main] INFO  c.t.sms.config.SecurityHeadersConfig - ✅ Security headers interceptor registered (SSL: true)
+2026-01-10 19:39:02 [main] INFO  com.tts.sms.config.WebConfig - 🌐 Configuring CORS for production
+2026-01-10 19:39:02 [main] INFO  com.tts.sms.config.WebConfig -  CORS configured for /api/** endpoints
+2026-01-10 19:39:03 [main] INFO  com.tts.sms.config.WebConfig - 📦 Configuring resource handlers for HTTPS production
+2026-01-10 19:39:03 [main] INFO  com.tts.sms.config.WebConfig -  Resource handlers configured with Google Analytics support
+2026-01-10 19:39:03 [main] INFO  com.tts.sms.config.WebConfig -  Resource handlers configured for production
+2026-01-10 19:39:03 [main] INFO  com.tts.sms.config.WebConfig -  Course images: D:\tts-sms\sms\.\uploads\courses
+2026-01-10 19:39:03 [main] INFO  com.tts.sms.config.WebConfig -  CSV uploads: D:\tts-sms\sms\.\uploads\csv
+2026-01-10 19:39:04 [main] INFO  o.s.s.w.a.c.ChannelProcessingFilter - Validated configuration attributes
+2026-01-10 19:39:04 [main] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@62c4b0c7, org.springframework.security.web.access.channel.ChannelProcessingFilter@2469c437, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@8e698d4, org.springframework.security.web.context.SecurityContextHolderFilter@7781d5cc, org.springframework.security.web.header.HeaderWriterFilter@5144d16c, org.springframework.web.filter.CorsFilter@76714c33, org.springframework.security.web.csrf.CsrfFilter@2143563e, org.springframework.security.web.authentication.logout.LogoutFilter@61b309d1, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@89607f4, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@3ba33398, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@42f494b0, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@51275fbe, org.springframework.security.web.session.SessionManagementFilter@6acd6523, org.springframework.security.web.access.ExceptionTranslationFilter@4031bf17, org.springframework.security.web.access.intercept.AuthorizationFilter@254e13ef]
+2026-01-10 19:39:04 [main] INFO  com.tts.sms.config.WebConfig - 🔧 Configuring MIME type mappings for production
+2026-01-10 19:39:04 [main] INFO  com.tts.sms.config.WebConfig -  MIME type mappings configured for production with UTF-8
+2026-01-10 19:39:06 [main] INFO  com.tts.sms.SmsApplicationTests - Started SmsApplicationTests in 40.605 seconds (process running for 62.951)
+2026-01-10 19:39:06 [main] INFO  com.tts.sms.config.CourseDataLoader - ✅ Courses already exist in database. Skipping data initialization.
+2026-01-10 19:39:06 [main] INFO  c.t.sms.config.LeadSourceDataLoader - Lead source data already exists. Skipping default data load.
+2026-01-10 19:39:06 [main] INFO  com.tts.sms.config.BankDataLoader - Bank data already exists. Skipping default data load.
+2026-01-10 19:39:06 [main] INFO  com.tts.sms.config.DataLoader -  Super Admin already exists
+2026-01-10 19:39:06 [main] INFO  com.tts.sms.config.UserDataLoader - ✅ Default admin user already exists
+2026-01-10 19:39:06 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
