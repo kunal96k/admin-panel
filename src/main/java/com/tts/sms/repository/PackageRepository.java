@@ -23,6 +23,8 @@ public interface PackageRepository extends JpaRepository<Package, Long> {
 
     Optional<Package> findByIdAndIsActiveTrue(Long id);
 
+    Optional<Package> findByPackageNameIgnoreCaseAndIsActiveTrue(String packageName);
+
     boolean existsByPackageNameIgnoreCaseAndIsActiveTrue(String packageName);
 
     @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END " +

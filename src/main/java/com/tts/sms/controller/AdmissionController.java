@@ -159,7 +159,30 @@ public class AdmissionController {
     }
 
     /**
-     * Search admissions
+     * Search admissions with cursor pagination (Optimized for performance)
+     */
+    @PostMapping(value = "/search-cursor",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<AdmissionCursorResponseDTO> searchAdmissionsCursor(
+            @RequestBody AdmissionSearchDTO searchDTO) {
+
+        log.debug("POST /api/admissions/search-cursor - {}", searchDTO);
+
+        try {
+            AdmissionCursorResponseDTO results = admissionService.searchAdmissionsCursor(searchDTO);
+            return ResponseEntity.ok(results);
+        } catch (Exception e) {
+            log.error("Cursor Search error: ", e);
+            return ResponseEntity.ok(AdmissionCursorResponseDTO.builder()
+                    .content(List.of())
+                    .hasMore(false)
+                    .build());
+        }
+    }
+
+    /**
+     * Search admissions (Legacy offset pagination)
      */
     @PostMapping(value = "/search",
             consumes = MediaType.APPLICATION_JSON_VALUE,

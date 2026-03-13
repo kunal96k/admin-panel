@@ -1,13 +1,13 @@
 package com.tts.sms.dto;
 
+import java.time.LocalDate;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDate;
-import java.util.List;
 
 /**
  * DTO for Admission Search with filters
@@ -21,6 +21,8 @@ public class AdmissionSearchDTO {
     private String searchTerm;
 
     private String status;
+
+    private String studentCategory;
 
     private String course;
 
@@ -39,6 +41,8 @@ public class AdmissionSearchDTO {
 
     @Builder.Default
     private Integer size = 25;
+
+    private Long lastId; // For cursor pagination
 
     @Builder.Default
     private String sortBy = "admissionDate";

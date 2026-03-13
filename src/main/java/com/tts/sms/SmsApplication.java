@@ -1,23 +1,34 @@
 package com.tts.sms;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.core.env.Environment;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+import org.springframework.core.env.Environment;
+
+import lombok.extern.slf4j.Slf4j;
+
 /**
- * TechnoKraft Student Management System
+ * CRM TTS
  * Main Application Entry Point
  *
- * @author TechnoKraft Services LLP
- * @version 1.0.0
+ * @author TechnoKraft Services LLP.
+ * @version 4.0.0
  */
 @Slf4j
 @SpringBootApplication
-public class SmsApplication {
+public class SmsApplication extends SpringBootServletInitializer {
+
+    /**
+     * Required for deploying as WAR to external servlet container
+     */
+    @Override
+    protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
+        return builder.sources(SmsApplication.class);
+    }
 
     public static void main(String[] args) {
         SpringApplication app = new SpringApplication(SmsApplication.class);

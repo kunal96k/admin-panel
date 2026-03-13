@@ -107,10 +107,58 @@ public class FeeInstallment {
     @Column(name = "updated_by", length = 100)
     private String updatedBy;
 
+    /**
+     *  Type of installment: REGULAR, EXTRA, PARTIAL, ADJUSTMENT
+     */
+    @Column(name = "installment_type", length = 20)
+    @Builder.Default
+    private String installmentType = "REGULAR";
+
+    /**
+     *  Track if this is a custom/edited installment
+     */
+    @Column(name = "is_custom")
+    @Builder.Default
+    private Boolean isCustom = false;
+
+    /**
+     *  Remaining amount after partial payment
+     */
+    @Column(name = "remaining_amount")
+    private Double remainingAmount;
+
+    /**
+     *  Original amount (before edits)
+     */
+    @Column(name = "original_amount")
+    private Double originalAmount;
+
+    /**
+     *  Track payment history
+     */
+    @Column(name = "payment_count")
+    @Builder.Default
+    private Integer paymentCount = 0;
+
     @PrePersist
     private void prePersist() {
         if (status == null) {
             status = "Pending";
+        }
+        if (installmentType == null) {
+            installmentType = "REGULAR";
+        }
+        if (isCustom == null) {
+            isCustom = false;
+        }
+        if (originalAmount == null) {
+            originalAmount = amount;
+        }
+        if (remainingAmount == null) {
+            remainingAmount = amount;
+        }
+        if (paymentCount == null) {
+            paymentCount = 0;
         }
     }
 

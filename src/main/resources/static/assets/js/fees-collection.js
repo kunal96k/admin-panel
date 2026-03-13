@@ -133,74 +133,19 @@
         const paymentMode = $('#paymentModeFilter').val();
         const dataSource = $('#dataSourceFilter').val();
 
+        if (dataTable) {
+            dataTable.destroy();
+            dataTable = null;
+        }
 
-        $.ajax({
-            url: `${API_BASE_URL}`,
-            method: 'GET',
-            data: {
-                fromDate: fromDate,
-                toDate: toDate,
-                paymentMode: paymentMode || null,
-                dataSource: dataSource || null,
-                page: 0,
-                size: 1000000
-            },
-            beforeSend: function(xhr) {
-                if (csrfToken && csrfHeader) {
-                    xhr.setRequestHeader(csrfHeader, csrfToken);
-                }
-            },
-            success: function (response) {
-                if (dataTable) {
-                    dataTable.destroy();
-                }
-
-                // ✅ Check if response.content exists and has data
-                console.log('API Response:', response);
-
-                const hasData = response && response.content && Array.isArray(response.content) && response.content.length > 0;
-
-                if (hasData) {
-                    console.log('✅ Data found:', response.content.length, 'records');
-                    initializeDataTable(response.content);
-                    $('#exportSection').slideDown();
-                } else {
-                    console.log('❌ No data found in response');
-                    // Reset table to empty state
-                    $('#feesCollectionTable tbody').html(`
-                        <tr>
-                            <td colspan="6" class="text-center py-5">
-                                <i class="bi bi-inbox" style="font-size: 3rem; color: #94a3b8;"></i>
-                                <p class="mt-3 mb-0 text-muted">No records found for the selected criteria</p>
-                            </td>
-                        </tr>
-                    `);
-                    $('#exportSection').slideUp();
-                    $('#feesCollectionTable tfoot').hide();
-                }
-
-                fetchStatistics();
-                hideLoading();
-
-                if (!hasData) {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'No Records Found',
-                        text: 'No records found for the selected criteria',
-                        confirmButtonColor: '#667eea'
-                    });
-                }
-            },
-            error: function (xhr, status, error) {
-                hideLoading();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Failed to fetch records: ' + error,
-                    confirmButtonColor: '#667eea'
-                });
-            }
+        initializeDataTable({
+            fromDate,
+            toDate,
+            paymentMode: paymentMode || null,
+            dataSource: dataSource || null
         });
+
+        fetchStatistics();
     }
 
     // Fetch statistics
@@ -210,7 +155,7 @@
         const paymentMode = $('#paymentModeFilter').val();
         const dataSource = $('#dataSourceFilter').val();
 
-         $.ajax({
+        $.ajax({
             url: `${API_BASE_URL}/statistics`,
             method: 'GET',
             data: {
@@ -234,9 +179,80 @@
     }
 
     // Initialize DataTable
-    function initializeDataTable(data) {
+    function initializeDataTable(filters) {
+        // Refresh CSRF token before request
+        initializeCsrfToken();
+
         dataTable = $('#feesCollectionTable').DataTable({
-            data: data,
+            processing: true,
+            serverSide: true,
+            destroy: true,
+            pageLength: 25,
+            lengthMenu: [25, 50, 100],
+            searching: false,
+
+            ajax: function(dtParams, callback) {
+                const page = Math.floor((dtParams.start || 0) / (dtParams.length || 25));
+                const size = dtParams.length || 25;
+
+                $.ajax({
+                    url: `${API_BASE_URL}`,
+                    method: 'GET',
+                    data: {
+                        fromDate: filters.fromDate,
+                        toDate: filters.toDate,
+                        paymentMode: filters.paymentMode,
+                        dataSource: filters.dataSource,
+                        page: page,
+                        size: size
+                    },
+                    beforeSend: function(xhr) {
+                        if (csrfToken && csrfHeader) {
+                            xhr.setRequestHeader(csrfHeader, csrfToken);
+                        }
+                    },
+                    success: function(response) {
+                        const content = response && response.content && Array.isArray(response.content)
+                            ? response.content
+                            : [];
+
+                        const total = response && typeof response.totalElements === 'number'
+                            ? response.totalElements
+                            : 0;
+
+                        $('#exportSection').toggle(total > 0);
+
+                        callback({
+                            draw: dtParams.draw,
+                            recordsTotal: total,
+                            recordsFiltered: total,
+                            data: content
+                        });
+
+                        hideLoading();
+
+                        if (total === 0) {
+                            $('#feesCollectionTable tfoot').hide();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        hideLoading();
+                        callback({
+                            draw: dtParams.draw,
+                            recordsTotal: 0,
+                            recordsFiltered: 0,
+                            data: []
+                        });
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to fetch records: ' + error,
+                            confirmButtonColor: '#667eea'
+                        });
+                    }
+                });
+            },
             columns: [
                 { data: 'receiptNo', defaultContent: 'N/A' },
                 { data: 'studentName', defaultContent: 'N/A' },
@@ -259,30 +275,17 @@
                 },
                 {
                     data: 'paymentMode',
-                    render: function (data) {
-                        if (!data) return '<span class="badge badge-cash">Cash</span>';
-                        let badgeClass = 'badge-cash';
-                        if (data === 'Online') badgeClass = 'badge-online';
-                        else if (data === 'Cheque') badgeClass = 'badge-cheque';
-                        else if (data === 'Card') badgeClass = 'badge-card';
-                        return `<span class="badge ${badgeClass}">${data}</span>`;
-                    },
-                    defaultContent: '<span class="badge badge-cash">Cash</span>'
+                    defaultContent: 'N/A'
                 }
             ],
-            order: [[0, 'desc']],
-            pageLength: 25,
             responsive: true,
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
-                '<"row"<"col-sm-12"tr>>' +
-                '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+            dom: 'Bfrtip',
             language: {
-                search: "_INPUT_",
-                searchPlaceholder: "Search records...",
-                lengthMenu: "Show _MENU_ entries",
-                info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                infoEmpty: "No entries available",
-                infoFiltered: "(filtered from _MAX_ total entries)",
+                processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>',
+                emptyTable: 'No data available',
+                info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+                infoEmpty: 'No entries available',
+                infoFiltered: '(filtered from _MAX_ total entries)',
                 paginate: {
                     first: '<i class="bi bi-chevron-double-left"></i>',
                     previous: '<i class="bi bi-chevron-left"></i>',
@@ -332,7 +335,9 @@
                 $('#footerTotalAmount').html('₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2 }));
             },
             drawCallback: function () {
-                if (data && data.length > 0) {
+                const api = this.api();
+                const rowCount = api.rows({ page: 'current' }).data().length;
+                if (rowCount > 0) {
                     $('#feesCollectionTable tfoot').show();
                 } else {
                     $('#feesCollectionTable tfoot').hide();

@@ -39,59 +39,96 @@
 
         <!-- Action Bar -->
         <div class="action-card">
-            <div class="row align-items-center">
-                <div class="col-lg-6 mb-3 mb-lg-0">
-                    <button class="btn btn-primary btn-action me-2" id="btnNewAdmission">
-                        <i class="bi bi-plus-circle me-2"></i>New Admission
-                    </button>
-                    <button class="btn btn-success btn-action me-2" id="btnImportAdmissions">
-                        <i class="bi bi-upload me-2"></i>Import CSV
-                    </button>
-                    <div class="btn-group">
-                        <button class="btn btn-info btn-action dropdown-toggle"
-                                type="button"
-                                id="btnExportAdmissions"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false">
-                            <i class="bi bi-download me-2"></i>Export
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="btnExportAdmissions">
-                            <li>
-                                <a class="dropdown-item" href="#" onclick="window.exportToCSV(); return false;">
-                                    <i class="bi bi-filetype-csv me-2"></i>Export as CSV
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="#" onclick="window.exportToExcel(); return false;">
-                                    <i class="bi bi-file-earmark-excel me-2"></i>Export as Excel
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="#" onclick="window.exportToPDF(); return false;">
-                                    <i class="bi bi-filetype-pdf me-2"></i>Export as PDF
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="#" onclick="window.copyTableData(); return false;">
-                                    <i class="bi bi-clipboard me-2"></i>Copy to Clipboard
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="#" onclick="window.printTable(); return false;">
-                                    <i class="bi bi-printer me-2"></i>Print
-                                </a>
-                            </li>
-                        </ul>
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-lg-4">
+                    <div class="row g-2">
+                        <div class="col-12 col-sm-4">
+                            <button class="btn btn-primary btn-action w-100" id="btnNewAdmission">
+                                <i class="bi bi-plus-circle me-2"></i>New
+                            </button>
+                        </div>
+                        <div class="col-12 col-sm-4">
+                            <button class="btn btn-success btn-action w-100" id="btnImportAdmissions">
+                                <i class="bi bi-upload me-2"></i>Import
+                            </button>
+                        </div>
+                        <div class="col-12 col-sm-4">
+                            <div class="btn-group w-100">
+                                <button class="btn btn-info btn-action dropdown-toggle w-100"
+                                        type="button"
+                                        id="btnExportAdmissions"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false">
+                                    <i class="bi bi-download me-2"></i>Export
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="btnExportAdmissions">
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="window.exportToCSV(); return false;">
+                                            <i class="bi bi-filetype-csv me-2"></i>Export as CSV
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="window.exportToExcel(); return false;">
+                                            <i class="bi bi-file-earmark-excel me-2"></i>Export as Excel
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="window.exportToPDF(); return false;">
+                                            <i class="bi bi-filetype-pdf me-2"></i>Export as PDF
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="window.copyTableData(); return false;">
+                                            <i class="bi bi-clipboard me-2"></i>Copy to Clipboard
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="window.printTable(); return false;">
+                                            <i class="bi bi-printer me-2"></i>Print
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-lg-6">
-                    <div class="input-group">
-                            <span class="input-group-text bg-white">
-                                <i class="bi bi-search"></i>
-                            </span>
-                        <input type="text" class="form-control" id="searchInput" placeholder="Search by name, mobile, reg no...">
-                        <select class="form-select" id="pageSizeSelect" style="max-width: 150px;">
+
+                <!-- Course Filter with Search -->
+                <div class="col-12 col-md-4 col-lg-3">
+                    <label class="form-label mb-1 fw-bold small">Course Filter</label>
+                    <div class="position-relative">
+                        <input type="text" class="form-control form-control-sm mb-1" id="courseSearchInput"
+                               placeholder="Search courses..." style="font-size: 0.85rem;">
+                        <select class="form-select form-select-sm" id="courseFilter"
+                                style="font-size: 0.85rem;">
+                            <option value="">-- All Courses --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-12 col-md-4 col-lg-2">
+                    <label class="form-label mb-1 fw-bold small">Status Filter</label>
+                    <select class="form-select form-select-sm" id="categoryFilter">
+                        <option value="">-- All Status --</option>
+                        <option value="NEW_STUDENT">New Student</option>
+                        <option value="PURSUING">Pursuing</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="OLD_STUDENT">Old Student</option>
+                        <option value="CANCELLED">Cancelled</option>
+                    </select>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="col-12 col-md-4 col-lg-3">
+                    <label class="form-label mb-1 fw-bold small">Search & Page Size</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Name, Mobile, Reg...">
+                        <select class="form-select" id="pageSizeSelect" style="max-width: 70px;">
                             <option value="25" selected>25</option>
                             <option value="50">50</option>
                             <option value="100">100</option>
@@ -241,10 +278,6 @@
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Cast</label>
                                         <input type="text" class="form-control" id="admCast">
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Category</label>
-                                        <input type="text" class="form-control" id="admCategory">
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Physically Handicapped</label>
@@ -420,6 +453,8 @@
                                 <div class="row">
                                     <div class="col-12 mb-3">
                                         <label class="form-label">Select Batch</label>
+                                        <input type="text" class="form-control form-control-sm mb-2" id="batchSearchInput"
+                                               placeholder="Search batches..." style="font-size: 0.85rem;">
                                         <select class="form-select" id="admBatch" multiple size="5">
                                             <option value="Batch 1">Morning Batch (9 AM - 11 AM)</option>
                                             <option value="Batch 2">Afternoon Batch (2 PM - 4 PM)</option>
@@ -427,16 +462,6 @@
                                             <option value="Batch 4">Weekend Batch (Sat-Sun)</option>
                                         </select>
                                         <small class="text-muted">Hold Ctrl/Cmd to select multiple batches</small>
-                                    </div>
-                                    <div class="col-12 mb-3">
-                                        <label class="form-label">Select Subject</label>
-                                        <select class="form-select" id="admSubject" multiple size="5">
-                                            <option value="Subject 1">Java Fundamentals</option>
-                                            <option value="Subject 2">Advanced Java</option>
-                                            <option value="Subject 3">Database Management</option>
-                                            <option value="Subject 4">Web Technologies</option>
-                                        </select>
-                                        <small class="text-muted">Hold Ctrl/Cmd to select multiple subjects</small>
                                     </div>
                                 </div>
                             </form>
@@ -784,7 +809,7 @@
                                 <a class="myImage"
                                    style="width: 100px; height: 100px; margin-right: 20px;"></a>
                                 <div style="flex: 1;">
-                                    <h2 style="margin: 0; font-weight: bold;" id="printBranchName">TechnoKraft Training & Solutions</h2>
+                                    <h2 style="margin: 0; font-weight: bold;" id="printBranchName">Mahindra Training & Solutions</h2>
                                     <p style="margin: 5px 0;" id="printAddress">1st Floor, Kanchwala Avenue,</p>
                                     <p style="margin: 5px 0;" id="printAddressLine2">Above Viju's Dabeli, College Road, Nashik</p>
                                     <p style="margin: 5px 0;">
@@ -1043,16 +1068,6 @@
                                         <option value="Batch 4">Weekend Batch (Sat-Sun)</option>
                                     </select>
                                     <small class="text-muted">Hold Ctrl/Cmd to select multiple batches</small>
-                                </div>
-                                <div class="col-12 mb-3">
-                                    <label class="form-label">Select Subject</label>
-                                    <select class="form-select" id="transferSubject" multiple size="5">
-                                        <option value="Subject 1">Java Fundamentals</option>
-                                        <option value="Subject 2">Advanced Java</option>
-                                        <option value="Subject 3">Database Management</option>
-                                        <option value="Subject 4">Web Technologies</option>
-                                    </select>
-                                    <small class="text-muted">Hold Ctrl/Cmd to select multiple subjects</small>
                                 </div>
                             </div>
                         </div>

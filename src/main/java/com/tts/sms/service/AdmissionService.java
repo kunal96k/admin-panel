@@ -3,9 +3,11 @@ package com.tts.sms.service;
 import com.tts.sms.dto.*;
 import com.tts.sms.exception.ResourceNotFoundException;
 import com.tts.sms.model.Admission;
+import com.tts.sms.model.Course;
 import com.tts.sms.model.Enquiry;
 import com.tts.sms.model.FeeInstallment;
 import com.tts.sms.model.Fees;
+import com.tts.sms.model.Package;
 import com.tts.sms.repository.*;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,8 @@ public class AdmissionService {
     private final EnquiryRepository enquiryRepository;
     private final FeeInstallmentRepository feeInstallmentRepository;
     private final FeesRepository feesRepository;
+    private final PackageRepository packageRepository;
+    private final CourseRepository courseRepository;
     private final AdmissionMapper admissionMapper;
     private final CSVService csvService;
     private final StudentCategoryService studentCategoryService;
@@ -49,9 +53,66 @@ public class AdmissionService {
 
         List<Admission> admissions = admissionRepository.findAllByOrderByCreatedAtDesc();
 
-        return admissions.stream()
-                .map(this::mapToExportDTO)
+        if (admissions.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Batch fetch all fees data to avoid N+1 database load (database crease issue)
+        List<String> regNos = admissions.stream()
+                .map(Admission::getRegistrationNumber)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+
+        Map<String, Fees> feesMap = feesRepository.findAllByRegistrationNumberInAndIsDeletedFalse(regNos)
+                .stream()
+                .collect(Collectors.toMap(Fees::getRegistrationNumber, f -> f, (existing, replacement) -> existing));
+
+        return admissions.stream()
+                .map(a -> mapToExportDTOOptimized(a, feesMap.get(a.getRegistrationNumber())))
+                .collect(Collectors.toList());
+    }
+
+    private AdmissionExportDTO mapToExportDTOOptimized(Admission admission, Fees fees) {
+        String totalFeesStr = "-";
+        String receivableStr = "-";
+
+        if (fees != null) {
+            totalFeesStr = fees.getTotalFees() != null && fees.getTotalFees() > 0
+                    ? "₹" + String.format("%.2f", fees.getTotalFees())
+                    : "-";
+
+            receivableStr = fees.getFeesDue() != null && fees.getFeesDue() > 0
+                    ? "₹" + String.format("%.2f", fees.getFeesDue())
+                    : "-";
+        } else {
+            if (admission.getTotalPayableFees() != null && admission.getTotalPayableFees() > 0) {
+                totalFeesStr = "₹" + String.format("%.2f", admission.getTotalPayableFees());
+            }
+
+            if (admission.getTotalReceivableFees() != null && admission.getTotalReceivableFees() > 0) {
+                receivableStr = "₹" + String.format("%.2f", admission.getTotalReceivableFees());
+            }
+        }
+
+        String studentName = buildFullName(
+                admission.getFirstName(),
+                admission.getMiddleName(),
+                admission.getLastName());
+
+        return AdmissionExportDTO.builder()
+                .registrationNumber(admission.getRegistrationNumber() != null ? admission.getRegistrationNumber() : "-")
+                .studentName(studentName)
+                .mobile(admission.getMobilePrimary() != null ? admission.getMobilePrimary() : "-")
+                .email(admission.getEmailPrimary() != null ? admission.getEmailPrimary() : "-")
+                .courses(admission.getCourses() != null && !admission.getCourses().isEmpty()
+                        ? String.join(", ", admission.getCourses())
+                        : "-")
+                .college(admission.getCollege() != null ? admission.getCollege() : "-")
+                .totalFees(totalFeesStr)
+                .receivableFees(receivableStr)
+                .admissionDate(admission.getAdmissionDate() != null ? admission.getAdmissionDate().toString() : "-")
+                .studentCategory(admission.getStudentCategory() != null ? admission.getStudentCategory() : "-")
+                .build();
     }
 
     /**
@@ -70,6 +131,9 @@ public class AdmissionService {
 
         admissionRepository.save(admission);
         log.info(" Updated category for {} to: {}", admission.getRegistrationNumber(), newCategory);
+
+        // SYNC WITH FEES MANAGER
+        updateFeesRecord(admission);
     }
 
     /**
@@ -95,60 +159,15 @@ public class AdmissionService {
         admission.setUpdatedBy("MANUAL_OVERRIDE");
 
         Admission updated = admissionRepository.save(admission);
-        log.info("✅ Category updated: {} -> {}", admission.getRegistrationNumber(), newCategory);
+        log.info(" Category updated: {} -> {}", admission.getRegistrationNumber(), newCategory);
+
+        // SYNC WITH FEES MANAGER
+        updateFeesRecord(updated);
 
         return toResponseDTOWithInstallments(updated);
     }
 
-    private AdmissionExportDTO mapToExportDTO(Admission admission) {
-        // Try to get fees data from Fees table
-        Fees fees = feesRepository.findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber())
-                .orElse(null);
-
-        String totalFeesStr = "-";
-        String receivableStr = "-";
-
-        if (fees != null) {
-            totalFeesStr = fees.getTotalFees() != null && fees.getTotalFees() > 0
-                    ? "₹" + String.format("%.2f", fees.getTotalFees())
-                    : "-";
-
-            receivableStr = fees.getFeesDue() != null && fees.getFeesDue() > 0
-                    ? "₹" + String.format("%.2f", fees.getFeesDue())
-                    : "-";
-        } else {
-            if (admission.getTotalPayableFees() != null && admission.getTotalPayableFees() > 0) {
-                totalFeesStr = "₹" + String.format("%.2f", admission.getTotalPayableFees());
-            }
-
-            if (admission.getTotalReceivableFees() != null && admission.getTotalReceivableFees() > 0) {
-                receivableStr = "₹" + String.format("%.2f", admission.getTotalReceivableFees());
-            }
-        }
-
-        //  Construct student name from first, middle, last
-        String studentName = buildFullName(
-                admission.getFirstName(),
-                admission.getMiddleName(),
-                admission.getLastName()
-        );
-
-        return AdmissionExportDTO.builder()
-                .registrationNumber(admission.getRegistrationNumber() != null ? admission.getRegistrationNumber() : "-")
-                .studentName(studentName)
-                .mobile(admission.getMobilePrimary() != null ? admission.getMobilePrimary() : "-")
-                .email(admission.getEmailPrimary() != null ? admission.getEmailPrimary() : "-")
-                .courses(admission.getCourses() != null && !admission.getCourses().isEmpty()
-                        ? String.join(", ", admission.getCourses())
-                        : (admission.getCourses() != null ? admission.getCourses().toString()   : "-"))
-                .college(admission.getCollege() != null ? admission.getCollege() : "-")
-                .totalFees(totalFeesStr)
-                .receivableFees(receivableStr)
-                .admissionDate(admission.getAdmissionDate() != null ? admission.getAdmissionDate().toString() : "-")
-                .build();
-    }
-
-    //  Helper method to build full name
+    // Helper method to build full name
     private String buildFullName(String firstName, String middleName, String lastName) {
         StringBuilder name = new StringBuilder();
 
@@ -157,12 +176,14 @@ public class AdmissionService {
         }
 
         if (middleName != null && !middleName.trim().isEmpty()) {
-            if (name.length() > 0) name.append(" ");
+            if (name.length() > 0)
+                name.append(" ");
             name.append(middleName.trim());
         }
 
         if (lastName != null && !lastName.trim().isEmpty()) {
-            if (name.length() > 0) name.append(" ");
+            if (name.length() > 0)
+                name.append(" ");
             name.append(lastName.trim());
         }
 
@@ -174,14 +195,14 @@ public class AdmissionService {
         log.debug("Fetching admissions - page: {}, size: {}", page, size);
 
         Pageable pageable = PageRequest.of(page, size,
-                Sort.by(Sort.Direction.DESC, "created_at"));
+                Sort.by(Sort.Direction.DESC, "admission_date", "created_at"));
 
         Page<Admission> admissions = admissionRepository.findByIsDeletedFalse(pageable);
 
         log.info("Retrieved {} admissions out of {} total",
                 admissions.getNumberOfElements(), admissions.getTotalElements());
 
-        return admissions.map(this::toResponseDTOWithInstallments);
+        return mapToResponseDTOBatch(admissions);
     }
 
     @Transactional(readOnly = true)
@@ -196,6 +217,55 @@ public class AdmissionService {
     }
 
     @Transactional(readOnly = true)
+    public AdmissionCursorResponseDTO searchAdmissionsCursor(AdmissionSearchDTO searchDTO) {
+        log.debug("Searching admissions with cursor: {}", searchDTO);
+
+        int limit = searchDTO.getSize() != null ? searchDTO.getSize() : 25;
+
+        // Fetch one extra to determine if there's more
+        List<Admission> admissions = admissionRepository.searchWithCursor(
+                searchDTO.getLastId(),
+                searchDTO.getSearchTerm(),
+                searchDTO.getStatus(),
+                searchDTO.getCourse(),
+                searchDTO.getBatch(),
+                searchDTO.getAcademicYear(),
+                searchDTO.getAdmissionDateFrom(),
+                searchDTO.getAdmissionDateTo(),
+                limit + 1,
+                searchDTO.getStudentCategory());
+
+        boolean hasMore = admissions.size() > limit;
+        if (hasMore) {
+            admissions = admissions.subList(0, limit);
+        }
+
+        Long nextCursor = null;
+        if (!admissions.isEmpty()) {
+            nextCursor = admissions.get(admissions.size() - 1).getId();
+        }
+
+        long totalElements = admissionRepository.countSearch(
+                searchDTO.getSearchTerm(),
+                searchDTO.getStatus(),
+                searchDTO.getCourse(),
+                searchDTO.getBatch(),
+                searchDTO.getAcademicYear(),
+                searchDTO.getAdmissionDateFrom(),
+                searchDTO.getAdmissionDateTo(),
+                searchDTO.getStudentCategory());
+
+        List<AdmissionResponseDTO> dtos = mapToResponseDTOBatch(admissions);
+
+        return AdmissionCursorResponseDTO.builder()
+                .content(dtos)
+                .nextCursor(nextCursor)
+                .hasMore(hasMore)
+                .totalElements(totalElements)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
     public Page<AdmissionResponseDTO> searchAdmissions(AdmissionSearchDTO searchDTO) {
         log.debug("Searching admissions with criteria: {}", searchDTO);
 
@@ -203,8 +273,7 @@ public class AdmissionService {
                 "DESC".equalsIgnoreCase(searchDTO.getSortDirection())
                         ? Sort.Direction.DESC
                         : Sort.Direction.ASC,
-                convertToSnakeCase(searchDTO.getSortBy())
-        );
+                convertToSnakeCase(searchDTO.getSortBy()));
 
         Pageable pageable = PageRequest.of(searchDTO.getPage(), searchDTO.getSize(), sort);
 
@@ -218,18 +287,69 @@ public class AdmissionService {
                 searchDTO.getAcademicYear(), searchDTO.getAcademicYear(),
                 searchDTO.getAdmissionDateFrom(), searchDTO.getAdmissionDateFrom(),
                 searchDTO.getAdmissionDateTo(), searchDTO.getAdmissionDateTo(),
-                pageable
-        );
+                searchDTO.getStudentCategory(), searchDTO.getStudentCategory(),
+                pageable);
 
         log.info("Search returned {} results", results.getTotalElements());
-        return results.map(this::toResponseDTOWithInstallments);
+        return mapToResponseDTOBatch(results);
+    }
+
+    /**
+     * Optimized batch mapping from Admission to AdmissionResponseDTO
+     * Eliminates N+1 problem by batch fetching associated Fee data
+     */
+    private Page<AdmissionResponseDTO> mapToResponseDTOBatch(Page<Admission> admissionPage) {
+        List<AdmissionResponseDTO> dtos = mapToResponseDTOBatch(admissionPage.getContent());
+        return new PageImpl<>(dtos, admissionPage.getPageable(), admissionPage.getTotalElements());
+    }
+
+    private List<AdmissionResponseDTO> mapToResponseDTOBatch(List<Admission> admissions) {
+        if (admissions.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Get all registration numbers for batch fetching
+        List<String> regNos = admissions.stream()
+                .map(Admission::getRegistrationNumber)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        // Batch fetch fees summary data
+        Map<String, Fees> feesMap = feesRepository.findAllByRegistrationNumberInAndIsDeletedFalse(regNos)
+                .stream()
+                .collect(Collectors.toMap(Fees::getRegistrationNumber, f -> f, (existing, replacement) -> existing));
+
+        return admissions.stream()
+                .map(admission -> {
+                    AdmissionResponseDTO dto = admissionMapper.toResponseDTO(admission);
+
+                    // Use batch-fetched fees data instead of hitting repository for each row
+                    Fees fees = feesMap.get(admission.getRegistrationNumber());
+                    if (fees != null) {
+                        dto.setTotalPaidAmount(fees.getTotalPaid() != null ? fees.getTotalPaid() : 0.0);
+                        dto.setTotalDueAmount(fees.getFeesDue() != null ? fees.getFeesDue() : 0.0);
+                        dto.setTotalInstallmentAmount(fees.getTotalInstallmentAmount());
+                        dto.setNumberOfInstallments(fees.getNumberOfInstallments());
+                    } else {
+                        dto.setTotalPaidAmount(0.0);
+                        dto.setTotalDueAmount(0.0);
+                    }
+
+                    // Note: full installments list is still skipped for list view to maximize
+                    // performance
+                    // If installments are needed, they should be fetched on-demand or in a separate
+                    // batch
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     /**
      * Convert camelCase field names to snake_case for database queries
      */
     private String convertToSnakeCase(String fieldName) {
-        if (fieldName == null) return "created_at";
+        if (fieldName == null)
+            return "created_at";
 
         // Map common fields
         Map<String, String> fieldMapping = Map.of(
@@ -237,8 +357,7 @@ public class AdmissionService {
                 "updatedAt", "updated_at",
                 "admissionDate", "admission_date",
                 "registrationNumber", "registration_number",
-                "mobilePrimary", "mobile_primary"
-        );
+                "mobilePrimary", "mobile_primary");
 
         return fieldMapping.getOrDefault(fieldName,
                 fieldName.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase());
@@ -263,15 +382,15 @@ public class AdmissionService {
             enquiryId = latestEnquiry.getId();
 
             if (enquiries.size() > 1) {
-                log.info("✅ Found {} enquiries for mobile: {}, using latest (ID: {})",
+                log.info(" Found {} enquiries for mobile: {}, using latest (ID: {})",
                         enquiries.size(), requestDTO.getMobilePrimary(), enquiryId);
             } else {
-                log.info("✅ Found 1 enquiry with ID: {} for mobile: {}",
+                log.info(" Found 1 enquiry with ID: {} for mobile: {}",
                         enquiryId, requestDTO.getMobilePrimary());
             }
         } else {
             enquiryId = null;
-            log.warn("⚠️ No enquiry found for mobile: {} - Creating admission without enquiry link",
+            log.warn(" No enquiry found for mobile: {} - Creating admission without enquiry link",
                     requestDTO.getMobilePrimary());
         }
 
@@ -296,7 +415,7 @@ public class AdmissionService {
         admission.setImportSource(importSource);
         admission.setCreatedBy("SYSTEM");
 
-        // ✅ SET CATEGORY BEFORE FIRST SAVE
+        // SET CATEGORY BEFORE FIRST SAVE
         LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
         String category = studentCategoryService.determineCategory(admission, cutoffDate);
         admission.setStudentCategory(category);
@@ -304,7 +423,7 @@ public class AdmissionService {
 
         // Save admission
         Admission savedAdmission = admissionRepository.save(admission);
-        log.info("✅ Created admission with id: {} and reg no: {} - Category: {}",
+        log.info(" Created admission with id: {} and reg no: {} - Category: {}",
                 savedAdmission.getId(), savedAdmission.getRegistrationNumber(), category);
 
         // Update enquiry status if exists
@@ -317,17 +436,17 @@ public class AdmissionService {
             if (enquiry != null) {
                 enquiry.setStatus("Admitted");
                 enquiryRepository.save(enquiry);
-                log.info("✅ Updated enquiry {} status to 'Admitted'", enquiryId);
+                log.info(" Updated enquiry {} status to 'Admitted'", enquiryId);
             }
         }
 
         // ONLY create fees record for NEW admissions (REG* numbers)
         if (isNewAdmission) {
-            log.info("📝 NEW ADMISSION: Creating fees record for regNo: {}",
+            log.info(" NEW ADMISSION: Creating fees record for regNo: {}",
                     savedAdmission.getRegistrationNumber());
             createFeesRecord(savedAdmission);
         } else {
-            log.info("⏭️ OLD CSV IMPORT: Skipping fees record creation for regNo: {}",
+            log.info(" OLD CSV IMPORT: Skipping fees record creation for regNo: {}",
                     savedAdmission.getRegistrationNumber());
         }
 
@@ -336,22 +455,21 @@ public class AdmissionService {
             generateInstallments(
                     savedAdmission.getRegistrationNumber(),
                     requestDTO.getInstallmentConfig(),
-                    requestDTO.getTotalReceivableFees()
-            );
+                    requestDTO.getTotalReceivableFees());
         }
 
         return toResponseDTOWithInstallments(savedAdmission);
     }
 
     /**
-     *  Create fees record ONLY for NEW admissions (REG* numbers)
+     * Create fees record ONLY for NEW admissions (REG* numbers)
      * This method is NEVER called for old CSV imports
      */
     private void createFeesRecord(Admission admission) {
         try {
-            //  Double-check: Only proceed if registration number starts with REG
+            // Double-check: Only proceed if registration number starts with REG
             if (!admission.getRegistrationNumber().startsWith("REG")) {
-                log.warn("⚠️ Skipping fees record - Not a REG number: {}",
+                log.warn(" Skipping fees record - Not a REG number: {}",
                         admission.getRegistrationNumber());
                 return;
             }
@@ -361,7 +479,7 @@ public class AdmissionService {
                     .findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber());
 
             if (existingFees.isPresent()) {
-                log.info("ℹ️ Fees record already exists for regNo: {} - Skipping",
+                log.info("Fees record already exists for regNo: {} - Skipping",
                         admission.getRegistrationNumber());
                 return;
             }
@@ -395,12 +513,12 @@ public class AdmissionService {
             log.info(" Created and flushed fees record for regNo: {}", admission.getRegistrationNumber());
 
         } catch (Exception e) {
-            log.error("❌ Failed to create fees record for regNo: {}",
+            log.error(" Failed to create fees record for regNo: {}",
                     admission.getRegistrationNumber(), e);
             throw new RuntimeException("Failed to create fees record: " + e.getMessage(), e);
         }
     }
-    
+
     @Transactional
     public AdmissionResponseDTO updateAdmission(Long id, AdmissionRequestDTO requestDTO) {
         log.debug("Updating admission with id: {}", id);
@@ -417,6 +535,9 @@ public class AdmissionService {
 
         Admission updated = admissionRepository.save(existingAdmission);
         log.info("Updated admission with id: {}", id);
+
+        // SYNC WITH FEES MANAGER
+        updateFeesRecord(updated);
 
         return toResponseDTOWithInstallments(updated);
     }
@@ -464,11 +585,9 @@ public class AdmissionService {
                 "\n[Transfer on %s] Academic Year: %s. Reason: %s",
                 transferDTO.getTransferDate(),
                 transferDTO.getAcademicYear(),
-                transferDTO.getTransferReason() != null ? transferDTO.getTransferReason() : "N/A"
-        );
+                transferDTO.getTransferReason() != null ? transferDTO.getTransferReason() : "N/A");
         admission.setNotes(
-                (admission.getNotes() != null ? admission.getNotes() : "") + transferNote
-        );
+                (admission.getNotes() != null ? admission.getNotes() : "") + transferNote);
 
         admission.setUpdatedBy("SYSTEM");
 
@@ -476,7 +595,7 @@ public class AdmissionService {
         log.info("Transferred admission with id: {} to academic year: {}",
                 admission.getId(), transferDTO.getAcademicYear());
 
-        //  UPDATE FEES RECORD
+        // UPDATE FEES RECORD
         updateFeesRecord(transferred);
 
         return toResponseDTOWithInstallments(transferred);
@@ -498,7 +617,7 @@ public class AdmissionService {
 
         admissionRepository.save(admission);
 
-        //  SOFT DELETE FEES RECORD
+        // SOFT DELETE FEES RECORD
         feesRepository.findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber())
                 .ifPresent(fees -> {
                     fees.setIsDeleted(true);
@@ -516,10 +635,8 @@ public class AdmissionService {
         Admission admission = admissionRepository.findById(admissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admission not found: " + admissionId));
 
-        List<FeeInstallment> installments =
-                feeInstallmentRepository.findByRegistrationNumberOrderByDueDateAsc(
-                        admission.getRegistrationNumber()
-                );
+        List<FeeInstallment> installments = feeInstallmentRepository.findByRegistrationNumberOrderByDueDateAsc(
+                admission.getRegistrationNumber());
 
         return installments.stream()
                 .map(admissionMapper::toInstallmentDTO)
@@ -533,7 +650,7 @@ public class AdmissionService {
         List<Enquiry> enquiries = enquiryRepository.findAllByMobileAndIsDeletedFalse(mobileNumber);
 
         if (enquiries.isEmpty()) {
-            log.warn("⚠️ No enquiry found for mobile: {} - Will create without pre-fill", mobileNumber);
+            log.warn(" No enquiry found for mobile: {} - Will create without pre-fill", mobileNumber);
         } else {
             log.info(" Found {} enquiry(ies) for mobile: {}", enquiries.size(), mobileNumber);
         }
@@ -553,7 +670,7 @@ public class AdmissionService {
                     "No enquiry found for mobile: " + mobileNumber);
         }
 
-        //  Handle multiple enquiries - always use latest
+        // Handle multiple enquiries - always use latest
         Enquiry latestEnquiry = enquiries.stream()
                 .max(Comparator.comparing(e -> e.getEnquiryDate() != null
                         ? e.getEnquiryDate()
@@ -561,7 +678,7 @@ public class AdmissionService {
                 .orElse(enquiries.get(0));
 
         if (enquiries.size() > 1) {
-            log.warn("⚠️ Found {} enquiries for mobile: {}. Using latest from {}",
+            log.warn(" Found {} enquiries for mobile: {}. Using latest from {}",
                     enquiries.size(), mobileNumber,
                     latestEnquiry.getEnquiryDate() != null
                             ? latestEnquiry.getEnquiryDate()
@@ -587,13 +704,43 @@ public class AdmissionService {
                 .coursesList(latestEnquiry.getCourses())
                 .source(latestEnquiry.getSource())
                 .date(latestEnquiry.getEnquiryDate())
+                .totalFees(calculateEnquiryFees(latestEnquiry))
                 .build();
+    }
+
+    /**
+     * Calculate estimated fees for an enquiry
+     */
+    private Double calculateEnquiryFees(Enquiry enquiry) {
+        // 1. Check Package
+        if (enquiry.getPackageName() != null && !enquiry.getPackageName().trim().isEmpty()) {
+            Optional<Package> pkg = packageRepository
+                    .findByPackageNameIgnoreCaseAndIsActiveTrue(enquiry.getPackageName());
+            if (pkg.isPresent()) {
+                return pkg.get().getTotalAmount().doubleValue();
+            }
+        }
+
+        // 2. Sum up courses if no package match
+        if (enquiry.getCourses() != null && !enquiry.getCourses().isEmpty()) {
+            double total = 0.0;
+            for (String courseName : enquiry.getCourses()) {
+                Optional<Course> course = courseRepository
+                        .findByCourseNameAndIsActiveTrue(courseName);
+                if (course.isPresent()) {
+                    total += course.get().getCourseFees().doubleValue();
+                }
+            }
+            return total;
+        }
+
+        return 0.0;
     }
 
     // ==================== HELPER METHODS ====================
 
     /**
-     *  Update Fees record when admission is updated
+     * Update Fees record when admission is updated
      */
     private void updateFeesRecord(Admission admission) {
         try {
@@ -605,7 +752,8 @@ public class AdmissionService {
 
                         fees.setStudentName(admission.getFullName());
                         fees.setMobile(admission.getMobilePrimary());
-                        fees.setTotalFees(admission.getTotalReceivableFees() != null ? admission.getTotalReceivableFees() : 0.0);
+                        fees.setTotalFees(
+                                admission.getTotalReceivableFees() != null ? admission.getTotalReceivableFees() : 0.0);
                         fees.setCourse(courseName);
                         fees.setUpdatedBy("SYSTEM");
 
@@ -618,13 +766,13 @@ public class AdmissionService {
                     });
 
         } catch (Exception e) {
-            log.error("❌ Failed to update fees record for regNo: {}",
+            log.error(" Failed to update fees record for regNo: {}",
                     admission.getRegistrationNumber(), e);
         }
     }
 
     private String generateRegistrationNumber() {
-        //  Initialize counter from database only once
+        // Initialize counter from database only once
         if (!counterInitialized) {
             synchronized (AdmissionService.class) {
                 if (!counterInitialized) {
@@ -634,13 +782,13 @@ public class AdmissionService {
             }
         }
 
-        //  Generate next number atomically
+        // Generate next number atomically
         int nextNumber = registrationCounter.getAndIncrement();
         return String.format("%s%04d", REGISTRATION_PREFIX, nextNumber);
     }
 
     /**
-     *  Initialize counter from database - finds max and starts from 8000 or max+1
+     * Initialize counter from database - finds max and starts from 8000 or max+1
      */
     private void initializeRegistrationCounter() {
         try {
@@ -651,7 +799,7 @@ public class AdmissionService {
                     String numberPart = maxRegNo.substring(REGISTRATION_PREFIX.length());
                     int maxNumber = Integer.parseInt(numberPart);
 
-                    //  Start from max+1 or 8000, whichever is greater
+                    // Start from max+1 or 8000, whichever is greater
                     int startNumber = Math.max(maxNumber + 1, 8000);
                     registrationCounter.set(startNumber);
 
@@ -661,7 +809,7 @@ public class AdmissionService {
                     registrationCounter.set(8000);
                 }
             } else {
-                //  No existing records, start from 8000
+                // No existing records, start from 8000
                 registrationCounter.set(8000);
                 log.info(" No existing registrations, starting from 8000");
             }
@@ -674,10 +822,8 @@ public class AdmissionService {
     private AdmissionResponseDTO toResponseDTOWithInstallments(Admission admission) {
         AdmissionResponseDTO dto = admissionMapper.toResponseDTO(admission);
 
-        List<FeeInstallment> installments =
-                feeInstallmentRepository.findByRegistrationNumberOrderByDueDateAsc(
-                        admission.getRegistrationNumber()
-                );
+        List<FeeInstallment> installments = feeInstallmentRepository.findByRegistrationNumberOrderByDueDateAsc(
+                admission.getRegistrationNumber());
 
         dto.setInstallments(installments.stream()
                 .map(admissionMapper::toInstallmentDTO)
@@ -704,16 +850,14 @@ public class AdmissionService {
         Map<String, Long> statusMap = statusStats.stream()
                 .collect(Collectors.toMap(
                         arr -> (String) arr[0],
-                        arr -> (Long) arr[1]
-                ));
+                        arr -> (Long) arr[1]));
         stats.put("byStatus", statusMap);
 
         List<Object[]> yearStats = admissionRepository.getAdmissionStatsByYear();
         Map<String, Long> yearMap = yearStats.stream()
                 .collect(Collectors.toMap(
                         arr -> (String) arr[0],
-                        arr -> (Long) arr[1]
-                ));
+                        arr -> (Long) arr[1]));
         stats.put("byYear", yearMap);
 
         long total = admissionRepository.count();
@@ -766,7 +910,7 @@ public class AdmissionService {
             boolean hasWarnings = false;
 
             try {
-                //  Validate and set defaults
+                // Validate and set defaults
                 if (dto.getMobilePrimary() == null || dto.getMobilePrimary().trim().isEmpty()) {
                     dto.setMobilePrimary("N/A");
                     hasWarnings = true;
@@ -813,15 +957,15 @@ public class AdmissionService {
                     dto.setDocumentType("N/A");
                 }
 
-                //  IMPORTANT: Determine if this is NEW or OLD format
+                // IMPORTANT: Determine if this is NEW or OLD format
                 boolean isNewAdmission = false;
                 importSource = "NEW_ENTRY";
 
                 String regNumber = dto.getRegistrationNumber();
                 if (regNumber != null && !regNumber.trim().isEmpty()) {
-                    //  Check if it's a NEW admission (starts with REG)
+                    // Check if it's a NEW admission (starts with REG)
                     isNewAdmission = regNumber.startsWith("REG");
-                    importSource = isNewAdmission ? "NEW_ENTRY" : "IMPORTED_OLD_DATA"; 
+                    importSource = isNewAdmission ? "NEW_ENTRY" : "IMPORTED_OLD_DATA";
 
                     try {
                         Admission existing = admissionRepository
@@ -836,10 +980,10 @@ public class AdmissionService {
                         log.warn("Could not check existing admission: {}", e.getMessage());
                     }
                 } else {
-                    //  Generate new REG number - This is definitely NEW
+                    // Generate new REG number - This is definitely NEW
                     regNumber = generateRegistrationNumber();
                     isNewAdmission = true;
-                    importSource = "NEW_ENTRY"; 
+                    importSource = "NEW_ENTRY";
                     dto.setRegistrationNumber(regNumber);
                 }
 
@@ -855,7 +999,7 @@ public class AdmissionService {
                 admission.setCategoryUpdatedAt(LocalDateTime.now());
 
                 try {
-                    //  Pass isNewAdmission flag to save method
+                    // Pass isNewAdmission flag to save method
                     saveAdmissionInNewTransaction(admission, isNewAdmission);
                     successCount++;
 
@@ -867,7 +1011,7 @@ public class AdmissionService {
                             rowNumber, isNewAdmission, admission.getMobilePrimary(), admission.getRegistrationNumber());
 
                 } catch (Exception saveEx) {
-                    log.error("❌ Row {}: Save failed - {}", rowNumber, saveEx.getMessage());
+                    log.error(" Row {}: Save failed - {}", rowNumber, saveEx.getMessage());
 
                     errors.add(BulkImportResponseDTO.ImportError.builder()
                             .rowNumber(rowNumber)
@@ -878,7 +1022,7 @@ public class AdmissionService {
                 }
 
             } catch (Exception e) {
-                log.error("❌ Row {}: Processing error - {}", rowNumber, e.getMessage(), e);
+                log.error(" Row {}: Processing error - {}", rowNumber, e.getMessage(), e);
 
                 errors.add(BulkImportResponseDTO.ImportError.builder()
                         .rowNumber(rowNumber)
@@ -902,17 +1046,17 @@ public class AdmissionService {
                 .errors(errors)
                 .message(String.format(
                         "%d/%d records saved (%d warnings, %d failed)",
-                        successCount, dtos.size(), withWarnings, failedCount
-                ))
+                        successCount, dtos.size(), withWarnings, failedCount))
                 .build();
     }
 
-// ==================== GENERATE INSTALLMENTS - STORE CONFIG ====================
+    // ==================== GENERATE INSTALLMENTS - STORE CONFIG
+    // ====================
 
     @Transactional
     public List<FeeInstallmentDTO> generateInstallments(String registrationNumber,
-                                                        InstallmentConfigDTO config,
-                                                        Double totalAmount) {
+            InstallmentConfigDTO config,
+            Double totalAmount) {
         log.debug("Generating {} installments for regNo: {}",
                 config.getNumberOfInstallments(), registrationNumber);
 
@@ -930,7 +1074,7 @@ public class AdmissionService {
                     .dueDate(currentDate)
                     .amount(amountPerInstallment)
                     .status("Pending")
-                    //  Store config in each installment
+                    // Store config in each installment
                     .totalAmount(totalAmount)
                     .totalInstallmentAmount(totalAmount)
                     .installmentStartDate(config.getStartDate())
@@ -945,7 +1089,7 @@ public class AdmissionService {
 
         List<FeeInstallment> saved = feeInstallmentRepository.saveAll(installments);
 
-        //  Update Fees table with installment config
+        // Update Fees table with installment config
         feesRepository.findByRegistrationNumberAndIsDeletedFalse(registrationNumber)
                 .ifPresent(fees -> {
                     fees.setInstallmentStartDate(config.getStartDate());
@@ -963,7 +1107,8 @@ public class AdmissionService {
                 .collect(Collectors.toList());
     }
 
-    // ==================== GET ADMISSION BY ID - HANDLE OLD DATA ====================
+    // ==================== GET ADMISSION BY ID - HANDLE OLD DATA
+    // ====================
 
     @Transactional(readOnly = true)
     public AdmissionResponseDTO getAdmissionById(Long id) {
@@ -978,7 +1123,7 @@ public class AdmissionService {
 
         AdmissionResponseDTO dto = toResponseDTOWithInstallments(admission);
 
-        //  Load installment config from Fees table (FIRST RECORD ONLY)
+        // Load installment config from Fees table (FIRST RECORD ONLY)
         feesRepository.findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber())
                 .ifPresent(fees -> {
                     dto.setInstallmentStartDate(fees.getInstallmentStartDate());
@@ -990,59 +1135,65 @@ public class AdmissionService {
         return dto;
     }
 
-// ==================== HANDLE OLD CSV IMPORTS (NO INSTALLMENT DATA) ====================
+    // ==================== HANDLE OLD CSV IMPORTS (NO INSTALLMENT DATA)
+    // ====================
 
-//    private void createFeesRecord(Admission admission) {
-//        try {
-//            // Check if already exists
-//            Optional<Fees> existingFees = feesRepository
-//                    .findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber());
-//
-//            if (existingFees.isPresent()) {
-//                log.info(" Fees record already exists for regNo: {} - Skipping",
-//                        admission.getRegistrationNumber());
-//                return;
-//            }
-//
-//            String courseName = (admission.getCourses() != null && !admission.getCourses().isEmpty())
-//                    ? String.join(", ", admission.getCourses())
-//                    : "N/A";
-//
-//            Fees fees = Fees.builder()
-//                    .registrationNumber(admission.getRegistrationNumber())
-//                    .admissionId(admission.getId())
-//                    .studentName(admission.getFullName())
-//                    .mobile(admission.getMobilePrimary())
-//                    .totalFees(admission.getTotalReceivableFees() != null ? admission.getTotalReceivableFees() : 0.0)
-//                    .feesDue(admission.getTotalReceivableFees() != null ? admission.getTotalReceivableFees() : 0.0)
-//                    .totalPaid(0.0)
-//                    .dueDate(null)
-//                    .feesRefund(0.0)
-//                    .status("Pending")
-//                    .course(courseName)
-//                    .installmentStartDate(null)
-//                    .numberOfInstallments(null)
-//                    .daysBetweenInstallments(null)
-//                    .totalInstallmentAmount(null)
-//                    .createdBy("SYSTEM")
-//                    .build();
-//
-//            //  ADD: Flush immediately after save
-//            Fees savedFees = feesRepository.save(fees);
-//            feesRepository.flush();
-//
-//            log.info(" Created and flushed fees record for regNo: {}", admission.getRegistrationNumber());
-//
-//        } catch (Exception e) {
-//            log.error("❌ Failed to create fees record for regNo: {}",
-//                    admission.getRegistrationNumber(), e);
-//            //  ADD: Rethrow to prevent partial save
-//            throw new RuntimeException("Failed to create fees record: " + e.getMessage(), e);
-//        }
-//    }
+    // private void createFeesRecord(Admission admission) {
+    // try {
+    // // Check if already exists
+    // Optional<Fees> existingFees = feesRepository
+    // .findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber());
+    //
+    // if (existingFees.isPresent()) {
+    // log.info(" Fees record already exists for regNo: {} - Skipping",
+    // admission.getRegistrationNumber());
+    // return;
+    // }
+    //
+    // String courseName = (admission.getCourses() != null &&
+    // !admission.getCourses().isEmpty())
+    // ? String.join(", ", admission.getCourses())
+    // : "N/A";
+    //
+    // Fees fees = Fees.builder()
+    // .registrationNumber(admission.getRegistrationNumber())
+    // .admissionId(admission.getId())
+    // .studentName(admission.getFullName())
+    // .mobile(admission.getMobilePrimary())
+    // .totalFees(admission.getTotalReceivableFees() != null ?
+    // admission.getTotalReceivableFees() : 0.0)
+    // .feesDue(admission.getTotalReceivableFees() != null ?
+    // admission.getTotalReceivableFees() : 0.0)
+    // .totalPaid(0.0)
+    // .dueDate(null)
+    // .feesRefund(0.0)
+    // .status("Pending")
+    // .course(courseName)
+    // .installmentStartDate(null)
+    // .numberOfInstallments(null)
+    // .daysBetweenInstallments(null)
+    // .totalInstallmentAmount(null)
+    // .createdBy("SYSTEM")
+    // .build();
+    //
+    // // ADD: Flush immediately after save
+    // Fees savedFees = feesRepository.save(fees);
+    // feesRepository.flush();
+    //
+    // log.info(" Created and flushed fees record for regNo: {}",
+    // admission.getRegistrationNumber());
+    //
+    // } catch (Exception e) {
+    // log.error(" Failed to create fees record for regNo: {}",
+    // admission.getRegistrationNumber(), e);
+    // // ADD: Rethrow to prevent partial save
+    // throw new RuntimeException("Failed to create fees record: " + e.getMessage(),
+    // e);
+    // }
+    // }
 
     /**
-     *  Save admission in new transaction with proper error handling
+     * Save admission in new transaction with proper error handling
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveAdmissionInNewTransaction(Admission admission, boolean isNewAdmission) {
@@ -1061,20 +1212,20 @@ public class AdmissionService {
                 throw new IllegalArgumentException("Mobile number cannot be null");
             }
 
-            // ✅ ENSURE CATEGORY IS SET BEFORE SAVE
+            // ENSURE CATEGORY IS SET BEFORE SAVE
             if (admission.getStudentCategory() == null || admission.getStudentCategory().isEmpty()) {
                 LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
                 String category = studentCategoryService.determineCategory(admission, cutoffDate);
                 admission.setStudentCategory(category);
                 admission.setCategoryUpdatedAt(LocalDateTime.now());
-                log.debug("✅ Set category during save: {} -> {}", admission.getRegistrationNumber(), category);
+                log.debug(" Set category during save: {} -> {}", admission.getRegistrationNumber(), category);
             }
 
             // SAVE ADMISSION
             Admission saved = admissionRepository.save(admission);
             admissionRepository.flush();
 
-            log.debug("✅ Saved admission for regNo: {} with category: {}",
+            log.debug(" Saved admission for regNo: {} with category: {}",
                     saved.getRegistrationNumber(), saved.getStudentCategory());
 
             // ONLY create fees record for NEW admissions (REG* numbers)
@@ -1082,33 +1233,33 @@ public class AdmissionService {
                 try {
                     createFeesRecordInNewTransaction(saved);
                 } catch (Exception feesEx) {
-                    log.error("❌ Failed to create fees for regNo: {} - {}",
+                    log.error(" Failed to create fees for regNo: {} - {}",
                             saved.getRegistrationNumber(), feesEx.getMessage());
                 }
             } else {
-                log.debug("⏭️ Skipping fees creation for regNo: {}", saved.getRegistrationNumber());
+                log.debug(" Skipping fees creation for regNo: {}", saved.getRegistrationNumber());
             }
 
         } catch (Exception e) {
-            log.error("❌ Failed to save admission: {}", e.getMessage());
+            log.error(" Failed to save admission: {}", e.getMessage());
             throw new RuntimeException("Save failed: " + e.getMessage(), e);
         }
     }
 
     /**
-     *  Create fees record in NEW transaction (isolated from admission save)
+     * Create fees record in NEW transaction (isolated from admission save)
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createFeesRecordInNewTransaction(Admission admission) {
         try {
-            //  Double-check: Only proceed if registration number starts with REG
+            // Double-check: Only proceed if registration number starts with REG
             if (!admission.getRegistrationNumber().startsWith("REG")) {
-                log.warn("⚠️ Skipping fees record - Not a REG number: {}",
+                log.warn(" Skipping fees record - Not a REG number: {}",
                         admission.getRegistrationNumber());
                 return;
             }
 
-            //  Check if already exists
+            // Check if already exists
             Optional<Fees> existingFees = feesRepository
                     .findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber());
 
@@ -1122,7 +1273,7 @@ public class AdmissionService {
                     ? String.join(", ", admission.getCourses())
                     : "N/A";
 
-            //  CREATE FEES RECORD WITH DEFAULTS
+            // CREATE FEES RECORD WITH DEFAULTS
             Fees fees = Fees.builder()
                     .registrationNumber(admission.getRegistrationNumber())
                     .admissionId(admission.getId())
@@ -1143,14 +1294,14 @@ public class AdmissionService {
                     .isDeleted(false)
                     .build();
 
-            //  SAVE AND FLUSH
+            // SAVE AND FLUSH
             Fees saved = feesRepository.save(fees);
             feesRepository.flush();
 
             log.info(" Created fees record for regNo: {}", admission.getRegistrationNumber());
 
         } catch (Exception e) {
-            log.error("❌ Failed to create fees record for regNo: {}",
+            log.error(" Failed to create fees record for regNo: {}",
                     admission.getRegistrationNumber(), e);
             throw new RuntimeException("Fees creation failed: " + e.getMessage(), e);
         }

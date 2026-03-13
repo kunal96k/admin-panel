@@ -35,7 +35,6 @@
 }
 
 .btn-action:hover {
-    transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
@@ -395,7 +394,6 @@
     }
 
     .btn-action:hover {
-        transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
 

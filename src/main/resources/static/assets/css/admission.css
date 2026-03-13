@@ -1257,6 +1257,7 @@
     border-radius: 0.375rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    width: fit-content;
 }
 
 /* Badge icon sizing */

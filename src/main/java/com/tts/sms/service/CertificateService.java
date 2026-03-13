@@ -75,8 +75,7 @@ public class CertificateService {
                 certificate.getCourseFromDate(),
                 certificate.getCourseToDate(),
                 certificate.getBatch(),
-                certificateImage
-        );
+                certificateImage);
 
         log.info(" Certificate email sent to: {} for certificate: {}",
                 email, certificate.getCertificateNo());
@@ -418,8 +417,7 @@ public class CertificateService {
                 certificate.getCourseFromDate(),
                 certificate.getCourseToDate(),
                 certificate.getBatch(),
-                certificateImage
-        );
+                certificateImage);
 
         log.info(" Certificate email sent to: {} for certificate: {}", email, certificate.getCertificateNo());
     }
@@ -432,7 +430,8 @@ public class CertificateService {
             // Load template - try multiple locations
             File templateFile = new File("src/main/resources/static/assets/images/TTS-Certificate.jpg");
             if (!templateFile.exists()) {
-                templateFile = new File("src/main/resources/static/assets/images/TTS_Certificate-Picsart-AiImageEnhancer_1_rvk0mb.jpg");
+                templateFile = new File(
+                        "src/main/resources/static/assets/images/TTS_Certificate-Picsart-AiImageEnhancer_1_rvk0mb.jpg");
             }
 
             BufferedImage template;
@@ -455,7 +454,7 @@ public class CertificateService {
             g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
             g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-            //  EXACT COORDINATES - DO NOT CHANGE
+            // EXACT COORDINATES - DO NOT CHANGE
             final int STUDENT_NAME_X = 285;
             final int STUDENT_NAME_Y = 550;
             final int COURSE_NAME_X = 285;
@@ -465,13 +464,12 @@ public class CertificateService {
             final int CERT_NO_X = 550;
             final int CERT_NO_Y = 1279;
             final int LOGO_X = 1350;
-            final int LOGO_Y = 1120;
+            final int LOGO_Y = 1225;
             final int LOGO_SIZE = 100;
             final int MAX_TEXT_WIDTH = 1000;
 
             // ========== 1. STUDENT NAME ==========
-            String studentName = certificate.getStudentName() != null ?
-                    certificate.getStudentName().toUpperCase() : "";
+            String studentName = certificate.getStudentName() != null ? certificate.getStudentName().toUpperCase() : "";
 
             Font nameFont = new Font("Century Gothic", Font.BOLD, 50);
             g2d.setFont(nameFont);
@@ -486,8 +484,7 @@ public class CertificateService {
             }
 
             // ========== 2. COURSE NAME ==========
-            String courseName = certificate.getCourseName() != null ?
-                    certificate.getCourseName().toUpperCase() : "";
+            String courseName = certificate.getCourseName() != null ? certificate.getCourseName().toUpperCase() : "";
 
             Font courseFont = new Font("Century Gothic", Font.BOLD, 50);
             g2d.setFont(courseFont);
@@ -506,8 +503,9 @@ public class CertificateService {
             g2d.setFont(dateFont);
             g2d.setColor(Color.BLACK);
 
-            String issueDate = certificate.getIssueDate() != null ?
-                    certificate.getIssueDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : "";
+            String issueDate = certificate.getIssueDate() != null
+                    ? certificate.getIssueDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+                    : "";
             g2d.drawString(issueDate, DATE_X, DATE_Y);
 
             // ========== 4. CERTIFICATE NUMBER ==========
@@ -593,7 +591,8 @@ public class CertificateService {
      * Fit a font to make a text fit in available width.
      * Tries from maxFont down until minFont.
      */
-    private Font fitFontToWidth(Graphics2D g2d, String family, int style, int maxFont, int minFont, String text, int maxWidth) {
+    private Font fitFontToWidth(Graphics2D g2d, String family, int style, int maxFont, int minFont, String text,
+            int maxWidth) {
         if (text == null || text.isEmpty()) {
             return new Font(family, style, Math.max(minFont, Math.min(maxFont, 24)));
         }
@@ -611,7 +610,8 @@ public class CertificateService {
     }
 
     /**
-     * Wrap text into multiple lines using the current font on g2d and respecting the max width.
+     * Wrap text into multiple lines using the current font on g2d and respecting
+     * the max width.
      */
     private List<String> wrapText(Graphics2D g2d, String text, int maxWidth) {
         List<String> lines = new ArrayList<>();
@@ -656,10 +656,8 @@ public class CertificateService {
         return lines;
     }
 
-    // Add this to CertificateService.java
-
     /**
-     *  Issue certificate with unique certificate number
+     * Issue certificate with unique certificate number
      */
     public CertificateDTO issueCertificate(Long id, CertificateDTO dto) {
         Certificate certificate = certificateRepository.findById(id)
@@ -672,7 +670,8 @@ public class CertificateService {
         if (certNo == null || certNo.isEmpty() || certNo.equals("AUTO-GENERATED")) {
             certNo = generateUniqueCertificateNumber();
         } else {
-            // If user provided a number, validate it's unique (skip if it's the same as current)
+            // If user provided a number, validate it's unique (skip if it's the same as
+            // current)
             if (!certNo.equals(certificate.getCertificateNo())) {
                 if (certificateRepository.existsByCertificateNoAndIsActiveTrue(certNo)) {
                     throw new RuntimeException("Certificate number already exists: " + certNo);
@@ -694,14 +693,14 @@ public class CertificateService {
 
         // TRIGGER ADMISSION STATUS UPDATE
         autoCertificateService.updateAdmissionStatusAfterCertificate(
-                savedCertificate.getRegistrationNo()
-        );
+                savedCertificate.getRegistrationNo());
 
         return convertToDTO(savedCertificate);
     }
 
     /**
-     * Generate UNIQUE certificate number with date-time format: CERT20241205143025001
+     * Generate UNIQUE certificate number with date-time format:
+     * CERT20241205143025001
      */
     private String generateUniqueCertificateNumber() {
         LocalDateTime now = LocalDateTime.now();

@@ -1,11 +1,14 @@
 package com.tts.sms.repository;
 
-import com.tts.sms.model.OnlinePaymentMode;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import com.tts.sms.model.OnlinePaymentMode;
 
 @Repository
 public interface OnlinePaymentModeRepository extends JpaRepository<OnlinePaymentMode, Long> {
@@ -14,6 +17,8 @@ public interface OnlinePaymentModeRepository extends JpaRepository<OnlinePayment
      * Find all active payment modes
      */
     List<OnlinePaymentMode> findByIsActiveTrue();
+
+    Page<OnlinePaymentMode> findByIsActiveTrue(Pageable pageable);
 
     /**
      * Check if payment mode title exists (case-insensitive)

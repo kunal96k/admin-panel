@@ -1,10 +1,13 @@
 package com.tts.sms.repository;
 
-import com.tts.sms.model.ManualCertificateLog;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import com.tts.sms.model.ManualCertificateLog;
 
 @Repository
 public interface ManualCertificateLogRepository extends JpaRepository<ManualCertificateLog, Long> {
@@ -13,6 +16,8 @@ public interface ManualCertificateLogRepository extends JpaRepository<ManualCert
      * Find all logs ordered by creation date
      */
     List<ManualCertificateLog> findAllByIsActiveTrueOrderByCreatedAtDesc();
+
+    Page<ManualCertificateLog> findAllByIsActiveTrueOrderByCreatedAtDesc(Pageable pageable);
 
     /**
      * Find logs by registration number

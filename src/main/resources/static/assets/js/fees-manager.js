@@ -6,6 +6,13 @@ let filteredCourses = [];
 let currentPage = 1;
 let entriesPerPage = 25;
 let filteredData = [];
+let totalPages = 0;
+let totalElements = 0;
+let feesFilters = {
+    searchTerm: '',
+    status: '',
+    course: ''
+};
 let currentStudentId = null;
 let importedFeesData = [];
 // CSRF Token Configuration
@@ -207,7 +214,7 @@ function initializeEventListeners() {
     document.getElementById('entriesPerPage').addEventListener('change', function() {
         entriesPerPage = parseInt(this.value);
         currentPage = 1;
-        renderTable();
+        loadFeesFromBackend();
     });
 
     // Import Type Selection
@@ -312,30 +319,12 @@ function filterCourseList() {
 }
 
 function applyFilters() {
-    const statusFilter = document.getElementById('statusFilter')?.value || '';
-    const courseFilter = document.getElementById('courseFilter')?.value || '';
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-
-    filteredData = feesData.filter(item => {
-        // Search filter
-        const matchesSearch = !searchTerm ||
-            item.regNo.toLowerCase().includes(searchTerm) ||
-            item.studentName.toLowerCase().includes(searchTerm) ||
-            item.mobile.includes(searchTerm) ||
-            (item.course && item.course.toLowerCase().includes(searchTerm));
-
-        // Status filter
-        const matchesStatus = !statusFilter || item.status === statusFilter;
-
-        // Course filter
-        const matchesCourse = !courseFilter ||
-            (item.course && item.course.includes(courseFilter));
-
-        return matchesSearch && matchesStatus && matchesCourse;
-    });
+    feesFilters.status = document.getElementById('statusFilter')?.value || '';
+    feesFilters.course = document.getElementById('courseFilter')?.value || '';
+    feesFilters.searchTerm = document.getElementById('searchInput')?.value || '';
 
     currentPage = 1;
-    renderTable();
+    loadFeesFromBackend();
 }
 
 // ==================== IMPORT FUNCTIONS ====================
@@ -528,7 +517,25 @@ async function importFeesCSV() {
 
 async function loadFeesFromBackend() {
     try {
-       const response = await fetch('/api/fees-manager?page=0&size=100000', {
+       const backendPage = Math.max(0, (currentPage || 1) - 1);
+       const params = new URLSearchParams({
+           page: String(backendPage),
+           size: String(entriesPerPage),
+           sortBy: 'createdAt',
+           sortDirection: 'DESC'
+       });
+
+       if (feesFilters.searchTerm && feesFilters.searchTerm.trim() !== '') {
+           params.set('searchTerm', feesFilters.searchTerm.trim());
+       }
+       if (feesFilters.status && feesFilters.status.trim() !== '' && feesFilters.status.trim().toLowerCase() !== 'all') {
+           params.set('status', feesFilters.status.trim());
+       }
+       if (feesFilters.course && feesFilters.course.trim() !== '') {
+           params.set('course', feesFilters.course.trim());
+       }
+
+       const response = await fetch(`/api/fees-manager?${params.toString()}`, {
            headers: getCsrfHeaders()
        });
 
@@ -537,6 +544,11 @@ async function loadFeesFromBackend() {
         }
 
         const data = await response.json();
+
+        totalPages = data.totalPages || 0;
+        totalElements = data.totalElements || 0;
+        currentPage = (data.number ?? 0) + 1;
+        entriesPerPage = data.size || entriesPerPage;
 
         if (data.content && Array.isArray(data.content)) {
             feesData = data.content.map(item => ({
@@ -559,6 +571,14 @@ async function loadFeesFromBackend() {
             feesData = [];
             filteredData = [];
             renderTable();
+
+            // Show user-friendly error
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed to Load Data',
+                text: 'Unable to load fees data. Please refresh the page.',
+                confirmButtonColor: '#667eea'
+            });
         }
     } catch (error) {
         console.error('Error loading fees:', error);
@@ -867,11 +887,8 @@ function renderTable() {
         return;
     }
 
-    const start = (currentPage - 1) * entriesPerPage;
-    const end = start + entriesPerPage;
-    const paginatedData = filteredData.slice(start, end);
-
-    tbody.innerHTML = paginatedData.map(item => {
+    // Backend already returns a single page; do not paginate again on the client.
+    tbody.innerHTML = filteredData.map(item => {
         const netPaid = item.totalPaid || 0;
         const totalRefund = item.feesRefund || 0;
         const grossPaid = netPaid + totalRefund;
@@ -1064,13 +1081,12 @@ document.addEventListener('click', function() {
 });
 
 function updatePagination() {
-    const totalPages = Math.ceil(filteredData.length / entriesPerPage);
-    const start = (currentPage - 1) * entriesPerPage + 1;
-    const end = Math.min(currentPage * entriesPerPage, filteredData.length);
+    const start = totalElements === 0 ? 0 : ((currentPage - 1) * entriesPerPage) + 1;
+    const end = Math.min(currentPage * entriesPerPage, totalElements);
 
-    document.getElementById('entriesStart').textContent = filteredData.length === 0 ? 0 : start;
-    document.getElementById('entriesEnd').textContent = end;
-    document.getElementById('totalEntries').textContent = filteredData.length;
+    document.getElementById('entriesStart').textContent = totalElements === 0 ? 0 : start;
+    document.getElementById('entriesEnd').textContent = totalElements === 0 ? 0 : end;
+    document.getElementById('totalEntries').textContent = totalElements || 0;
 
     const paginationControls = document.getElementById('paginationControls');
     let paginationHTML = '';
@@ -1097,7 +1113,7 @@ function updatePagination() {
 
     // Next button
     paginationHTML += `
-        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+        <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
             <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a>
         </li>
     `;
@@ -1106,10 +1122,9 @@ function updatePagination() {
 }
 
 function changePage(page) {
-    const totalPages = Math.ceil(filteredData.length / entriesPerPage);
     if (page >= 1 && page <= totalPages) {
         currentPage = page;
-        renderTable();
+        loadFeesFromBackend();
     }
 }
 

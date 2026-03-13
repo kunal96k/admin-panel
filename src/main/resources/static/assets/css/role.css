@@ -168,7 +168,6 @@ body {
 .action-btn:hover {
     background-color: #eef2ff;
     color: #4f46e5;
-    transform: translateY(-1px);
 }
 
 .action-btn:active {

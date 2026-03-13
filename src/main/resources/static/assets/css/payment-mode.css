@@ -63,7 +63,6 @@
 }
 
 .btn-action:hover {
-    transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -200,10 +199,6 @@
     background-color: transparent;
 }
 
-.action-btn:hover {
-    transform: translateY(-2px);
-}
-
 .btn-edit {
     border-color: #ffc107;
     color: #ffc107;
@@ -273,7 +268,6 @@
 .page-link:hover {
     background-color: #667eea;
     color: #ffffff;
-    transform: translateY(-2px);
 }
 
 .page-item.active .page-link {

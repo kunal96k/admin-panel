@@ -1,5 +1,3 @@
-console.log('⚙️ Initializing TechnoKraft Admin Console...');
-
 document.addEventListener('DOMContentLoaded', function() {
 
     // ========================================
@@ -16,39 +14,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // ========================================
     // PERMISSION-BASED ACCESS CONTROL
     // ========================================
-    
+
     // Hide menu items user doesn't have access to
     if (typeof userPermissions !== 'undefined' && Array.isArray(userPermissions)) {
-        console.log('🔑 User Permissions:', userPermissions);
-
         document.querySelectorAll('[data-menu-id]').forEach(item => {
             const menuId = parseInt(item.getAttribute('data-menu-id'));
             const hasAccess = userPermissions.includes(menuId);
 
             if (!hasAccess) {
                 item.style.display = 'none';
-                console.log(` Hiding menu: ${menuId}`);
-            } else {
-                console.log(` Showing menu: ${menuId}`);
             }
         });
-    } else {
-        console.warn(' userPermissions not defined - showing all menus');
     }
-    
+
     function checkMenuAccess(menuId) {
-        if (typeof userPermissions === 'undefined') {
-            console.warn(' userPermissions not loaded');
-            return true;
-        }
-        
+        if (typeof userPermissions === 'undefined') return true;
+
         const hasAccess = userPermissions.includes(parseInt(menuId));
-        
+
         if (!hasAccess) {
-            console.warn(`🚫 Access denied to menu ID: ${menuId}`);
             Swal.fire({
                 icon: 'error',
-                title: '🚫 Access Denied',
+                title: ' Access Denied',
                 html: `
                     <div style="text-align: center;">
                         <p style="font-size: 16px; color: #dc2626; margin-bottom: 10px;">
@@ -67,17 +54,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = '/access-denied';
             });
         }
-        
+
         return hasAccess;
     }
-    
+
     // Intercept all menu link clicks for permission checking
     const protectedLinks = document.querySelectorAll('[data-menu-id]');
-    
+
     protectedLinks.forEach(link => {
         link.addEventListener('click', function(e) {
             const menuId = this.getAttribute('data-menu-id');
-            
+
             // Skip check for Dashboard (menu_id = 1)
             if (menuId && menuId !== '1') {
                 if (!checkMenuAccess(menuId)) {
@@ -89,70 +76,67 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, true);
     });
-    
-    console.log(' Permission-based access control initialized');
 
     // Prevent direct URL manipulation
     window.addEventListener('load', function() {
         const currentPath = window.location.pathname;
         const currentLink = document.querySelector(`[href="${currentPath}"]`);
-        
+
         if (currentLink) {
             const menuId = currentLink.getAttribute('data-menu-id');
-            
+
             if (menuId && menuId !== '1' && !checkMenuAccess(menuId)) {
-                console.error('🚫 Unauthorized access attempt detected via URL manipulation');
                 window.location.href = '/access-denied';
             }
         }
     });
 
-   // ========================================
-       // SIDEBAR COLLAPSE (DESKTOP ONLY)
-       // ========================================
+    // ========================================
+    // SIDEBAR COLLAPSE (DESKTOP ONLY)
+    // ========================================
 
-       // Add tooltips to menu items
-       function addTooltips() {
-           document.querySelectorAll('.menu-link').forEach(link => {
-               const text = link.querySelector('.menu-text');
-               if (text) {
-                   link.setAttribute('data-tooltip', text.textContent.trim());
-               }
-           });
+    // Add tooltips to menu items
+    function addTooltips() {
+        document.querySelectorAll('.menu-link').forEach(link => {
+            const text = link.querySelector('.menu-text');
+            if (text) {
+                link.setAttribute('data-tooltip', text.textContent.trim());
+            }
+        });
 
-           document.querySelectorAll('.submenu-link').forEach(link => {
-               link.setAttribute('data-tooltip', link.textContent.trim());
-           });
-       }
+        document.querySelectorAll('.submenu-link').forEach(link => {
+            link.setAttribute('data-tooltip', link.textContent.trim());
+        });
+    }
 
-       addTooltips();
+    addTooltips();
 
-       if (sidebarToggle) {
-           sidebarToggle.addEventListener('click', function(e) {
-               e.preventDefault();
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', function (e) {
+            e.preventDefault();
 
-               // Only work on desktop
-               if (window.innerWidth < 992) {
-                   return;
-               }
+            // Only work on desktop
+            if (window.innerWidth < 992) {
+                return;
+            }
 
-               const isCollapsed = sidebar.classList.toggle('collapsed');
-               mainWrapper.classList.toggle('collapsed');
+            const isCollapsed = sidebar.classList.toggle('collapsed');
+            mainWrapper.classList.toggle('collapsed');
 
-               // Save state
-               localStorage.setItem('sidebarCollapsed', isCollapsed);
+            // Save state
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
 
-               // Close all submenus when collapsing
-               if (isCollapsed) {
-                   document.querySelectorAll('.submenu').forEach(sub => {
-                       sub.classList.remove('open');
-                   });
-                   document.querySelectorAll('.menu-link[data-toggle="submenu"]').forEach(link => {
-                       link.classList.remove('expanded');
-                   });
-               }
-           });
-       }
+            // Close all submenus when collapsing
+            if (isCollapsed) {
+                document.querySelectorAll('.submenu').forEach(sub => {
+                    sub.classList.remove('open');
+                });
+                document.querySelectorAll('.menu-link[data-toggle="submenu"]').forEach(link => {
+                    link.classList.remove('expanded');
+                });
+            }
+        });
+    }
 
        // ========================================
        // MOBILE SIDEBAR TOGGLE
@@ -556,143 +540,97 @@ document.addEventListener('DOMContentLoaded', function() {
                  });
              });
          }
+});
 
          // ========================================
-         // INITIALIZATION
+         // LOGOUT FUNCTIONALITY
          // ========================================
 
-         console.log('%cTechnoKraft Admin Console', 'color: #2563eb; font-size: 24px; font-weight: bold;');
-         console.log('%cVersion 1.0.0 - Initialized Successfully', 'color: #10b981; font-size: 14px;');
+         (function() {
+             'use strict';
 
-         setTimeout(() => {
-             showNotification('Welcome to TechnoKraft Admin Console!', 'success');
-         }, 500);
-   });
+             function initializeDropdowns() {
+                 const dropdowns = document.querySelectorAll('[data-bs-toggle="dropdown"]');
 
-   // ========================================
-   // BOOTSTRAP DROPDOWN
-   // ========================================
+                 dropdowns.forEach(element => {
+                     const existingDropdown = bootstrap.Dropdown.getInstance(element);
+                     if (existingDropdown) {
+                         existingDropdown.dispose();
+                     }
 
-   (function() {
-       'use strict';
+                     new bootstrap.Dropdown(element, {
+                         boundary: 'window',
+                         popperConfig: {
+                             strategy: 'fixed'
+                         }
+                     });
+                 });
+             }
 
-       /**
-        * Initialize Bootstrap Dropdowns
-        * This ensures dropdowns work on all pages including fragments
-        */
-       function initializeDropdowns() {
-           const dropdowns = document.querySelectorAll('[data-bs-toggle="dropdown"]');
+             initializeDropdowns();
 
-           dropdowns.forEach(element => {
-               // Dispose existing instance if present
-               const existingDropdown = bootstrap.Dropdown.getInstance(element);
-               if (existingDropdown) {
-                   existingDropdown.dispose();
-               }
+             function observeContentChanges() {
+                 const mainContent = document.getElementById('mainContent');
 
-               // Create new dropdown instance
-               new bootstrap.Dropdown(element, {
-                   boundary: 'window',
-                   popperConfig: {
-                       strategy: 'fixed'
-                   }
-               });
-           });
+                 if (!mainContent) {
+                     return;
+                 }
 
-           if (dropdowns.length > 0) {
-               console.log(' Initialized', dropdowns.length, 'Bootstrap dropdown(s)');
-           }
-       }
+                 const observer = new MutationObserver(function(mutations) {
+                     let shouldReinit = false;
 
-       // Initialize on DOM ready
-       initializeDropdowns();
+                     mutations.forEach(function(mutation) {
+                         if (mutation.addedNodes.length > 0) {
+                             mutation.addedNodes.forEach(function(node) {
+                                 if (node.nodeType === 1) {
+                                     const hasDropdown = node.querySelector?.('[data-bs-toggle="dropdown"]') ||
+                                         node.matches?.('[data-bs-toggle="dropdown"]');
+                                     if (hasDropdown) {
+                                         shouldReinit = true;
+                                     }
+                                 }
+                             });
+                         }
+                     });
 
-       /**
-        * Reinitialize dropdowns when page content changes
-        * This handles Thymeleaf fragment loading
-        */
-       function observeContentChanges() {
-           const mainContent = document.getElementById('mainContent');
+                     if (shouldReinit) {
+                         setTimeout(initializeDropdowns, 50);
+                     }
+                 });
 
-           if (!mainContent) {
-               console.warn(' Main content container not found');
-               return;
-           }
+                 observer.observe(mainContent, {
+                     childList: true,
+                     subtree: true
+                 });
+             }
 
-           const observer = new MutationObserver(function(mutations) {
-               let shouldReinit = false;
+             observeContentChanges();
 
-               mutations.forEach(function(mutation) {
-                   if (mutation.addedNodes.length > 0) {
-                       mutation.addedNodes.forEach(function(node) {
-                           if (node.nodeType === 1) {
-                               const hasDropdown = node.querySelector?.('[data-bs-toggle="dropdown"]') ||
-                                                 node.matches?.('[data-bs-toggle="dropdown"]');
-                               if (hasDropdown) {
-                                   shouldReinit = true;
-                               }
-                           }
-                       });
-                   }
-               });
+             function handleNavigation() {
+                 const menuLinks = document.querySelectorAll('.menu-link, .submenu-link');
 
-               if (shouldReinit) {
-                   console.log('🔄 Content changed, reinitializing dropdowns...');
-                   setTimeout(initializeDropdowns, 50);
-               }
-           });
+                 menuLinks.forEach(link => {
+                     link.addEventListener('click', function() {
+                         setTimeout(initializeDropdowns, 200);
+                     });
+                 });
+             }
 
-           observer.observe(mainContent, {
-               childList: true,
-               subtree: true
-           });
+             handleNavigation();
 
-           console.log('Content observer initialized');
-       }
+             window.reinitBootstrapDropdowns = function() {
+                 initializeDropdowns();
+             };
 
-       // Start observing content changes
-       observeContentChanges();
+             document.addEventListener('click', function(e) {
+                 if (!e.target.closest('.dropdown')) {
+                     document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                         menu.classList.remove('show');
+                     });
+                 }
+             });
 
-       /**
-        * Reinitialize on navigation
-        * Handles menu link clicks
-        */
-       function handleNavigation() {
-           const menuLinks = document.querySelectorAll('.menu-link, .submenu-link');
-
-           menuLinks.forEach(link => {
-               link.addEventListener('click', function() {
-                   // Wait for content to load, then reinitialize
-                   setTimeout(initializeDropdowns, 200);
-               });
-           });
-       }
-
-       handleNavigation();
-
-       /**
-        * Global function for manual reinitialization
-        * Call from anywhere: window.reinitBootstrapDropdowns()
-        */
-       window.reinitBootstrapDropdowns = function() {
-           console.log('🔄 Manual dropdown reinitialization');
-           initializeDropdowns();
-       };
-
-       /**
-        * Fallback: Close dropdowns on outside click
-        * Ensures dropdowns close even if Bootstrap fails
-        */
-       document.addEventListener('click', function(e) {
-           if (!e.target.closest('.dropdown')) {
-               document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                   menu.classList.remove('show');
-               });
-           }
-       });
-
-       console.log(' Dropdown fix module loaded successfully');
-   })();
+         })();
 
 // ========================================
 // USER MENU DROPDOWN
@@ -701,9 +639,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 (function() {
     'use strict';
-
-    console.log('🔧 Initializing User Menu Dropdown Fix...');
-
     // Wait for DOM to be fully loaded
     function initUserDropdown() {
         const userMenu = document.querySelector('.user-menu');
@@ -711,12 +646,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const dropdown = document.querySelector('.topbar-right .dropdown');
 
         if (!userMenu || !dropdownMenu) {
-            console.warn(' User menu elements not found, retrying...');
             setTimeout(initUserDropdown, 100);
             return;
         }
-
-        console.log(' User menu elements found');
 
         // Step 1: Remove Bootstrap's data-bs-toggle to prevent auto-initialization
         userMenu.removeAttribute('data-bs-toggle');
@@ -727,7 +659,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const bsDropdown = bootstrap.Dropdown.getInstance(userMenu);
             if (bsDropdown) {
                 bsDropdown.dispose();
-                console.log(' Removed existing Bootstrap dropdown instance');
             }
         }
 
@@ -735,8 +666,6 @@ document.addEventListener('DOMContentLoaded', function() {
         userMenu.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-
-            console.log(' User menu clicked');
 
             const isCurrentlyOpen = dropdownMenu.classList.contains('show');
 
@@ -751,11 +680,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isCurrentlyOpen) {
                 dropdownMenu.classList.remove('show');
                 userMenu.setAttribute('aria-expanded', 'false');
-                console.log('📴 Dropdown closed');
             } else {
                 dropdownMenu.classList.add('show');
                 userMenu.setAttribute('aria-expanded', 'true');
-                console.log('📋 Dropdown opened');
             }
         });
 
@@ -774,8 +701,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.stopPropagation();
             }
         });
-
-        console.log(' User menu dropdown initialized successfully (click-only)');
     }
 
     // Initialize when DOM is ready
@@ -835,20 +760,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     // My Profile
                     item.addEventListener('click', function(e) {
                         e.preventDefault();
-                        console.log('📋 Opening Profile Modal');
                         openProfileModal();
                     });
                 } else if (icon && icon.classList.contains('bi-gear')) {
                     // Settings
                     item.addEventListener('click', function(e) {
                         e.preventDefault();
-                        console.log('⚙️ Opening Settings Modal');
                         openSettingsModal();
                     });
                 }
             });
-
-            console.log(' Profile & Settings handlers attached');
         }, 500);
     }
 
@@ -1019,7 +940,6 @@ document.addEventListener('DOMContentLoaded', function() {
             displayProfile(employee);
 
         } catch (error) {
-            console.error('Error loading profile:', error);
             document.getElementById('profileContent').innerHTML = `
                 <div class="alert alert-danger">
                     <i class="bi bi-exclamation-triangle me-2"></i>
@@ -1155,9 +1075,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Export for external use
     window.openProfileModal = openProfileModal;
     window.openSettingsModal = openSettingsModal;
-
-    console.log(' Profile & Settings module loaded');
-
 })();
 
 // ========================================
@@ -1167,9 +1084,7 @@ document.addEventListener('DOMContentLoaded', function() {
 (function() {
     'use strict';
 
-    console.log('🔐 Initializing Reset Password module...');
-
-    // Wait for DOM to be ready
+    // Wait for DOM to be fully loaded
     function initResetPassword() {
         const resetPasswordBtn = document.getElementById('resetPasswordBtn');
         const submitBtn = document.getElementById('submitResetPassword');
@@ -1177,7 +1092,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const confirmPasswordInput = document.getElementById('confirmPassword');
 
         if (!resetPasswordBtn) {
-            console.warn('⚠️ Reset Password button not found, retrying...');
             setTimeout(initResetPassword, 100);
             return;
         }
@@ -1185,7 +1099,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Open modal
         resetPasswordBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            console.log('🔓 Opening Reset Password modal');
 
             const modal = new bootstrap.Modal(document.getElementById('resetPasswordModal'));
             modal.show();
@@ -1211,8 +1124,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (submitBtn) {
             submitBtn.addEventListener('click', handlePasswordReset);
         }
-
-        console.log(' Reset Password module initialized');
     }
 
     // Toggle password visibility
@@ -1315,8 +1226,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle password reset
     async function handlePasswordReset() {
-        console.log('🔐 Attempting password reset...');
-
         const currentPassword = document.getElementById('currentPassword').value;
         const newPassword = document.getElementById('newPassword').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
@@ -1412,7 +1321,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
         } catch (error) {
-            console.error(' Password reset error:', error);
             showError('Failed to reset password. Please try again.');
         } finally {
             submitBtn.disabled = false;
@@ -1500,14 +1408,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnSaveCutoffDate = document.getElementById('btnSaveCutoffDate');
 
     if (!btnConfigureCutoffDate) {
-        console.log('⏭️ Cutoff date button not found (user is not SUPER_ADMIN)');
         return;
     }
 
     // Open modal and load current cutoff date
     btnConfigureCutoffDate.addEventListener('click', async function(e) {
         e.preventDefault();
-        console.log('📅 Opening cutoff date configuration modal');
 
         try {
             const response = await fetch('/api/system-config/cutoff-date', {
@@ -1519,12 +1425,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 const data = await response.json();
                 cutoffDateInput.value = data.cutoffDate;
-                console.log(' Loaded current cutoff date:', data.cutoffDate);
             } else {
                 cutoffDateInput.value = '2025-08-01';
             }
         } catch (error) {
-            console.error('Error loading cutoff date:', error);
             cutoffDateInput.value = '2025-08-01';
         }
 
@@ -1544,11 +1448,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 backdrop.style.display = 'none';
             }
 
-            cutoffDateInput.focus();
             cutoffDateInput.disabled = false;
             cutoffDateInput.readOnly = false;
-
-            console.log(' Date input is now fully interactive');
         }, 300);
     });
 
@@ -1556,22 +1457,18 @@ document.addEventListener('DOMContentLoaded', function() {
     if (cutoffDateInput) {
         cutoffDateInput.addEventListener('click', function(e) {
             e.stopPropagation();
-            console.log('📅 Date input clicked');
 
             try {
                 this.showPicker();
             } catch (err) {
-                console.log('ℹ️ Browser does not support showPicker()');
             }
         });
 
         cutoffDateInput.addEventListener('focus', function() {
-            console.log('📅 Date input focused');
             this.style.backgroundColor = '#fff';
         });
 
         cutoffDateInput.addEventListener('change', function() {
-            console.log('📅 Date changed to:', this.value);
         });
     }
 
@@ -1678,7 +1575,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (error) {
             Swal.close();
-            console.error('Error updating cutoff date:', error);
 
             Swal.fire({
                 icon: 'error',
@@ -1688,6 +1584,4 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
-
-    console.log(' Cutoff date configuration module loaded (SUPER_ADMIN only)');
 })();

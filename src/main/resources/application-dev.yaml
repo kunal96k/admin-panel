@@ -3,8 +3,13 @@
 # ============================================
 server:
   port: ${SERVER_PORT:8081}
+  forward-headers-strategy: framework
   ssl:
     enabled: false
+  servlet:
+    session:
+      cookie:
+        secure: false
   error:
     include-message: always
     include-binding-errors: always
@@ -12,13 +17,10 @@ server:
     include-exception: true
 
 spring:
-  config:
-    activate:
-      on-profile: dev
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:tts_database}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata&useLegacyDatetimeCode=false
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:teamtts}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata&useLegacyDatetimeCode=false
     username: ${DB_USER:root}
-    password: ${DB_PASSWORD:}
+    password: ${DB_PASSWORD:kunal11}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       auto-commit: false

@@ -7,6 +7,10 @@ import com.tts.sms.model.*;
 import com.tts.sms.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +33,12 @@ public class RoleService {
         return roleRepository.findAll().stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<RoleResponseDTO> getRolesPaginated(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdDate").descending());
+        return roleRepository.findAll(pageable).map(this::convertToResponseDTO);
     }
 
     @Transactional(readOnly = true)
@@ -120,6 +130,19 @@ public class RoleService {
                         .menuOrder(menu.getMenuOrder())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<MenuResponseDTO> getMenusPaginated(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("menuOrder").ascending());
+        return menuRepository.findByIsActiveTrue(pageable)
+                .map(menu -> MenuResponseDTO.builder()
+                        .id(menu.getId())
+                        .mainMenu(menu.getMainMenu())
+                        .submenu(menu.getSubmenu())
+                        .menuUrl(menu.getMenuUrl())
+                        .menuOrder(menu.getMenuOrder())
+                        .build());
     }
 
     @Transactional

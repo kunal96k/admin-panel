@@ -9,7 +9,7 @@ app:
     username: ${SUPERADMIN_USERNAME:admin}
     password: ${SUPERADMIN_PASSWORD:admin@123}
 
-  base-url: ${APP_BASE_URL:https://team.ttsnashik.com}  #  CHANGED: HTTPS by default
+  base-url: ${APP_BASE_URL:https://team.ttsnashik.com}
 
   upload:
     courses:
@@ -23,7 +23,7 @@ app:
 
   security:
     cors:
-      allowed-origins: "https://team.ttsnashik.com,https://www.ttsnashik.com"  #  CHANGED: Specific domains
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:https://team.ttsnashik.com,https://team.ttsnashik.com}
       allowed-methods: "GET,POST,PUT,DELETE,OPTIONS,PATCH"
       allowed-headers: "*"
       max-age: 3600
@@ -41,7 +41,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: ${MAIL_USERNAME:kunalpatil192001@gmail.com}
-    password: ${MAIL_PASSWORD:ijpb zhfr ufcw jnpn}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -53,7 +53,7 @@ spring:
           writetimeout: 10000
 
   profiles:
-    active: ${SPRING_PROFILE:prod}
+    active: ${SPRING_PROFILE:dev}
 
   jackson:
     serialization:
@@ -61,7 +61,7 @@ spring:
       fail-on-empty-beans: false
     date-format: yyyy-MM-dd
     time-zone: Asia/Kolkata
-    default-property-inclusion: non_null  #  ADDED: Reduce response size
+    default-property-inclusion: non_null
 
   servlet:
     multipart:
@@ -78,7 +78,7 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        format_sql: false  #  CHANGED: false in production
+        format_sql: false
         dialect: org.hibernate.dialect.MySQLDialect
         jdbc:
           batch_size: 50
@@ -101,7 +101,7 @@ spring:
 
   thymeleaf:
     enabled: true
-    cache: true  #  CHANGED: true in production
+    cache: true
     check-template-location: true
     prefix: classpath:/templates/
     suffix: .html
@@ -115,7 +115,7 @@ spring:
     pathmatch:
       use-suffix-pattern: false
       use-registered-suffix-pattern: false
-      trailing-slash-match: true  #  ADDED
+      trailing-slash-match: true
 
   web:
     resources:
@@ -155,12 +155,12 @@ server:
     min-response-size: 1024
 
   http2:
-    enabled: true  #  ADDED: HTTP/2 support
+    enabled: true
 
 logging:
   level:
     root: INFO
-    com.tts.sms: INFO  #  CHANGED: INFO in production
+    com.tts.sms: INFO
     org.springframework.web: WARN
     org.springframework.security: INFO
     org.hibernate.SQL: WARN

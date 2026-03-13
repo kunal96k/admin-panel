@@ -142,12 +142,7 @@ public class SecurityConfig {
                             response.sendRedirect("/access-denied");
                         })
                 );
-
-        // FORCE HTTPS ONLY IN PROD
-        if (isProd) {
-            http.requiresChannel(channel -> channel.anyRequest().requiresSecure());
-        }
-
+                
         return http.build();
     }
 

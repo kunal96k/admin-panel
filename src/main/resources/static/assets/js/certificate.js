@@ -6,6 +6,9 @@ let totalElements = 0;
 let selectedCertificateId = null;
 let importedCertData = [];
 let allCourses = [];
+let manualLogsPage = 0;
+let manualLogsSize = 25;
+let manualLogsTotalPages = 0;
 // CSRF Token handling
 let csrfToken = null;
 let csrfHeader = null;
@@ -56,7 +59,7 @@ async function updateStatsForCurrentView() {
             ...(search && { search })
         });
 
-        // Refresh CSRF token before request
+         // Refresh CSRF token before request
         initializeCsrfToken();
 
         const response = await fetch(`/api/certificates/stats-filtered?${params}`, {
@@ -1317,7 +1320,6 @@ function changePage(page) {
     loadCertificates();
 }
 
-
 // ==================== AUTO-GENERATE CERTIFICATES ====================
 
 async function autoGenerateCertificates() {
@@ -1606,113 +1608,168 @@ function initializeCertificateButtons() {
 // Call on page load
 document.addEventListener('DOMContentLoaded', initializeCertificateButtons);
 
+async function loadManualLogsPage(page) {
+    Swal.fire({
+        title: 'Loading Logs...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+        customClass: {
+            popup: 'manual-logs-popup'
+        }
+    });
+
+    initializeCsrfToken();
+
+    const params = new URLSearchParams({
+        page,
+        size: manualLogsSize
+    });
+
+    const response = await fetch(`/api/certificates/manual-logs/paged?${params}`, {
+        headers: {
+            ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to load manual certificate logs');
+    }
+
+    const pageData = await response.json();
+    const logs = pageData.content || [];
+    manualLogsTotalPages = pageData.totalPages || 0;
+    manualLogsPage = pageData.number || 0;
+
+    if (manualLogsTotalPages === 0) {
+        Swal.fire({
+            icon: 'info',
+            title: 'No Manual Records',
+            text: 'No manual certificate generation records found',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    const tableRows = logs.map(log => {
+
+            let formattedDate = 'N/A';
+
+            if (log.createdAt) {
+                try {
+                    const dateStr = log.createdAt.replace('T', ' ').split('.')[0];
+                    const createdDate = new Date(dateStr);
+
+                    if (!isNaN(createdDate.getTime())) {
+                        formattedDate = createdDate.toLocaleString('en-IN', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                            timeZone: 'Asia/Kolkata'
+                        });
+                    }
+                } catch (e) {
+                    console.error('Date parsing error:', e, log.createdAt);
+                }
+            }
+
+        return `
+            <tr>
+                <td><strong>${log.registrationNo || '-'}</strong></td>
+                <td>${log.studentName || '-'}</td>
+                <td><span class="badge bg-primary">${log.courseName || '-'}</span></td>
+                <td>
+                    <div>
+                        <i class="bi bi-person-fill text-primary me-1"></i>
+                        <strong>${log.createdByEmployeeName || 'Unknown'}</strong>
+                    </div>
+                </td>
+                <td><small class="text-muted">${log.reason || '-'}</small></td>
+                <td>
+                    <small class="text-success">
+                        <i class="bi bi-calendar-check me-1"></i>${formattedDate}
+                    </small>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    const startEntry = (pageData.number * pageData.size) + (logs.length > 0 ? 1 : 0);
+    const endEntry = (pageData.number * pageData.size) + logs.length;
+
+    const modalHtml = `
+        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+            <table class="table table-sm table-hover">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th>Reg No</th>
+                        <th>Student Name</th>
+                        <th>Course</th>
+                        <th>Created By</th>
+                        <th>Reason</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRows}
+                </tbody>
+            </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted">
+                Showing <strong>${startEntry}</strong> to <strong>${endEntry}</strong>
+                of <strong>${pageData.totalElements}</strong> entries
+            </div>
+            <div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="manualLogsPrev" ${manualLogsPage <= 0 ? 'disabled' : ''}>
+                    Previous
+                </button>
+                <span class="mx-2 text-muted">Page <strong>${manualLogsPage + 1}</strong> / <strong>${manualLogsTotalPages}</strong></span>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="manualLogsNext" ${manualLogsPage >= manualLogsTotalPages - 1 ? 'disabled' : ''}>
+                    Next
+                </button>
+            </div>
+        </div>
+    `;
+
+    Swal.fire({
+        title: '<i class="bi bi-clipboard-data me-2"></i>Manual Certificate Generation Logs',
+        html: modalHtml,
+        width: '950px',
+        confirmButtonText: 'Close',
+        confirmButtonColor: '#667eea',
+        customClass: {
+            popup: 'manual-logs-popup'
+        },
+        didOpen: () => {
+            const prevBtn = document.getElementById('manualLogsPrev');
+            const nextBtn = document.getElementById('manualLogsNext');
+
+            if (prevBtn) {
+                prevBtn.addEventListener('click', async () => {
+                    if (manualLogsPage > 0) {
+                        await loadManualLogsPage(manualLogsPage - 1);
+                    }
+                });
+            }
+
+            if (nextBtn) {
+                nextBtn.addEventListener('click', async () => {
+                    if (manualLogsPage < manualLogsTotalPages - 1) {
+                        await loadManualLogsPage(manualLogsPage + 1);
+                    }
+                });
+            }
+        }
+    });
+}
 
 async function viewManualCertificateLogs() {
     try {
-        Swal.fire({
-            title: 'Loading Logs...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-
-        // Refresh CSRF token before request
-        initializeCsrfToken();
-
-        const response = await fetch('/api/certificates/manual-logs', {
-            headers: {
-                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
-            }
-        });
-
-        const logs = await response.json();
-
-        if (logs.length === 0) {
-            Swal.fire({
-                icon: 'info',
-                title: 'No Manual Records',
-                text: 'No manual certificate generation records found',
-                confirmButtonColor: '#667eea'
-            });
-            return;
-        }
-        const tableRows = logs.map(log => {
-
-                let formattedDate = 'N/A';
-
-                if (log.createdAt) {
-                    try {
-                        const dateStr = log.createdAt.replace('T', ' ').split('.')[0];
-                        const createdDate = new Date(dateStr);
-
-                        if (!isNaN(createdDate.getTime())) {
-                            formattedDate = createdDate.toLocaleString('en-IN', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true,
-                                timeZone: 'Asia/Kolkata'
-                            });
-                        }
-                    } catch (e) {
-                        console.error('Date parsing error:', e, log.createdAt);
-                    }
-                }
-
-            return `
-                <tr>
-                    <td><strong>${log.registrationNo || '-'}</strong></td>
-                    <td>${log.studentName || '-'}</td>
-                    <td><span class="badge bg-primary">${log.courseName || '-'}</span></td>
-                    <td>
-                        <div>
-                            <i class="bi bi-person-fill text-primary me-1"></i>
-                            <strong>${log.createdByEmployeeName || 'Unknown'}</strong>
-                        </div>
-                    </td>
-                    <td><small class="text-muted">${log.reason || '-'}</small></td>
-                    <td>
-                        <small class="text-success">
-                            <i class="bi bi-calendar-check me-1"></i>${formattedDate}
-                        </small>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-
-        Swal.fire({
-            title: '<i class="bi bi-clipboard-data me-2"></i>Manual Certificate Generation Logs',
-            html: `
-                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                    <table class="table table-sm table-hover">
-                        <thead class="table-light sticky-top">
-                            <tr>
-                                <th>Reg No</th>
-                                <th>Student Name</th>
-                                <th>Course</th>
-                                <th>Created By</th>
-                                <th>Reason</th>
-                                <th>Created At</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${tableRows}
-                        </tbody>
-                    </table>
-                </div>
-                <div class="alert alert-info mt-3 mb-0">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Total Manual Records:</strong> ${logs.length}
-                </div>
-            `,
-            width: '950px',
-            confirmButtonText: 'Close',
-            confirmButtonColor: '#667eea',
-            customClass: {
-                popup: 'manual-logs-popup'
-            }
-        });
+        manualLogsPage = 0;
+        await loadManualLogsPage(manualLogsPage);
 
     } catch (error) {
         console.error('Error loading manual logs:', error);

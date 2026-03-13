@@ -62,6 +62,7 @@ public class EnquiryResponseDTO {
     private String assign;  // assignTo
     private String status;
     private String note;
+    private Double totalFees;
 
     // Metadata
     private String importSource;

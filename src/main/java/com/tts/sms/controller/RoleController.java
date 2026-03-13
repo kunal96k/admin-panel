@@ -4,6 +4,7 @@ import com.tts.sms.dto.*;
 import com.tts.sms.service.RoleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,13 @@ public class RoleController {
     @GetMapping
     public ResponseEntity<List<RoleResponseDTO>> getAllRoles() {
         return ResponseEntity.ok(roleService.getAllRoles());
+    }
+
+    @GetMapping("/paged")
+    public ResponseEntity<Page<RoleResponseDTO>> getAllRolesPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size) {
+        return ResponseEntity.ok(roleService.getRolesPaginated(page, size));
     }
 
     @GetMapping("/active")

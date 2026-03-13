@@ -1,20 +1,35 @@
 package com.tts.sms.service;
 
-import com.tts.sms.model.*;
-import com.tts.sms.repository.*;
-import com.tts.sms.dto.ManualCertificateRequestDTO;
-import com.tts.sms.dto.ManualCertificateLogDTO;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
+import com.tts.sms.dto.ManualCertificateLogDTO;
+import com.tts.sms.dto.ManualCertificateRequestDTO;
+import com.tts.sms.model.Admission;
+import com.tts.sms.model.Certificate;
+import com.tts.sms.model.Employee;
+import com.tts.sms.model.Fees;
+import com.tts.sms.model.ManualCertificateLog;
+import com.tts.sms.model.User;
+import com.tts.sms.repository.AdmissionRepository;
+import com.tts.sms.repository.CertificateRepository;
+import com.tts.sms.repository.CourseRepository;
+import com.tts.sms.repository.EmployeeRepository;
+import com.tts.sms.repository.FeesRepository;
+import com.tts.sms.repository.ManualCertificateLogRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -213,6 +228,15 @@ public class AutoCertificateService {
         return logs.stream()
                 .map(this::convertLogToDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ManualCertificateLogDTO> getManualCertificateLogsPaginated(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        return manualCertificateLogRepository
+                .findAllByIsActiveTrueOrderByCreatedAtDesc(pageable)
+                .map(this::convertLogToDTO);
     }
 
     /**

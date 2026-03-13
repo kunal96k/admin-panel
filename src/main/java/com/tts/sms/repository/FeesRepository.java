@@ -12,8 +12,14 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
 @Repository
-public interface FeesRepository extends JpaRepository<Fees, Long> {
+public interface FeesRepository extends JpaRepository<Fees, Long>, JpaSpecificationExecutor<Fees> {
 
     Page<Fees> findByIsDeletedFalse(Pageable pageable);
 
@@ -147,4 +153,10 @@ public interface FeesRepository extends JpaRepository<Fees, Long> {
             "AND f.createdAt >= :fromDate " +
             "AND f.feesDue > 0")
     Double getTotalPendingFromDate(@Param("fromDate") LocalDate fromDate);
+
+    /**
+     * Batch fetch fees for multiple registration numbers
+     */
+    @Query("SELECT f FROM Fees f WHERE f.registrationNumber IN :regNos AND f.isDeleted = false")
+    List<Fees> findAllByRegistrationNumberInAndIsDeletedFalse(@Param("regNos") List<String> registrationNumbers);
 }

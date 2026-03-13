@@ -6,6 +6,7 @@ import com.tts.sms.model.Certificate;
 import com.tts.sms.service.AutoCertificateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -94,6 +95,19 @@ public class AutoCertificateController {
             return ResponseEntity.ok(logs);
         } catch (Exception e) {
             log.error("❌ Error fetching manual logs", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping(value = "/manual-logs/paged", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Page<ManualCertificateLogDTO>> getManualLogsPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size) {
+        try {
+            Page<ManualCertificateLogDTO> logs = autoCertificateService.getManualCertificateLogsPaginated(page, size);
+            return ResponseEntity.ok(logs);
+        } catch (Exception e) {
+            log.error("❌ Error fetching manual logs paged", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

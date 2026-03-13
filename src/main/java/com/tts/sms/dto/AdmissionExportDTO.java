@@ -17,4 +17,5 @@ public class AdmissionExportDTO {
     private String totalFees;      // String to show "-" if null
     private String receivableFees; // String to show "-" if null
     private String admissionDate;
+    private String studentCategory;
 }

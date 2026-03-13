@@ -10,8 +10,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
 
 import java.util.Base64;
 import java.util.List;
@@ -28,6 +31,47 @@ public class FeesManagerController {
 
     // ==================== FEES SUMMARY (MISSING ENDPOINT) ====================
 
+    /**
+     *  Create receipt with smart handling (overpayment/partial payment)
+     */
+    @PostMapping(value = "/receipts/smart", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<FeeReceiptResponseDTO> createFeeReceiptSmart(
+            @Valid @RequestBody FeeReceiptRequestDTO requestDTO) {
+
+        log.info("POST /api/fees-manager/receipts/smart - regNo: {}", requestDTO.getRegNo());
+
+        FeeReceiptResponseDTO receipt = feesManagerService.createFeeReceiptWithSmartHandling(requestDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(receipt);
+    }
+
+    /**
+     *  Update installment
+     */
+    @PutMapping(value = "/installments/{installmentId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<FeeInstallmentDTO> updateInstallment(
+            @PathVariable Long installmentId,
+            @Valid @RequestBody FeeInstallmentUpdateDTO updateDTO) {
+
+        log.info("PUT /api/fees-manager/installments/{}", installmentId);
+
+        FeeInstallmentDTO updated = feesManagerService.updateInstallment(installmentId, updateDTO);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     *  Add extra installment
+     */
+    @PostMapping(value = "/installments/{regNo}/extra", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<FeeInstallmentDTO> addExtraInstallment(
+            @PathVariable String regNo,
+            @Valid @RequestBody FeeInstallmentCreateDTO createDTO) {
+
+        log.info("POST /api/fees-manager/installments/{}/extra", regNo);
+
+        FeeInstallmentDTO extra = feesManagerService.addExtraInstallment(regNo, createDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(extra);
+    }
+    
     /**
      * Get installment configuration for a student
      */
@@ -167,11 +211,41 @@ public class FeesManagerController {
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Page<FeesSummaryDTO>> getAllFees(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "25") int size) {
+            @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String searchTerm,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String course,
+            @RequestParam(required = false) Double minFeesDue,
+            @RequestParam(required = false) Double maxFeesDue,
+            @RequestParam(required = false) Double minTotalFees,
+            @RequestParam(required = false) Double maxTotalFees,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateTo,
+            @RequestParam(required = false) Boolean overdue,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection) {
 
-        log.info("GET /api/fees-manager - page: {}, size: {}", page, size);
+        log.info("GET /api/fees-manager - page: {}, size: {}, searchTerm: {}, status: {}, course: {}, minDue: {}, overdue: {}",
+                page, size, searchTerm, status, course, minFeesDue, overdue);
 
-        Page<FeesSummaryDTO> fees = feesManagerService.getAllFeesSummary(page, size);
+        FeesSearchDTO searchDTO = FeesSearchDTO.builder()
+                .page(page)
+                .size(size)
+                .searchTerm(searchTerm)
+                .status(status)
+                .course(course)
+                .minFeesDue(minFeesDue)
+                .maxFeesDue(maxFeesDue)
+                .minTotalFees(minTotalFees)
+                .maxTotalFees(maxTotalFees)
+                .dueDateFrom(dueDateFrom)
+                .dueDateTo(dueDateTo)
+                .overdue(overdue)
+                .sortBy(sortBy)
+                .sortDirection(sortDirection)
+                .build();
+
+        Page<FeesSummaryDTO> fees = feesManagerService.searchFees(searchDTO);
         return ResponseEntity.ok(fees);
     }
 

@@ -1,14 +1,15 @@
 package com.tts.sms.config;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Security headers configuration for HTTPS production deployment with Google Analytics
@@ -24,7 +25,7 @@ public class SecurityHeadersConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(securityHeadersInterceptor());
-        log.info("✅ Security headers interceptor registered (SSL: {})", sslEnabled);
+        log.info(" Security headers interceptor registered (SSL: {})", sslEnabled);
     }
 
     @Bean
@@ -49,7 +50,7 @@ public class SecurityHeadersConfig implements WebMvcConfigurer {
 
                 // ==================== HSTS ====================
                 // HTTPS Strict Transport Security (production only)
-                if (sslEnabled) {
+                if (request.isSecure()) {
                     response.setHeader("Strict-Transport-Security",
                             "max-age=31536000; includeSubDomains; preload");
                 }
@@ -103,8 +104,7 @@ public class SecurityHeadersConfig implements WebMvcConfigurer {
                                 "frame-src 'self'; " +
                                 "object-src 'none'; " +
                                 "base-uri 'self'; " +
-                                "form-action 'self'; " +
-                                "upgrade-insecure-requests"
+                                "form-action 'self'; "
                 );
 
                 // ==================== CLICKJACKING PROTECTION ====================

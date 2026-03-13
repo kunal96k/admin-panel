@@ -204,7 +204,6 @@
         initializeEventListeners();
         loadEnquiries();
         initializeCourseSelector();
-        loadAllDropdownData();
     });
 
     function initializeCourseSelector() {
@@ -213,12 +212,17 @@
 
         if (!searchInput || !dropdown) return;
 
-        // Load courses on init
-        loadCoursesForSearch();
+        let hasLoadedCourses = false;
 
         // Search input events
-        searchInput.addEventListener('focus', () => {
+        searchInput.addEventListener('focus', async () => {
             dropdown.style.display = 'block';
+
+            if (!hasLoadedCourses) {
+                hasLoadedCourses = true;
+                await loadCoursesForSearch();
+            }
+
             renderCourseDropdown('');
         });
 
@@ -1864,6 +1868,14 @@ async function deleteFollowUp(followUpId, enquiryId) {
            try {
                console.log('🔄 Loading all dropdown data...');
 
+               if (coursesCache.length > 0 && packagesCache.length > 0 && employeesCache.length > 0 && leadSourcesCache.length > 0) {
+                   populateCourseSelect();
+                   populatePackageSelect();
+                   await populateEmployeeSelect();
+                   populateLeadSourceSelect();
+                   return;
+               }
+
                await Promise.all([
                    loadCourses(),
                    loadPackages(),
@@ -1881,10 +1893,9 @@ async function deleteFollowUp(followUpId, enquiryId) {
         // ADD THESE NEW FUNCTIONS
         async function loadCourses() {
             try {
-                const response = await fetch('/api/courses?page=0&size=1000');
+                const response = await fetch('/api/courses/dropdown');
                 if (!response.ok) throw new Error('Failed to load courses');
-                const data = await response.json();
-                coursesCache = data.courses || [];
+                coursesCache = await response.json();
                 populateCourseSelect();
             } catch (error) {
                 console.error('Error loading courses:', error);
@@ -1894,10 +1905,9 @@ async function deleteFollowUp(followUpId, enquiryId) {
 
         async function loadPackages() {
             try {
-                const response = await fetch('/api/packages?page=0&size=1000');
+                const response = await fetch('/api/packages/dropdown');
                 if (!response.ok) throw new Error('Failed to load packages');
-                const data = await response.json();
-                packagesCache = data.packages || [];
+                packagesCache = await response.json();
                 populatePackageSelect();
             } catch (error) {
                 console.error('Error loading packages:', error);
@@ -1912,7 +1922,7 @@ async function deleteFollowUp(followUpId, enquiryId) {
            try {
                console.log('🔄 Loading employees...');
 
-               const response = await fetch('/api/employees?page=0&size=1000', {
+               const response = await fetch('/api/employees?page=0&size=200', {
                    method: 'GET',
                    headers: {
                        'Accept': 'application/json'
@@ -1945,10 +1955,9 @@ async function deleteFollowUp(followUpId, enquiryId) {
 
         async function loadLeadSources() {
             try {
-                const response = await fetch('/lead-source/list?page=0&size=1000');
+                const response = await fetch('/api/lead-sources/dropdown');
                 if (!response.ok) throw new Error('Failed to load lead sources');
-                const data = await response.json();
-                leadSourcesCache = data.data || [];
+                leadSourcesCache = await response.json();
                 populateLeadSourceSelect();
             } catch (error) {
                 console.error('Error loading lead sources:', error);

@@ -11,6 +11,12 @@
 
        let selectedCourses = [];
 
+       let allCoursesForFilter = [];
+
+       let currentSearchTerm = '';
+       let currentStudentCategory = '';
+       let currentCourseFilter = '';
+
        let currentPage = 0;
        let pageSize = 25;
        let totalPages = 0;
@@ -36,10 +42,11 @@
 
 
 // Initialize on page load
-   document.addEventListener('DOMContentLoaded', function() {
+   document.addEventListener('DOMContentLoaded', async function() {
        initializeEventListeners();
        loadAdmissions();
-       loadDropdownData();
+       await loadDropdownData();
+       await loadCoursesForFilter();
        checkEnquiryPreFill();
        initializeCourseSearch();
    });
@@ -103,6 +110,14 @@
 
         // Search
         document.getElementById('searchInput')?.addEventListener('input', debounce(searchAdmissions, 800));
+
+       // Student Status Filter
+       document.getElementById('categoryFilter')?.addEventListener('change', searchAdmissions);
+
+       // Course Filter
+       document.getElementById('courseFilter')?.addEventListener('change', searchAdmissions);
+       document.getElementById('courseSearchInput')?.addEventListener('input', filterCourseList);
+
        // Package selection
        document.getElementById('admPackage')?.addEventListener('change', handlePackageChange);
 
@@ -172,28 +187,50 @@
            }
        }
 
-       function getCsrfToken() {
-           const metaTag = document.querySelector('meta[name="_csrf"]');
-           return metaTag ? metaTag.getAttribute('content') : null;
-       }
-
-       function getCsrfHeader() {
-           const metaTag = document.querySelector('meta[name="_csrf_header"]');
-           return metaTag ? metaTag.getAttribute('content') : 'X-CSRF-TOKEN';
-       }
-
 async function loadAdmissions(page = 0, size = 25) {
     try {
         showLoading('Loading admissions...');
 
-        // Sort by admission_date DESC (latest first)
-        const response = await fetch(`/api/admissions?page=${page}&size=${size}&sort=admission_date,desc`, {
-            method: 'GET',
-            headers: {
+        const hasSearch = !!(currentSearchTerm && currentSearchTerm.trim());
+        const hasStudentCategory = !!(currentStudentCategory && currentStudentCategory.trim());
+        const hasCourse = !!(currentCourseFilter && currentCourseFilter.trim());
+
+        let response;
+
+        if (hasSearch || hasStudentCategory || hasCourse) {
+            const csrfToken = getCsrfToken();
+            const headers = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-            }
-        });
+            };
+            if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
+            const searchDTO = {
+                searchTerm: (currentSearchTerm || '').trim() || null,
+                studentCategory: (currentStudentCategory || '').trim() || null,
+                course: (currentCourseFilter || '').trim() || null,
+                page: page,
+                size: size,
+                sortBy: 'createdAt',
+                sortDirection: 'DESC'
+            };
+
+            response = await fetch('/api/admissions/search', {
+                method: 'POST',
+                headers: headers,
+                credentials: 'include',
+                body: JSON.stringify(searchDTO)
+            });
+        } else {
+            // Sort by admission_date DESC (latest first)
+            response = await fetch(`/api/admissions?page=${page}&size=${size}&sort=admission_date,desc`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
 
         if (!response.ok) {
             throw new Error('Failed to load admissions');
@@ -217,6 +254,45 @@ async function loadAdmissions(page = 0, size = 25) {
         renderAdmissionsTable([]);
         showError('Failed to load admissions');
     }
+}
+
+// ==================== COURSE FILTER (SERVER-SIDE SEARCH INPUTS) ====================
+
+async function loadCoursesForFilter() {
+    try {
+        const response = await fetch('/api/courses/dropdown');
+        if (response.ok) {
+            allCoursesForFilter = await response.json();
+            populateCourseFilter(allCoursesForFilter);
+        }
+    } catch (error) {
+    }
+}
+
+function populateCourseFilter(courses) {
+    const select = document.getElementById('courseFilter');
+    if (!select) return;
+
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">-- All Courses --</option>';
+
+    (courses || []).forEach(course => {
+        const option = document.createElement('option');
+        option.value = course.courseName;
+        option.textContent = course.courseName;
+        select.appendChild(option);
+    });
+
+    if (currentValue) select.value = currentValue;
+}
+
+function filterCourseList() {
+    const input = document.getElementById('courseSearchInput');
+    const searchTerm = (input?.value || '').toLowerCase().trim();
+    const filtered = (allCoursesForFilter || []).filter(c =>
+        String(c.courseName || '').toLowerCase().includes(searchTerm)
+    );
+    populateCourseFilter(filtered);
 }
 
 // ==================== GET CATEGORY BADGE ====================
@@ -263,7 +339,6 @@ function renderAdmissionsTable(admissions) {
 
     tbody.innerHTML = admissions.map(adm => {
         // : Log the category data
-        console.log('🔍 Rendering:', adm.registrationNumber, 'Category:', adm.studentCategory);
 
         // Format courses
         const courses = adm.coursesList && adm.coursesList.length > 0
@@ -512,6 +587,78 @@ function handleAction(action, id) {
 // Make getCategoryBadge globally available
 window.getCategoryBadge = getCategoryBadge;
 
+async function loadAdmissionForEdit(id) {
+    try {
+        showLoading('Loading admission details...');
+
+        const csrfToken = getCsrfToken();
+        const headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        };
+        if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
+        const response = await fetch(`/api/admissions/${id}`, {
+            method: 'GET',
+            headers: headers,
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to load admission');
+
+        const admission = await response.json();
+        Swal.close();
+
+        const modalTitle = document.getElementById('admissionModalTitle');
+        if (modalTitle) modalTitle.textContent = 'Update Admission';
+
+        const finishBtn = document.getElementById('btnFinish');
+        if (finishBtn) {
+            finishBtn.dataset.admissionId = id;
+            finishBtn.textContent = 'Update';
+        }
+
+        prefillAdmissionForm(admission, true);
+
+        if (admission.installments && admission.installments.length > 0) {
+            displayExistingInstallments(admission.installments);
+
+            if (admission.installmentStartDate) {
+                setValue('instStartDate', admission.installmentStartDate);
+            }
+            if (admission.numberOfInstallments) {
+                setValue('instNoOfInstallments', admission.numberOfInstallments);
+            }
+            if (admission.daysBetweenInstallments) {
+                setValue('instDays', admission.daysBetweenInstallments);
+            }
+            if (admission.totalInstallmentAmount) {
+                setValue('instTotalInstAmount', admission.totalInstallmentAmount);
+            }
+        } else {
+            const tbody = document.getElementById('installmentsBody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments found. You can generate new ones.</td></tr>';
+            }
+        }
+
+        setValue('instTotalAmount', admission.totalReceivableFees || 0);
+
+        currentTab = 1;
+        updateNavigationButtons();
+        updateProgress(16.66);
+
+        const modalEl = document.getElementById('admissionModal');
+        if (!modalEl) return;
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+    } catch (error) {
+        Swal.close();
+        showError('Failed to load admission details: ' + (error?.message || error));
+    }
+}
+
 async function openNewAdmissionModal() {
     const fromEnquiry = sessionStorage.getItem('admissionFromEnquiry');
 
@@ -698,7 +845,6 @@ function showErrorWithDetails(title, message, technicalError = null) {
 }
 
     function prefillAdmissionForm(data, isUpdate = false) {
-         console.log('Pre-filling form with:', data);
      
          //  Helper function to format date
          function formatDate(dateValue) {
@@ -768,51 +914,134 @@ function showErrorWithDetails(title, message, technicalError = null) {
          setValue('admNotes', data.note || data.notes);
          setValue('admRollNo', data.rollNumber);
          setValue('admAdmissionDate', formatDate(data.admissionDate)); //  Format date
-     
-         // Tab 3: Properly populate courses with amounts
+
+         // Tab 3: Courses & fees
          if (data.coursesList && data.coursesList.length > 0) {
-             const totalPayable = data.totalPayableFees || 0;
-             const amountPerCourse = totalPayable / data.coursesList.length;
-     
-             selectedCourses = data.coursesList.map((courseName, index) => ({
-                 id: index + 1,
-                 name: courseName,
-                 price: amountPerCourse
-             }));
-     
+             const coursesMaster = Array.isArray(allCoursesForFilter) ? allCoursesForFilter : [];
+             const totalPayableFromData = Number(data.totalPayableFees) || 0;
+             const amountPerCourse = data.coursesList.length > 0 ? (totalPayableFromData / data.coursesList.length) : 0;
+
+             const matchedCourses = [];
+             const seenCourseIds = new Set();
+
+             data.coursesList.forEach((courseName, index) => {
+                 const raw = String(courseName || '').trim();
+                 if (!raw) return;
+
+                 const normalizedRaw = raw.toLowerCase();
+                 const exact = coursesMaster.find(c => String(c.courseName || '').trim().toLowerCase() === normalizedRaw);
+
+                 if (exact) {
+                     if (!seenCourseIds.has(exact.id)) {
+                         matchedCourses.push({
+                             id: exact.id,
+                             name: String(exact.courseName || raw).trim(),
+                             price: parseFloat(exact.courseFees) || 0
+                         });
+                         seenCourseIds.add(exact.id);
+                     }
+                     return;
+                 }
+
+                 // Try splitting by comma/pipe
+                 const parts = raw
+                     .split(/\s*,\s*|\s*\|\s*/g)
+                     .map(p => p.trim())
+                     .filter(Boolean);
+
+                 if (parts.length > 1) {
+                     let added = false;
+                     parts.forEach(part => {
+                         const partNorm = part.toLowerCase();
+                         const partMatch = coursesMaster.find(c => String(c.courseName || '').trim().toLowerCase() === partNorm);
+                         if (partMatch && !seenCourseIds.has(partMatch.id)) {
+                             matchedCourses.push({
+                                 id: partMatch.id,
+                                 name: String(partMatch.courseName || part).trim(),
+                                 price: parseFloat(partMatch.courseFees) || 0
+                             });
+                             seenCourseIds.add(partMatch.id);
+                             added = true;
+                         }
+                     });
+
+                     if (added) return;
+                 }
+
+                 // Fallback: substring matches (handles strings like "FULL STACK FRONTEND PYTHON DJANGO")
+                 const substringMatches = coursesMaster
+                     .filter(c => {
+                         const name = String(c.courseName || '').trim();
+                         if (!name) return false;
+                         return normalizedRaw.includes(name.toLowerCase());
+                     })
+                     .sort((a, b) => String(b.courseName || '').length - String(a.courseName || '').length);
+
+                 if (substringMatches.length > 0) {
+                     substringMatches.forEach(m => {
+                         if (!seenCourseIds.has(m.id)) {
+                             matchedCourses.push({
+                                 id: m.id,
+                                 name: String(m.courseName || '').trim(),
+                                 price: parseFloat(m.courseFees) || 0
+                             });
+                             seenCourseIds.add(m.id);
+                         }
+                     });
+                     return;
+                 }
+
+                 // Nothing matched
+                 matchedCourses.push({
+                     id: index + 1,
+                     name: raw,
+                     price: amountPerCourse || 0
+                 });
+             });
+
+             selectedCourses = matchedCourses;
              renderSelectedCourses();
+             calculateTotalFees();
          }
-     
-         setValue('admTotalFees', data.totalPayableFees || 0);
-         setValue('admReceivableFees', data.totalReceivableFees || 0);
+
+         const totalFromSelectedCourses = (selectedCourses || []).reduce((sum, c) => sum + (parseFloat(c.price) || 0), 0);
+         const totalPayable = (Number(data.totalPayableFees) || 0) > 0 ? Number(data.totalPayableFees) : totalFromSelectedCourses;
+         const receivable = (Number(data.totalReceivableFees) || 0) > 0 ? Number(data.totalReceivableFees) : totalPayable;
+
+         setValue('admTotalFees', totalPayable || 0);
+         setValue('admReceivableFees', receivable || 0);
          setValue('admDiscountPercent', data.discountPercent || 0);
          setValue('admDiscountAmount', data.discountAmount || 0);
      
          // Tab 4: Batch & Subject
-         if (data.batchesList && data.batchesList.length > 0) {
-             const batchSelect = document.getElementById('admBatch');
-             Array.from(batchSelect.options).forEach(option => {
-                 if (data.batchesList.includes(option.value)) {
-                     option.selected = true;
-                 }
-             });
-         }
-     
-         const subjectSelect = document.getElementById('admSubject');
-         if (data.subjectsList && data.subjectsList.length > 0) {
-             enableSubjectSelection().then(() => {
-                 setTimeout(() => {
-                     Array.from(subjectSelect.options).forEach(option => {
-                         if (data.subjectsList.some(s => option.textContent.includes(s))) {
-                             option.selected = true;
-                         }
-                     });
-                 }, 500);
-             });
-         } else {
-             subjectSelect.disabled = true;
-             subjectSelect.innerHTML = '<option value="">No subjects selected</option>';
-         }
+        if (data.batchesList && data.batchesList.length > 0) {
+            const batchSelect = document.getElementById('admBatch');
+            if (batchSelect) {
+                Array.from(batchSelect.options).forEach(option => {
+                    if (data.batchesList.includes(option.value)) {
+                        option.selected = true;
+                    }
+                });
+            }
+        }
+    
+        const subjectSelect = document.getElementById('admSubject');
+        if (subjectSelect) {
+            if (data.subjectsList && data.subjectsList.length > 0) {
+                enableSubjectSelection().then(() => {
+                    setTimeout(() => {
+                        Array.from(subjectSelect.options).forEach(option => {
+                            if (data.subjectsList.some(s => option.textContent.includes(s))) {
+                                option.selected = true;
+                            }
+                        });
+                    }, 500);
+                });
+            } else {
+                subjectSelect.disabled = true;
+                subjectSelect.innerHTML = '<option value="">No subjects selected</option>';
+            }
+        }
      
          //  Tab 5: Installment dates
          if (data.installmentStartDate) {
@@ -1108,6 +1337,7 @@ function showErrorWithDetails(title, message, technicalError = null) {
 
     async function enableSubjectSelection() {
         const subjectSelect = document.getElementById('admSubject');
+        if (!subjectSelect) return;
         subjectSelect.disabled = false;
         subjectSelect.innerHTML = '<option value="">Loading subjects...</option>';
 
@@ -1147,87 +1377,8 @@ function showErrorWithDetails(title, message, technicalError = null) {
         }
     }
 
-    function disableSubjectSelection() {
-        const subjectSelect = document.getElementById('admSubject');
-        subjectSelect.disabled = true;
-        subjectSelect.innerHTML = '<option value="">Select courses first</option>';
-    }
-    
-    // ==================== LOAD ADMISSION FOR UPDATE ====================
-    
-     async function loadAdmissionForEdit(id) {
-            try {
-                showLoading('Loading admission details...');
-
-                const csrfToken = getCsrfToken();
-                const headers = {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                };
-                if (csrfToken) headers[getCsrfHeader()] = csrfToken;
-
-                const response = await fetch(`/api/admissions/${id}`, {
-                    method: 'GET',
-                    headers: headers,
-                    credentials: 'include'
-                });
-
-                if (!response.ok) throw new Error('Failed to load admission');
-
-                const admission = await response.json();
-                Swal.close();
-
-                //  CHANGE MODAL TITLE
-                document.getElementById('admissionModalTitle').textContent = 'Update Admission';
-
-                //  Store admission ID for update
-                document.getElementById('btnFinish').dataset.admissionId = id;
-                document.getElementById('btnFinish').textContent = 'Update';
-
-                //  Pre-fill all form data
-                prefillAdmissionForm(admission, true);
-
-                //  Load installments ONLY IF THEY EXIST
-                if (admission.installments && admission.installments.length > 0) {
-                    displayExistingInstallments(admission.installments);
-
-                    //  Pre-fill installment config fields IF AVAILABLE
-                    if (admission.installmentStartDate) {
-                        setValue('instStartDate', admission.installmentStartDate);
-                    }
-                    if (admission.numberOfInstallments) {
-                        setValue('instNoOfInstallments', admission.numberOfInstallments);
-                    }
-                    if (admission.daysBetweenInstallments) {
-                        setValue('instDays', admission.daysBetweenInstallments);
-                    }
-                    if (admission.totalInstallmentAmount) {
-                        setValue('instTotalInstAmount', admission.totalInstallmentAmount);
-                    }
-                } else {
-                    //  OLD CSV DATA - No installments
-                    const tbody = document.getElementById('installmentsBody');
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments found. You can generate new ones.</td></tr>';
-                }
-
-                setValue('instTotalAmount', admission.totalReceivableFees || 0);
-
-                // Open modal
-                currentTab = 1;
-                updateNavigationButtons();
-                updateProgress(16.66);
-                const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
-                modal.show();
-
-            } catch (error) {
-                Swal.close();
-                console.error('Error:', error);
-                showError('Failed to load admission details: ' + error.message);
-            }
-        }
-
     // ==================== DISPLAY EXISTING INSTALLMENTS ====================
-    
+
     function displayExistingInstallments(installments) {
         const tbody = document.getElementById('installmentsBody');
 
@@ -1477,67 +1628,18 @@ function showErrorWithDetails(title, message, technicalError = null) {
        }
 
     // Search Admissions
-   async function searchAdmissions(e) {
-       const searchTerm = e.target.value.trim();
+    async function searchAdmissions() {
+        const searchTerm = document.getElementById('searchInput')?.value.trim() || '';
+        const studentCategory = document.getElementById('categoryFilter')?.value || '';
+        const course = document.getElementById('courseFilter')?.value || '';
 
-       try {
-           // If search is empty, reload all admissions
-           if (!searchTerm) {
-               await loadAdmissions(0, pageSize);
-               return;
-           }
+        currentSearchTerm = searchTerm;
+        currentStudentCategory = studentCategory;
+        currentCourseFilter = course;
 
-           const csrfToken = getCsrfToken();
-           const headers = {
-               'Accept': 'application/json',
-               'Content-Type': 'application/json',
-           };
-           if (csrfToken) headers[getCsrfHeader()] = csrfToken;
-
-           const searchDTO = {
-               searchTerm: searchTerm,
-               page: 0,
-               size: pageSize,
-               sortBy: 'createdAt',
-               sortDirection: 'DESC'
-           };
-
-           const response = await fetch('/api/admissions/search', {
-               method: 'POST',
-               headers: headers,
-               credentials: 'include',
-               body: JSON.stringify(searchDTO)
-           });
-
-           if (!response.ok) {
-               const contentType = response.headers.get('content-type');
-               if (contentType && contentType.includes('text/html')) {
-                   throw new Error('Server returned HTML instead of JSON. Check if you are logged in.');
-               }
-               throw new Error(`Search failed: ${response.status}`);
-           }
-
-           const data = await response.json();
-
-           currentPage = data.number || 0;
-           totalPages = data.totalPages || 0;
-           totalElements = data.totalElements || 0;
-
-           renderAdmissionsTable(data.content);
-           updatePaginationInfo();
-           renderPaginationControls();
-
-       } catch (error) {
-           console.error('Search error:', error);
-           showError('Search failed: ' + error.message);
-           // Fallback to showing current data
-           renderAdmissionsTable([]);
-       }
-   }
-
-// ==================== EXPORT FUNCTIONALITY ====================
-
-let exportDataTable = null;
+        currentPage = 0;
+        await loadAdmissions(0, pageSize);
+    }
 
 // Fetch export data with fees
 async function prepareExportData() {
@@ -1897,8 +1999,6 @@ window.printTable = async function() {
                 if (!response.ok) throw new Error('Failed to load courses');
 
                 allCourses = await response.json();
-                console.log(' Loaded courses for search:', allCourses.length);
-
             } catch (error) {
                 console.error('❌ Error loading courses:', error);
             }
