@@ -393,6 +393,14 @@
                                         </select>
                                     </div>
                                     <div class="col-md-6 mb-3">
+                                        <label class="form-label">Academic Year</label>
+                                        <select class="form-select" id="admAcademicYear">
+                                            <option value="2024-25">2024-25</option>
+                                            <option value="2025-26">2025-26</option>
+                                            <option value="2023-24">2023-24</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
                                         <label class="form-label">Course</label>
                                         <div class="position-relative">
                                             <input type="text"
@@ -679,11 +687,75 @@
                     </div>
                     <hr>
                     <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="text-primary mb-3"><u>Course & Batch details</u></h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Package:</strong> <span id="viewAdmPackage">-</span></p>
+                                    <p><strong>Courses:</strong> <span id="viewAdmCourses">-</span></p>
+                                    <div class="mb-2"><strong>Batches:</strong> <div id="viewAdmBatches">-</div></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Academic Year:</strong> <span id="viewAdmAcademicYear">-</span></p>
+                                    <p><strong>Document:</strong> <span id="viewAdmDocument">-</span></p>
+                                    <p><strong>Notes:</strong> <span id="viewAdmNotes">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
                         <div class="col-12">
-                            <h6 class="text-primary mb-3"><u>Course Details</u></h6>
-                            <p><strong>Courses:</strong> <span id="viewAdmCourses">-</span></p>
-                            <p><strong>Document Submitted:</strong> <span id="viewAdmDocument">-</span></p>
-                            <p><strong>Notes:</strong> <span id="viewAdmNotes">-</span></p>
+                            <h6 class="text-primary mb-3"><u>Payment Information</u></h6>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <p class="mb-1"><strong>Total Fees:</strong></p>
+                                    <h5 class="text-primary" id="viewAdmTotalFees">₹0.00</h5>
+                                </div>
+                                <div class="col-md-4">
+                                    <p class="mb-1"><strong>Paid Amount:</strong></p>
+                                    <h5 class="text-success" id="viewAdmPaidAmount">₹0.00</h5>
+                                </div>
+                                <div class="col-md-4">
+                                    <p class="mb-1"><strong>Due Amount:</strong></p>
+                                    <h5 class="text-danger" id="viewAdmDueAmount">₹0.00</h5>
+                                </div>
+                            </div>
+                            
+                            <!-- Installments Table -->
+                            <h6 class="small fw-bold mb-2">Installment Schedule</h6>
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="viewAdmInstallmentsBody">
+                                        <tr><td colspan="3" class="text-center text-muted">No installments</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Receipts Table -->
+                            <h6 class="small fw-bold mb-2">Recent Receipts</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Receipt No.</th>
+                                            <th>Date</th>
+                                            <th>Amount</th>
+                                            <th>Mode</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="viewAdmReceiptsBody">
+                                        <tr><td colspan="4" class="text-center text-muted">No receipts found</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

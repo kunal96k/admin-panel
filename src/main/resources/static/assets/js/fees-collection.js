@@ -38,36 +38,35 @@
     }
 
     // Initialize CSRF token from cookie
-        function initializeCsrfToken() {
-            const token = getCookie('XSRF-TOKEN');
-            if (token) {
-                csrfToken = token;
-                csrfHeader = 'X-CSRF-TOKEN';
-                console.log('CSRF token initialized');
-            } else {
-                console.warn('CSRF token not found in cookies');
-            }
+    function initializeCsrfToken() {
+        const token = getCookie('XSRF-TOKEN');
+        if (token) {
+            csrfToken = token;
+            csrfHeader = 'X-CSRF-TOKEN';
+        } else {
+            console.warn('CSRF token not found in cookies');
         }
+    }
 
-        // Get cookie by name
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) {
-                return parts.pop().split(';').shift();
-            }
-            return null;
+    // Get cookie by name
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            return parts.pop().split(';').shift();
         }
+        return null;
+    }
 
-        function setupAjaxWithCsrf() {
-            $.ajaxSetup({
-                beforeSend: function(xhr) {
-                    if (csrfToken && csrfHeader) {
-                        xhr.setRequestHeader(csrfHeader, csrfToken);
-                    }
+    function setupAjaxWithCsrf() {
+        $.ajaxSetup({
+            beforeSend: function (xhr) {
+                if (csrfToken && csrfHeader) {
+                    xhr.setRequestHeader(csrfHeader, csrfToken);
                 }
-            });
-        }
+            }
+        });
+    }
 
     // Initialize page
     function initializePage() {
@@ -164,7 +163,7 @@
                 paymentMode: paymentMode || null,
                 dataSource: dataSource || null
             },
-            beforeSend: function(xhr) {
+            beforeSend: function (xhr) {
                 if (csrfToken && csrfHeader) {
                     xhr.setRequestHeader(csrfHeader, csrfToken);
                 }
@@ -183,15 +182,84 @@
         // Refresh CSRF token before request
         initializeCsrfToken();
 
+        function exportAllData(e, dt, button, config) {
+            const self = this;
+            const oldStart = dt.settings()[0]._iDisplayStart;
+            const pageInfo = dt.page.info();
+            const totalRecords = pageInfo && typeof pageInfo.recordsTotal === 'number'
+                ? pageInfo.recordsTotal
+                : 0;
+
+            // Try to find the original action function
+            const buttonName = config.exportType || config.extend;
+            let originalActionFn = null;
+
+            if (buttonName) {
+                const btns = $.fn.dataTable.ext.buttons;
+                if (btns[buttonName] && btns[buttonName].action) {
+                    originalActionFn = btns[buttonName].action;
+                } else if (btns[buttonName + 'Html5'] && btns[buttonName + 'Html5'].action) {
+                    originalActionFn = btns[buttonName + 'Html5'].action;
+                } else if (btns[buttonName + 'Flash'] && btns[buttonName + 'Flash'].action) {
+                    originalActionFn = btns[buttonName + 'Flash'].action;
+                }
+            }
+
+            if (!originalActionFn) {
+                console.warn('⚠️ Could not find original action for:', buttonName || 'unknown');
+            }
+
+            if (!totalRecords || totalRecords <= 0) {
+                if (originalActionFn) {
+                    originalActionFn.call(self, e, dt, button, config);
+                }
+                return;
+            }
+
+            showLoading(); // Show loading while fetching all data
+
+            dt.one('preXhr', function (_e, _s, data) {
+                data.start = 0;
+                data.length = totalRecords;
+            });
+
+            dt.one('draw', function () {
+                hideLoading();
+
+                if (originalActionFn) {
+                    try {
+                        // Small extra delay to ensure any other draw handlers finished
+                        setTimeout(function () {
+                            originalActionFn.call(self, e, dt, button, config);
+                            // Revert to original settings
+                            dt.one('preXhr', function (_e, _s, data) {
+                                data.start = oldStart;
+                                data.length = pageInfo.length;
+                            });
+                            dt.ajax.reload(null, false);
+                        }, 100);
+                    } catch (err) {
+                        console.error('❌ Export action failed:', err);
+                        hideLoading();
+                    }
+                } else {
+                    console.error('❌ Cannot export: Original action not found');
+                    hideLoading();
+                }
+            });
+
+            dt.ajax.reload();
+        }
+
         dataTable = $('#feesCollectionTable').DataTable({
             processing: true,
             serverSide: true,
             destroy: true,
             pageLength: 25,
-            lengthMenu: [25, 50, 100],
+            lengthMenu: [10, 25, 50, 100, 1000],
             searching: false,
 
-            ajax: function(dtParams, callback) {
+            ajax: function (dtParams, callback) {
                 const page = Math.floor((dtParams.start || 0) / (dtParams.length || 25));
                 const size = dtParams.length || 25;
 
@@ -206,12 +274,12 @@
                         page: page,
                         size: size
                     },
-                    beforeSend: function(xhr) {
+                    beforeSend: function (xhr) {
                         if (csrfToken && csrfHeader) {
                             xhr.setRequestHeader(csrfHeader, csrfToken);
                         }
                     },
-                    success: function(response) {
+                    success: function (response) {
                         const content = response && response.content && Array.isArray(response.content)
                             ? response.content
                             : [];
@@ -235,7 +303,7 @@
                             $('#feesCollectionTable tfoot').hide();
                         }
                     },
-                    error: function(xhr, status, error) {
+                    error: function (xhr, status, error) {
                         hideLoading();
                         callback({
                             draw: dtParams.draw,
@@ -296,34 +364,44 @@
             buttons: [
                 {
                     extend: 'copy',
+                    exportType: 'copy',
                     text: '<i class="bi bi-clipboard me-1"></i> Copy',
                     className: 'btn btn-sm btn-export',
-                    exportOptions: { columns: [0, 1, 2, 3, 4, 5] }
+                    exportOptions: { columns: [0, 1, 2, 3, 4, 5] },
+                    action: exportAllData
                 },
                 {
                     extend: 'csv',
+                    exportType: 'csv',
                     text: '<i class="bi bi-filetype-csv me-1"></i> CSV',
                     className: 'btn btn-sm btn-export',
-                    exportOptions: { columns: [0, 1, 2, 3, 4, 5] }
+                    exportOptions: { columns: [0, 1, 2, 3, 4, 5] },
+                    action: exportAllData
                 },
                 {
                     extend: 'excel',
+                    exportType: 'excel',
                     text: '<i class="bi bi-file-earmark-excel me-1"></i> Excel',
                     className: 'btn btn-sm btn-export',
-                    exportOptions: { columns: [0, 1, 2, 3, 4, 5] }
+                    exportOptions: { columns: [0, 1, 2, 3, 4, 5] },
+                    action: exportAllData
                 },
                 {
                     extend: 'pdf',
+                    exportType: 'pdf',
                     text: '<i class="bi bi-file-earmark-pdf me-1"></i> PDF',
                     className: 'btn btn-sm btn-export',
                     orientation: 'landscape',
-                    exportOptions: { columns: [0, 1, 2, 3, 4, 5] }
+                    exportOptions: { columns: [0, 1, 2, 3, 4, 5] },
+                    action: exportAllData
                 },
                 {
                     extend: 'print',
+                    exportType: 'print',
                     text: '<i class="bi bi-printer me-1"></i> Print',
                     className: 'btn btn-sm btn-export',
-                    exportOptions: { columns: [0, 1, 2, 3, 4, 5] }
+                    exportOptions: { columns: [0, 1, 2, 3, 4, 5] },
+                    action: exportAllData
                 }
             ],
             footerCallback: function () {
@@ -400,15 +478,15 @@
         Swal.fire({
             title: 'Import CSV Data',
             html: '<strong>Important:</strong> This will import ALL data from the CSV file AS-IS without any validation.' +
-                  '<br><br>The import will accept:' +
-                  '<ul class="text-start">' +
-                  '<li>Duplicate records</li>' +
-                  '<li>NULL or empty values</li>' +
-                  '<li>Invalid date formats</li>' +
-                  '<li>Any text or numbers</li>' +
-                  '</ul>' +
-                  '<br>All imported data will be marked as "Old Imported Data".' +
-                  '<br><br>Do you want to continue?',
+                '<br><br>The import will accept:' +
+                '<ul class="text-start">' +
+                '<li>Duplicate records</li>' +
+                '<li>NULL or empty values</li>' +
+                '<li>Invalid date formats</li>' +
+                '<li>Any text or numbers</li>' +
+                '</ul>' +
+                '<br>All imported data will be marked as "Old Imported Data".' +
+                '<br><br>Do you want to continue?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#667eea',
@@ -437,10 +515,10 @@
             data: formData,
             processData: false,
             contentType: false,
-            beforeSend: function(xhr) {
-               if (csrfToken && csrfHeader) {
-                   xhr.setRequestHeader(csrfHeader, csrfToken);
-               }
+            beforeSend: function (xhr) {
+                if (csrfToken && csrfHeader) {
+                    xhr.setRequestHeader(csrfHeader, csrfToken);
+                }
             },
             success: function (response) {
                 hideLoading();
@@ -450,11 +528,11 @@
                         icon: 'success',
                         title: 'Import Successful',
                         html: `<strong>${response.message}</strong><br><br>` +
-                              `Total Records: ${response.totalRecords}<br>` +
-                              `Successful: ${response.successCount}<br>` +
-                              `Failed: ${response.errorCount}` +
-                              (response.errors && response.errors.length > 0 ?
-                                  `<br><br><small>First few errors:<br>${response.errors.slice(0, 5).join('<br>')}</small>` : ''),
+                            `Total Records: ${response.totalRecords}<br>` +
+                            `Successful: ${response.successCount}<br>` +
+                            `Failed: ${response.errorCount}` +
+                            (response.errors && response.errors.length > 0 ?
+                                `<br><br><small>First few errors:<br>${response.errors.slice(0, 5).join('<br>')}</small>` : ''),
                         confirmButtonColor: '#667eea'
                     }).then(() => {
                         if ($('#fromDate').val() && $('#toDate').val()) {

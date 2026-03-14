@@ -48,6 +48,7 @@ public class FileStorageService {
             // Create subdirectories for different entities
             createSubDirectory("employees");
             createSubDirectory("courses");
+            createSubDirectory("admissions");
 
             maxFileSizeBytes = parseSize(maxFileSize);
             allowedExtensionsList = Arrays.asList(allowedExtensions.toLowerCase().split(","));

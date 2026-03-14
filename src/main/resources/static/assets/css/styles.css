@@ -14,8 +14,8 @@ body {
 
 /* Global custom scrollbar theme (used across modals and scrollable containers) */
 ::-webkit-scrollbar {
-    width: 8px !important;
-    height: 8px !important;
+    width: 6px !important;
+    height: 6px !important;
 }
 
 ::-webkit-scrollbar-track {
@@ -33,8 +33,8 @@ body {
 }
 
 .table-responsive::-webkit-scrollbar {
-    height: 10px !important;
-    width: 10px !important;
+    height: 8px !important;
+    width: 8px !important;
 }
 
 .table-responsive::-webkit-scrollbar-track {

@@ -1012,34 +1012,17 @@ function showErrorWithDetails(title, message, technicalError = null) {
          setValue('admReceivableFees', receivable || 0);
          setValue('admDiscountPercent', data.discountPercent || 0);
          setValue('admDiscountAmount', data.discountAmount || 0);
+         setValue('admAcademicYear', data.academicYear || '2024-25');
      
-         // Tab 4: Batch & Subject
+         // Tab 4: Batch & Subject (Subjects removed per user request)
         if (data.batchesList && data.batchesList.length > 0) {
             const batchSelect = document.getElementById('admBatch');
             if (batchSelect) {
                 Array.from(batchSelect.options).forEach(option => {
-                    if (data.batchesList.includes(option.value)) {
+                    if (data.batchesList.includes(option.textContent)) {
                         option.selected = true;
                     }
                 });
-            }
-        }
-    
-        const subjectSelect = document.getElementById('admSubject');
-        if (subjectSelect) {
-            if (data.subjectsList && data.subjectsList.length > 0) {
-                enableSubjectSelection().then(() => {
-                    setTimeout(() => {
-                        Array.from(subjectSelect.options).forEach(option => {
-                            if (data.subjectsList.some(s => option.textContent.includes(s))) {
-                                option.selected = true;
-                            }
-                        });
-                    }, 500);
-                });
-            } else {
-                subjectSelect.disabled = true;
-                subjectSelect.innerHTML = '<option value="">No subjects selected</option>';
             }
         }
      
@@ -1182,9 +1165,6 @@ function showErrorWithDetails(title, message, technicalError = null) {
 
         renderSelectedCourses();
         calculateTotalFees();
-
-        // Enable subject selection if courses are selected
-        enableSubjectSelection();
     }
 
     function handleCourseAdd(e) {
@@ -1213,7 +1193,6 @@ function showErrorWithDetails(title, message, technicalError = null) {
 
         renderSelectedCourses();
         calculateTotalFees();
-        enableSubjectSelection();
 
         // Reset selection
         select.value = '';
@@ -1261,7 +1240,6 @@ function showErrorWithDetails(title, message, technicalError = null) {
                 calculateTotalFees();
 
                 if (selectedCourses.length === 0) {
-                    disableSubjectSelection();
                 }
             });
         });
@@ -1283,7 +1261,6 @@ function showErrorWithDetails(title, message, technicalError = null) {
        calculateTotalFees();
 
        if (selectedCourses.length === 0) {
-           disableSubjectSelection();
        }
 
        return false;
@@ -1293,7 +1270,6 @@ function showErrorWithDetails(title, message, technicalError = null) {
         selectedCourses = [];
         renderSelectedCourses();
         calculateTotalFees();
-        disableSubjectSelection();
     }
 
     // ==================== FEE CALCULATIONS ====================
@@ -1333,49 +1309,6 @@ function showErrorWithDetails(title, message, technicalError = null) {
         document.getElementById('feeInstTotalAmount').value = amount.toFixed(2);
     }
 
-    // ==================== SUBJECT HANDLING ====================
-
-    async function enableSubjectSelection() {
-        const subjectSelect = document.getElementById('admSubject');
-        if (!subjectSelect) return;
-        subjectSelect.disabled = false;
-        subjectSelect.innerHTML = '<option value="">Loading subjects...</option>';
-
-        try {
-            // Get subjects for all selected courses
-            const allSubjects = [];
-
-            for (const course of selectedCourses) {
-                const response = await fetch(`/api/subjects/course/${course.id}`);
-                if (response.ok) {
-                    const subjects = await response.json();
-                    allSubjects.push(...subjects.map(s => ({
-                        id: s.id,
-                        name: s.subjectName,
-                        courseId: course.id,
-                        courseName: course.name
-                    })));
-                }
-            }
-
-            subjectSelect.innerHTML = '';
-            if (allSubjects.length === 0) {
-                subjectSelect.innerHTML = '<option value="">No subjects available</option>';
-                return;
-            }
-
-            allSubjects.forEach(subject => {
-                const option = document.createElement('option');
-                option.value = subject.id;
-                option.textContent = `${subject.name} (${subject.courseName})`;
-                subjectSelect.appendChild(option);
-            });
-
-        } catch (error) {
-            console.error('Error loading subjects:', error);
-            subjectSelect.innerHTML = '<option value="">Error loading subjects</option>';
-        }
-    }
 
     // ==================== DISPLAY EXISTING INSTALLMENTS ====================
 
@@ -1552,10 +1485,14 @@ function showErrorWithDetails(title, message, technicalError = null) {
 
        function collectAdmissionData() {
            const batchSelect = document.getElementById('admBatch');
-           const selectedBatches = Array.from(batchSelect.selectedOptions).map(opt => opt.value);
+           const selectedBatches = batchSelect
+               ? Array.from(batchSelect.selectedOptions || []).map(opt => opt.textContent)
+               : [];
 
            const subjectSelect = document.getElementById('admSubject');
-           const selectedSubjects = Array.from(subjectSelect.selectedOptions).map(opt => opt.textContent);
+           const selectedSubjects = subjectSelect
+               ? Array.from(subjectSelect.selectedOptions || []).map(opt => opt.textContent)
+               : [];
 
            const installmentConfig = collectInstallmentData();
 
@@ -1586,14 +1523,15 @@ function showErrorWithDetails(title, message, technicalError = null) {
                rollNumber: getValue('admRollNo'),
                notes: getValue('admNotes'),
                packageName: getSelectedPackageName(),
+               academicYear: getValue('admAcademicYear'),
                courses: selectedCourses.map(c => c.name),
                batches: selectedBatches,
-               subjects: selectedSubjects,
                totalPayableFees: parseFloat(getValue('admTotalFees')) || 0,
                totalReceivableFees: parseFloat(getValue('admReceivableFees')) || 0,
                discountPercent: parseFloat(getValue('admDiscountPercent')) || 0,
                discountAmount: parseFloat(getValue('admDiscountAmount')) || 0,
-               installmentConfig: installmentConfig
+               installmentConfig: installmentConfig,
+               studentPhoto: document.getElementById('admCanvas').toDataURL('image/jpeg', 0.8)
            };
        }
 
@@ -1939,13 +1877,13 @@ window.printTable = async function() {
         try {
             showLoading('Loading admission details...');
 
-           const response = await fetch(`/api/admissions/${id}`, {
-                       method: 'GET',
-                       headers: {
-                           'Accept': 'application/json',
-                           'Content-Type': 'application/json'
-                       }
-                   });
+            const response = await fetch(`/api/admissions/${id}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
 
             if (!response.ok) throw new Error('Failed to load admission');
 
@@ -1953,10 +1891,10 @@ window.printTable = async function() {
             Swal.close();
 
             // Populate view modal
-            document.getElementById('viewAdmStudentName').textContent = admission.studentName;
+            document.getElementById('viewAdmStudentName').textContent = admission.studentName || `${admission.firstName} ${admission.lastName}`;
             document.getElementById('viewAdmRegNo').textContent = admission.registrationNumber;
-            document.getElementById('viewAdmDate').textContent = admission.admissionDate;
-            document.getElementById('viewAdmBirthDate').textContent = admission.birthDate || '-';
+            document.getElementById('viewAdmDate').textContent = admission.admissionDate ? new Date(admission.admissionDate).toLocaleDateString('en-GB') : '-';
+            document.getElementById('viewAdmBirthDate').textContent = admission.birthDate ? new Date(admission.birthDate).toLocaleDateString('en-GB') : '-';
             document.getElementById('viewAdmGender').textContent = admission.gender || '-';
             document.getElementById('viewAdmAadhaarNo').textContent = admission.aadhaar || '-';
             document.getElementById('viewAdmBloodGroup').textContent = admission.bloodGroup || '-';
@@ -1964,9 +1902,103 @@ window.printTable = async function() {
             document.getElementById('viewAdmMobile2').textContent = admission.mobileSecondary || '-';
             document.getElementById('viewAdmEmail').textContent = admission.emailPrimary || '-';
             document.getElementById('viewAdmAddress').textContent = admission.currentAddress || '-';
+            
+            // Course & Batch Details
+            document.getElementById('viewAdmPackage').textContent = admission.packageName || '-';
             document.getElementById('viewAdmCourses').textContent = admission.courses || '-';
+            
+            // Render Detailed Batches
+            const batchesContainer = document.getElementById('viewAdmBatches');
+            if (admission.batchDetails && admission.batchDetails.length > 0) {
+                batchesContainer.innerHTML = `
+                    <div class="table-responsive mt-1">
+                        <table class="table table-sm table-bordered mb-0" style="font-size: 0.85rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Batch Name</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Timing</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${admission.batchDetails.map(b => `
+                                    <tr>
+                                        <td><strong>${b.batchName}</strong></td>
+                                        <td>${formatDisplayDate(b.startDate)}</td>
+                                        <td>${formatDisplayDate(b.endDate)}</td>
+                                        <td>${formatDisplayTime(b.startTime)} - ${formatDisplayTime(b.endTime)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                batchesContainer.textContent = admission.batches || '-';
+            }
+            
+            document.getElementById('viewAdmAcademicYear').textContent = admission.academicYear || '-';
             document.getElementById('viewAdmDocument').textContent = admission.documentType || '-';
             document.getElementById('viewAdmNotes').textContent = admission.notes || '-';
+
+            // Photo
+            const photoImg = document.getElementById('viewStudentPhoto');
+            if (admission.photoPath) {
+                photoImg.src = `/uploads/admissions/${admission.photoPath}`;
+            } else {
+                photoImg.src = '/assets/images/user-logo.png';
+            }
+
+            // Payment Totals
+            const totalFees = admission.totalReceivableFees || 0;
+            const paidAmount = admission.totalPaidAmount || 0;
+            const dueAmount = totalFees - paidAmount;
+
+            document.getElementById('viewAdmTotalFees').textContent = `₹${totalFees.toFixed(2)}`;
+            document.getElementById('viewAdmPaidAmount').textContent = `₹${paidAmount.toFixed(2)}`;
+            document.getElementById('viewAdmDueAmount').textContent = `₹${dueAmount.toFixed(2)}`;
+
+            // Installments
+            const instBody = document.getElementById('viewAdmInstallmentsBody');
+            if (admission.installments && admission.installments.length > 0) {
+                instBody.innerHTML = admission.installments.map(inst => `
+                    <tr>
+                        <td>${new Date(inst.dueDate).toLocaleDateString('en-GB')}</td>
+                        <td>₹${parseFloat(inst.amount).toFixed(2)}</td>
+                        <td>
+                            <span class="badge bg-${inst.status === 'Paid' ? 'success' : inst.status === 'Overdue' ? 'danger' : 'warning'}">
+                                ${inst.status}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                instBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No installments found</td></tr>';
+            }
+
+            // Fetch Receipts
+            try {
+                const receiptResponse = await fetch(`/api/fees-manager/receipts/${admission.registrationNumber}`);
+                if (receiptResponse.ok) {
+                    const receipts = await receiptResponse.json();
+                    const receiptBody = document.getElementById('viewAdmReceiptsBody');
+                    if (receipts && receipts.length > 0) {
+                        receiptBody.innerHTML = receipts.map(r => `
+                            <tr>
+                                <td>${r.receiptNumber}</td>
+                                <td>${new Date(r.receiptDate).toLocaleDateString('en-GB')}</td>
+                                <td>₹${parseFloat(r.amountReceived || 0).toFixed(2)}</td>
+                                <td>${r.paymentMode}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        receiptBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No receipts found</td></tr>';
+                    }
+                }
+            } catch (receiptError) {
+                console.error('Error fetching receipts:', receiptError);
+            }
 
             const modal = new bootstrap.Modal(document.getElementById('viewAdmissionModal'));
             modal.show();
@@ -1976,6 +2008,36 @@ window.printTable = async function() {
             console.error('Error:', error);
             showError('Failed to load admission details');
         }
+    }
+
+    function formatDisplayDate(dateValue) {
+        if (!dateValue) return '-';
+        if (Array.isArray(dateValue) && dateValue.length >= 3) {
+            const [year, month, day] = dateValue;
+            return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+        }
+        if (typeof dateValue === 'string' && dateValue.includes('-')) {
+            const parts = dateValue.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return dateValue;
+    }
+
+    function formatDisplayTime(timeValue) {
+        if (!timeValue) return '-';
+        let hours, minutes;
+        if (Array.isArray(timeValue) && timeValue.length >= 2) {
+            [hours, minutes] = timeValue;
+        } else if (typeof timeValue === 'string' && timeValue.includes(':')) {
+            const parts = timeValue.split(':');
+            hours = parseInt(parts[0]);
+            minutes = parseInt(parts[1]);
+        } else return timeValue;
+        if (isNaN(hours) || isNaN(minutes)) return timeValue;
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${hours}:${String(minutes).padStart(2, '0')} ${ampm}`;
     }
 
     // Initialize course search functionality
@@ -2455,8 +2517,14 @@ window.printTable = async function() {
                 transferDate: getValue('transferDate'),
                 transferReason: getValue('transferReason'),
                 courses: [getValue('transferCourse')],
-                batches: Array.from(document.getElementById('transferBatch').selectedOptions).map(o => o.value),
-                subjects: Array.from(document.getElementById('transferSubject').selectedOptions).map(o => o.textContent),
+                batches: (() => {
+                    const el = document.getElementById('transferBatch');
+                    return el ? Array.from(el.selectedOptions || []).map(o => o.value) : [];
+                })(),
+                subjects: (() => {
+                    const el = document.getElementById('transferSubject');
+                    return el ? Array.from(el.selectedOptions || []).map(o => o.textContent) : [];
+                })(),
                 packageName: document.getElementById('transferPackage').options[document.getElementById('transferPackage').selectedIndex]?.text,
                 totalPayableFees: parseFloat(getValue('transferTotalFees')),
                 totalReceivableFees: parseFloat(getValue('transferReceivableFees')),

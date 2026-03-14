@@ -1,31 +1,61 @@
 package com.tts.sms.service;
 
-import com.tts.sms.dto.*;
-import com.tts.sms.exception.ResourceNotFoundException;
-import com.tts.sms.model.*;
-import com.tts.sms.repository.*;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.*;
+import java.io.ByteArrayOutputStream;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Year;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.tts.sms.dto.FeeInstallmentBatchDTO;
+import com.tts.sms.dto.FeeInstallmentCreateDTO;
+import com.tts.sms.dto.FeeInstallmentDTO;
+import com.tts.sms.dto.FeeInstallmentUpdateDTO;
+import com.tts.sms.dto.FeeReceiptRequestDTO;
+import com.tts.sms.dto.FeeReceiptResponseDTO;
+import com.tts.sms.dto.FeeRefundRequestDTO;
+import com.tts.sms.dto.FeeRefundResponseDTO;
+import com.tts.sms.dto.FeesBulkImportResponseDTO;
+import com.tts.sms.dto.FeesCSVImportDTO;
+import com.tts.sms.dto.FeesSearchDTO;
+import com.tts.sms.dto.FeesSummaryDTO;
+import com.tts.sms.exception.ResourceNotFoundException;
+import com.tts.sms.model.Admission;
+import com.tts.sms.model.FeeCollection;
+import com.tts.sms.model.FeeInstallment;
+import com.tts.sms.model.FeeReceipt;
+import com.tts.sms.model.FeeRefund;
+import com.tts.sms.model.Fees;
+import com.tts.sms.model.User;
+import com.tts.sms.repository.AdmissionRepository;
+import com.tts.sms.repository.FeeCollectionRepository;
+import com.tts.sms.repository.FeeInstallmentRepository;
+import com.tts.sms.repository.FeeReceiptRepository;
+import com.tts.sms.repository.FeeRefundRepository;
+import com.tts.sms.repository.FeesRepository;
+
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-
-import java.io.ByteArrayOutputStream;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.Year;
-import java.util.*;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -1151,7 +1181,6 @@ public class FeesManagerService {
         log.debug("🔍 Fetching receipts from fee_collections for regNo: {}", regNo);
 
         try {
-            // Get student from admission
             Admission admission = admissionRepository
                     .findByRegistrationNumberAndIsDeletedFalse(regNo);
 
@@ -1163,13 +1192,11 @@ public class FeesManagerService {
             String studentName = admission.getFullName();
             String mobile = admission.getMobilePrimary();
 
-            // Search fee_collections by matching student name and mobile
             List<FeeCollection> feeCollections = feeCollectionRepository
                     .findByStudentNameAndMobileAndIsDeletedFalse(studentName, mobile);
 
             log.info(" Found {} records in fee_collections", feeCollections.size());
 
-            // Convert to receipt format
             return feeCollections.stream()
                     .map(fc -> FeeReceiptResponseDTO.builder()
                             .id(fc.getId())
@@ -1193,6 +1220,10 @@ public class FeesManagerService {
         }
     }
 
+    /**
+     * Strict accounting delete: soft-delete receipt, revert installment if linked,
+     * then recalc Fees totals/status/dueDate from remaining receipts/refunds.
+     */
     @Transactional
     public void deleteFeeReceipt(Long receiptId) {
         log.debug("Deleting fee receipt: {}", receiptId);
@@ -1200,20 +1231,42 @@ public class FeesManagerService {
         FeeReceipt receipt = feeReceiptRepository.findById(receiptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Receipt not found: " + receiptId));
 
+        final String regNo = receipt.getRegistrationNumber();
+        final Long installmentId = receipt.getInstallmentId();
+
         receipt.setIsDeleted(true);
         receipt.setDeletedAt(java.time.LocalDateTime.now());
         feeReceiptRepository.save(receipt);
 
+        if (installmentId != null) {
+            try {
+                feeInstallmentRepository.findById(installmentId)
+                        .ifPresent(installment -> {
+                            installment.setStatus("Pending");
+                            installment.setPaidAmount(null);
+                            installment.setPaidDate(null);
+                            installment.setUpdatedBy("SYSTEM");
+                            feeInstallmentRepository.saveAndFlush(installment);
+                        });
+            } catch (Exception e) {
+                log.error("Failed to revert installment {} for deleted receipt {}", installmentId, receiptId, e);
+            }
+        }
+
+        if (regNo != null && !regNo.trim().isEmpty()) {
+            recalculateFeesFromTransactions(regNo);
+        }
+
         log.info("Deleted fee receipt: {}", receipt.getReceiptNumber());
     }
 
-    // ==================== FEE REFUNDS - USE REG NO ====================
-
+    /**
+     * Create fee refund
+     */
     @Transactional
     public FeeRefundResponseDTO createFeeRefund(FeeRefundRequestDTO requestDTO) {
         log.debug("Creating fee refund for regNo: {}", requestDTO.getRegNo());
 
-        // Validate note field
         if (requestDTO.getNotes() == null || requestDTO.getNotes().trim().isEmpty()) {
             throw new IllegalArgumentException("Note is required for refund");
         }
@@ -1223,7 +1276,6 @@ public class FeesManagerService {
             throw new ResourceNotFoundException("Admission not found: " + requestDTO.getRegNo());
         }
 
-        // Get current user
         String currentUser = "SYSTEM";
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -1258,27 +1310,21 @@ public class FeesManagerService {
         FeeRefund saved = feeRefundRepository.save(refund);
 
         try {
+            LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
+            String newCategory = studentCategoryService.determineCategory(admission, cutoffDate);
 
-            if (admission != null) {
-                LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
-                String newCategory = studentCategoryService.determineCategory(admission, cutoffDate);
+            if (!newCategory.equals(admission.getStudentCategory())) {
+                admission.setStudentCategory(newCategory);
+                admission.setCategoryUpdatedAt(LocalDateTime.now());
+                admissionRepository.save(admission);
 
-                if (!newCategory.equals(admission.getStudentCategory())) {
-                    admission.setStudentCategory(newCategory);
-                    admission.setCategoryUpdatedAt(LocalDateTime.now());
-                    admissionRepository.save(admission);
-
-                    log.info(" Admission {} marked as {}", requestDTO.getRegNo(), newCategory);
-                }
+                log.info(" Admission {} marked as {}", requestDTO.getRegNo(), newCategory);
             }
         } catch (Exception e) {
             log.error(" Could not update admission status: {}", e.getMessage());
         }
 
-        // Create refund installment
         createRefundInstallment(requestDTO.getRegNo(), saved);
-
-        // Recalculate ALL fees from transactions (this uses the correct formula)
         recalculateFeesFromTransactions(requestDTO.getRegNo());
 
         log.info(" Created fee refund: {} by {}", saved.getRefundNumber(), currentUser);
@@ -1293,26 +1339,21 @@ public class FeesManagerService {
         log.debug("Recalculating total paid for regNo: {}", regNo);
 
         try {
-            // Get all receipts for this student
             List<FeeReceipt> receipts = feeReceiptRepository
                     .findByRegistrationNumberAndIsDeletedFalseOrderByReceiptDateDesc(regNo);
 
-            // Calculate total from receipts
             Double totalPaid = receipts.stream()
                     .mapToDouble(r -> r.getAmountReceived() != null ? r.getAmountReceived() : 0.0)
                     .sum();
 
-            // Update fees record
             feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo)
                     .ifPresent(fees -> {
                         fees.setTotalPaid(totalPaid);
 
-                        // Recalculate fees due
                         Double feesDue = fees.getTotalFees() - totalPaid +
                                 (fees.getFeesRefund() != null ? fees.getFeesRefund() : 0.0);
                         fees.setFeesDue(Math.max(0, feesDue));
 
-                        // Auto-update status
                         if (fees.getFeesRefund() != null && fees.getFeesRefund() > 0) {
                             fees.setStatus("Refund");
                         } else if (feesDue <= 0.01) {

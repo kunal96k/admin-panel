@@ -72,4 +72,6 @@ public class AdmissionRequestDTO {
 
     // Installment Configuration
     private InstallmentConfigDTO installmentConfig;
+
+    private String studentPhoto;
 }

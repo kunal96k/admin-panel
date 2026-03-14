@@ -78,13 +78,12 @@ function showError(message) {
 // Load banks from API
 async function loadBanks() {
     try {
-       const response = await fetch('/bank/list?page=0&size=100', {
-           headers: getCsrfHeaders()
-       });
+        const response = await fetch('/bank/list?page=0&size=100', {
+            headers: getCsrfHeaders()
+        });
 
         if (response.ok) {
             const result = await response.json();
-            console.log('Banks response:', result);
 
             // Handle different response formats
             if (result.success && result.data) {
@@ -97,7 +96,6 @@ async function loadBanks() {
                 banks = [];
             }
 
-            console.log('Loaded banks:', banks.length);
             populateBankDropdowns();
         }
     } catch (error) {
@@ -123,10 +121,8 @@ async function loadPaymentModes() {
 
         if (response.ok) {
             const result = await response.json();
-            console.log('Payment modes response:', result);
 
             paymentModes = Array.isArray(result) ? result : [];
-            console.log('Loaded payment modes:', paymentModes.length); // Debug log
             populatePaymentModeDropdowns();
         }
     } catch (error) {
@@ -184,14 +180,12 @@ function populatePaymentModeDropdowns() {
             if (currentValue) {
                 select.value = currentValue;
             }
-
-            console.log(`Populated ${selectId} with ${select.options.length - 1} modes`);
         }
     });
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initializeEventListeners();
     loadFeesFromBackend();
     loadCoursesForFilter();
@@ -199,7 +193,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function debugAPICall(endpoint, method = 'GET') {
-    console.log(`🌐 API Call: ${method} ${API_BASE}${endpoint}`);
 }
 
 function initializeEventListeners() {
@@ -208,10 +201,10 @@ function initializeEventListeners() {
     loadPaymentModes();
 
     // Search
-   document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
 
     // Entries per page
-    document.getElementById('entriesPerPage').addEventListener('change', function() {
+    document.getElementById('entriesPerPage').addEventListener('change', function () {
         entriesPerPage = parseInt(this.value);
         currentPage = 1;
         loadFeesFromBackend();
@@ -226,7 +219,50 @@ function initializeEventListeners() {
     document.getElementById('btnImportCSV').addEventListener('click', () => {
         new bootstrap.Modal(document.getElementById('importModal')).show();
     });
-    document.getElementById('btnExportCSV').addEventListener('click', exportToCSV);
+
+    document.getElementById('btnExportFees')?.addEventListener('click', async function () {
+        const result = await Swal.fire({
+            title: 'Export Fees Data',
+            text: 'Choose export format',
+            showCancelButton: true,
+            showConfirmButton: false,
+            cancelButtonText: 'Close',
+            cancelButtonColor: '#6b7280',
+            html: `
+                <div class="d-grid gap-2 text-start">
+                    <button type="button" class="swal2-confirm swal2-styled" id="swalExportCSV" style="background:#0ea5e9;">CSV</button>
+                    <button type="button" class="swal2-confirm swal2-styled" id="swalExportExcel" style="background:#16a34a;">Excel</button>
+                    <button type="button" class="swal2-confirm swal2-styled" id="swalExportPDF" style="background:#ef4444;">PDF</button>
+                    <button type="button" class="swal2-confirm swal2-styled" id="swalExportCopy" style="background:#6366f1;">Copy</button>
+                    <button type="button" class="swal2-confirm swal2-styled" id="swalExportPrint" style="background:#111827;">Print</button>
+                </div>
+            `,
+            didOpen: () => {
+                document.getElementById('swalExportCSV')?.addEventListener('click', () => {
+                    Swal.close();
+                    window.exportFeesToCSV && window.exportFeesToCSV();
+                });
+                document.getElementById('swalExportExcel')?.addEventListener('click', () => {
+                    Swal.close();
+                    window.exportFeesToExcel && window.exportFeesToExcel();
+                });
+                document.getElementById('swalExportPDF')?.addEventListener('click', () => {
+                    Swal.close();
+                    window.exportFeesToPDF && window.exportFeesToPDF();
+                });
+                document.getElementById('swalExportCopy')?.addEventListener('click', () => {
+                    Swal.close();
+                    window.copyFeesTableData && window.copyFeesTableData();
+                });
+                document.getElementById('swalExportPrint')?.addEventListener('click', () => {
+                    Swal.close();
+                    window.printFeesTable && window.printFeesTable();
+                });
+            }
+        });
+    });
+
+    // Export dropdown actions are exposed on window.* (see bottom of file)
 
     // Import Button
     document.getElementById('importBtn').addEventListener('click', importFeesCSV);
@@ -237,7 +273,7 @@ function initializeEventListeners() {
     });
 
     // File Input Change
-    document.getElementById('csvFileInput')?.addEventListener('change', function(e) {
+    document.getElementById('csvFileInput')?.addEventListener('change', function (e) {
         handleFeesCSVFile(e.target.files[0]);
     });
 
@@ -451,11 +487,11 @@ async function importFeesCSV() {
         });
 
         // Send to backend
-       const response = await fetch('/api/fees-manager/bulk-import-json', {
-           method: 'POST',
-           headers: getCsrfHeaders(),
-           body: JSON.stringify(importedFeesData)
-       });
+        const response = await fetch('/api/fees-manager/bulk-import-json', {
+            method: 'POST',
+            headers: getCsrfHeaders(),
+            body: JSON.stringify(importedFeesData)
+        });
 
         const result = await response.json();
 
@@ -489,11 +525,11 @@ async function importFeesCSV() {
                         <p><strong>Successfully Imported:</strong> ${result.successfulImports}</p>
                         <p><strong>Failed:</strong> ${result.failedImports}</p>
                         ${result.errors && result.errors.length > 0 ?
-                            `<p class="mt-2"><strong>Errors:</strong></p>
+                        `<p class="mt-2"><strong>Errors:</strong></p>
                              <ul class="small">${result.errors.slice(0, 5).map(e =>
-                                `<li>Row ${e.rowNumber}: ${e.errorMessage}</li>`
-                             ).join('')}</ul>` : ''
-                        }
+                            `<li>Row ${e.rowNumber}: ${e.errorMessage}</li>`
+                        ).join('')}</ul>` : ''
+                    }
                     </div>
                 `,
                 confirmButtonColor: '#667eea'
@@ -517,27 +553,27 @@ async function importFeesCSV() {
 
 async function loadFeesFromBackend() {
     try {
-       const backendPage = Math.max(0, (currentPage || 1) - 1);
-       const params = new URLSearchParams({
-           page: String(backendPage),
-           size: String(entriesPerPage),
-           sortBy: 'createdAt',
-           sortDirection: 'DESC'
-       });
+        const backendPage = Math.max(0, (currentPage || 1) - 1);
+        const params = new URLSearchParams({
+            page: String(backendPage),
+            size: String(entriesPerPage),
+            sortBy: 'createdAt',
+            sortDirection: 'DESC'
+        });
 
-       if (feesFilters.searchTerm && feesFilters.searchTerm.trim() !== '') {
-           params.set('searchTerm', feesFilters.searchTerm.trim());
-       }
-       if (feesFilters.status && feesFilters.status.trim() !== '' && feesFilters.status.trim().toLowerCase() !== 'all') {
-           params.set('status', feesFilters.status.trim());
-       }
-       if (feesFilters.course && feesFilters.course.trim() !== '') {
-           params.set('course', feesFilters.course.trim());
-       }
+        if (feesFilters.searchTerm && feesFilters.searchTerm.trim() !== '') {
+            params.set('searchTerm', feesFilters.searchTerm.trim());
+        }
+        if (feesFilters.status && feesFilters.status.trim() !== '' && feesFilters.status.trim().toLowerCase() !== 'all') {
+            params.set('status', feesFilters.status.trim());
+        }
+        if (feesFilters.course && feesFilters.course.trim() !== '') {
+            params.set('course', feesFilters.course.trim());
+        }
 
-       const response = await fetch(`/api/fees-manager?${params.toString()}`, {
-           headers: getCsrfHeaders()
-       });
+        const response = await fetch(`/api/fees-manager?${params.toString()}`, {
+            headers: getCsrfHeaders()
+        });
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -717,7 +753,6 @@ async function openFeeInstallments(regNo) {
                     totalAmount: config.totalAmount || student.totalFees
                 };
 
-                console.log(' Loaded installment config from backend:', installmentConfig);
             }
         }
 
@@ -787,7 +822,7 @@ async function openFeeInstallments(regNo) {
 }
 
 // Delete installment function
-window.deleteInstallment = async function(installmentId) {
+window.deleteInstallment = async function (installmentId) {
     const result = await Swal.fire({
         title: 'Delete Installment?',
         text: 'This action cannot be undone',
@@ -867,6 +902,7 @@ async function loadRefundHistory(regNo) {
                 `).join('');
             }
         }
+
     } catch (error) {
         console.error('Error loading refund history:', error);
     }
@@ -906,18 +942,35 @@ function renderTable() {
             }
         }
 
-        // Determine status
-        let statusBadge = 'bg-warning';
-        let statusText = item.status || 'Pending';
+        // Determine status (prefer backend payment status)
+        const rawStatus = (item.status || '').toString().trim();
+        const normalizedStatus = rawStatus.toLowerCase();
 
-        if (totalRefund > 0 && actualDue > 0.01) {
-            statusBadge = 'bg-danger';
-            statusText = 'Refund';
-        } else if (actualDue <= 0.01) {
+        let statusText = rawStatus || (actualDue <= 0.01 ? 'Clear' : 'Pending');
+        let statusBadge = 'bg-warning';
+
+        if (normalizedStatus === 'clear') {
             statusBadge = 'bg-success';
             statusText = 'Clear';
-        } else if (item.status === 'Overdue') {
+        } else if (normalizedStatus === 'overdue') {
             statusBadge = 'bg-danger';
+            statusText = 'Overdue';
+        } else if (normalizedStatus === 'refund') {
+            statusBadge = 'bg-danger';
+            statusText = 'Refund';
+        } else if (normalizedStatus === 'pending') {
+            statusBadge = 'bg-warning';
+            statusText = 'Pending';
+        } else {
+            if (!rawStatus) {
+                if (totalRefund > 0 && actualDue > 0.01) {
+                    statusBadge = 'bg-danger';
+                    statusText = 'Refund';
+                } else if (actualDue <= 0.01) {
+                    statusBadge = 'bg-success';
+                    statusText = 'Clear';
+                }
+            }
         }
 
         return `
@@ -1009,7 +1062,7 @@ async function viewReceipts(regNo) {
             tbody.innerHTML = receipts.map(receipt => {
                 //  Check data source to determine if it's old imported data
                 const isOldData = receipt.dataSource === 'IMPORTED_OLD_DATA' ||
-                                 receipt.receiptType === 'Old Imported';
+                    receipt.receiptType === 'Old Imported';
 
                 const receiptTypeBadge = isOldData
                     ? '<span class="badge bg-secondary">Old Import</span>'
@@ -1074,7 +1127,7 @@ function toggleActionMenu(event) {
 }
 
 // Close menus when clicking outside
-document.addEventListener('click', function() {
+document.addEventListener('click', function () {
     document.querySelectorAll('.action-menu').forEach(menu => {
         menu.classList.remove('show');
     });
@@ -1276,43 +1329,7 @@ function generateReceiptHTML(data) {
     `;
 }
 
-// Helper function to convert number to words
-function numberToWords(num) {
-    if (num === 0) return 'Zero Rupees Only';
 
-    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-
-    function convertLessThanThousand(n) {
-        if (n === 0) return '';
-        if (n < 10) return ones[n];
-        if (n < 20) return teens[n - 10];
-        if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
-        return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertLessThanThousand(n % 100) : '');
-    }
-
-    num = Math.floor(num);
-
-    if (num < 1000) return convertLessThanThousand(num) + ' Rupees Only';
-    if (num < 100000) {
-        const thousands = Math.floor(num / 1000);
-        const remainder = num % 1000;
-        return convertLessThanThousand(thousands) + ' Thousand' +
-               (remainder !== 0 ? ' ' + convertLessThanThousand(remainder) : '') + ' Rupees Only';
-    }
-
-    const lakhs = Math.floor(num / 100000);
-    const remainder = num % 100000;
-    const thousands = Math.floor(remainder / 1000);
-    const hundreds = remainder % 1000;
-
-    let result = convertLessThanThousand(lakhs) + ' Lakh';
-    if (thousands > 0) result += ' ' + convertLessThanThousand(thousands) + ' Thousand';
-    if (hundreds > 0) result += ' ' + convertLessThanThousand(hundreds);
-
-    return result + ' Rupees Only';
-}
 
 // Print Receipt Content
 function printReceiptContent(htmlContent) {
@@ -1422,7 +1439,6 @@ function updateReceipt(receiptNo) {
     }).then((result) => {
         if (result.isConfirmed) {
             // Here you would make API call to update receipt
-            console.log('Updating receipt:', result.value);
 
             Swal.fire({
                 icon: 'success',
@@ -1437,92 +1453,7 @@ function updateReceipt(receiptNo) {
     });
 }
 
-document.getElementById('importBtn').addEventListener('click', importFeesCSV);
 
-
-async function importFeesCSV() {
-    if (importedFeesData.length === 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'No Data',
-            text: 'No valid data to import',
-            confirmButtonColor: '#667eea'
-        });
-        return;
-    }
-
-    try {
-        Swal.fire({
-            title: 'Importing...',
-            text: `Processing ${importedFeesData.length} records`,
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-
-        // Send to backend
-        const response = await fetch('/api/fees-manager/bulk-import-json', {
-            method: 'POST',
-            headers: getCsrfHeaders(),
-            body: JSON.stringify(importedFeesData)
-        });
-
-        const result = await response.json();
-
-        Swal.close();
-        bootstrap.Modal.getInstance(document.getElementById('importModal')).hide();
-
-        if (result.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Import Complete!',
-                html: `
-                    <div class="text-start">
-                        <p><strong>Total Records:</strong> ${result.totalRecords}</p>
-                        <p><strong>Successfully Imported:</strong> ${result.successfulImports}</p>
-                        <p><strong>Failed:</strong> ${result.failedImports}</p>
-                    </div>
-                `,
-                confirmButtonColor: '#667eea'
-            }).then(() => {
-                // Reload the fees table
-                renderTable();
-                resetFeesImport();
-            });
-        } else {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Import Completed with Errors',
-                html: `
-                    <div class="text-start">
-                        <p><strong>Total Records:</strong> ${result.totalRecords}</p>
-                        <p><strong>Successfully Imported:</strong> ${result.successfulImports}</p>
-                        <p><strong>Failed:</strong> ${result.failedImports}</p>
-                        ${result.errors && result.errors.length > 0 ?
-                            `<p class="mt-2"><strong>Errors:</strong></p>
-                             <ul class="small">${result.errors.slice(0, 5).map(e =>
-                                `<li>Row ${e.rowNumber}: ${e.errorMessage}</li>`
-                             ).join('')}</ul>` : ''
-                        }
-                    </div>
-                `,
-                confirmButtonColor: '#667eea'
-            }).then(() => {
-                renderTable();
-                resetFeesImport();
-            });
-        }
-
-    } catch (error) {
-        Swal.close();
-        console.error('Import error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Import Failed',
-            text: error.message || 'Failed to import data',
-            confirmButtonColor: '#ef4444'
-        });
-    }
-}
 
 // Generate and print receipt
 async function printReceiptWithData(receiptNo, regNo) {
@@ -1631,8 +1562,6 @@ async function saveReceipt() {
         receiptType: 'Regular',
         notes: document.getElementById('receiptNotes').value || null
     };
-
-    console.log('💾 Saving receipt with installmentId:', installmentId); //  Debug log
 
     try {
         showLoading(isUpdate ? 'Updating receipt...' : 'Saving receipt...');
@@ -1797,14 +1726,14 @@ async function updateFeesTotalPaid(regNo) {
             }, 0);
 
             // Update fees table
-           await fetch(`${API_BASE}/update-total-paid`, {
-               method: 'PUT',
-               headers: getCsrfHeaders(),
-               body: JSON.stringify({
-                   regNo: regNo,
-                   totalPaid: totalPaid
-               })
-           });
+            await fetch(`${API_BASE}/update-total-paid`, {
+                method: 'PUT',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({
+                    regNo: regNo,
+                    totalPaid: totalPaid
+                })
+            });
         }
     } catch (error) {
         console.error('Error updating total paid:', error);
@@ -1979,7 +1908,7 @@ function handleDrop(e) {
 
 function processCSVFile(file) {
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         const text = e.target.result;
         const rows = text.split('\n');
         const headers = rows[0].split(',');
@@ -2055,7 +1984,6 @@ function exportToCSV() {
 }
 
 function printReceipt(receiptNo) {
-    console.log('Printing receipt:', receiptNo);
 
     Swal.fire({
         icon: 'info',
@@ -2078,13 +2006,13 @@ async function deleteReceipt(receiptId) {
 
     if (result.isConfirmed) {
         try {
-             const response = await fetch(
-                 `/api/fees-manager/receipts/${receiptId}`,
-                 {
-                     method: 'DELETE',
-                     headers: getCsrfHeaders()
-                 }
-             );
+            const response = await fetch(
+                `/api/fees-manager/receipts/${receiptId}`,
+                {
+                    method: 'DELETE',
+                    headers: getCsrfHeaders()
+                }
+            );
 
             if (response.ok) {
                 Swal.fire({
@@ -2097,6 +2025,9 @@ async function deleteReceipt(receiptId) {
                     if (currentStudentId) {
                         viewReceipts(currentStudentId);
                     }
+
+                    // Refresh main fees table totals/status after backend recalculation
+                    loadFeesFromBackend();
                 });
             } else {
                 throw new Error('Delete failed');
@@ -2171,7 +2102,6 @@ async function openFeeReceipt(regNo) {
         installmentSelect.innerHTML = '<option value="" selected>Not Applicable (Old Student)</option>';
         installmentSelect.disabled = false; // Keep enabled but with NA option
 
-        console.log('ℹ️ Old student - Installment field set to optional');
     } else {
         // For new students (REG*): Load installments normally
         await loadInstallmentsForReceipt(regNo);
@@ -2265,7 +2195,6 @@ async function emailReceipt(receiptNo, studentName, mobile) {
 
         if (student) {
             actualRegNo = student.regNo;
-            console.log(' Found regNo from feesData:', actualRegNo);
         } else {
             console.error(' Student not found in feesData:', studentName);
             showError('Could not find student registration number');
@@ -2359,7 +2288,6 @@ async function emailReceipt(receiptNo, studentName, mobile) {
             }
 
             try {
-                console.log('🔍 Fetching receipt for regNo:', actualRegNo);
 
                 // Fetch receipt data
                 const receiptResponse = await fetch(`${API_BASE}/receipts/${actualRegNo}`, {
@@ -2396,143 +2324,124 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                     nextDueDate: student?.dueDate || null
                 };
 
-                console.log('📄 Generating PDF with CURRENT data:', {
-                    pendingFees: receiptData.pendingFees,
-                    nextDueDate: receiptData.nextDueDate
-                });
 
-                // Generate PDF
-                const pdfBase64 = await generateInvoicePDF(receiptData);
 
-                if (!pdfBase64) {
-                    Swal.showValidationMessage('Failed to generate PDF');
-                    return false;
-                }
+    // Generate PDF
+    const pdfBase64 = await generateInvoicePDF(receiptData);
 
-                // Validate PDF size
-                const pdfSizeKB = Math.round((pdfBase64.length * 3 / 4) / 1024);
-                console.log(`📊 PDF size: ${pdfSizeKB} KB (${pdfBase64.length} chars base64)`);
+    if (!pdfBase64) {
+        Swal.showValidationMessage('Failed to generate PDF');
+        return false;
+    }
 
-                if (pdfSizeKB > 8192) { // 8MB limit for safety
-                    Swal.showValidationMessage(`PDF too large (${pdfSizeKB}KB). Maximum 8MB allowed.`);
-                    return false;
-                }
+    // Validate PDF size
+    const pdfSizeKB = Math.round((pdfBase64.length * 3 / 4) / 1024);
 
-                // Show progress for large PDFs
-                if (pdfSizeKB > 2048) { // > 2MB
-                    console.log('⏳ Large PDF detected, sending may take longer...');
-                }
+    if (pdfSizeKB > 8192) { // 8MB limit for safety
+        Swal.showValidationMessage(`PDF too large (${pdfSizeKB}KB). Maximum 8MB allowed.`);
+        return false;
+    }
 
-                // Increase timeout for large PDFs
-                const controller = new AbortController();
-                const timeoutMs = 60000; // 60 seconds
-                const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+    // Increase timeout for large PDFs
+    const controller = new AbortController();
+    const timeoutMs = 60000; // 60 seconds
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        const response = await fetch(`${API_BASE}/receipts/${receiptNo}/send-email`, {
+            method: 'POST',
+            headers: getCsrfHeaders(),
+            body: JSON.stringify({
+                email: email,
+                studentName: name,
+                message: document.getElementById('emailMessage').value,
+                pdfData: pdfBase64
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        // Better error handling
+        if (!response.ok) {
+            const contentType = response.headers.get('content-type');
+            let errorMessage = 'Failed to send email';
+
+            console.error(' Server response status:', response.status);
+            console.error(' Server response headers:',
+                Object.fromEntries(response.headers.entries()));
+
+            if (contentType && contentType.includes('application/json')) {
                 try {
-                    console.log('📧 Sending email to:', email);
-                    console.log('📤 Request payload size:', JSON.stringify({
-                        email: email,
-                        studentName: name,
-                        message: document.getElementById('emailMessage').value,
-                        pdfData: pdfBase64.substring(0, 100) + '...' // Log first 100 chars only
-                    }).length, 'bytes');
-
-                    const response = await fetch(`${API_BASE}/receipts/${receiptNo}/send-email`, {
-                        method: 'POST',
-                        headers: getCsrfHeaders(),
-                        body: JSON.stringify({
-                            email: email,
-                            studentName: name,
-                            message: document.getElementById('emailMessage').value,
-                            pdfData: pdfBase64
-                        }),
-                        signal: controller.signal
-                    });
-
-                    clearTimeout(timeoutId);
-
-                    // Better error handling
-                    if (!response.ok) {
-                        const contentType = response.headers.get('content-type');
-                        let errorMessage = 'Failed to send email';
-
-                        console.error(' Server response status:', response.status);
-                        console.error(' Server response headers:',
-                            Object.fromEntries(response.headers.entries()));
-
-                        if (contentType && contentType.includes('application/json')) {
-                            try {
-                                const errorData = await response.json();
-                                errorMessage = errorData.message || errorMessage;
-                                console.error(' Server error JSON:', errorData);
-                            } catch (jsonError) {
-                                console.error(' Failed to parse error JSON:', jsonError);
-                            }
-                        } else {
-                            const errorText = await response.text();
-                            console.error(' Server error text:', errorText.substring(0, 500));
-
-                            // Check for specific error patterns
-                            if (errorText.includes('JSON parse error')) {
-                                errorMessage = 'Failed to process PDF. Please try again or contact support.';
-                            } else if (errorText.includes('Unexpected end-of-input')) {
-                                errorMessage = 'PDF data was truncated. Please try again.';
-                            }
-                        }
-
-                        Swal.showValidationMessage(errorMessage);
-                        return false;
-                    }
-
-                    const result = await response.json();
-                    console.log(' Email API response:', result);
-
-                    return { email, result };
-
-                } catch (error) {
-                    clearTimeout(timeoutId);
-
-                    if (error.name === 'AbortError') {
-                        console.log('⏱ Email request timed out after', timeoutMs/1000, 'seconds');
-                        console.log('ℹ️ Email is likely being processed in background');
-                        // Don't fail - return success as email is processing
-                        return { email, timeout: true };
-                    }
-
-                    console.error(' Network error:', error);
-                    console.error(' Error name:', error.name);
-                    console.error(' Error message:', error.message);
-                    console.error(' Error stack:', error.stack);
-
-                    Swal.showValidationMessage('Network error: ' + error.message);
-                    return false;
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                    console.error(' Server error JSON:', errorData);
+                } catch (jsonError) {
+                    console.error(' Failed to parse error JSON:', jsonError);
                 }
-            } catch (error) {
-                console.error(' Error in email process:', error);
-                console.error(' Error type:', error.constructor.name);
-                console.error(' Error details:', error);
-                Swal.showValidationMessage('Unexpected error: ' + error.message);
-                return false;
+            } else {
+                const errorText = await response.text();
+                console.error(' Server error text:', errorText.substring(0, 500));
+
+                // Check for specific error patterns
+                if (errorText.includes('JSON parse error')) {
+                    errorMessage = 'Failed to process PDF. Please try again or contact support.';
+                } else if (errorText.includes('Unexpected end-of-input')) {
+                    errorMessage = 'PDF data was truncated. Please try again.';
+                }
             }
+
+            Swal.showValidationMessage(errorMessage);
+            return false;
+        }
+
+        const result = await response.json();
+
+        return { email, result };
+
+    } catch (error) {
+        clearTimeout(timeoutId);
+
+        if (error.name === 'AbortError') {
+            // Don't fail - return success as email is processing
+            return { email, timeout: true };
+        }
+
+        console.error(' Network error:', error);
+        console.error(' Error name:', error.name);
+        console.error(' Error message:', error.message);
+        console.error(' Error stack:', error.stack);
+
+        Swal.showValidationMessage('Network error: ' + error.message);
+        return false;
+    }
+} catch (error) {
+    console.error(' Error in email process:', error);
+    console.error(' Error type:', error.constructor.name);
+    console.error(' Error details:', error);
+    Swal.showValidationMessage('Unexpected error: ' + error.message);
+    return false;
+}
         }
     });
 
-    if (isConfirmed && formValues) {
-        let message = `Receipt is being sent to: <p class="fw-bold text-primary">${formValues.email}</p>`;
+if (isConfirmed && formValues) {
+    let message = `Receipt is being sent to: <p class="fw-bold text-primary">${formValues.email}</p>`;
 
-        if (formValues.timeout) {
-            message += '<p class="small text-muted">⏳ Request timed out but email is being processed in background.</p>';
-        } else {
-            message += '<p class="small text-muted">Please check your inbox in a few moments</p>';
-        }
-
-        Swal.fire({
-            icon: 'success',
-            title: 'Email Sent!',
-            html: message,
-            confirmButtonColor: '#667eea'
-        });
+    if (formValues.timeout) {
+        message += '<p class="small text-muted">⏳ Request timed out but email is being processed in background.</p>';
+    } else {
+        message += '<p class="small text-muted">Please check your inbox in a few moments</p>';
     }
+
+    Swal.fire({
+        icon: 'success',
+        title: 'Email Sent!',
+        html: message,
+        confirmButtonColor: '#667eea'
+    });
+}
 }
 
 function changeStatus(admissionId) {
@@ -2550,20 +2459,6 @@ function changeStatus(admissionId) {
     new bootstrap.Modal(document.getElementById('changeStatusModal')).show();
 }
 
-function changeStatus(admissionId) {
-    if (!admissionId) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Student admission ID is missing',
-            confirmButtonColor: '#667eea'
-        });
-        return;
-    }
-
-    currentStudentId = admissionId;
-    new bootstrap.Modal(document.getElementById('changeStatusModal')).show();
-}
 
 //  manageInstallments function
 function manageInstallments(admissionId) {
@@ -2761,11 +2656,9 @@ function updateNextDueDateFromInstallment() {
     if (nextInstallment) {
         //  Set next installment's due date
         nextDueDateInput.value = nextInstallment.dueDate;
-        console.log(` Auto-set next due date to Installment ${nextInstallment.installmentNumber}: ${nextInstallment.dueDate}`);
     } else {
         //  This is the last installment - clear next due date
         nextDueDateInput.value = '';
-        console.log('ℹ️ Last installment - no next due date');
     }
 }
 
@@ -2835,11 +2728,11 @@ async function saveRefund() {
             didOpen: () => Swal.showLoading()
         });
 
-      const response = await fetch('/api/fees-manager/refunds', {
-          method: 'POST',
-          headers: getCsrfHeaders(),
-          body: JSON.stringify(refundData)
-      });
+        const response = await fetch('/api/fees-manager/refunds', {
+            method: 'POST',
+            headers: getCsrfHeaders(),
+            body: JSON.stringify(refundData)
+        });
 
         const result = await response.json();
 
@@ -2876,9 +2769,6 @@ async function saveRefund() {
 async function viewReceiptPreview(receiptNo, regNo) {
     try {
         showLoading('Loading receipt...');
-
-        //  FIX: Use regNo parameter, not currentStudentRegNo
-        console.log('🔍 viewReceiptPreview called with:', { receiptNo, regNo });
 
         const response = await fetch(`${API_BASE}/receipts/${regNo}`, {
             headers: getCsrfHeaders()
@@ -3276,7 +3166,7 @@ function numberToWords(num) {
         const thousands = Math.floor(num / 1000);
         const remainder = num % 1000;
         return convertLessThanThousand(thousands) + ' Thousand' +
-               (remainder !== 0 ? ' ' + convertLessThanThousand(remainder) : '') + ' Rupees Only';
+            (remainder !== 0 ? ' ' + convertLessThanThousand(remainder) : '') + ' Rupees Only';
     }
 
     const lakhs = Math.floor(num / 100000);
@@ -3290,3 +3180,201 @@ function numberToWords(num) {
 
     return result + ' Rupees Only';
 }
+
+// ==================== EXPORT (ALL FILTERED ROWS) ====================
+
+async function fetchAllFeesForExport() {
+    try {
+        showLoading('Fetching export data...');
+
+        const baseParams = new URLSearchParams({
+            sortBy: 'createdAt',
+            sortDirection: 'DESC'
+        });
+
+        if (feesFilters.searchTerm && feesFilters.searchTerm.trim() !== '') {
+            baseParams.set('searchTerm', feesFilters.searchTerm.trim());
+        }
+        if (feesFilters.status && feesFilters.status.trim() !== '' && feesFilters.status.trim().toLowerCase() !== 'all') {
+            baseParams.set('status', feesFilters.status.trim());
+        }
+        if (feesFilters.course && feesFilters.course.trim() !== '') {
+            baseParams.set('course', feesFilters.course.trim());
+        }
+
+        const pageSize = 500;
+        let page = 0;
+        let allRows = [];
+        let totalPagesLocal = 1;
+
+        while (page < totalPagesLocal) {
+            const params = new URLSearchParams(baseParams.toString());
+            params.set('page', String(page));
+            params.set('size', String(pageSize));
+
+            const response = await fetch(`/api/fees-manager?${params.toString()}`, {
+                headers: getCsrfHeaders()
+            });
+            if (!response.ok) {
+                throw new Error(`Failed to fetch export data (status ${response.status})`);
+            }
+
+            const data = await response.json();
+            const rows = data && Array.isArray(data.content) ? data.content : [];
+            allRows = allRows.concat(rows);
+
+            totalPagesLocal = typeof data.totalPages === 'number' ? data.totalPages : 0;
+            if (!totalPagesLocal) {
+                break;
+            }
+
+            page += 1;
+        }
+
+        Swal.close();
+
+        if (!allRows.length) {
+            showError('No data available to export');
+            return null;
+        }
+
+        return allRows;
+    } catch (error) {
+        Swal.close();
+        console.error('Export error:', error);
+        showError('Failed to fetch data: ' + (error.message || 'Unknown error'));
+        return null;
+    }
+}
+
+function buildFeesExportTable(rows) {
+    let tempTable = document.getElementById('tempFeesExportTable');
+    if (!tempTable) {
+        tempTable = document.createElement('table');
+        tempTable.id = 'tempFeesExportTable';
+        tempTable.style.display = 'none';
+        document.body.appendChild(tempTable);
+    }
+
+    const tableHTML = `
+        <thead>
+            <tr>
+                <th>Reg No</th>
+                <th>Student Name</th>
+                <th>Mobile</th>
+                <th>Total Fees</th>
+                <th>Total Paid</th>
+                <th>Fees Due</th>
+                <th>Due Date</th>
+                <th>Fees Refund</th>
+                <th>Status</th>
+                <th>Course</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rows.map(r => `
+                <tr>
+                    <td>${r.registrationNumber ?? ''}</td>
+                    <td>${r.studentName ?? ''}</td>
+                    <td>${r.mobile ?? ''}</td>
+                    <td>${r.totalFees ?? ''}</td>
+                    <td>${r.totalPaid ?? ''}</td>
+                    <td>${r.feesDue ?? ''}</td>
+                    <td>${r.dueDate ?? ''}</td>
+                    <td>${r.feesRefund ?? ''}</td>
+                    <td>${r.status ?? ''}</td>
+                    <td>${r.course ?? ''}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+    `;
+
+    tempTable.innerHTML = tableHTML;
+    return tempTable;
+}
+
+let feesExportDataTable = null;
+function initFeesExportDataTable(table) {
+    if (feesExportDataTable) {
+        try {
+            feesExportDataTable.destroy();
+        } catch (e) {
+        }
+        feesExportDataTable = null;
+    }
+
+    feesExportDataTable = $(table).DataTable({
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: 'csvHtml5',
+                text: 'CSV',
+                title: 'Fees_Manager_Export',
+                filename: `Fees_Manager_${new Date().toISOString().split('T')[0]}`
+            },
+            {
+                extend: 'excelHtml5',
+                text: 'Excel',
+                title: 'Fees Manager Export',
+                filename: `Fees_Manager_${new Date().toISOString().split('T')[0]}`
+            },
+            {
+                extend: 'pdfHtml5',
+                text: 'PDF',
+                title: 'Fees Manager Export',
+                filename: `Fees_Manager_${new Date().toISOString().split('T')[0]}`,
+                orientation: 'landscape',
+                pageSize: 'A3'
+            },
+            'copy',
+            'print'
+        ],
+        paging: false,
+        searching: false,
+        ordering: false,
+        info: false,
+        autoWidth: false
+    });
+
+    return feesExportDataTable;
+}
+
+window.exportFeesToCSV = async function () {
+    const rows = await fetchAllFeesForExport();
+    if (!rows) return;
+    const table = buildFeesExportTable(rows);
+    const dt = initFeesExportDataTable(table);
+    dt.button('.buttons-csv').trigger();
+};
+
+window.exportFeesToExcel = async function () {
+    const rows = await fetchAllFeesForExport();
+    if (!rows) return;
+    const table = buildFeesExportTable(rows);
+    const dt = initFeesExportDataTable(table);
+    dt.button('.buttons-excel').trigger();
+};
+
+window.exportFeesToPDF = async function () {
+    const rows = await fetchAllFeesForExport();
+    if (!rows) return;
+    const table = buildFeesExportTable(rows);
+    const dt = initFeesExportDataTable(table);
+    dt.button('.buttons-pdf').trigger();
+};
+
+window.copyFeesTableData = async function () {
+    const rows = await fetchAllFeesForExport();
+    if (!rows) return;
+    const table = buildFeesExportTable(rows);
+    const dt = initFeesExportDataTable(table);
+    dt.button('.buttons-copy').trigger();
+};
+
+window.printFeesTable = async function () {
+    const rows = await fetchAllFeesForExport();
+    if (!rows) return;
+    const table = buildFeesExportTable(rows);
+    const dt = initFeesExportDataTable(table);
+    dt.button('.buttons-print').trigger();
+};

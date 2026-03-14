@@ -365,7 +365,7 @@ public class BatchService {
     /**
      * Convert entity to response DTO
      */
-    private BatchResponseDTO convertToResponseDTO(Batch batch) {
+    public BatchResponseDTO convertToResponseDTO(Batch batch) {
         BatchResponseDTO dto = new BatchResponseDTO();
         dto.setId(batch.getId());
         dto.setBatchNo(batch.getBatchNo());

@@ -69,27 +69,27 @@ public class AutoCertificateService {
                 admission.setCategoryUpdatedAt(LocalDateTime.now());
                 admissionRepository.save(admission);
 
-                log.info("✅ Updated {} category: {} -> {}",
+                log.info(" Updated {} category: {} -> {}",
                         registrationNumber, admission.getStudentCategory(), newCategory);
             }
 
         } catch (Exception e) {
-            log.error("❌ Error updating admission status for {}: {}", registrationNumber, e.getMessage());
+            log.error(" Error updating admission status for {}: {}", registrationNumber, e.getMessage());
         }
     }
 
     /**
      *  AUTO-GENERATE CERTIFICATES FROM CLEARED FEES
-     * - Only processes NEW admissions (regNo starts with "REG")
+     * - Processes BOTH new and old admissions
      * - Creates separate certificate for EACH course
      * - Skips duplicate certificates (same regNo + course combination)
      */
     @Transactional
     public int processFeesAndGenerateCertificates() {
-        log.info("🔄 Starting auto certificate generation for NEW admissions with cleared fees...");
+        log.info("🔄 Starting auto certificate generation for admissions with cleared fees...");
 
-        List<Fees> clearedFees = feesRepository.findClearedFees();
-        log.info("📊 Found {} cleared fee records (NEW admissions only)", clearedFees.size());
+        List<Fees> clearedFees = feesRepository.findFeesWithStatusClear();
+        log.info("📊 Found {} cleared fee records", clearedFees.size());
 
         int certificatesCreated = 0;
 
@@ -97,9 +97,7 @@ public class AutoCertificateService {
             try {
                 String regNo = fee.getRegistrationNumber();
 
-                //  FILTER: Only process NEW admissions (starts with "REG")
-                if (regNo == null || !regNo.startsWith("REG")) {
-                    log.debug("⏭️ Skipping old admission: {}", regNo);
+                if (regNo == null || regNo.trim().isEmpty()) {
                     continue;
                 }
 

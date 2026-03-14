@@ -1,22 +1,18 @@
 package com.tts.sms.repository;
 
-import com.tts.sms.model.Fees;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
+import com.tts.sms.model.Fees;
 
 @Repository
 public interface FeesRepository extends JpaRepository<Fees, Long>, JpaSpecificationExecutor<Fees> {
@@ -74,6 +70,9 @@ public interface FeesRepository extends JpaRepository<Fees, Long>, JpaSpecificat
             "ABS(f.totalFees - f.totalPaid) < 0.01) " +
             "ORDER BY f.createdAt DESC")
     List<Fees> findClearedFees();
+
+    @Query("SELECT f FROM Fees f WHERE f.isDeleted = false AND LOWER(f.status) = 'clear' ORDER BY f.createdAt DESC")
+    List<Fees> findFeesWithStatusClear();
 
     /**
      * Find cleared fees for specific student/course combination

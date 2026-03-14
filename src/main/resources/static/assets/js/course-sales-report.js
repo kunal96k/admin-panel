@@ -18,7 +18,7 @@ let csrfToken = null;
 let csrfHeader = null;
 
 // Initialize on DOM Ready
-$(document).ready(function() {
+$(document).ready(function () {
     initializePage();
 });
 
@@ -54,7 +54,6 @@ function initializeCsrfToken() {
     if (token) {
         csrfToken = token;
         csrfHeader = 'X-CSRF-TOKEN';
-        console.log('CSRF token initialized');
     } else {
         console.warn('CSRF token not found in cookies');
     }
@@ -82,7 +81,7 @@ function loadCourses() {
         url: config.baseUrl + config.endpoints.courses,
         contentType: "application/json",
         dataType: "json",
-        beforeSend: function(xhr) {
+        beforeSend: function (xhr) {
             if (sessionStorage.token) {
                 xhr.setRequestHeader("Authorization", "Bearer " + sessionStorage.token);
             }
@@ -93,12 +92,12 @@ function loadCourses() {
                 xhr.setRequestHeader(csrfHeader, csrfToken);
             }
         },
-        success: function(result) {
+        success: function (result) {
             coursesData = result;
             populateCourseDropdown(result);
             hideLoading();
         },
-        error: function(xhr) {
+        error: function (xhr) {
             hideLoading();
             handleError(xhr);
         }
@@ -112,7 +111,7 @@ function populateCourseDropdown(courses) {
 
     $courseFilter.append('<option value="" disabled selected>-- Select Course --</option>');
 
-    courses.forEach(function(course) {
+    courses.forEach(function (course) {
         $courseFilter.append(
             $('<option>', {
                 value: course.CourseId,
@@ -127,7 +126,7 @@ function populateCourseDropdown(courses) {
 // Setup Event Listeners
 function setupEventListeners() {
     // Form Submit
-    $('#salesReportForm').on('submit', function(e) {
+    $('#salesReportForm').on('submit', function (e) {
         e.preventDefault();
         if (validateForm()) {
             searchReport();
@@ -138,29 +137,29 @@ function setupEventListeners() {
     $('#resetBtn').on('click', resetForm);
 
     // Course Filter Change
-    $('#courseFilter').on('change', function() {
+    $('#courseFilter').on('change', function () {
         selectedCourseId = $(this).val();
         $(this).removeClass('is-invalid');
     });
 
     // Course Search
-    $('#courseSearchInput').on('input', function() {
+    $('#courseSearchInput').on('input', function () {
         const searchTerm = $(this).val().toLowerCase();
-        $('#courseFilter option').each(function() {
+        $('#courseFilter option').each(function () {
             const text = $(this).text().toLowerCase();
             $(this).toggle(text.includes(searchTerm) || $(this).val() === '');
         });
     });
 
     // Table Search
-    $('#tableSearch').on('keyup', function() {
+    $('#tableSearch').on('keyup', function () {
         if (dataTable) {
             dataTable.search($(this).val()).draw();
         }
     });
 
     // Page Size Change
-    $('#pageSizeSelect').on('change', function() {
+    $('#pageSizeSelect').on('change', function () {
         if (dataTable) {
             dataTable.page.len($(this).val()).draw();
         }
@@ -172,30 +171,8 @@ function setupEventListeners() {
 
 // Setup Export Buttons
 function setupExportButtons() {
-    $('#copyBtn').on('click', function() {
-        if (dataTable) {
-            dataTable.button('.buttons-copy').trigger();
-            showNotification('Data copied to clipboard!', 'success');
-        }
-    });
-
-    $('#excelBtn').on('click', function() {
-        if (dataTable) {
-            dataTable.button('.buttons-excel').trigger();
-        }
-    });
-
-    $('#pdfBtn').on('click', function() {
-        if (dataTable) {
-            dataTable.button('.buttons-pdf').trigger();
-        }
-    });
-
-    $('#csvBtn').on('click', function() {
-        if (dataTable) {
-            dataTable.button('.buttons-csv').trigger();
-        }
-    });
+    // Buttons are now handled via DataTables and appended to #exportTools
+    // Individual listeners are removed to rely on DataTables buttons extension
 }
 
 // Validate Form
@@ -260,14 +237,70 @@ function searchReport() {
 
 // Initialize DataTable
 function initializeDataTable(startDate, toDate) {
- // Refresh CSRF token before request
+    // Refresh CSRF token before request
     initializeCsrfToken();
+
+    function exportAllData(e, dt, button, config) {
+        const self = this;
+        const oldStart = dt.settings()[0]._iDisplayStart;
+        const pageInfo = dt.page.info();
+        const totalRecords = pageInfo && typeof pageInfo.recordsFiltered === 'number'
+            ? pageInfo.recordsFiltered
+            : (pageInfo && typeof pageInfo.recordsTotal === 'number' ? pageInfo.recordsTotal : 0);
+
+        const buttonName = config.exportType || config.extend;
+        let originalActionFn = null;
+
+        if (buttonName) {
+            const btns = $.fn.dataTable.ext.buttons;
+            if (btns[buttonName] && btns[buttonName].action) {
+                originalActionFn = btns[buttonName].action;
+            } else if (btns[buttonName + 'Html5'] && btns[buttonName + 'Html5'].action) {
+                originalActionFn = btns[buttonName + 'Html5'].action;
+            }
+        }
+
+        if (!totalRecords || totalRecords <= 0) {
+            if (originalActionFn) {
+                originalActionFn.call(self, e, dt, button, config);
+            }
+            return;
+        }
+
+        showLoading();
+
+        dt.one('preXhr', function (_e, _s, data) {
+            data.start = 0;
+            data.length = totalRecords;
+        });
+
+        dt.one('draw', function () {
+            hideLoading();
+            if (originalActionFn) {
+                try {
+                    setTimeout(function () {
+                        originalActionFn.call(self, e, dt, button, config);
+                        dt.one('preXhr', function (_e, _s, data) {
+                            data.start = oldStart;
+                            data.length = pageInfo.length;
+                        });
+                        dt.ajax.reload(null, false);
+                    }, 100);
+                } catch (err) {
+                    console.error('Export failed:', err);
+                }
+            }
+        });
+
+        dt.ajax.reload();
+    }
 
     dataTable = $('#salesReportTable').DataTable({
         processing: true,
         serverSide: true,
         destroy: true,
         pageLength: config.pageLength,
+        lengthMenu: [10, 25, 50, 100, 1000],
         searching: true, //  Enable DataTables search
         language: {
             processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>',
@@ -285,45 +318,51 @@ function initializeDataTable(startDate, toDate) {
             }
         },
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
-             '<"row"<"col-sm-12"tr>>' +
-             '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>B',
+            '<"row"<"col-sm-12"tr>>' +
+            '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>B',
         buttons: [
             {
                 extend: 'copy',
+                exportType: 'copy',
                 className: 'btn btn-sm btn-outline-primary',
                 text: '<i class="bi bi-clipboard"></i> Copy',
-                exportOptions: {
-                    columns: [0, 1, 2, 3, 4]
-                }
+                exportOptions: { columns: [0, 1, 2, 3, 4] },
+                action: exportAllData
             },
             {
                 extend: 'excel',
+                exportType: 'excel',
                 className: 'btn btn-sm btn-outline-success',
                 text: '<i class="bi bi-file-earmark-excel"></i> Excel',
                 title: 'Course Wise Sales Report',
-                filename: 'course_sales_report_' + new Date().getTime()
+                filename: 'course_sales_report_' + new Date().getTime(),
+                action: exportAllData
             },
             {
                 extend: 'pdf',
+                exportType: 'pdf',
                 className: 'btn btn-sm btn-outline-danger',
                 text: '<i class="bi bi-file-earmark-pdf"></i> PDF',
                 title: 'Course Wise Sales Report',
                 filename: 'course_sales_report_' + new Date().getTime(),
-                orientation: 'landscape'
+                orientation: 'landscape',
+                action: exportAllData
             },
             {
                 extend: 'csv',
+                exportType: 'csv',
                 className: 'btn btn-sm btn-outline-info',
                 text: '<i class="bi bi-filetype-csv"></i> CSV',
                 title: 'Course Wise Sales Report',
-                filename: 'course_sales_report_' + new Date().getTime()
+                filename: 'course_sales_report_' + new Date().getTime(),
+                action: exportAllData
             }
         ],
         ajax: {
             url: config.baseUrl + config.endpoints.salesReport,
             type: 'POST',
             contentType: 'application/json',
-            beforeSend: function(xhr) {
+            beforeSend: function (xhr) {
                 if (sessionStorage.token) {
                     xhr.setRequestHeader("Authorization", "Bearer " + sessionStorage.token);
                 }
@@ -334,7 +373,7 @@ function initializeDataTable(startDate, toDate) {
                     xhr.setRequestHeader(csrfHeader, csrfToken);
                 }
             },
-            data: function(d) {
+            data: function (d) {
                 return JSON.stringify({
                     parameters: d,
                     ddlSelectedCourseId: selectedCourseId,
@@ -342,12 +381,14 @@ function initializeDataTable(startDate, toDate) {
                     toDate: toDate
                 });
             },
-            dataSrc: function(json) {
+            dataSrc: function (json) {
                 hideLoading();
+                const total = json.recordsTotal || 0;
+                $('#exportSection').toggle(total > 0);
                 updateStatistics(json);
                 return json.data || [];
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 hideLoading();
                 handleError(xhr);
             }
@@ -355,55 +396,59 @@ function initializeDataTable(startDate, toDate) {
         columns: [
             {
                 data: 'RegistrationNo',
-                render: function(data) {
+                render: function (data) {
                     return '<span class="fw-semibold">' + (data || 'N/A') + '</span>';
                 }
             },
             {
                 data: 'StudentName',
-                render: function(data) {
+                render: function (data) {
                     return '<span class="text-primary">' + (data || 'N/A') + '</span>';
                 }
             },
             {
                 data: 'StudentMobileNo',
-                render: function(data) {
+                render: function (data) {
                     return '<span class="text-muted">' + (data || 'N/A') + '</span>';
                 }
             },
             {
                 data: 'CreatedDate',
-                render: function(data) {
+                render: function (data) {
                     return data || 'N/A';
                 }
             },
             {
                 data: 'CourseAmount',
-                       render: function(data) {
-                           if (!data || data === '₹0.00' || data === 0) {
-                               return '<span class="fw-bold text-danger">₹0.00</span>';
-                           }
-                           return '<span class="fw-bold text-success">' + data + '</span>';
+                render: function (data) {
+                    if (!data || data === '₹0.00' || data === 0) {
+                        return '<span class="fw-bold text-danger">₹0.00</span>';
+                    }
+                    return '<span class="fw-bold text-success">' + data + '</span>';
                 }
             }
         ],
         order: [[3, 'desc']],
         responsive: true,
-        drawCallback: function(settings) {
+        drawCallback: function (settings) {
             const api = this.api();
-            const data = api.rows({page: 'current'}).data();
-        
+            const data = api.rows({ page: 'current' }).data();
+
             //  Get total from first record
             if (data.length > 0) {
                 const totalCourseAmount = data[0].TotalCourseAmount || '₹0.00';
                 $('#totalAmount').text(totalCourseAmount);
-                
-                console.log(' Total Amount Updated:', totalCourseAmount);
+
             } else {
                 $('#totalAmount').text('₹0.00');
             }
         }
     });
+
+    // Add export buttons to custom container
+    if ($('#exportTools').length) {
+        dataTable.buttons().container().appendTo('#exportTools');
+    }
 }
 
 // Update Statistics
@@ -431,7 +476,7 @@ function updateStatistics(json) {
 
 // Update Stats Card
 function updateStatsCard(selector, value) {
-    $(selector).fadeOut(200, function() {
+    $(selector).fadeOut(200, function () {
         $(this).text(value).fadeIn(200);
     });
 }
@@ -508,7 +553,7 @@ function updatePaginationControls() {
     `);
 
     // Bind Click Events
-    $pagination.find('a.page-link').on('click', function(e) {
+    $pagination.find('a.page-link').on('click', function (e) {
         e.preventDefault();
         const page = $(this).data('page');
         if (page !== undefined && dataTable) {
@@ -544,8 +589,9 @@ function resetForm() {
 
     updateStatsCard('#totalStudents', 0);
     updateStatsCard('#totalRevenue', '₹0.00');
-    updateStatsCard('#avgFees', '₹0.00');
+    $('#avgFees').text('₹0.00');
     $('#totalAmount').text('₹0.00');
+    $('#exportSection').hide();
 
     showNotification('Form reset successfully', 'info');
 }
@@ -579,7 +625,7 @@ function formatDisplayDate(dateString) {
 
 // Initialize Validation
 function initializeValidation() {
-    $('.form-control, .form-select').on('input change', function() {
+    $('.form-control, .form-select').on('input change', function () {
         if ($(this).val()) {
             $(this).removeClass('is-invalid');
         }
@@ -657,7 +703,7 @@ function fetchStatistics(courseId, fromDate, toDate) {
             startDate: fromDate,
             toDate: toDate
         },
-        beforeSend: function(xhr) {
+        beforeSend: function (xhr) {
             if (sessionStorage.token) {
                 xhr.setRequestHeader("Authorization", "Bearer " + sessionStorage.token);
             }
@@ -668,13 +714,13 @@ function fetchStatistics(courseId, fromDate, toDate) {
                 xhr.setRequestHeader(csrfHeader, csrfToken);
             }
         },
-        success: function(stats) {
+        success: function (stats) {
             updateStatsCard('#totalStudents', stats.totalStudents);
             updateStatsCard('#totalRevenue', '₹' + stats.totalRevenue);
             updateStatsCard('#totalCourses', stats.totalCourses);
             updateStatsCard('#avgFees', '₹' + stats.avgFees);
         },
-        error: function(xhr) {
+        error: function (xhr) {
             console.error('Failed to fetch statistics');
         }
     });

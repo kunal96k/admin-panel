@@ -1,30 +1,37 @@
 package com.tts.sms.service;
 
-import com.opencsv.CSVReader;
-import com.tts.sms.dto.FeeCollectionDTO;
-import com.tts.sms.dto.FeeCollectionSearchDTO;
-import com.tts.sms.dto.FeeCollectionStatsDTO;
-import com.tts.sms.model.Admission;
-import com.tts.sms.model.FeeCollection;
-import com.tts.sms.model.FeeReceipt;
-import com.tts.sms.repository.AdmissionRepository;
-import com.tts.sms.repository.FeeCollectionRepository;
-import com.tts.sms.repository.FeeReceiptRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.*;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.opencsv.CSVReader;
+import com.tts.sms.dto.FeeCollectionDTO;
+import com.tts.sms.dto.FeeCollectionSearchDTO;
+import com.tts.sms.dto.FeeCollectionStatsDTO;
+import com.tts.sms.model.FeeCollection;
+import com.tts.sms.model.FeeReceipt;
+import com.tts.sms.repository.AdmissionRepository;
+import com.tts.sms.repository.FeeCollectionRepository;
+import com.tts.sms.repository.FeeReceiptRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -51,10 +58,6 @@ public class FeeCollectionService {
     public Page<FeeCollectionDTO> searchFeeCollections(FeeCollectionSearchDTO searchDTO) {
         log.debug("Searching fee collections: {}", searchDTO);
 
-        // Create a list to hold combined results
-        List<FeeCollectionDTO> combinedResults = new ArrayList<>();
-
-        // Handle empty string as null
         String dataSource = searchDTO.getDataSource();
         if (dataSource != null && dataSource.trim().isEmpty()) {
             dataSource = null;
@@ -65,104 +68,48 @@ public class FeeCollectionService {
             paymentMode = null;
         }
 
-        // Determine what to fetch based on dataSource filter
-        boolean fetchOldData = (dataSource == null || dataSource.equals("IMPORTED_OLD_DATA"));
-        boolean fetchNewData = (dataSource == null || dataSource.equals("NEW_ENTRY"));
+        final int page = Math.max(searchDTO.getPage(), 0);
+        final int size = Math.max(searchDTO.getSize(), 1);
+        final int offset = page * size;
 
-        // 1. Fetch from fee_collections table (old imported data)
-        if (fetchOldData) {
-            log.debug("🔍 Fetching from fee_collections table...");
+        long total = feeCollectionRepository.countCombinedFeeCollections(
+                searchDTO.getFromDate(),
+                searchDTO.getToDate(),
+                dataSource,
+                paymentMode
+        );
 
-            List<FeeCollection> oldCollections = feeCollectionRepository.findByFiltersAsList(
-                    searchDTO.getFromDate(),
-                    searchDTO.getToDate(),
-                    "IMPORTED_OLD_DATA",
-                    paymentMode
-            );
+        List<FeeCollectionRepository.CombinedFeeRow> rows = feeCollectionRepository.findCombinedFeeCollections(
+                searchDTO.getFromDate(),
+                searchDTO.getToDate(),
+                dataSource,
+                paymentMode,
+                size,
+                offset
+        );
 
-            log.debug("✅ Found {} records in fee_collections", oldCollections.size());
-
-            // Convert old collections to DTOs
-            for (FeeCollection fc : oldCollections) {
-                FeeCollectionDTO dto = toDTO(fc);
-
-                // Fetch mobile from admission if missing
-                if ((dto.getMobileNo() == null || dto.getMobileNo().isEmpty())
-                        && dto.getRegistrationNumber() != null) {
-                    try {
-                        Admission admission = admissionRepository
-                                .findByRegistrationNumberAndIsDeletedFalse(dto.getRegistrationNumber());
-                        if (admission != null) {
-                            dto.setMobileNo(admission.getMobilePrimary());
-                        }
-                    } catch (Exception e) {
-                        log.warn("Could not fetch mobile for regNo: {}", dto.getRegistrationNumber());
-                    }
-                }
-
-                combinedResults.add(dto);
-            }
+        List<FeeCollectionDTO> pageContent = new ArrayList<>();
+        for (FeeCollectionRepository.CombinedFeeRow r : rows) {
+            pageContent.add(FeeCollectionDTO.builder()
+                    .id(r.getId())
+                    .receiptNo(r.getReceiptNo())
+                    .studentName(r.getStudentName())
+                    .mobileNo(r.getMobileNo())
+                    .receiptDate(r.getReceiptDate())
+                    .receiptDateOriginal(r.getReceiptDateOriginal())
+                    .paidFees(r.getPaidFees())
+                    .paymentMode(r.getPaymentMode())
+                    .dataSource(r.getDataSource())
+                    .registrationNumber(r.getRegistrationNumber())
+                    .createdAt(r.getCreatedAt())
+                    .build());
         }
 
-        // 2. Fetch from fee_receipts table (new entries)
-        if (fetchNewData) {
-            log.debug("🔍 Fetching from fee_receipts table...");
-
-            List<FeeReceipt> receipts = feeReceiptRepository.findByFiltersForCollection(
-                    searchDTO.getFromDate(),
-                    searchDTO.getToDate(),
-                    paymentMode
-            );
-
-            log.debug("✅ Found {} records in fee_receipts", receipts.size());
-
-            // Convert receipts to DTOs
-            for (FeeReceipt receipt : receipts) {
-                Admission admission = admissionRepository
-                        .findByRegistrationNumberAndIsDeletedFalse(receipt.getRegistrationNumber());
-
-                if (admission != null) {
-                    FeeCollectionDTO dto = FeeCollectionDTO.builder()
-                            .id(receipt.getId())
-                            .receiptNo(receipt.getReceiptNumber())
-                            .studentName(admission.getFullName())
-                            .mobileNo(admission.getMobilePrimary())
-                            .receiptDate(receipt.getReceiptDate())
-                            .paidFees(receipt.getAmountReceived())
-                            .paymentMode(receipt.getPaymentMode())
-                            .dataSource("NEW_ENTRY")
-                            .registrationNumber(receipt.getRegistrationNumber())
-                            .notes(receipt.getNotes())
-                            .createdAt(receipt.getCreatedAt())
-                            .build();
-
-                    combinedResults.add(dto);
-                } else {
-                    log.warn("⚠️ No admission found for receipt regNo: {}", receipt.getRegistrationNumber());
-                }
-            }
-        }
-
-        log.info("📊 Total combined results: {}", combinedResults.size());
-
-        // Sort by receipt date descending
-        combinedResults.sort((a, b) -> {
-            if (a.getReceiptDate() == null) return 1;
-            if (b.getReceiptDate() == null) return -1;
-            return b.getReceiptDate().compareTo(a.getReceiptDate());
-        });
-
-        // Apply pagination manually
-        int start = searchDTO.getPage() * searchDTO.getSize();
-        int end = Math.min(start + searchDTO.getSize(), combinedResults.size());
-
-        List<FeeCollectionDTO> pageContent = start < combinedResults.size()
-                ? combinedResults.subList(start, end)
-                : new ArrayList<>();
-
-        return new PageImpl<>(pageContent,
-                PageRequest.of(searchDTO.getPage(), searchDTO.getSize()),
-                combinedResults.size());
+        return new PageImpl<>(
+                pageContent,
+                PageRequest.of(page, size),
+                total
+        );
     }
 
     /**

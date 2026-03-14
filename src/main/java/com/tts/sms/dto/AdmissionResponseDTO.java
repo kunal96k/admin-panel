@@ -60,6 +60,7 @@ public class AdmissionResponseDTO {
     // Batch Details
     private String batches; // Comma-separated string
     private List<String> batchesList; // Parsed list
+    private List<BatchResponseDTO> batchDetails; // Full batch details
     private String subjects; // Comma-separated string
     private List<String> subjectsList; // Parsed list
     private String academicYear;

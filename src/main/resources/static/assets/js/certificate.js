@@ -1324,20 +1324,19 @@ function changePage(page) {
 
 async function autoGenerateCertificates() {
     const result = await Swal.fire({
-        title: '🎓 Auto-Generate Certificates',
+        title: 'Auto-Generate Certificates',
         html: `
             <div class="text-start">
-                <h6 class="text-primary mb-3"> For NEW Admissions Only</h6>
+                <h6 class="text-primary mb-3">For New + Old Admissions</h6>
                 <p class="mb-2">This will automatically create certificate entries for students with:</p>
                 <ul class="mb-3">
-                    <li><strong>Registration numbers starting with "REG"</strong> (e.g., REG8000, REG8001)</li>
-                    <li>Cleared fees (Status = "Clear" OR Fees Due = 0 OR Total Fees = Total Paid)</li>
+                    <li><strong>Fees status = "Clear"</strong></li>
                     <li><strong>Separate certificate for each enrolled course</strong></li>
                 </ul>
 
                 <div class="alert alert-info mb-3">
                     <i class="bi bi-info-circle me-2"></i>
-                    <strong>Note:</strong> Old admission records (7168, 7167, etc.) are managed via CSV import
+                    <strong>Note:</strong> Old admission records (7168, 7167, etc.) may be managed via CSV import
                 </div>
 
                 <p class="text-warning mb-0">
@@ -1384,7 +1383,7 @@ async function autoGenerateCertificates() {
         const contentType = response.headers.get('content-type');
 
         if (!contentType || !contentType.includes('application/json')) {
-            console.error('❌ Non-JSON response received:', contentType);
+            console.error('Non-JSON response received:', contentType);
             const text = await response.text();
             console.error('Response body:', text.substring(0, 500));
             throw new Error('Server returned non-JSON response. Please check if you are logged in.');
@@ -1439,7 +1438,7 @@ async function autoGenerateCertificates() {
 
     } catch (error) {
         Swal.close();
-        console.error('❌ Auto-generate error:', error);
+        console.error('Auto-generate error:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -1474,7 +1473,7 @@ async function openManualCertificateModal() {
     }
 
     const { value: formValues } = await Swal.fire({
-        title: '🔧 Manual Certificate Generation',
+        title: 'Manual Certificate Generation',
         html: `
             <div class="text-start">
                 <div class="alert alert-warning mb-3">

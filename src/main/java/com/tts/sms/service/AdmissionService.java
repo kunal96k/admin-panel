@@ -40,6 +40,9 @@ public class AdmissionService {
     private final CSVService csvService;
     private final StudentCategoryService studentCategoryService;
     private final SystemConfigurationService systemConfigurationService;
+    private final FileStorageService fileStorageService;
+    private final BatchRepository batchRepository;
+    private final BatchService batchService;
 
     private static final AtomicInteger registrationCounter = new AtomicInteger(8000);
     private static final String REGISTRATION_PREFIX = "REG";
@@ -421,6 +424,17 @@ public class AdmissionService {
         admission.setStudentCategory(category);
         admission.setCategoryUpdatedAt(LocalDateTime.now());
 
+        // Handle photo upload
+        if (requestDTO.getStudentPhoto() != null && !requestDTO.getStudentPhoto().trim().isEmpty()) {
+            try {
+                String photoPath = fileStorageService.saveBase64Image(requestDTO.getStudentPhoto(), "admissions");
+                admission.setPhotoPath(photoPath);
+                log.info(" Saved student photo for {}", admission.getRegistrationNumber());
+            } catch (Exception e) {
+                log.error(" Failed to save student photo: {}", e.getMessage());
+            }
+        }
+
         // Save admission
         Admission savedAdmission = admissionRepository.save(admission);
         log.info(" Created admission with id: {} and reg no: {} - Category: {}",
@@ -531,6 +545,18 @@ public class AdmissionService {
                 });
 
         admissionMapper.updateEntityFromDTO(requestDTO, existingAdmission);
+        
+        // Handle photo update
+        if (requestDTO.getStudentPhoto() != null && !requestDTO.getStudentPhoto().trim().isEmpty()) {
+            try {
+                String photoPath = fileStorageService.saveBase64Image(requestDTO.getStudentPhoto(), "admissions");
+                existingAdmission.setPhotoPath(photoPath);
+                log.info(" Updated student photo for {}", existingAdmission.getRegistrationNumber());
+            } catch (Exception e) {
+                log.error(" Failed to update student photo: {}", e.getMessage());
+            }
+        }
+
         existingAdmission.setUpdatedBy("SYSTEM");
 
         Admission updated = admissionRepository.save(existingAdmission);
@@ -821,6 +847,43 @@ public class AdmissionService {
 
     private AdmissionResponseDTO toResponseDTOWithInstallments(Admission admission) {
         AdmissionResponseDTO dto = admissionMapper.toResponseDTO(admission);
+
+        // Fetch and populate full batch details
+        if (admission.getBatches() != null && !admission.getBatches().isEmpty()) {
+            List<BatchResponseDTO> batchDetails = admission.getBatches().stream()
+                    .map(rawValue -> {
+                        if (rawValue == null || rawValue.trim().isEmpty()) {
+                            return null;
+                        }
+
+                        String value = rawValue.trim();
+
+                        // Common case: UI saves batchNo (like "1", "B001", etc.)
+                        return batchRepository.findByBatchNo(value)
+                                .map(batchService::convertToResponseDTO)
+                                .orElseGet(() -> {
+                                    // Fallback: sometimes stored as "Batch Name (09:00 - 10:00)" or similar
+                                    String batchName = value;
+                                    int index = value.indexOf(" (");
+                                    if (index != -1) {
+                                        batchName = value.substring(0, index).trim();
+                                    }
+
+                                    // Try by name
+                                    List<com.tts.sms.model.Batch> byName = batchRepository.findByBatchName(batchName);
+                                    if (!byName.isEmpty()) {
+                                        return batchService.convertToResponseDTO(byName.get(0));
+                                    }
+
+                                    // Last fallback: if the stored value is numeric but actually refers to batchNo
+                                    List<com.tts.sms.model.Batch> byValueAsName = batchRepository.findByBatchName(value);
+                                    return byValueAsName.isEmpty() ? null : batchService.convertToResponseDTO(byValueAsName.get(0));
+                                });
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            dto.setBatchDetails(batchDetails);
+        }
 
         List<FeeInstallment> installments = feeInstallmentRepository.findByRegistrationNumberOrderByDueDateAsc(
                 admission.getRegistrationNumber());
