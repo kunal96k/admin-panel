@@ -56,7 +56,7 @@ public class AutoCertificateService {
             Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(registrationNumber);
 
             if (admission == null) {
-                log.warn("⚠️ Admission not found: {}", registrationNumber);
+                log.warn(" Admission not found: {}", registrationNumber);
                 return;
             }
 
@@ -141,7 +141,7 @@ public class AutoCertificateService {
                 }
 
             } catch (Exception e) {
-                log.error("❌ Error creating certificate for {}: {}",
+                log.error(" Error creating certificate for {}: {}",
                         fee.getRegistrationNumber(), e.getMessage());
             }
         }
