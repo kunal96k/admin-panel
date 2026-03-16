@@ -211,11 +211,41 @@ public class Admission {
     @Transient
     public String getFullName() {
         StringBuilder name = new StringBuilder();
-        if (firstName != null) name.append(firstName).append(" ");
-        if (middleName != null) name.append(middleName).append(" ");
-        if (lastName != null) name.append(lastName);
+        if (firstName != null && !firstName.isEmpty()) name.append(firstName).append(" ");
+        if (middleName != null && !middleName.isEmpty()) name.append(middleName).append(" ");
+        if (lastName != null && !lastName.isEmpty()) name.append(lastName);
         return name.toString().trim();
     }
+
+    @Transient
+    public void setFullName(String fullName) {
+        if (fullName == null || fullName.trim().isEmpty()) {
+            this.firstName = "";
+            this.middleName = "";
+            this.lastName = "";
+            return;
+        }
+        
+        String[] parts = fullName.trim().split("\\s+");
+        if (parts.length == 1) {
+            this.firstName = parts[0];
+            this.middleName = "";
+            this.lastName = "";
+        } else if (parts.length == 2) {
+            this.firstName = parts[0];
+            this.middleName = "";
+            this.lastName = parts[1];
+        } else {
+            this.firstName = parts[0];
+            this.lastName = parts[parts.length - 1];
+            StringBuilder middle = new StringBuilder();
+            for (int i = 1; i < parts.length - 1; i++) {
+                middle.append(parts[i]).append(" ");
+            }
+            this.middleName = middle.toString().trim();
+        }
+    }
+
 
     @PrePersist
     private void prePersist() {

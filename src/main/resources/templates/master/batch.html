@@ -145,6 +145,14 @@
                                         <label class="form-label">Batch Size <span class="required">*</span></label>
                                         <input type="number" class="form-control" id="batchSize" required min="1" max="200" value="50" placeholder="Enter batch size">
                                     </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Batch Status</label>
+                                        <select class="form-select" id="batchStatus">
+                                            <option value="Active">Active</option>
+                                            <option value="Complete">Complete</option>
+                                            <option value="Cancelled">Cancelled</option>
+                                        </select>
+                                    </div>
                                     <div class="col-md-12 mb-3">
                                         <div class="form-check form-switch" style="padding: 1rem; background: #f1f5f9; border-radius: 0.5rem;">
                                             <input class="form-check-input" type="checkbox" id="attachCourse" style="width: 48px; height: 24px;">

@@ -953,7 +953,7 @@ function renderTable() {
             statusBadge = 'bg-success';
             statusText = 'Clear';
         } else if (normalizedStatus === 'overdue') {
-            statusBadge = 'bg-danger';
+            statusBadge = 'bg-secondary';
             statusText = 'Overdue';
         } else if (normalizedStatus === 'refund') {
             statusBadge = 'bg-danger';

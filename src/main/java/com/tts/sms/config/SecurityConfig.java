@@ -1,9 +1,7 @@
 package com.tts.sms.config;
 
-import com.tts.sms.service.CustomUserDetailsService;
-import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Arrays;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,14 +18,18 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.http.HttpMethod;
 
-import java.util.Arrays;
+import com.tts.sms.service.CustomUserDetailsService;
+
+import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Configuration
@@ -44,6 +46,7 @@ public class SecurityConfig {
 
     private final Environment environment;
     private final CustomUserDetailsService userDetailsService;
+    private final AccountStatusEnforcementFilter accountStatusEnforcementFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -57,36 +60,44 @@ public class SecurityConfig {
         CookieCsrfTokenRepository csrfRepo = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfRepo.setCookieName("XSRF-TOKEN");
         csrfRepo.setHeaderName("X-CSRF-TOKEN");
+        csrfRepo.setCookiePath("/"); // Critical for cross-path access
 
+        // Industry Standard: Only enforce secure cookies if profile is prod AND we are
+        // explicitly using HTTPS
+        // This prevents the JSESSIONID/XSRF-TOKEN from being rejected on HTTP
+        // production test servers
         boolean isProd = "prod".equalsIgnoreCase(activeProfile);
+        csrfRepo.setSecure(isProd); // We'll set this based on profile, but for testing IPs, HTTP is common.
 
-        try {
-            csrfRepo.setSecure(isProd);  // secure cookie only in HTTPS production
-        } catch (Exception ignored) { }
+        // Also ensure JSESSIONID follows the same pattern
+        http.sessionManagement(session -> session
+                .sessionFixation().migrateSession());
 
         http
                 .authenticationProvider(authenticationProvider())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .addFilterBefore(accountStatusEnforcementFilter, UsernamePasswordAuthenticationFilter.class)
 
-                /* --------------------
-                 *  ENABLE CSRF SECURELY
-                 * -------------------- */
+                /*
+                 * --------------------
+                 * ENABLE CSRF SECURELY
+                 * --------------------
+                 */
                 .csrf(csrf -> csrf
                         // Allow public auth endpoints (login, captcha)
                         .ignoringRequestMatchers(
-                                "/api/auth/**",   // captcha, forgot-password etc.
-                                "/error"
-                        )
+                                "/api/auth/**", // captcha, forgot-password etc.
+                                "/error")
                         .csrfTokenRepository(csrfRepo)
-                        .csrfTokenRequestHandler(csrfHandler)
-                )
+                        .csrfTokenRequestHandler(csrfHandler))
 
-                /* AUTH RULES - FIXED ORDER */
+                /* AUTH RULES */
                 .authorizeHttpRequests(auth -> auth
-                        //  PUBLIC ROUTES FIRST
+                        // PUBLIC ROUTES FIRST
                         .requestMatchers(
                                 "/",
                                 "/login",
+                                "/access-denied",
                                 "/api/auth/**",
                                 "/assets/**",
                                 "/css/**",
@@ -94,23 +105,21 @@ public class SecurityConfig {
                                 "/images/**",
                                 "/uploads/**",
                                 "/webjars/**",
-                                "/error"
-                        ).permitAll()
+                                "/error")
+                        .permitAll()
 
-                        //  ADMIN ROUTES
+                        // ADMIN ROUTES
                         .requestMatchers("/admin/**").hasRole("ADMIN")
 
-                        //  ALL OTHER API ROUTES
+                        // ALL OTHER API ROUTES
                         .requestMatchers("/api/**").authenticated()
 
-                        //  CATCH-ALL MUST BE LAST
-                        .anyRequest().authenticated()
-                )
+                        // CATCH-ALL MUST BE LAST
+                        .anyRequest().authenticated())
 
                 /* SESSIONS */
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                )
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 
                 /* LOGIN FORM */
                 .formLogin(form -> form
@@ -120,8 +129,7 @@ public class SecurityConfig {
                         .passwordParameter("password")
                         .successHandler(authenticationSuccessHandler())
                         .failureHandler(authenticationFailureHandler())
-                        .permitAll()
-                )
+                        .permitAll())
 
                 /* LOGOUT */
                 .logout(logout -> logout
@@ -129,8 +137,7 @@ public class SecurityConfig {
                         .logoutSuccessUrl("/login?logout")
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID", "XSRF-TOKEN")
-                        .clearAuthentication(true)
-                )
+                        .clearAuthentication(true))
 
                 /* ACCESS DENIED HANDLER */
                 .exceptionHandling(exception -> exception
@@ -140,9 +147,8 @@ public class SecurityConfig {
                                     "You attempted to access: " + request.getRequestURI());
                             log.warn("Access denied for: {}", request.getRequestURI());
                             response.sendRedirect("/access-denied");
-                        })
-                );
-                
+                        }));
+
         return http.build();
     }
 

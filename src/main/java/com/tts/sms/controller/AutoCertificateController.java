@@ -111,4 +111,48 @@ public class AutoCertificateController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-}
+
+    /**
+     * BULK GENERATE CERTIFICATES FOR SELECTED STUDENTS
+     * Accepts a list of registration numbers and creates certificates for each student's courses.
+     */
+    @PostMapping(value = "/bulk-generate", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> bulkGenerateCertificates(
+            @RequestBody Map<String, List<String>> request) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            List<String> registrationNumbers = request.get("registrationNumbers");
+
+            if (registrationNumbers == null || registrationNumbers.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "No registration numbers provided");
+                response.put("certificatesCreated", 0);
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            log.info("🚀 Bulk generate certificates for {} students", registrationNumbers.size());
+
+            int created = autoCertificateService.bulkGenerateCertificates(registrationNumbers);
+
+            response.put("success", created > 0);
+            response.put("certificatesCreated", created);
+            response.put("message", created > 0
+                    ? created + " certificate(s) created successfully"
+                    : "No new certificates were created. Students may already have certificates.");
+
+            log.info("✅ Bulk generation complete: {} certificates created", created);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("❌ Error in bulk certificate generation", e);
+
+            response.put("success", false);
+            response.put("message", "Failed to generate certificates: " + e.getMessage());
+            response.put("certificatesCreated", 0);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+}

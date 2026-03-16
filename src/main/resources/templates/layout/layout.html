@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">TechnoKraft Admin Console</title>
 
-    <meta name="_csrf" th:content="${_csrf.token}"/>
-    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
 
     <style>
         /* ========================================
@@ -33,7 +33,7 @@
         }
 
 
-       /* ========================================
+        /* ========================================
        PROFILE & SETTINGS MODAL STYLING
        ======================================== */
 
@@ -111,6 +111,7 @@
 
         /* Responsive Design */
         @media (max-width: 768px) {
+
             #profileModal .modal-dialog,
             #settingsModal .modal-dialog {
                 margin: 0.5rem;
@@ -222,115 +223,286 @@
             border-top: 1px solid #e2e8f0;
         }
 
-/* ========================================
+        /* ========================================
    CONTAINER
    ======================================== */
 
 
-@media (max-width: 767px) {
-    /* Sidebar full overlay on mobile */
-    .sidebar {
-        width: 260px !important;
-        max-width: 85vw !important;
-    }
+        @media (max-width: 767px) {
 
-    /* Main wrapper no margin on mobile */
-    .main-wrapper {
-        margin-left: 0 !important;
-        width: 100vw;
-        max-width: 100vw;
-        overflow-x: hidden;
-    }
+            /* Sidebar full overlay on mobile */
+            .sidebar {
+                width: 220px !important;
+                max-width: 85vw !important;
+            }
 
-    /* Topbar full width */
-    .topbar {
-        width: 100%;
-        max-width: 100vw;
-        left: 0;
-        right: 0;
-    }
+            /* Main wrapper no margin on mobile */
+            .main-wrapper {
+                margin-left: 0 !important;
+                width: 100vw;
+                max-width: 100vw;
+                overflow-x: hidden;
+            }
 
-    /* User menu dropdown positioning */
-    .user-menu {
-        padding: 0.375rem 0.625rem;
-    }
+            /* Topbar full width */
+            .topbar {
+                width: 100%;
+                max-width: 100vw;
+                left: 0;
+                right: 0;
+            }
 
-    .user-avatar {
-        width: 36px;
-        height: 36px;
-        font-size: 0.8125rem;
-    }
-}
+            /* User menu dropdown positioning */
+            .user-menu {
+                padding: 0.375rem 0.625rem;
+            }
 
-    /* ========================================
+            .user-avatar {
+                width: 36px;
+                height: 36px;
+                font-size: 0.8125rem;
+            }
+        }
+
+        /* ========================================
+           ACCESS DENIED BLUR OVERLAY
+           ======================================== */
+
+        .access-blur-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            animation: overlayFadeIn 0.35s ease;
+            padding: 1rem;
+        }
+
+        @keyframes overlayFadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .access-blur-card {
+            background: #fff;
+            border-radius: 1.25rem;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25), 0 8px 20px rgba(0, 0, 0, 0.15);
+            padding: 2.5rem 2rem;
+            max-width: 460px;
+            width: 100%;
+            text-align: center;
+            animation: cardSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .access-blur-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #ef4444);
+        }
+
+        @keyframes cardSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .access-blur-icon-wrap {
+            margin-bottom: 1.25rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .access-blur-icon-ring {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(239, 68, 68, 0.12));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            animation: iconPulse 2.5s ease-in-out infinite;
+        }
+
+        @keyframes iconPulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.25);
+            }
+
+            50% {
+                box-shadow: 0 0 0 14px rgba(102, 126, 234, 0);
+            }
+        }
+
+        .access-blur-icon-ring i {
+            font-size: 2.6rem;
+            background: linear-gradient(135deg, #667eea, #ef4444);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .access-blur-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.65rem;
+        }
+
+        .access-blur-message {
+            font-size: 0.95rem;
+            color: #64748b;
+            line-height: 1.65;
+            margin-bottom: 1.75rem;
+        }
+
+        .access-blur-actions {
+            margin-bottom: 1.25rem;
+        }
+
+        .access-blur-btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.75rem 2rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            border-radius: 0.65rem;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 14px rgba(102, 126, 234, 0.45);
+        }
+
+        .access-blur-btn-primary:hover {
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.55);
+        }
+
+        .access-blur-footer {
+            font-size: 0.78rem;
+            color: #94a3b8;
+            background: #f8fafc;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Responsive */
+        @media (max-width: 575px) {
+            .access-blur-card {
+                padding: 2rem 1.25rem;
+            }
+
+            .access-blur-title {
+                font-size: 1.35rem;
+            }
+
+            .access-blur-icon-ring {
+                width: 72px;
+                height: 72px;
+            }
+
+            .access-blur-icon-ring i {
+                font-size: 2rem;
+            }
+        }
+
+        /* ========================================
        CUTOFF DATE MODAL  - REMOVE BACKDROP BLOCKING
        ======================================== */
 
-    /*  modal backdrop z-index hierarchy */
-    .modal-backdrop {
-        z-index: 1040 !important;
-    }
+        /*  modal backdrop z-index hierarchy */
+        .modal-backdrop {
+            z-index: 1040 !important;
+        }
 
-    #cutoffDateModal {
-        z-index: 1050 !important;
-    }
+        #cutoffDateModal {
+            z-index: 1050 !important;
+        }
 
-    #cutoffDateModal .modal-dialog {
-        z-index: 1060 !important;
-    }
+        #cutoffDateModal .modal-dialog {
+            z-index: 1060 !important;
+        }
 
-    /* Ensure date input is fully interactive */
-    #cutoffDateInput {
-        position: relative;
-        z-index: 1070 !important;
-        cursor: pointer !important;
-        background-color: #fff !important;
-        pointer-events: auto !important;
-        user-select: auto !important;
-    }
+        /* Ensure date input is fully interactive */
+        #cutoffDateInput {
+            position: relative;
+            z-index: 1070 !important;
+            cursor: pointer !important;
+            background-color: #fff !important;
+            pointer-events: auto !important;
+            user-select: auto !important;
+        }
 
-    /* Make date picker icon clickable */
-    #cutoffDateInput::-webkit-calendar-picker-indicator {
-        cursor: pointer;
-        z-index: 1080;
-        position: relative;
-        padding: 5px;
-        pointer-events: auto !important;
-    }
+        /* Make date picker icon clickable */
+        #cutoffDateInput::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            z-index: 1080;
+            position: relative;
+            padding: 5px;
+            pointer-events: auto !important;
+        }
 
-    #cutoffDateInput::-moz-calendar-picker-indicator {
-        cursor: pointer;
-        pointer-events: auto !important;
-    }
+        #cutoffDateInput::-moz-calendar-picker-indicator {
+            cursor: pointer;
+            pointer-events: auto !important;
+        }
 
-    /* Ensure modal body doesn't block interactions */
-    #cutoffDateModal .modal-body {
-        position: relative;
-        z-index: 1055;
-        pointer-events: auto !important;
-    }
+        /* Ensure modal body doesn't block interactions */
+        #cutoffDateModal .modal-body {
+            position: relative;
+            z-index: 1055;
+            pointer-events: auto !important;
+        }
 
-    /* Make sure form controls are interactive */
-    #cutoffDateModal .form-control {
-        pointer-events: auto !important;
-        user-select: auto !important;
-    }
+        /* Make sure form controls are interactive */
+        #cutoffDateModal .form-control {
+            pointer-events: auto !important;
+            user-select: auto !important;
+        }
 
-    /* Remove any overlay blocking */
-    #cutoffDateModal .modal-content {
-        pointer-events: auto !important;
-        z-index: 1065;
-    }
+        /* Remove any overlay blocking */
+        #cutoffDateModal .modal-content {
+            pointer-events: auto !important;
+            z-index: 1065;
+        }
 
-    /* IMPORTANT: Hide backdrop when cutoff modal is open */
-    body.modal-open .modal-backdrop.show ~ #cutoffDateModal ~ .modal-backdrop {
-        display: none !important;
-    }
+        /* IMPORTANT: Hide backdrop when cutoff modal is open */
+        body.modal-open .modal-backdrop.show~#cutoffDateModal~.modal-backdrop {
+            display: none !important;
+        }
 
-    /* Alternative: Make backdrop non-blocking */
-    #cutoffDateModal ~ .modal-backdrop {
-        pointer-events: none !important;
-    }
+        /* Alternative: Make backdrop non-blocking */
+        #cutoffDateModal~.modal-backdrop {
+            pointer-events: none !important;
+        }
     </style>
 
     <!-- Favicon -->
@@ -340,10 +512,12 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Bootstrap Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css"
+        rel="stylesheet">
 
     <!-- SweetAlert2 -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.css"
+        rel="stylesheet">
 
     <!-- Chart.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -351,7 +525,9 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Michroma&family=Orbitron:wght@400..900&display=swap');
@@ -360,452 +536,493 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" th:href="@{/assets/css/styles.css}">
 </head>
+
 <body>
 
-<!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-        <div class="logo-container">
-            <div class="logo">
-                <img th:src="@{/assets/images/tts-logo-ev.png}"
-                     alt="TechnoKraft Logo"
-                     class="logo-img">
-            </div>
-
-            <div class="logo-collapsed">
-                <img th:src="@{/assets/images/tts-logo-ev.png}"
-                     alt="TechnoKraft Logo"
-                     class="logo-img-collapsed">
-            </div>
-
-            <div class="brand-info">
-                <span class="brand-text">TechnoKraft</span>
-                <span class="app-subtitle">Training &amp; Solution</span>
-            </div>
-        </div>
-        <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
-            <i class="bi bi-chevron-left"></i>
-        </button>
-    </div>
-
-    <nav class="sidebar-menu">
-        <!-- Dashboard -->
-        <div class="menu-item">
-            <a th:href="@{/dashboard}"
-               class="menu-link"
-               data-menu-id="1"
-               th:classappend="${activePage == 'dashboard'} ? 'active' : ''"
-               data-page="dashboard">
-                <i class="bi bi-speedometer2"></i>
-                <span class="menu-text">Dashboard</span>
-            </a>
-        </div>
-
-        <!-- Student Manager -->
-        <div class="menu-item">
-            <div class="menu-link" data-toggle="submenu">
-                <i class="bi bi-people"></i>
-                <span class="menu-text">Student Manager</span>
-            </div>
-            <div class="submenu">
-                <a th:href="@{/students/enquiry}"
-                   class="submenu-link"
-                   data-menu-id="2"
-                   th:classappend="${activePage == 'enquiry'} ? 'active' : ''"
-                   data-page="enquiry">Enquiry</a>
-
-                <a th:href="@{/students/admission}"
-                   class="submenu-link"
-                   data-menu-id="3"
-                   th:classappend="${activePage == 'admission'} ? 'active' : ''"
-                   data-page="admission">Admission</a>
-            </div>
-        </div>
-
-        <!-- Account -->
-        <div class="menu-item">
-            <div class="menu-link" data-toggle="submenu">
-                <i class="bi bi-cash-coin"></i>
-                <span class="menu-text">Account</span>
-            </div>
-            <div class="submenu">
-                <a th:href="@{/accounts/fees-manager}"
-                   class="submenu-link"
-                   data-menu-id="4"
-                   th:classappend="${activePage == 'fees-manager'} ? 'active' : ''"
-                   data-page="fees-manager">Fees Manager</a>
-            </div>
-        </div>
-
-        <!-- Printing -->
-        <div class="menu-item">
-            <div class="menu-link" data-toggle="submenu">
-                <i class="bi bi-printer"></i>
-                <span class="menu-text">Printing</span>
-            </div>
-            <div class="submenu">
-                <a th:href="@{/printing/certificate}"
-                   class="submenu-link"
-                   data-menu-id="5"
-                   th:classappend="${activePage == 'certificate'} ? 'active' : ''"
-                   data-page="certificate">Certificate</a>
-            </div>
-        </div>
-
-        <!-- Master -->
-        <div class="menu-item">
-            <div class="menu-link" data-toggle="submenu">
-                <i class="bi bi-gear"></i>
-                <span class="menu-text">Master</span>
-            </div>
-            <div class="submenu">
-                <a th:href="@{/master/course}" class="submenu-link"
-                   data-menu-id="6"
-                   th:classappend="${activePage == 'course'} ? 'active' : ''"
-                   data-page="course">Course</a>
-                <a th:href="@{/master/batch}" class="submenu-link"
-                   data-menu-id="7"
-                   th:classappend="${activePage == 'batch'} ? 'active' : ''"
-                   data-page="batch">Batch</a>
-                <a th:href="@{/master/employee}" class="submenu-link"
-                   data-menu-id="8"
-                   th:classappend="${activePage == 'employee'} ? 'active' : ''"
-                   data-page="employee">Employee</a>
-                <a th:href="@{/master/role}" class="submenu-link"
-                   data-menu-id="9"
-                   th:classappend="${activePage == 'role'} ? 'active' : ''"
-                   data-page="role">Role</a>
-                <a th:href="@{/master/bank}" class="submenu-link"
-                   data-menu-id="10"
-                   th:classappend="${activePage == 'bank'} ? 'active' : ''"
-                   data-page="bank">Bank</a>
-                <a th:href="@{/master/lead-source}" class="submenu-link"
-                   data-menu-id="11"
-                   th:classappend="${activePage == 'lead-source'} ? 'active' : ''"
-                   data-page="lead-source">Lead Source</a>
-                <a th:href="@{/master/package}" class="submenu-link"
-                   data-menu-id="12"
-                   th:classappend="${activePage == 'create-package'} ? 'active' : ''"
-                   data-page="create-package">Create Package</a>
-                <a th:href="@{/master/online-payment}" class="submenu-link"
-                   data-menu-id="13"
-                   th:classappend="${activePage == 'online-payment'} ? 'active' : ''"
-                   data-page="online-payment">Online Payment Mode</a>
-            </div>
-        </div>
-
-        <!-- Reports -->
-        <div class="menu-item">
-            <div class="menu-link" data-toggle="submenu">
-                <i class="bi bi-file-earmark-bar-graph"></i>
-                <span class="menu-text">Reports</span>
-            </div>
-            <div class="submenu">
-                <a th:href="@{/reports/course-sales-report}"
-                   class="submenu-link"
-                   data-menu-id="14"
-                   th:classappend="${activePage == 'course-wise-sales'} ? 'active' : ''"
-                   data-page="course-wise-sales">Course-wise Sales</a>
-
-                <a th:href="@{/reports/fees-collection}"
-                   class="submenu-link"
-                   data-menu-id="15"
-                   th:classappend="${activePage == 'fees-collection'} ? 'active' : ''"
-                   data-page="fees-collection">Fees Collection</a>
-            </div>
-        </div>
-
-        <!-- Logout -->
-        <div class="menu-item logout-item">
-            <a href="#" class="menu-link" id="sidebarLogout">
-                <i class="bi bi-box-arrow-right"></i>
-                <span class="menu-text">Logout</span>
-            </a>
-        </div>
-    </nav>
-</aside>
-
-<!-- Sidebar Overlay (Mobile) -->
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-<!-- Main Content Wrapper -->
-<div class="main-wrapper" id="mainWrapper">
-
-    <!-- TOPBAR -->
-    <header class="topbar">
-        <div class="topbar-left">
-            <button class="hamburger" id="hamburger" aria-label="Toggle sidebar">
-                <i class="bi bi-list"></i>
-            </button>
-            <h1 class="page-title" id="pageTitle" th:text="${pageTitle}">Dashboard</h1>
-        </div>
-
-        <div class="topbar-right">
-            <button class="notification-btn" style="display:none;" aria-label="Notifications">
-                <i class="bi bi-bell"></i>
-            </button>
-
-            <div class="dropdown">
-                <div class="user-menu" data-bs-toggle="dropdown" aria-expanded="false">
-                    <div class="user-avatar" th:text="${currentUser != null ? currentUser.employee.employeeName.substring(0, 2).toUpperCase() : 'AD'}">AD</div>
-                    <div class="user-info">
-                        <span class="user-name" th:text="${currentUser != null ? currentUser.employee.employeeName : 'Admin User'}">Admin User</span>
-                        <span class="user-role" th:text="${currentUser != null ? currentUser.employee.role.roleTitle : 'Administrator'}">Administrator</span>
-                    </div>
-                    <i class="bi bi-chevron-down"></i>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <div class="logo">
+                    <img th:src="@{/assets/images/tts-logo-ev.png}" alt="TechnoKraft Logo" class="logo-img">
                 </div>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                    <li>
-                        <div class="dropdown-header">
-                            <strong th:text="${currentUser != null ? currentUser.employee.employeeName : 'Admin User'}">Admin User</strong>
-                            <small class="d-block text-muted" th:text="${currentUser != null ? currentUser.employee.emailId : 'admin@technokraft.com'}">admin@technokraft.com</small>
+
+                <div class="logo-collapsed">
+                    <img th:src="@{/assets/images/tts-logo-ev.png}" alt="TechnoKraft Logo" class="logo-img-collapsed">
+                </div>
+
+                <div class="brand-info">
+                    <span class="brand-text">TechnoKraft</span>
+                    <span class="app-subtitle">Training &amp; Solution</span>
+                </div>
+            </div>
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-menu">
+            <!-- Dashboard -->
+            <div class="menu-item">
+                <a th:href="@{/dashboard}" class="menu-link" data-menu-id="1"
+                    th:classappend="${activePage == 'dashboard'} ? 'active' : ''" data-page="dashboard">
+                    <i class="bi bi-speedometer2"></i>
+                    <span class="menu-text">Dashboard</span>
+                </a>
+            </div>
+
+            <!-- Student Manager -->
+            <div class="menu-item">
+                <div class="menu-link" data-toggle="submenu">
+                    <i class="bi bi-people"></i>
+                    <span class="menu-text">Student Manager</span>
+                </div>
+                <div class="submenu">
+                    <a th:href="@{/students/enquiry}" class="submenu-link" data-menu-id="2"
+                        th:classappend="${activePage == 'enquiry'} ? 'active' : ''" data-page="enquiry">Enquiry</a>
+
+                    <a th:href="@{/students/admission}" class="submenu-link" data-menu-id="3"
+                        th:classappend="${activePage == 'admission'} ? 'active' : ''"
+                        data-page="admission">Admission</a>
+                </div>
+            </div>
+
+            <!-- Account -->
+            <div class="menu-item">
+                <div class="menu-link" data-toggle="submenu">
+                    <i class="bi bi-cash-coin"></i>
+                    <span class="menu-text">Account</span>
+                </div>
+                <div class="submenu">
+                    <a th:href="@{/accounts/fees-manager}" class="submenu-link" data-menu-id="4"
+                        th:classappend="${activePage == 'fees-manager'} ? 'active' : ''" data-page="fees-manager">Fees
+                        Manager</a>
+                </div>
+            </div>
+
+            <!-- Printing -->
+            <div class="menu-item">
+                <div class="menu-link" data-toggle="submenu">
+                    <i class="bi bi-printer"></i>
+                    <span class="menu-text">Printing</span>
+                </div>
+                <div class="submenu">
+                    <a th:href="@{/printing/certificate}" class="submenu-link" data-menu-id="5"
+                        th:classappend="${activePage == 'certificate'} ? 'active' : ''"
+                        data-page="certificate">Certificate</a>
+                </div>
+            </div>
+
+            <!-- Master -->
+            <div class="menu-item">
+                <div class="menu-link" data-toggle="submenu">
+                    <i class="bi bi-gear"></i>
+                    <span class="menu-text">Master</span>
+                </div>
+                <div class="submenu">
+                    <a th:href="@{/master/course}" class="submenu-link" data-menu-id="6"
+                        th:classappend="${activePage == 'course'} ? 'active' : ''" data-page="course">Course</a>
+                    <a th:href="@{/master/batch}" class="submenu-link" data-menu-id="7"
+                        th:classappend="${activePage == 'batch'} ? 'active' : ''" data-page="batch">Batch</a>
+                    <a th:href="@{/master/employee}" class="submenu-link" data-menu-id="8"
+                        th:classappend="${activePage == 'employee'} ? 'active' : ''" data-page="employee">Employee</a>
+                    <a th:href="@{/master/role}" class="submenu-link" data-menu-id="9"
+                        th:classappend="${activePage == 'role'} ? 'active' : ''" data-page="role">Role</a>
+                    <a th:href="@{/master/bank}" class="submenu-link" data-menu-id="10"
+                        th:classappend="${activePage == 'bank'} ? 'active' : ''" data-page="bank">Bank</a>
+                    <a th:href="@{/master/lead-source}" class="submenu-link" data-menu-id="11"
+                        th:classappend="${activePage == 'lead-source'} ? 'active' : ''" data-page="lead-source">Lead
+                        Source</a>
+                    <a th:href="@{/master/package}" class="submenu-link" data-menu-id="12"
+                        th:classappend="${activePage == 'create-package'} ? 'active' : ''"
+                        data-page="create-package">Create Package</a>
+                    <a th:href="@{/master/online-payment}" class="submenu-link" data-menu-id="13"
+                        th:classappend="${activePage == 'online-payment'} ? 'active' : ''"
+                        data-page="online-payment">Online Payment Mode</a>
+                </div>
+            </div>
+
+            <!-- Reports -->
+            <div class="menu-item">
+                <div class="menu-link" data-toggle="submenu">
+                    <i class="bi bi-file-earmark-bar-graph"></i>
+                    <span class="menu-text">Reports</span>
+                </div>
+                <div class="submenu">
+                    <a th:href="@{/reports/course-sales-report}" class="submenu-link" data-menu-id="14"
+                        th:classappend="${activePage == 'course-wise-sales'} ? 'active' : ''"
+                        data-page="course-wise-sales">Course-wise Sales</a>
+
+                    <a th:href="@{/reports/fees-collection}" class="submenu-link" data-menu-id="15"
+                        th:classappend="${activePage == 'fees-collection'} ? 'active' : ''"
+                        data-page="fees-collection">Fees Collection</a>
+                </div>
+            </div>
+
+            <!-- Logout -->
+            <div class="menu-item logout-item">
+                <a href="#" class="menu-link" id="sidebarLogout">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span class="menu-text">Logout</span>
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Sidebar Overlay (Mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content Wrapper -->
+    <div class="main-wrapper" id="mainWrapper">
+
+        <!-- TOPBAR -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="hamburger" id="hamburger" aria-label="Toggle sidebar">
+                    <i class="bi bi-list"></i>
+                </button>
+                <h1 class="page-title" id="pageTitle" th:text="${pageTitle}">Dashboard</h1>
+            </div>
+
+            <div class="topbar-right">
+                <button class="notification-btn" style="display:none;" aria-label="Notifications">
+                    <i class="bi bi-bell"></i>
+                </button>
+
+                <div class="dropdown">
+                    <div class="user-menu" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="user-avatar"
+                            th:text="${currentUser != null ? currentUser.employee.employeeName.substring(0, 2).toUpperCase() : 'AD'}">
+                            AD</div>
+                        <div class="user-info">
+                            <span class="user-name"
+                                th:text="${currentUser != null ? currentUser.employee.employeeName : 'Admin User'}">Admin
+                                User</span>
+                            <span class="user-role"
+                                th:text="${currentUser != null ? currentUser.employee.role.roleTitle : 'Administrator'}">Administrator</span>
                         </div>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i> My Profile</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i> Settings</a></li>
-
-                    <!-- SUPER ADMIN ONLY: Cutoff Date Configuration -->
-                    <li th:if="${currentUser != null && currentUser.role.roleTitle == 'SUPER_ADMIN'}">
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li th:if="${currentUser != null && currentUser.role.roleTitle == 'SUPER_ADMIN'}">
-                        <a class="dropdown-item" href="#" id="btnConfigureCutoffDate">
-                            <i class="bi bi-calendar-date me-2"></i> Configure Cutoff Date
-                        </a>
-                    </li>
-
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <a class="dropdown-item" href="#" id="resetPasswordBtn">
-                            <i class="bi bi-shield-lock me-2"></i> Reset Password
-                        </a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <form th:action="@{/logout}" method="post" id="logoutForm" style="display: none;"></form>
-                        <a class="dropdown-item text-danger" href="#" id="logoutBtn">
-                            <i class="bi bi-box-arrow-right me-2"></i> Logout
-                        </a>
-                    </li>
-                </ul>
-
-                <!-- Cutoff Date Configuration Modal -->
-                <div class="modal fade" id="cutoffDateModal" tabindex="-1" data-bs-backdrop="static">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header bg-primary text-white">
-                                <h5 class="modal-title">
-                                    <i class="bi bi-calendar-date me-2"></i>Configure Student Category Cutoff Date
-                                </h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li>
+                            <div class="dropdown-header">
+                                <strong
+                                    th:text="${currentUser != null ? currentUser.employee.employeeName : 'Admin User'}">Admin
+                                    User</strong>
+                                <small class="d-block text-muted"
+                                    th:text="${currentUser != null ? currentUser.employee.emailId : 'admin@technokraft.com'}">admin@technokraft.com</small>
                             </div>
-                            <div class="modal-body">
-                                <div class="alert alert-info">
-                                    <i class="bi bi-info-circle me-2"></i>
-                                    <strong>Purpose:</strong> This date determines how students are categorized:
-                                    <ul class="mt-2 mb-0">
-                                        <li><strong>Before cutoff:</strong> OLD_STUDENT</li>
-                                        <li><strong>After cutoff:</strong> PURSUING</li>
-                                        <li><strong>REG* numbers:</strong> NEW_STUDENT</li>
-                                        <li><strong>All certificates issued:</strong> COMPLETED</li>
-                                        <li><strong>Has refund:</strong> CANCELLED</li>
-                                    </ul>
-                                </div>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i> My Profile</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i> Settings</a></li>
 
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">
-                                        Cutoff Date <span class="text-danger">*</span>
-                                    </label>
-                                    <!-- ✅ : Remove any overlays and ensure proper z-index -->
-                                    <input
-                                            type="date"
-                                            class="form-control"
-                                            id="cutoffDateInput"
-                                            required
+                        <!-- SUPER ADMIN ONLY: Cutoff Date Configuration -->
+                        <li th:if="${currentUser != null && currentUser.role.roleTitle == 'SUPER_ADMIN'}">
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li th:if="${currentUser != null && currentUser.role.roleTitle == 'SUPER_ADMIN'}">
+                            <a class="dropdown-item" href="#" id="btnConfigureCutoffDate">
+                                <i class="bi bi-calendar-date me-2"></i> Configure Cutoff Date
+                            </a>
+                        </li>
+
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" id="resetPasswordBtn">
+                                <i class="bi bi-shield-lock me-2"></i> Reset Password
+                            </a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li>
+                            <form th:action="@{/logout}" method="post" id="logoutForm" style="display: none;"></form>
+                            <a class="dropdown-item text-danger" href="#" id="logoutBtn">
+                                <i class="bi bi-box-arrow-right me-2"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Cutoff Date Configuration Modal -->
+                    <div class="modal fade" id="cutoffDateModal" tabindex="-1" data-bs-backdrop="static">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">
+                                        <i class="bi bi-calendar-date me-2"></i>Configure Student Category Cutoff Date
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white"
+                                        data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        <strong>Purpose:</strong> This date determines how students are categorized:
+                                        <ul class="mt-2 mb-0">
+                                            <li><strong>Before cutoff:</strong> OLD_STUDENT</li>
+                                            <li><strong>After cutoff:</strong> PURSUING</li>
+                                            <li><strong>REG* numbers:</strong> NEW_STUDENT</li>
+                                            <li><strong>All certificates issued:</strong> COMPLETED</li>
+                                            <li><strong>Has refund:</strong> CANCELLED</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">
+                                            Cutoff Date <span class="text-danger">*</span>
+                                        </label>
+                                        <!-- ✅ : Remove any overlays and ensure proper z-index -->
+                                        <input type="date" class="form-control" id="cutoffDateInput" required
                                             style="position: relative; z-index: 1050; cursor: pointer;"
                                             onclick="this.showPicker()">
-                                    <small class="text-muted d-block mt-1">
-                                        Students admitted before this date will be marked as "OLD_STUDENT"
-                                    </small>
-                                </div>
+                                        <small class="text-muted d-block mt-1">
+                                            Students admitted before this date will be marked as "OLD_STUDENT"
+                                        </small>
+                                    </div>
 
-                                <div class="alert alert-warning">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    <strong>Note:</strong> Changing this date will automatically recategorize ALL students in the system.
+                                    <div class="alert alert-warning">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                        <strong>Note:</strong> Changing this date will automatically recategorize ALL
+                                        students in the system.
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="button" class="btn btn-primary" id="btnSaveCutoffDate">
-                                    <i class="bi bi-check-circle me-1"></i> Save & Recategorize
-                                </button>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary"
+                                        data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-primary" id="btnSaveCutoffDate">
+                                        <i class="bi bi-check-circle me-1"></i> Save & Recategorize
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <!-- MAIN CONTENT AREA -->
-    <main class="main-content" id="mainContent" layout:fragment="content">
-        <div class="alert alert-info">
-            <h4>No content loaded</h4>
-            <p>Please select a page from the sidebar.</p>
-        </div>
-    </main>
+        <!-- MAIN CONTENT AREA -->
+        <div class="main-content-wrapper" style="position:relative;">
+            <main class="main-content" id="mainContent" layout:fragment="content">
+                <div class="alert alert-info">
+                    <h4>No content loaded</h4>
+                    <p>Please select a page from the sidebar.</p>
+                </div>
+            </main>
 
-    <!-- FOOTER -->
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-bottom">
-                <p>
-                    &copy; <span th:text="${#dates.year(#dates.createNow())}">2024</span>
-                    <a href="https://tts.net.in/" target="_blank">TechnoKraft Training &amp; Solution PVT LTD</a>.
-                    All rights reserved. | Powered by TechnoKraft Services Team.
-                </p>
+            <!-- ACCESS DENIED BLUR OVERLAY -->
+            <div id="accessDeniedOverlay" class="access-blur-overlay" style="display:none;" role="alertdialog"
+                aria-modal="true" aria-labelledby="blurAccessTitle">
+                <div class="access-blur-card" id="accessBlurCard">
+                    <div class="access-blur-icon-wrap">
+                        <div class="access-blur-icon-ring">
+                            <i class="bi bi-shield-lock-fill"></i>
+                        </div>
+                    </div>
+                    <h2 class="access-blur-title" id="blurAccessTitle">Access Restricted</h2>
+                    <p class="access-blur-message">You don't have permission to view this page.<br>Contact your
+                        administrator to request access.</p>
+                    <div class="access-blur-actions">
+                        <a href="/dashboard" class="access-blur-btn-primary">
+                            <i class="bi bi-speedometer2 me-2"></i>Go to Dashboard
+                        </a>
+                    </div>
+                    <div class="access-blur-footer">
+                        <i class="bi bi-info-circle me-1"></i> This access restriction was applied by your
+                        administrator.
+                    </div>
+                </div>
             </div>
         </div>
-    </footer>
 
-</div>
-
-<!-- Reset Password Model -->
-<div class="modal fade" id="resetPasswordModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title">
-                    <i class="bi bi-shield-lock me-2"></i>Reset Password
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <!-- FOOTER -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-bottom">
+                    <p>
+                        &copy; <span th:text="${#dates.year(#dates.createNow())}">2024</span>
+                        <a href="https://tts.net.in/" target="_blank">TechnoKraft Training &amp; Solution PVT LTD</a>.
+                        All rights reserved. | Powered by <a href="https://www.technokraftservices.com/" target="_blank"
+                            style="text-decoration: none; color: inherit; font-weight: 600;">TechnoKraft Services
+                            LLP</a>.
+                    </p>
+                </div>
             </div>
-            <div class="modal-body">
-                <form id="resetPasswordForm">
-                    <!-- Current Password -->
-                    <div class="mb-3">
-                        <label class="form-label">
-                            Current Password <span class="text-danger">*</span>
-                        </label>
-                        <div class="input-group">
-                            <input type="password"
-                                   class="form-control"
-                                   id="currentPassword"
-                                   name="currentPassword"
-                                   placeholder="Enter current password"
-                                   required>
-                            <button class="btn btn-outline-secondary"
-                                    type="button"
+        </footer>
+
+    </div>
+
+    <!-- Reset Password Model -->
+    <div class="modal fade" id="resetPasswordModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="bi bi-shield-lock me-2"></i>Reset Password
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="resetPasswordForm">
+                        <!-- Current Password -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Current Password <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="currentPassword" name="currentPassword"
+                                    placeholder="Enter current password" required>
+                                <button class="btn btn-outline-secondary" type="button"
                                     onclick="togglePassword('currentPassword')">
-                                <i class="bi bi-eye" id="currentPassword-icon"></i>
-                            </button>
+                                    <i class="bi bi-eye" id="currentPassword-icon"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback" id="currentPassword-error"></div>
                         </div>
-                        <div class="invalid-feedback" id="currentPassword-error"></div>
-                    </div>
 
-                    <!-- New Password -->
-                    <div class="mb-3">
-                        <label class="form-label">
-                            New Password <span class="text-danger">*</span>
-                        </label>
-                        <div class="input-group">
-                            <input type="password"
-                                   class="form-control"
-                                   id="newPassword"
-                                   name="newPassword"
-                                   placeholder="Enter new password"
-                                   required>
-                            <button class="btn btn-outline-secondary"
-                                    type="button"
+                        <!-- New Password -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                New Password <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="newPassword" name="newPassword"
+                                    placeholder="Enter new password" required>
+                                <button class="btn btn-outline-secondary" type="button"
                                     onclick="togglePassword('newPassword')">
-                                <i class="bi bi-eye" id="newPassword-icon"></i>
-                            </button>
-                        </div>
-                        <div class="invalid-feedback" id="newPassword-error"></div>
+                                    <i class="bi bi-eye" id="newPassword-icon"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback" id="newPassword-error"></div>
 
-                        <!-- Password Strength Indicator -->
-                        <div class="mt-2">
-                            <small class="text-muted">Password Strength: </small>
-                            <span id="passwordStrength" class="badge bg-secondary">Not Set</span>
+                            <!-- Password Strength Indicator -->
+                            <div class="mt-2">
+                                <small class="text-muted">Password Strength: </small>
+                                <span id="passwordStrength" class="badge bg-secondary">Not Set</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Confirm Password -->
-                    <div class="mb-3">
-                        <label class="form-label">
-                            Confirm New Password <span class="text-danger">*</span>
-                        </label>
-                        <div class="input-group">
-                            <input type="password"
-                                   class="form-control"
-                                   id="confirmPassword"
-                                   name="confirmPassword"
-                                   placeholder="Re-enter new password"
-                                   required>
-                            <button class="btn btn-outline-secondary"
-                                    type="button"
+                        <!-- Confirm Password -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Confirm New Password <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="confirmPassword" name="confirmPassword"
+                                    placeholder="Re-enter new password" required>
+                                <button class="btn btn-outline-secondary" type="button"
                                     onclick="togglePassword('confirmPassword')">
-                                <i class="bi bi-eye" id="confirmPassword-icon"></i>
-                            </button>
+                                    <i class="bi bi-eye" id="confirmPassword-icon"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback" id="confirmPassword-error"></div>
                         </div>
-                        <div class="invalid-feedback" id="confirmPassword-error"></div>
-                    </div>
 
-                    <!-- Password Requirements -->
-                    <div class="alert alert-info">
-                        <h6 class="alert-heading mb-2">
-                            <i class="bi bi-info-circle me-1"></i>Password Requirements:
-                        </h6>
-                        <ul class="mb-0 small" style="list-style-position: inside; padding-left: 0;">
-                            <li id="req-length">
-                                <i class="bi bi-circle text-muted"></i>
-                                At least 8 characters
-                            </li>
-                            <li id="req-uppercase">
-                                <i class="bi bi-circle text-muted"></i>
-                                One uppercase letter
-                            </li>
-                            <li id="req-lowercase">
-                                <i class="bi bi-circle text-muted"></i>
-                                One lowercase letter
-                            </li>
-                            <li id="req-number">
-                                <i class="bi bi-circle text-muted"></i>
-                                One number
-                            </li>
-                            <li id="req-special">
-                                <i class="bi bi-circle text-muted"></i>
-                                One special character (!@#$%^&*)
-                            </li>
-                        </ul>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle me-1"></i> Cancel
-                </button>
-                <button type="button" class="btn btn-warning" id="submitResetPassword">
-                    <i class="bi bi-shield-check me-1"></i> Reset Password
-                </button>
+                        <!-- Password Requirements -->
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading mb-2">
+                                <i class="bi bi-info-circle me-1"></i>Password Requirements:
+                            </h6>
+                            <ul class="mb-0 small" style="list-style-position: inside; padding-left: 0;">
+                                <li id="req-length">
+                                    <i class="bi bi-circle text-muted"></i>
+                                    At least 8 characters
+                                </li>
+                                <li id="req-uppercase">
+                                    <i class="bi bi-circle text-muted"></i>
+                                    One uppercase letter
+                                </li>
+                                <li id="req-lowercase">
+                                    <i class="bi bi-circle text-muted"></i>
+                                    One lowercase letter
+                                </li>
+                                <li id="req-number">
+                                    <i class="bi bi-circle text-muted"></i>
+                                    One number
+                                </li>
+                                <li id="req-special">
+                                    <i class="bi bi-circle text-muted"></i>
+                                    One special character (!@#$%^&*)
+                                </li>
+                            </ul>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-warning" id="submitResetPassword">
+                        <i class="bi bi-shield-check me-1"></i> Reset Password
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<script th:inline="javascript">
-    const userPermissions = /*[[${userMenuPermissions}]]*/ [];
-</script>
+    <script th:inline="javascript">
+        const userPermissions = /*[[${userMenuPermissions}]]*/[];
+        const currentMenuId = /*[[${currentMenuId}]]*/ 0;
+    </script>
+    <script>
+        (function () {
+            'use strict';
 
-<!-- Bootstrap JS Bundle -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+            function applyAccessControl() {
+                // Skip check if no menuId is matched for the current page
+                if (!currentMenuId) return;
 
-<!-- SweetAlert2 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.all.min.js"></script>
+                // If userPermissions is empty, allow all (e.g. SUPER_ADMIN / no restrictions set)
+                if (!Array.isArray(userPermissions) || userPermissions.length === 0) return;
 
-<!-- Custom JS -->
-<script th:src="@{/assets/js/script.js}"></script>
+                const hasAccess = userPermissions.includes(currentMenuId) || userPermissions.includes(String(currentMenuId));
+
+                if (!hasAccess) {
+                    const mainContent = document.getElementById('mainContent');
+                    const overlay = document.getElementById('accessDeniedOverlay');
+
+                    if (mainContent) {
+                        mainContent.style.filter = 'blur(6px)';
+                        mainContent.style.pointerEvents = 'none';
+                        mainContent.style.userSelect = 'none';
+                        mainContent.setAttribute('aria-hidden', 'true');
+                    }
+
+                    if (overlay) {
+                        overlay.style.display = 'flex';
+                        // If the user doesn't have dashboard access and is ON the dashboard, hide the "Go to Dashboard" button
+                        if (currentMenuId === 1 || currentMenuId === '1') {
+                            const dashboardBtn = overlay.querySelector('.access-blur-btn-primary');
+                            if (dashboardBtn) {
+                                dashboardBtn.style.display = 'none';
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Run immediately (synchronous) so blur appears before any JS initialises the page
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', applyAccessControl);
+            } else {
+                applyAccessControl();
+            }
+        })();
+    </script>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.all.min.js"></script>
+
+    <!-- Custom JS -->
+    <script th:src="@{/assets/js/script.js}"></script>
 
 </body>
+
 </html>

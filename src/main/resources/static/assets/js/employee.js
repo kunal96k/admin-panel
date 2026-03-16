@@ -236,17 +236,23 @@
 
             // Only validate and send credentials if checkbox is checked
             if (addUserChecked) {
-                if (!username || !password || !confirmPassword) {
-                    showError('Username, Password and Confirm Password are all required when "Add User Login Credentials" is enabled');
+                if (!username) {
+                    showError('Username is required when "Add User Login Credentials" is enabled');
                     return;
                 }
 
-                if (password !== confirmPassword) {
+                // If NEW employee or specifically CHANGING password
+                if (!editingEmployeeId && (!password || !confirmPassword)) {
+                    showError('Password and Confirm Password are required for new user credentials');
+                    return;
+                }
+
+                if (password && password !== confirmPassword) {
                     showError('Password and Confirm Password do not match');
                     return;
                 }
 
-                if (!validatePasswordRequirements(password)) {
+                if (password && !validatePasswordRequirements(password)) {
                     showError('Password does not meet security requirements');
                     return;
                 }
@@ -274,27 +280,7 @@
                 // Only send credentials if checkbox is CHECKED
                 username: addUserChecked ? username : null,
                 password: addUserChecked ? password : null,
-                confirmPassword: addUserChecked ? confirmPassword : null,
-                viewAdmission: document.getElementById('viewAdmission')?.checked || false,
-                newAdmission: document.getElementById('newAdmission')?.checked || false,
-                viewEnquiry: document.getElementById('viewEnquiry')?.checked || false,
-                newEnquiry: document.getElementById('newEnquiry')?.checked || false,
-                accDashboard: document.getElementById('accDashboard')?.checked || false,
-                counsellorDash: document.getElementById('counsellorDash')?.checked || false,
-                todaysFollowup: document.getElementById('todaysFollowup')?.checked || false,
-                overdueFollowup: document.getElementById('overdueFollowup')?.checked || false,
-                feeManager: document.getElementById('feeManager')?.checked || false,
-                batchWiseFee: document.getElementById('batchWiseFee')?.checked || false,
-                paymentLink: document.getElementById('paymentLink')?.checked || false,
-                manageCourse: document.getElementById('manageCourse')?.checked || false,
-                manageBatch: document.getElementById('manageBatch')?.checked || false,
-                timeTable: document.getElementById('timeTable')?.checked || false,
-                timeTableAttendance: document.getElementById('timeTableAttendance')?.checked || false,
-                studyNote: document.getElementById('studyNote')?.checked || false,
-                sendAppMsg: document.getElementById('sendAppMsg')?.checked || false,
-                shareVideo: document.getElementById('shareVideo')?.checked || false,
-                liveLecture: document.getElementById('liveLecture')?.checked || false,
-                offlineExam: document.getElementById('offlineExam')?.checked || false
+                confirmPassword: addUserChecked ? confirmPassword : null
             };
 
             // Show loading with proper message
@@ -411,20 +397,76 @@
 
             tbody.innerHTML = employees.map((emp, index) => {
                 const srNo = (currentPage * pageSize) + index + 1;
+                
+                // Employee Record Status
                 const accessBadge = emp.isActive
-                    ? '<span class="badge badge-access badge-active">Active</span>'
-                    : '<span class="badge badge-access badge-inactive">Inactive</span>';
+                    ? '<span class="badge badge-access badge-active"><i class="bi bi-check-circle-fill me-1"></i>Active</span>'
+                    : '<span class="badge badge-access badge-inactive"><i class="bi bi-x-circle-fill me-1"></i>Inactive</span>';
+
+                // User Login Status
+                let userStatusBadge = '';
+                const hasUser = emp.userActive !== null && emp.userActive !== undefined;
+                
+                if (hasUser) {
+                    const activeBadge = emp.userActive 
+                        ? '<span class="badge badge-access badge-user-active ms-1" title="Login Enabled"><i class="bi bi-person-check-fill"></i> Accessible</span>'
+                        : '<span class="badge badge-access badge-user-inactive ms-1" title="Login Disabled"><i class="bi bi-person-x-fill"></i> Disabled</span>';
+                    
+                    const lockBadge = emp.userLocked 
+                        ? '<span class="badge badge-access badge-locked ms-1" title="Account Locked"><i class="bi bi-lock-fill"></i> Locked</span>'
+                        : '<span class="badge badge-access badge-unlocked ms-1" title="Account Unlocked"><i class="bi bi-unlock-fill"></i> Unlocked</span>';
+                    
+                    userStatusBadge = `<div class="mt-1">${activeBadge}${lockBadge}</div>`;
+                } else {
+                    userStatusBadge = '<div class="mt-1"><span class="badge badge-access bg-secondary text-white ms-1" style="font-size: 0.65rem;">No Login Found</span></div>';
+                }
+
+                const unlockBtn = (hasUser && emp.userLocked === true)
+                    ? `
+                            <button class="action-btn btn-unlock" data-employee-id="${emp.id}" title="Unlock User">
+                                <i class="bi bi-unlock"></i>
+                            </button>
+                        `
+                    : '';
+
+                const lockBtn = (hasUser && emp.userLocked === false)
+                    ? `
+                            <button class="action-btn btn-lock" data-employee-id="${emp.id}" title="Lock User">
+                                <i class="bi bi-lock"></i>
+                            </button>
+                        `
+                    : '';
+
+                const activateBtn = (hasUser && emp.userActive === false)
+                    ? `
+                            <button class="action-btn btn-activate" data-employee-id="${emp.id}" title="Activate User">
+                                <i class="bi bi-person-check"></i>
+                            </button>
+                        `
+                    : '';
+
+                const deactivateBtn = (hasUser && emp.userActive === true)
+                    ? `
+                            <button class="action-btn btn-deactivate" data-employee-id="${emp.id}" title="Deactivate User">
+                                <i class="bi bi-person-x"></i>
+                            </button>
+                        `
+                    : '';
 
                 const dobDisplay = emp.dateOfBirth ? formatDate(emp.dateOfBirth) : 'N/A';
 
                 return `
                     <tr>
+
                         <td style="text-align:center;"><strong>${srNo}</strong></td>
                         <td>${emp.employeeName}</td>
                         <td>${emp.roleName || 'N/A'}</td>
                         <td>${emp.mobileNumber}</td>
                         <td>${emp.emailId}</td>
-                        <td>${accessBadge}</td>
+                        <td>
+                            ${accessBadge}
+                            ${userStatusBadge}
+                        </td>
                         <td>${dobDisplay}</td>
                         <td>
                             <button class="action-btn btn-edit" data-employee-id="${emp.id}" title="Edit">
@@ -436,6 +478,10 @@
                             <button class="action-btn btn-view" data-employee-id="${emp.id}" title="View Details">
                                 <i class="bi bi-eye"></i>
                             </button>
+                            ${unlockBtn}
+                            ${lockBtn}
+                            ${activateBtn}
+                            ${deactivateBtn}
                         </td>
                     </tr>
                 `;
@@ -462,6 +508,10 @@
             const editBtn = event.target.closest('.btn-edit');
             const deleteBtn = event.target.closest('.btn-delete');
             const viewBtn = event.target.closest('.btn-view');
+            const unlockBtn = event.target.closest('.btn-unlock');
+            const lockBtn = event.target.closest('.btn-lock');
+            const activateBtn = event.target.closest('.btn-activate');
+            const deactivateBtn = event.target.closest('.btn-deactivate');
 
             if (editBtn) {
                 const employeeId = parseInt(editBtn.dataset.employeeId);
@@ -472,6 +522,198 @@
             } else if (viewBtn) {
                 const employeeId = parseInt(viewBtn.dataset.employeeId);
                 viewEmployee(employeeId);
+            } else if (unlockBtn) {
+                const employeeId = parseInt(unlockBtn.dataset.employeeId);
+                unlockEmployeeUser(employeeId);
+            } else if (lockBtn) {
+                const employeeId = parseInt(lockBtn.dataset.employeeId);
+                lockEmployeeUser(employeeId);
+            } else if (activateBtn) {
+                const employeeId = parseInt(activateBtn.dataset.employeeId);
+                activateEmployeeUser(employeeId);
+            } else if (deactivateBtn) {
+                const employeeId = parseInt(deactivateBtn.dataset.employeeId);
+                deactivateEmployeeUser(employeeId);
+            }
+        }
+
+        async function unlockEmployeeUser(employeeId) {
+            try {
+                const result = await Swal.fire({
+                    title: 'Unlock User?',
+                    text: 'This will unlock the user, reset attempts, and activate the account.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#667eea',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Yes, Unlock',
+                    cancelButtonText: 'Cancel'
+                });
+
+                if (!result.isConfirmed) return;
+
+                Swal.fire({
+                    title: 'Processing...',
+                    html: '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-3">Please wait...</p></div>',
+                    allowOutsideClick: false,
+                    showConfirmButton: false
+                });
+
+                const response = await fetch(`${API_BASE_URL}/${employeeId}/unlock`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.message || 'Failed to unlock user');
+                }
+
+                Swal.close();
+                showSuccess('User unlocked and activated successfully');
+                await loadEmployees();
+            } catch (error) {
+                console.error('Error unlocking user:', error);
+                Swal.close();
+                showError(error.message || 'Failed to unlock user');
+            }
+        }
+
+        async function lockEmployeeUser(employeeId) {
+            try {
+                const result = await Swal.fire({
+                    title: 'Lock User?',
+                    text: 'User will not be able to log in until unlocked.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Yes, Lock',
+                    cancelButtonText: 'Cancel'
+                });
+
+                if (!result.isConfirmed) return;
+
+                Swal.fire({
+                    title: 'Processing...',
+                    html: '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-3">Please wait...</p></div>',
+                    allowOutsideClick: false,
+                    showConfirmButton: false
+                });
+
+                const response = await fetch(`${API_BASE_URL}/${employeeId}/lock`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.message || 'Failed to lock user');
+                }
+
+                Swal.close();
+                showSuccess('User locked successfully');
+                await loadEmployees();
+            } catch (error) {
+                console.error('Error locking user:', error);
+                Swal.close();
+                showError(error.message || 'Failed to lock user');
+            }
+        }
+
+        async function activateEmployeeUser(employeeId) {
+            try {
+                const result = await Swal.fire({
+                    title: 'Activate User?',
+                    text: 'User will be able to log in again.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#667eea',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Yes, Activate',
+                    cancelButtonText: 'Cancel'
+                });
+
+                if (!result.isConfirmed) return;
+
+                Swal.fire({
+                    title: 'Processing...',
+                    html: '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-3">Please wait...</p></div>',
+                    allowOutsideClick: false,
+                    showConfirmButton: false
+                });
+
+                const response = await fetch(`${API_BASE_URL}/${employeeId}/activate`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.message || 'Failed to activate user');
+                }
+
+                Swal.close();
+                showSuccess('User activated successfully');
+                await loadEmployees();
+            } catch (error) {
+                console.error('Error activating user:', error);
+                Swal.close();
+                showError(error.message || 'Failed to activate user');
+            }
+        }
+
+        async function deactivateEmployeeUser(employeeId) {
+            try {
+                const result = await Swal.fire({
+                    title: 'Deactivate User?',
+                    text: 'User will not be able to log in until activated again.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Yes, Deactivate',
+                    cancelButtonText: 'Cancel'
+                });
+
+                if (!result.isConfirmed) return;
+
+                Swal.fire({
+                    title: 'Processing...',
+                    html: '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-3">Please wait...</p></div>',
+                    allowOutsideClick: false,
+                    showConfirmButton: false
+                });
+
+                const response = await fetch(`${API_BASE_URL}/${employeeId}/deactivate`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        ...getCsrfHeaders()
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.message || 'Failed to deactivate user');
+                }
+
+                Swal.close();
+                showSuccess('User deactivated successfully');
+                await loadEmployees();
+            } catch (error) {
+                console.error('Error deactivating user:', error);
+                Swal.close();
+                showError(error.message || 'Failed to deactivate user');
             }
         }
 
@@ -573,7 +815,7 @@
 
         function nextStep() {
             if (validateCurrentStep()) {
-                if (currentStep < 4) {
+                if (currentStep < 3) {
                     currentStep++;
                     showStep(currentStep);
                 }
@@ -599,8 +841,8 @@
             document.querySelector(`[data-step="${step}"]`).classList.add('active');
 
             document.getElementById('prevBtn').style.display = step === 1 ? 'none' : 'inline-block';
-            document.getElementById('nextBtn').style.display = step === 4 ? 'none' : 'inline-block';
-            document.getElementById('saveEmployeeBtn').style.display = step === 4 ? 'inline-block' : 'none';
+            document.getElementById('nextBtn').style.display = step === 3 ? 'none' : 'inline-block';
+            document.getElementById('saveEmployeeBtn').style.display = step === 3 ? 'inline-block' : 'none';
         }
 
         function validateCurrentStep() {
@@ -1101,30 +1343,27 @@
                 document.getElementById('role').value = employee.roleId || '';
                 document.getElementById('zoomLink').value = employee.zoomLink || '';
 
-                // STEP 8: Fill mobile permissions checkboxes
-                document.getElementById('newAdmission').checked = employee.newAdmission || false;
-                document.getElementById('viewAdmission').checked = employee.viewAdmission || false;
-                document.getElementById('newEnquiry').checked = employee.newEnquiry || false;
-                document.getElementById('viewEnquiry').checked = employee.viewEnquiry || false;
-                document.getElementById('accDashboard').checked = employee.accDashboard || false;
-                document.getElementById('counsellorDash').checked = employee.counsellorDash || false;
-                document.getElementById('todaysFollowup').checked = employee.todaysFollowup || false;
-                document.getElementById('overdueFollowup').checked = employee.overdueFollowup || false;
-                document.getElementById('feeManager').checked = employee.feeManager || false;
-                document.getElementById('batchWiseFee').checked = employee.batchWiseFee || false;
-                document.getElementById('paymentLink').checked = employee.paymentLink || false;
-                document.getElementById('manageCourse').checked = employee.manageCourse || false;
-                document.getElementById('manageBatch').checked = employee.manageBatch || false;
-                document.getElementById('timeTable').checked = employee.timeTable || false;
-                document.getElementById('timeTableAttendance').checked = employee.timeTableAttendance || false;
-                document.getElementById('studyNote').checked = employee.studyNote || false;
-                document.getElementById('sendAppMsg').checked = employee.sendAppMsg || false;
-                document.getElementById('shareVideo').checked = employee.shareVideo || false;
-                document.getElementById('liveLecture').checked = employee.liveLecture || false;
-                document.getElementById('offlineExam').checked = employee.offlineExam || false;
-
-                // STEP 9: Load username if exists
+                // STEP 8: Load username if exists
                 await loadUserCredentials(id);
+
+                // STEP 9: Prefill existing photo preview (cannot prefill file input)
+                if (employee.photoUrl) {
+                    try {
+                        const canvas = document.getElementById('canvas');
+                        const context = canvas.getContext('2d');
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.onload = function() {
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            context.clearRect(0, 0, canvas.width, canvas.height);
+                            context.drawImage(img, 0, 0);
+                        };
+                        img.src = employee.photoUrl;
+                    } catch (e) {
+                        console.error('Failed to prefill employee photo preview:', e);
+                    }
+                }
 
                 currentStep = 1;
                 showStep(1);
@@ -1159,12 +1398,22 @@
                     const userData = await response.json();
 
                     if (userData && userData.username) {
+                        // Check the checkbox and show section
+                        const checkbox = document.getElementById('addUserCheckbox');
+                        const section = document.getElementById('userCredentialsSection');
+                        if (checkbox) checkbox.checked = true;
+                        if (section) section.style.display = 'flex';
+
                         // Show username in read-only field
-                        document.getElementById('username').value = userData.username;
-                        document.getElementById('username').setAttribute('readonly', 'readonly');
+                        const usernameField = document.getElementById('username');
+                        usernameField.value = userData.username;
+                        usernameField.setAttribute('readonly', 'readonly');
+
+                        // Clear info message if exists
+                        const existingInfo = usernameField.parentElement.querySelector('.text-info');
+                        if (existingInfo) existingInfo.remove();
 
                         // Add info message
-                        const usernameField = document.getElementById('username');
                         const infoDiv = document.createElement('div');
                         infoDiv.className = 'text-info mt-1';
                         infoDiv.style.fontSize = '0.85rem';

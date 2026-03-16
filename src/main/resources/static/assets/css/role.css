@@ -148,32 +148,6 @@ body {
     border-color: #4f46e5;
 }
 
-/* Action buttons in role table
-   -------------------------------------------------- */
-
-.action-btn {
-    border: none;
-    background: transparent;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: background-color 0.15s ease, transform 0.1s ease, color 0.15s ease;
-    color: #64748b;
-}
-
-.action-btn i {
-    font-size: 1rem;
-}
-
-.action-btn:hover {
-    background-color: #eef2ff;
-    color: #4f46e5;
-}
-
-.action-btn:active {
-    transform: translateY(0);
-}
-
 /* Delete action emphasis (if you add text-danger on delete buttons) */
 .action-btn.text-danger:hover {
     background-color: #fee2e2;

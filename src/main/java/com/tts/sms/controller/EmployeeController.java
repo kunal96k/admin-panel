@@ -1,18 +1,29 @@
 package com.tts.sms.controller;
 
-import com.tts.sms.dto.EmployeeRequestDTO;
-import com.tts.sms.dto.EmployeeResponseDTO;
-import com.tts.sms.service.EmployeeService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tts.sms.dto.EmployeeRequestDTO;
+import com.tts.sms.dto.EmployeeResponseDTO;
+import com.tts.sms.service.EmployeeService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/employees")
@@ -111,6 +122,46 @@ public class EmployeeController {
         employeeService.sendCredentialsEmail(id);
         Map<String, String> response = new HashMap<>();
         response.put("message", "Credentials sent successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/unlock")
+    public ResponseEntity<Map<String, String>> unlockAndActivateUser(@PathVariable Long id) {
+        employeeService.unlockAndActivateUser(id);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "User unlocked and activated successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/lock")
+    public ResponseEntity<Map<String, String>> lockUser(@PathVariable Long id) {
+        employeeService.lockUser(id);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "User locked successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/unlock-only")
+    public ResponseEntity<Map<String, String>> unlockUser(@PathVariable Long id) {
+        employeeService.unlockUser(id);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "User unlocked successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/deactivate")
+    public ResponseEntity<Map<String, String>> deactivateUser(@PathVariable Long id) {
+        employeeService.deactivateUser(id);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "User deactivated successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/activate")
+    public ResponseEntity<Map<String, String>> activateUser(@PathVariable Long id) {
+        employeeService.activateUser(id);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "User activated successfully");
         return ResponseEntity.ok(response);
     }
 

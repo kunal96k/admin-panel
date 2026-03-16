@@ -77,7 +77,9 @@ public class PasswordResetService {
         try {
             emailTemplateService.sendPasswordChangedEmail(
                     currentUser.getEmployee().getEmailId(),
-                    currentUser.getEmployee().getEmployeeName()
+                    currentUser.getEmployee().getEmployeeName(),
+                    currentUser.getUsername(),
+                    resetDTO.getNewPassword()
             );
             log.info("📧 Password change notification sent");
         } catch (Exception e) {

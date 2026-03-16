@@ -3,6 +3,7 @@ package com.tts.sms.service;
 import com.tts.sms.dto.*;
 import com.tts.sms.exception.ResourceNotFoundException;
 import com.tts.sms.model.Admission;
+import com.tts.sms.model.Certificate;
 import com.tts.sms.model.Course;
 import com.tts.sms.model.Enquiry;
 import com.tts.sms.model.FeeInstallment;
@@ -43,6 +44,7 @@ public class AdmissionService {
     private final FileStorageService fileStorageService;
     private final BatchRepository batchRepository;
     private final BatchService batchService;
+    private final CertificateRepository certificateRepository;
 
     private static final AtomicInteger registrationCounter = new AtomicInteger(8000);
     private static final String REGISTRATION_PREFIX = "REG";
@@ -333,9 +335,23 @@ public class AdmissionService {
                         dto.setTotalDueAmount(fees.getFeesDue() != null ? fees.getFeesDue() : 0.0);
                         dto.setTotalInstallmentAmount(fees.getTotalInstallmentAmount());
                         dto.setNumberOfInstallments(fees.getNumberOfInstallments());
+                        
+                        String feesStatus = fees.getStatus() != null ? fees.getStatus() : "Pending";
+                        
+                        // Override with Cancelled if student category is CANCELLED
+                        if ("CANCELLED".equalsIgnoreCase(admission.getStudentCategory())) {
+                            feesStatus = "Cancelled";
+                        } 
+                        // Dynamically check for Overdue if not Clear or Cancelled
+                        else if (!"Clear".equalsIgnoreCase(feesStatus) && fees.getDueDate() != null && fees.getDueDate().isBefore(LocalDate.now())) {
+                            feesStatus = "Overdue";
+                        }
+                        
+                        dto.setFeesStatus(feesStatus);
                     } else {
                         dto.setTotalPaidAmount(0.0);
                         dto.setTotalDueAmount(0.0);
+                        dto.setFeesStatus("Pending");
                     }
 
                     // Note: full installments list is still skipped for list view to maximize
@@ -564,6 +580,9 @@ public class AdmissionService {
 
         // SYNC WITH FEES MANAGER
         updateFeesRecord(updated);
+
+        // SYNC WITH CERTIFICATES
+        syncCertificatesWithAdmission(updated);
 
         return toResponseDTOWithInstallments(updated);
     }
@@ -797,6 +816,49 @@ public class AdmissionService {
         }
     }
 
+    /**
+     * Sync certificates when admission student name or courses change.
+     * Updates studentName in all certificates for this registration number.
+     */
+    private void syncCertificatesWithAdmission(Admission admission) {
+        try {
+            List<Certificate> certificates = certificateRepository
+                    .findByRegistrationNoAndIsActiveTrue(admission.getRegistrationNumber());
+
+            if (certificates.isEmpty()) {
+                return;
+            }
+
+            String newName = admission.getFullName();
+            String newEmail = admission.getEmailPrimary();
+
+            for (Certificate cert : certificates) {
+                boolean changed = false;
+
+                // Sync student name
+                if (newName != null && !newName.equals(cert.getStudentName())) {
+                    cert.setStudentName(newName);
+                    changed = true;
+                }
+
+                // Sync email
+                if (newEmail != null && !newEmail.equals(cert.getStudentEmail())) {
+                    cert.setStudentEmail(newEmail);
+                    changed = true;
+                }
+
+                if (changed) {
+                    certificateRepository.save(cert);
+                    log.info("✅ Synced certificate {} for regNo: {} — name: {}",
+                            cert.getCertificateNo(), admission.getRegistrationNumber(), newName);
+                }
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to sync certificates for regNo: {}",
+                    admission.getRegistrationNumber(), e);
+        }
+    }
+
     private String generateRegistrationNumber() {
         // Initialize counter from database only once
         if (!counterInitialized) {
@@ -900,6 +962,28 @@ public class AdmissionService {
         dto.setTotalPaidAmount(totalPaid != null ? totalPaid : 0.0);
         dto.setTotalDueAmount(totalDue != null ? totalDue : 0.0);
 
+        // Fetch fees status
+        feesRepository.findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber())
+                .ifPresent(fees -> {
+                    String feesStatus = fees.getStatus() != null ? fees.getStatus() : "Pending";
+                    
+                    if ("CANCELLED".equalsIgnoreCase(admission.getStudentCategory())) {
+                        feesStatus = "Cancelled";
+                    } else if (!"Clear".equalsIgnoreCase(feesStatus) && fees.getDueDate() != null && fees.getDueDate().isBefore(LocalDate.now())) {
+                        feesStatus = "Overdue";
+                    }
+                    
+                    dto.setFeesStatus(feesStatus);
+                    
+                    // Also sync total config if not already set
+                    if (dto.getInstallmentStartDate() == null) dto.setInstallmentStartDate(fees.getInstallmentStartDate());
+                    if (dto.getNumberOfInstallments() == null) dto.setNumberOfInstallments(fees.getNumberOfInstallments());
+                });
+
+        if (dto.getFeesStatus() == null) {
+            dto.setFeesStatus("Pending");
+        }
+        
         return dto;
     }
 

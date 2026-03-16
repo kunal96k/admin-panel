@@ -101,12 +101,7 @@
             background: linear-gradient(135deg, #5568d3 0%, #653a8e 100%);
         }
 
-        .action-btn {
-            padding: 0.375rem 0.75rem;
-            border-radius: 0.375rem;
-            font-size: 0.875rem;
-            margin: 0 0.125rem;
-        }
+
 
         .section-title {
             font-size: 1.25rem;

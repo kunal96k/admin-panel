@@ -31,7 +31,6 @@ function initializeCsrfToken() {
     if (token) {
         csrfToken = token;
         csrfHeader = 'X-CSRF-TOKEN';
-        console.log('CSRF token initialized');
     } else {
         console.warn('CSRF token not found in cookies');
     }
@@ -85,87 +84,9 @@ async function updateStatsForCurrentView() {
 }
 
 async function autoGenerateCertificates() {
-    const result = await Swal.fire({
-        title: 'Auto-Generate Certificates',
-        html: `
-            <div class="text-start">
-                <p>This will automatically create certificate entries for all students who have:</p>
-                <ul>
-                    <li>Cleared their fees (Status = "Clear")</li>
-                    <li>Fees Due = 0</li>
-                    <li>Total Fees = Total Paid</li>
-                </ul>
-                <p class="text-warning"><i class="bi bi-exclamation-triangle me-2"></i>Duplicate entries (same student + course) will be skipped automatically.</p>
-                <p class="fw-bold">Continue?</p>
-            </div>
-        `,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: '<i class="bi bi-check-circle me-2"></i>Yes, Generate',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#10b981',
-        cancelButtonColor: '#6c757d',
-        width: '550px'
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-        Swal.fire({
-            title: 'Processing...',
-            html: 'Checking fees and generating certificates',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-
-        // Refresh CSRF token before request
-        initializeCsrfToken();
-
-        const response = await fetch('/api/certificates/auto-generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
-            }
-        });
-
-        const data = await response.json();
-
-        Swal.close();
-
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                html: `
-                    <p><strong>${data.certificatesCreated}</strong> certificate(s) created successfully!</p>
-                    <p class="text-muted mt-2">Students can now have their certificates issued.</p>
-                `,
-                confirmButtonColor: '#10b981'
-            }).then(() => {
-                loadCertificates();
-                updateStats();
-            });
-        } else {
-            Swal.fire({
-                icon: 'warning',
-                title: 'No Certificates Created',
-                text: data.message || 'No eligible students found with cleared fees',
-                confirmButtonColor: '#667eea'
-            });
-        }
-
-    } catch (error) {
-        Swal.close();
-        console.error('Auto-generate error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to auto-generate certificates',
-            confirmButtonColor: '#ef4444'
-        });
-    }
+    openStudentSelectModal();
 }
+
 
 function initializeEventListeners() {
 
@@ -506,12 +427,22 @@ async function issueCertificate(id) {
         const certificate = await response.json();
         selectedCertificateId = id;
 
-        document.getElementById('studentName').value = certificate.studentName;
-        document.getElementById('courseName').value = certificate.courseName;
+        document.getElementById('studentName').value = certificate.studentName || '';
+        
+        // Set course in searchable dropdown
+        document.getElementById('courseName').value = certificate.courseName || '';
+        const courseSearchEl = document.getElementById('courseSearchInput_cert');
+        if (courseSearchEl) courseSearchEl.value = certificate.courseName || '';
+        
+        // Show course preview with logo
+        showCoursePreview(certificate.courseName, certificate.courseImagePath);
+        
+        document.getElementById('batchName').value = certificate.batch || '';
         document.getElementById('grade').value = certificate.grade || '';
         document.getElementById('certificateNo').value = certificate.certificateNo || 'AUTO-GENERATED';
 
-        if (certificate.issueDate) {
+        // Set date to today if not issued, otherwise use saved date
+        if (certificate.status === 'Issued' && certificate.issueDate) {
             document.getElementById('issueDate').value = certificate.issueDate;
         } else {
             document.getElementById('issueDate').valueAsDate = new Date();
@@ -1320,142 +1251,8 @@ function changePage(page) {
     loadCertificates();
 }
 
-// ==================== AUTO-GENERATE CERTIFICATES ====================
 
-async function autoGenerateCertificates() {
-    const result = await Swal.fire({
-        title: 'Auto-Generate Certificates',
-        html: `
-            <div class="text-start">
-                <h6 class="text-primary mb-3">For New + Old Admissions</h6>
-                <p class="mb-2">This will automatically create certificate entries for students with:</p>
-                <ul class="mb-3">
-                    <li><strong>Fees status = "Clear"</strong></li>
-                    <li><strong>Separate certificate for each enrolled course</strong></li>
-                </ul>
 
-                <div class="alert alert-info mb-3">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Note:</strong> Old admission records (7168, 7167, etc.) may be managed via CSV import
-                </div>
-
-                <p class="text-warning mb-0">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    Duplicate entries (same student + course) will be automatically skipped
-                </p>
-            </div>
-        `,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: '<i class="bi bi-magic me-2"></i>Generate Certificates',
-        cancelButtonText: '<i class="bi bi-x-circle me-2"></i>Cancel',
-        confirmButtonColor: '#10b981',
-        cancelButtonColor: '#6c757d',
-        width: '600px',
-        customClass: {
-            popup: 'custom-swal-popup'
-        }
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-        Swal.fire({
-            title: 'Processing...',
-            html: '<div class="text-center"><div class="spinner-border text-primary mb-3" role="status"></div><p>Checking cleared fees and generating certificates...</p></div>',
-            allowOutsideClick: false,
-            showConfirmButton: false
-        });
-
-        // Refresh CSRF token
-        initializeCsrfToken();
-
-        const response = await fetch('/api/certificates/auto-generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
-            }
-        });
-
-        //  Check content type before parsing
-        const contentType = response.headers.get('content-type');
-
-        if (!contentType || !contentType.includes('application/json')) {
-            console.error('Non-JSON response received:', contentType);
-            const text = await response.text();
-            console.error('Response body:', text.substring(0, 500));
-            throw new Error('Server returned non-JSON response. Please check if you are logged in.');
-        }
-
-        const data = await response.json();
-
-        console.log(' Auto-generate response:', data);
-
-        Swal.close();
-
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                html: `
-                    <div class="text-center">
-                        <div class="display-4 text-success mb-3">
-                            <i class="bi bi-check-circle-fill"></i>
-                        </div>
-                        <h5 class="mb-3">
-                            <strong>${data.certificatesCreated}</strong> certificate(s) created successfully!
-                        </h5>
-                        <p class="text-muted">
-                            Students can now have their certificates issued with certificate numbers
-                        </p>
-                    </div>
-                `,
-                confirmButtonColor: '#10b981',
-                confirmButtonText: 'View Certificates'
-            }).then(() => {
-                loadCertificates();
-                updateStats();
-            });
-        } else {
-            Swal.fire({
-                icon: 'info',
-                title: 'No Certificates Created',
-                html: `
-                    <p class="mb-2">${data.message || 'No eligible students found with cleared fees'}</p>
-                    <hr>
-                    <small class="text-muted">
-                        <strong>Possible reasons:</strong><br>
-                        • All eligible students already have certificates<br>
-                        • No students with cleared fees<br>
-                        • Only old admissions found (handled via CSV import)
-                    </small>
-                `,
-                confirmButtonColor: '#667eea'
-            });
-        }
-
-    } catch (error) {
-        Swal.close();
-        console.error('Auto-generate error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            html: `
-                <div class="text-start">
-                    <p><strong>Failed to auto-generate certificates</strong></p>
-                    <p class="text-muted small">${error.message}</p>
-                    <hr>
-                    <small class="text-danger">
-                        If this error persists, please contact support or check browser console for details.
-                    </small>
-                </div>
-            `,
-            confirmButtonColor: '#ef4444'
-        });
-    }
-}
 
 // ==================== MANUAL CERTIFICATE GENERATION ====================
 
@@ -1792,11 +1589,14 @@ async function saveCertificate() {
     }
 
     const certificateData = {
+        studentName: document.getElementById('studentName').value,
+        courseName: document.getElementById('courseName').value,
+        batch: document.getElementById('batchName').value,
         certificateNo: document.getElementById('certificateNo').value,
         grade: document.getElementById('grade').value || null,
         issueDate: document.getElementById('issueDate').value,
-        courseFromDate: document.getElementById('courseFromDate').value,
-        courseToDate: document.getElementById('courseToDate').value,
+        courseFromDate: document.getElementById('courseFromDate').value || null,
+        courseToDate: document.getElementById('courseToDate').value || null,
         notes: document.getElementById('certificateNotes').value
     };
 
@@ -1915,3 +1715,482 @@ document.addEventListener('DOMContentLoaded', () => {
     styleElement.innerHTML = customStyles;
     document.head.appendChild(styleElement);
 });
+
+// =========================================================================
+// STUDENT SELECTION & BULK CERTIFICATE GENERATION
+// =========================================================================
+
+let modalCurrentPage = 0;
+let modalPageSize = 25;
+let selectedStudents = new Set(); // Stores registration numbers
+let modalSearchTimeout = null;
+
+function openStudentSelectModal() {
+    modalCurrentPage = 0;
+    selectedStudents.clear();
+    updateSelectedCount();
+    
+    const searchInput = document.getElementById('modalStudentSearch');
+    if (searchInput) searchInput.value = '';
+    
+    const checkAll = document.getElementById('checkAllInModal');
+    if (checkAll) checkAll.checked = false;
+    
+    // Reset table to initial state
+    const tbody = document.getElementById('modalStudentTableBody');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-5 text-muted">
+                    <i class="bi bi-search mb-2" style="font-size: 2rem;"></i>
+                    <p>Start typing to search students...</p>
+                </td>
+            </tr>
+        `;
+    }
+    updateModalPagination(0, 0, false);
+    
+    const modal = new bootstrap.Modal(document.getElementById('studentSelectModal'));
+    modal.show();
+    
+    // Focus search input after modal is shown
+    document.getElementById('studentSelectModal')?.addEventListener('shown.bs.modal', function handler() {
+        document.getElementById('modalStudentSearch')?.focus();
+        this.removeEventListener('shown.bs.modal', handler);
+    });
+}
+
+// Dynamic search with debounce (400ms)
+document.getElementById('modalStudentSearch')?.addEventListener('input', function() {
+    clearTimeout(modalSearchTimeout);
+    modalSearchTimeout = setTimeout(() => {
+        modalCurrentPage = 0;
+        loadStudentsInModal();
+    }, 400);
+});
+
+// Pagination listeners
+document.getElementById('modalPrev')?.addEventListener('click', function() {
+    if (!this.classList.contains('disabled')) {
+        modalCurrentPage--;
+        loadStudentsInModal();
+    }
+});
+
+document.getElementById('modalNext')?.addEventListener('click', function() {
+    if (!this.classList.contains('disabled')) {
+        modalCurrentPage++;
+        loadStudentsInModal();
+    }
+});
+
+// Select all on current page
+document.getElementById('checkAllInModal')?.addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = this.checked;
+        const regNo = cb.getAttribute('data-regno');
+        if (this.checked) {
+            selectedStudents.add(regNo);
+        } else {
+            selectedStudents.delete(regNo);
+        }
+    });
+    updateSelectedCount();
+});
+
+// Clear selection
+document.getElementById('btnClearSelection')?.addEventListener('click', () => {
+    selectedStudents.clear();
+    const checkAll = document.getElementById('checkAllInModal');
+    if (checkAll) checkAll.checked = false;
+    document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = false);
+    updateSelectedCount();
+});
+
+// Generate button
+document.getElementById('btnGenerateForSelected')?.addEventListener('click', generateCertificatesForSelected);
+
+/**
+ * Load students from server using POST /api/admissions/search
+ * Uses offset pagination (page, size) — server-side
+ */
+async function loadStudentsInModal() {
+    const tbody = document.getElementById('modalStudentTableBody');
+    const searchTerm = document.getElementById('modalStudentSearch')?.value?.trim() || '';
+    
+    if (!tbody) return;
+    
+    // Show spinner
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="6" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+                <span class="ms-2">Searching...</span>
+            </td>
+        </tr>
+    `;
+    
+    try {
+        const searchDTO = {
+            searchTerm: searchTerm,
+            page: modalCurrentPage,
+            size: modalPageSize,
+            sortBy: "admissionDate",
+            sortDirection: "DESC"
+        };
+        
+        initializeCsrfToken();
+        const response = await fetch('/api/admissions/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            },
+            body: JSON.stringify(searchDTO)
+        });
+        
+        if (!response.ok) throw new Error('Search failed');
+        
+        const data = await response.json();
+        const students = data.content || [];
+        
+        if (students.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox mb-2" style="font-size: 2rem;"></i>
+                        <p class="mb-0">${searchTerm ? 'No students found for "' + searchTerm + '"' : 'No students available'}</p>
+                    </td>
+                </tr>
+            `;
+            updateModalPagination(0, 0, false);
+            return;
+        }
+        
+        // Render table rows using AdmissionResponseDTO fields
+        tbody.innerHTML = students.map((student) => {
+            const isSelected = selectedStudents.has(student.registrationNumber);
+            const name = student.studentName || [student.firstName, student.middleName, student.lastName].filter(Boolean).join(' ') || '-';
+            const mobile = student.mobilePrimary || '-';
+            const courses = student.coursesList || (student.courses ? student.courses.split(',') : []);
+            const feesStatus = student.feesStatus || 'Pending';
+            
+            let statusBadgeClass = 'bg-warning';
+            if (feesStatus === 'Clear') statusBadgeClass = 'bg-success';
+            else if (feesStatus === 'Partial') statusBadgeClass = 'bg-info';
+            else if (feesStatus === 'Overdue') statusBadgeClass = 'bg-danger';
+            else if (feesStatus === 'Cancelled') statusBadgeClass = 'bg-secondary';
+
+            return `
+                <tr class="${isSelected ? 'table-success' : ''}">
+                    <td>
+                        <input type="checkbox" class="form-check-input student-checkbox" 
+                               data-regno="${student.registrationNumber}"
+                               ${isSelected ? 'checked' : ''}
+                               onchange="window.toggleStudentSelection('${student.registrationNumber}', this)">
+                    </td>
+                    <td><strong>${student.registrationNumber}</strong></td>
+                    <td>${name}</td>
+                    <td>${mobile}</td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            ${courses.map(c => `<span class="badge bg-light text-dark border" style="font-size: 0.65rem;">${c.trim()}</span>`).join('')}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge ${statusBadgeClass}" style="font-size: 0.7rem;">
+                            ${feesStatus}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        
+        updateModalPagination(students.length, data.totalElements, !data.last);
+        
+        // Sync checkAll checkbox
+        const allChecked = students.length > 0 && students.every(s => selectedStudents.has(s.registrationNumber));
+        const checkAll = document.getElementById('checkAllInModal');
+        if (checkAll) checkAll.checked = allChecked;
+        
+    } catch (error) {
+        console.error('Error loading students in modal:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-5 text-danger">
+                    <i class="bi bi-exclamation-triangle-fill mb-2" style="font-size: 2rem;"></i>
+                    <p>Failed to load students. Please check your connection.</p>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// Called from inline onchange handler
+window.toggleStudentSelection = function(regNo, checkbox) {
+    if (checkbox.checked) {
+        selectedStudents.add(regNo);
+        checkbox.closest('tr')?.classList.add('table-success');
+    } else {
+        selectedStudents.delete(regNo);
+        checkbox.closest('tr')?.classList.remove('table-success');
+        const checkAll = document.getElementById('checkAllInModal');
+        if (checkAll) checkAll.checked = false;
+    }
+    updateSelectedCount();
+};
+
+function updateSelectedCount() {
+    const count = selectedStudents.size;
+    const el = document.getElementById('selectedStudentCount');
+    if (el) el.textContent = count;
+    
+    const clearBtn = document.getElementById('btnClearSelection');
+    if (clearBtn) clearBtn.style.display = count > 0 ? 'inline-block' : 'none';
+    
+    // Enable/disable generate button
+    const genBtn = document.getElementById('btnGenerateForSelected');
+    if (genBtn) genBtn.disabled = count === 0;
+}
+
+function updateModalPagination(currentPageCount, totalCount, hasNext) {
+    const start = totalCount > 0 ? (modalCurrentPage * modalPageSize + 1) : 0;
+    const end = Math.min(start + currentPageCount - 1, totalCount);
+    
+    const infoEl = document.getElementById('modalPageInfo');
+    if (infoEl) {
+        infoEl.textContent = totalCount > 0
+            ? `Showing ${start} to ${end} of ${totalCount} students`
+            : 'No students to show';
+    }
+    
+    const prevBtn = document.getElementById('modalPrev');
+    const nextBtn = document.getElementById('modalNext');
+    
+    if (prevBtn) prevBtn.classList.toggle('disabled', modalCurrentPage === 0);
+    if (nextBtn) nextBtn.classList.toggle('disabled', !hasNext);
+}
+
+async function generateCertificatesForSelected() {
+    if (selectedStudents.size === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Selection',
+            text: 'Please select at least one student to generate certificates.',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+    
+    const result = await Swal.fire({
+        title: 'Generate Certificates?',
+        html: `
+            <div class="text-start">
+                <p>You have selected <strong>${selectedStudents.size}</strong> student(s).</p>
+                <p>Certificates will be created for each of their enrolled courses.</p>
+                <p class="text-warning mb-0"><i class="bi bi-info-circle me-1"></i>Duplicate student + course certificates will be skipped.</p>
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-magic me-2"></i>Yes, Generate',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#198754',
+        cancelButtonColor: '#6c757d',
+        width: '500px'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    try {
+        Swal.fire({
+            title: 'Processing...',
+            html: `Generating certificates for ${selectedStudents.size} student(s)`,
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+        
+        initializeCsrfToken();
+        const response = await fetch('/api/certificates/bulk-generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(csrfToken && csrfHeader && { [csrfHeader]: csrfToken })
+            },
+            body: JSON.stringify({ registrationNumbers: Array.from(selectedStudents) })
+        });
+        
+        const data = await response.json();
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Certificates Created!',
+                html: `<p><strong>${data.certificatesCreated}</strong> certificate(s) generated successfully!</p>
+                       ${data.skipped > 0 ? `<p class="text-muted">${data.skipped} duplicate(s) skipped.</p>` : ''}`,
+                confirmButtonColor: '#198754'
+            }).then(() => {
+                const modalEl = document.getElementById('studentSelectModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                
+                loadCertificates();
+                updateStats();
+                updateStatsForCurrentView();
+            });
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No New Certificates',
+                text: data.message || 'All selected students already have certificates for their courses.',
+                confirmButtonColor: '#667eea'
+            });
+        }
+        
+    } catch (error) {
+        Swal.close();
+        console.error('Bulk generation error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to generate certificates. Please try again.',
+            confirmButtonColor: '#ef4444'
+        });
+    }
+}
+
+// =========================================================================
+// COURSE SEARCH DROPDOWN FOR CERTIFICATE ISSUE MODAL
+// =========================================================================
+
+let allCoursesCache = null;
+let courseSearchDebounce = null;
+
+/**
+ * Fetch all courses from server and cache them
+ */
+async function fetchAllCourses() {
+    if (allCoursesCache) return allCoursesCache;
+    
+    try {
+        const response = await fetch('/api/courses?page=0&size=1000');
+        const data = await response.json();
+        allCoursesCache = (data.courses || []).map(c => ({
+            name: c.courseName,
+            imagePath: c.courseImagePath || null
+        }));
+        return allCoursesCache;
+    } catch (error) {
+        console.error('Error fetching courses:', error);
+        return [];
+    }
+}
+
+/**
+ * Show course preview with logo when a course is selected
+ */
+function showCoursePreview(courseName, imagePath) {
+    const previewDiv = document.getElementById('selectedCoursePreview');
+    const imgEl = document.getElementById('selectedCourseImage');
+    const badgeEl = document.getElementById('selectedCourseBadge');
+    
+    if (!previewDiv || !badgeEl) return;
+    
+    if (!courseName) {
+        previewDiv.style.cssText = 'display: none !important';
+        return;
+    }
+    
+    badgeEl.textContent = courseName;
+    previewDiv.style.cssText = 'display: flex !important';
+    
+    if (imgEl) {
+        if (imagePath) {
+            imgEl.src = '/uploads/courses/' + imagePath;
+            imgEl.classList.remove('d-none');
+            imgEl.onerror = () => { imgEl.classList.add('d-none'); };
+        } else {
+            imgEl.classList.add('d-none');
+        }
+    }
+}
+
+/**
+ * Filter and render course dropdown
+ */
+function renderCourseDropdown(courses, filterText) {
+    const dropdownList = document.getElementById('courseDropdownList');
+    if (!dropdownList) return;
+    
+    const filtered = filterText
+        ? courses.filter(c => c.name.toLowerCase().includes(filterText.toLowerCase()))
+        : courses;
+    
+    if (filtered.length === 0) {
+        dropdownList.innerHTML = '<div class="list-group-item text-muted small py-2">No courses found</div>';
+        dropdownList.style.display = 'block';
+        return;
+    }
+    
+    dropdownList.innerHTML = filtered.map(c => `
+        <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2"
+                data-course-name="${c.name}" data-course-image="${c.imagePath || ''}">
+            ${c.imagePath
+                ? `<img src="/uploads/courses/${c.imagePath}" alt="" style="width: 24px; height: 24px; object-fit: contain; border-radius: 3px;" onerror="this.style.display='none'">`
+                : '<i class="bi bi-book text-muted" style="width: 24px; text-align: center;"></i>'
+            }
+            <span style="font-size: 0.88rem;">${c.name}</span>
+        </button>
+    `).join('');
+    
+    dropdownList.style.display = 'block';
+    
+    // Bind click events
+    dropdownList.querySelectorAll('.list-group-item-action').forEach(item => {
+        item.addEventListener('click', () => {
+            const name = item.getAttribute('data-course-name');
+            const image = item.getAttribute('data-course-image');
+            
+            document.getElementById('courseName').value = name;
+            document.getElementById('courseSearchInput_cert').value = name;
+            showCoursePreview(name, image || null);
+            dropdownList.style.display = 'none';
+        });
+    });
+}
+
+// Setup course search input event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const courseSearchInput = document.getElementById('courseSearchInput_cert');
+    const dropdownList = document.getElementById('courseDropdownList');
+    
+    if (!courseSearchInput) return;
+    
+    // On focus — show dropdown
+    courseSearchInput.addEventListener('focus', async () => {
+        const courses = await fetchAllCourses();
+        renderCourseDropdown(courses, courseSearchInput.value);
+    });
+    
+    // On input — filter dropdown with debounce
+    courseSearchInput.addEventListener('input', () => {
+        clearTimeout(courseSearchDebounce);
+        courseSearchDebounce = setTimeout(async () => {
+            const courses = await fetchAllCourses();
+            renderCourseDropdown(courses, courseSearchInput.value);
+            
+            // Update hidden value as user types (for manual entry if needed)
+            document.getElementById('courseName').value = courseSearchInput.value;
+        }, 200);
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (dropdownList && !e.target.closest('#courseDropdownContainer')) {
+            dropdownList.style.display = 'none';
+        }
+    });
+});
+

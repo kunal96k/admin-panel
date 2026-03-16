@@ -27,12 +27,39 @@ public class LayoutController {
     private final EmployeeMenuPermissionRepository employeeMenuPermissionRepository;
     private final DashboardService dashboardService;
 
+    // ========================================
+    // MENU ID MAPPING
+    // ========================================
+
+    // Maps activePage key -> menu_id (matches sidebar data-menu-id attributes)
+    private static final Map<String, Long> PAGE_MENU_ID_MAP = new HashMap<>();
+    static {
+        PAGE_MENU_ID_MAP.put("dashboard", 1L);
+        PAGE_MENU_ID_MAP.put("enquiry", 2L);
+        PAGE_MENU_ID_MAP.put("admission", 3L);
+        PAGE_MENU_ID_MAP.put("fees-manager", 4L);
+        PAGE_MENU_ID_MAP.put("certificate", 5L);
+        PAGE_MENU_ID_MAP.put("course", 6L);
+        PAGE_MENU_ID_MAP.put("batch", 7L);
+        PAGE_MENU_ID_MAP.put("employee", 8L);
+        PAGE_MENU_ID_MAP.put("role", 9L);
+        PAGE_MENU_ID_MAP.put("bank", 10L);
+        PAGE_MENU_ID_MAP.put("lead-source", 11L);
+        PAGE_MENU_ID_MAP.put("create-package", 12L);
+        PAGE_MENU_ID_MAP.put("online-payment", 13L);
+        PAGE_MENU_ID_MAP.put("course-wise-sales", 14L);
+        PAGE_MENU_ID_MAP.put("fees-collection", 15L);
+    }
+
     /**
      * Common method to add base attributes for all pages
      */
     private void addBaseAttributes(Model model, String pageTitle, String activePage) {
         model.addAttribute("pageTitle", pageTitle);
         model.addAttribute("activePage", activePage);
+        // Pass the menu ID for this page so layout can check permissions
+        Long menuId = PAGE_MENU_ID_MAP.getOrDefault(activePage, 0L);
+        model.addAttribute("currentMenuId", menuId);
         // Flag to trigger Bootstrap reinitialization
         model.addAttribute("requiresBootstrapInit", true);
     }
@@ -82,33 +109,38 @@ public class LayoutController {
 
             Set<Long> menuIds = new HashSet<>();
 
-            // 1. Get employee-specific permissions (highest priority)
-            List<EmployeeMenuPermission> employeePermissions =
-                    employeeMenuPermissionRepository.findByEmployee(employee);
-
-            if (!employeePermissions.isEmpty()) {
-                log.info("📋 Found {} employee-specific permissions", employeePermissions.size());
-                employeePermissions.stream()
-                        .filter(EmployeeMenuPermission::getHasAccess)
-                        .forEach(perm -> menuIds.add(perm.getMenu().getId()));
-            }
-
-            // 2. Get role-based permissions (fallback)
-            List<RoleMenuPermission> rolePermissions =
-                    roleMenuPermissionRepository.findByRoleAndHasAccessTrue(employee.getRole());
+            // 1. First get Role-based permissions as a baseline
+            List<RoleMenuPermission> rolePermissions = roleMenuPermissionRepository
+                    .findByRoleAndHasAccessTrue(employee.getRole());
 
             if (!rolePermissions.isEmpty()) {
                 log.info("👥 Found {} role-based permissions", rolePermissions.size());
                 rolePermissions.forEach(perm -> menuIds.add(perm.getMenu().getId()));
             }
 
-            // Always include Dashboard (menu_id = 1)
-            menuIds.add(1L);
+            // 2. Then apply Employee-specific permissions (these OVERRIDE role permissions)
+            List<EmployeeMenuPermission> employeePermissions = employeeMenuPermissionRepository
+                    .findByEmployee(employee);
+
+            if (!employeePermissions.isEmpty()) {
+                log.info("📋 Found {} employee-specific permissions", employeePermissions.size());
+                for (EmployeeMenuPermission perm : employeePermissions) {
+                    if (perm.getHasAccess()) {
+                        // Explicitly granted to employee
+                        menuIds.add(perm.getMenu().getId());
+                    } else {
+                        // Explicitly denied to employee (overrides role)
+                        menuIds.remove(perm.getMenu().getId());
+                    }
+                }
+            }
+
+            // Note: Dashboard is NOT hardcoded. It is controlled by database permissions.
 
             List<Long> sortedMenuIds = new ArrayList<>(menuIds);
             Collections.sort(sortedMenuIds);
 
-            log.info("✅ User has access to {} menus: {}", sortedMenuIds.size(), sortedMenuIds);
+            log.info(" User has access to {} menus: {}", sortedMenuIds.size(), sortedMenuIds);
             return sortedMenuIds;
 
         } catch (Exception e) {

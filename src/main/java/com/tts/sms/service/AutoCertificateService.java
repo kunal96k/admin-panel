@@ -108,21 +108,15 @@ public class AutoCertificateService {
                     continue;
                 }
 
-                List<String> courses = admission.getCourses();
-
-                if (courses == null || courses.isEmpty()) {
+                List<String> courses = normalizeCourseList(admission.getCourses());
+                
+                if (courses.isEmpty()) {
                     log.warn("⚠️ No courses found for regNo: {}", regNo);
                     continue;
                 }
 
                 //  CREATE CERTIFICATE FOR EACH COURSE
                 for (String courseName : courses) {
-                    if (courseName == null || courseName.trim().isEmpty()) {
-                        continue;
-                    }
-
-                    courseName = courseName.trim();
-
                     boolean exists = certificateRepository.existsByRegistrationNoAndCourseNameAndIsActiveTrue(
                             regNo, courseName
                     );
@@ -246,7 +240,14 @@ public class AutoCertificateService {
         certificate.setStudentName(admission.getFullName());
         certificate.setCourseName(courseName);
         certificate.setStudentEmail(admission.getEmailPrimary());
-        certificate.setBatch(generateBatchName(admission.getAdmissionDate()));
+        
+        // Use actual batches from admission if available, otherwise generate fallback
+        if (admission.getBatches() != null && !admission.getBatches().isEmpty()) {
+            certificate.setBatch(String.join(", ", admission.getBatches()));
+        } else {
+            certificate.setBatch(generateBatchName(admission.getAdmissionDate()));
+        }
+        
         certificate.setStatus("Not Issued");
         certificate.setIsActive(true);
 
@@ -319,4 +320,95 @@ public class AutoCertificateService {
                 .createdAt(log.getCreatedAt())
                 .build();
     }
-}
+
+    /**
+     * NORMALIZES COURSE LIST
+     * - Handles legacy data where multiple courses were stored as a single string
+     * - Recognizes "  " (double space) or "," (comma) as separators
+     */
+    private List<String> normalizeCourseList(List<String> rawCourses) {
+        java.util.List<String> normalized = new java.util.ArrayList<>();
+        if (rawCourses == null) return normalized;
+
+        for (String entry : rawCourses) {
+            if (entry == null || entry.trim().isEmpty()) continue;
+
+            // Check if string contains multiple courses (concatenated with 2+ spaces or comma)
+            if (entry.contains("  ") || entry.contains(",")) {
+                // Split by 2+ spaces OR comma
+                String[] parts = entry.split("\\s{2,}|\\s*,\\s*");
+                for (String part : parts) {
+                    if (part != null && !part.trim().isEmpty()) {
+                        normalized.add(part.trim());
+                    }
+                }
+            } else {
+                normalized.add(entry.trim());
+            }
+        }
+        return normalized;
+    }
+
+    /**
+     * BULK GENERATE CERTIFICATES FOR SELECTED STUDENTS ONLY
+     * - Processes only the given registration numbers (not ALL admissions)
+     * - Creates separate certificate for each course
+     * - Skips duplicates (same regNo + course)
+     * - Each student processed independently so one failure doesn't stop the batch
+     */
+    @Transactional
+    public int bulkGenerateCertificates(List<String> registrationNumbers) {
+        log.info("🔄 Bulk certificate generation for {} student(s)", registrationNumbers.size());
+
+        int certificatesCreated = 0;
+
+        for (String regNo : registrationNumbers) {
+            try {
+                if (regNo == null || regNo.trim().isEmpty()) {
+                    continue;
+                }
+
+                regNo = regNo.trim();
+
+                Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+
+                if (admission == null) {
+                    log.warn("⚠️ Admission not found for regNo: {}", regNo);
+                    continue;
+                }
+
+                List<String> courses = normalizeCourseList(admission.getCourses());
+
+                if (courses.isEmpty()) {
+                    log.warn("⚠️ No courses found for regNo: {}", regNo);
+                    continue;
+                }
+
+                for (String courseName : courses) {
+                    // Skip if certificate already exists for this student + course
+                    boolean exists = certificateRepository.existsByRegistrationNoAndCourseNameAndIsActiveTrue(
+                            regNo, courseName
+                    );
+
+                    if (exists) {
+                        log.debug("⏭️ Certificate already exists for {} - {}", regNo, courseName);
+                        continue;
+                    }
+
+                    Certificate certificate = createCertificateFromAdmission(admission, courseName);
+                    certificateRepository.save(certificate);
+
+                    certificatesCreated++;
+                    log.info("✅ Created certificate for {} - {} ({})",
+                            admission.getFullName(), courseName, regNo);
+                }
+
+            } catch (Exception e) {
+                log.error("❌ Error creating certificate for {}: {}", regNo, e.getMessage());
+            }
+        }
+
+        log.info("✅ Bulk generation complete: {} certificates created", certificatesCreated);
+        return certificatesCreated;
+    }
+}

@@ -107,10 +107,10 @@ function renderTable(banks) {
                 <td>${currentPage * entriesPerPage + index + 1}</td>
                 <td>${escapeHtml(bank.bankName)}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-secondary action-btn" onclick="editBank(${bank.id})">
-                        <i class="bi bi-pencil"></i>
+                    <button class="action-btn" onclick="editBank(${bank.id})" title="Edit">
+                        <i class="bi bi-pencil-square"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-secondary action-btn" onclick="deleteBank(${bank.id})">
+                    <button class="action-btn" onclick="deleteBank(${bank.id})" title="Delete">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>

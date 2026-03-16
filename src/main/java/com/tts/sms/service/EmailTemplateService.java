@@ -193,6 +193,11 @@ public class EmailTemplateService {
      */
     @Async("emailTaskExecutor")
     public void sendCredentialsEmail(String toEmail, String employeeName, String username, String password) {
+        sendCredentialsEmail(toEmail, employeeName, username, password, false);
+    }
+
+    @Async("emailTaskExecutor")
+    public void sendCredentialsEmail(String toEmail, String employeeName, String username, String password, boolean isUpdate) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -205,12 +210,13 @@ public class EmailTemplateService {
             context.setVariable("companyName", "TechnoKraft Training & Solution Pvt. Ltd.");
             context.setVariable("supportEmail", "support@tts.net.in");
             context.setVariable("year", java.time.Year.now().getValue());
+            context.setVariable("isUpdate", isUpdate);
 
             String htmlContent = templateEngine.process("email/credentials-email", context);
 
             helper.setFrom(fromEmail);
             helper.setTo(toEmail);
-            helper.setSubject("Your Login Credentials - TTS SMS");
+            helper.setSubject(isUpdate ? "Login Details Updated - TTS SMS" : "Your Login Credentials - TTS SMS");
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
@@ -226,13 +232,15 @@ public class EmailTemplateService {
      * Send password change notification
      */
     @Async("emailTaskExecutor")
-    public void sendPasswordChangedEmail(String toEmail, String employeeName) {
+    public void sendPasswordChangedEmail(String toEmail, String employeeName, String username, String newPassword) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             Context context = new Context();
             context.setVariable("employeeName", employeeName);
+            context.setVariable("username", username);
+            context.setVariable("password", newPassword);
             context.setVariable("loginUrl", baseUrl + "/login");
             context.setVariable("supportEmail", "support@tts.net.in");
             context.setVariable("year", java.time.Year.now().getValue());

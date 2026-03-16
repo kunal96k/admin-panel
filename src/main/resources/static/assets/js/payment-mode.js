@@ -117,10 +117,10 @@ function renderTable() {
             <td>${startIndex + index + 1}</td>
             <td>${escapeHtml(mode.paymentModeTitle)}</td>
             <td>
-                <button class="btn btn-outline-secondary btn-edit" onclick="editPaymentMode(${mode.id})" title="Edit">
+                <button class="action-btn" onclick="editPaymentMode(${mode.id})" title="Edit">
                     <i class="bi bi-pencil-square"></i>
                 </button>
-                <button class="btn btn-outline-secondary btn-delete" onclick="deletePaymentMode(${mode.id})" title="Delete">
+                <button class="action-btn" onclick="deletePaymentMode(${mode.id})" title="Delete">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>

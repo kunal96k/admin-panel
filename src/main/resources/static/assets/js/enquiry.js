@@ -899,9 +899,9 @@ function updateEntriesInfo() {
                    <td>
                        <!-- Actions menu -->
                        <div class="action-dropdown">
-                           <button class="btn btn-light action-menu-trigger" style="padding: 0.25rem 0.5rem;">
-                               <i class="bi bi-three-dots-vertical"></i>
-                           </button>
+                            <button class="action-btn action-menu-trigger">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
                            <div class="action-menu">
                                <button class="action-menu-item" data-action="update" data-id="${enq.id}">
                                    <i class="bi bi-pencil-square"></i><span>Update</span>

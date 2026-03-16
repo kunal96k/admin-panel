@@ -107,10 +107,10 @@ function renderTable(leadSources) {
                 <td>${currentPage * entriesPerPage + index + 1}</td>
                 <td>${escapeHtml(source.sourceTitle)}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-secondary action-btn" onclick="editLeadSource(${source.id})">
-                        <i class="bi bi-pencil"></i>
+                    <button class="action-btn" onclick="editLeadSource(${source.id})" title="Edit">
+                        <i class="bi bi-pencil-square"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-secondary action-btn" onclick="deleteLeadSource(${source.id})">
+                    <button class="action-btn" onclick="deleteLeadSource(${source.id})" title="Delete">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>

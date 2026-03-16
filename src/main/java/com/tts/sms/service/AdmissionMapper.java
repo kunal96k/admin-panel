@@ -91,16 +91,16 @@ public class AdmissionMapper {
                 .pinCodeCurrent(admission.getPinCodeCurrent())
                 .pinCodePermanent(admission.getPinCodePermanent())
                 .packageName(admission.getPackageName())
-                .courses(listToString(admission.getCourses()))
-                .coursesList(admission.getCourses())
+                .courses(listToString(normalizeList(admission.getCourses())))
+                .coursesList(normalizeList(admission.getCourses()))
                 .totalPayableFees(admission.getTotalPayableFees())
                 .totalReceivableFees(admission.getTotalReceivableFees())
                 .discountPercent(admission.getDiscountPercent())
                 .discountAmount(admission.getDiscountAmount())
-                .batches(listToString(admission.getBatches()))
-                .batchesList(admission.getBatches())
-                .subjects(listToString(admission.getSubjects()))
-                .subjectsList(admission.getSubjects())
+                .batches(listToString(normalizeList(admission.getBatches())))
+                .batchesList(normalizeList(admission.getBatches()))
+                .subjects(listToString(normalizeList(admission.getSubjects())))
+                .subjectsList(normalizeList(admission.getSubjects()))
                 .academicYear(admission.getAcademicYear())
                 .documentType(admission.getDocumentType())
                 .leadSource(admission.getLeadSource())
@@ -173,5 +173,28 @@ public class AdmissionMapper {
     private String listToString(List<String> list) {
         if (list == null || list.isEmpty()) return null;
         return String.join(", ", list);
+    }
+
+    private List<String> normalizeList(List<String> rawList) {
+        List<String> normalized = new ArrayList<>();
+        if (rawList == null) return normalized;
+
+        for (String entry : rawList) {
+            if (entry == null || entry.trim().isEmpty()) continue;
+
+            // Check if string contains multiple items (concatenated with 2+ spaces or comma)
+            if (entry.contains("  ") || entry.contains(",")) {
+                // Split by 2+ spaces OR comma
+                String[] parts = entry.split("\\s{2,}|\\s*,\\s*");
+                for (String part : parts) {
+                    if (part != null && !part.trim().isEmpty()) {
+                        normalized.add(part.trim());
+                    }
+                }
+            } else {
+                normalized.add(entry.trim());
+            }
+        }
+        return normalized;
     }
 }

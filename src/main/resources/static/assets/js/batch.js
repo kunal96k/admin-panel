@@ -94,20 +94,35 @@ function populateCourseSelect() {
 async function loadBatches() {
     try {
         showLoading();
-        const response = await fetch(`/api/batches?page=${currentPage}&size=${pageSize}`);
-
+        
+        const searchTerm = document.getElementById('searchInput').value.trim();
+        
+        // Use the search endpoint for everything to keep logic unified
+        const response = await fetch('/api/batches/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                [csrfHeader]: csrfToken
+            },
+            body: JSON.stringify({
+                searchTerm: searchTerm || null,
+                page: currentPage,
+                size: pageSize
+            })
+        });
+ 
         if (!response.ok) {
             throw new Error('Failed to fetch batches');
         }
-
+ 
         const data = await response.json();
-
+ 
         if (data.success) {
             batches = data.batches || [];
             filteredBatches = [...batches];
             totalElements = data.totalElements || 0;
             totalPages = data.totalPages || 0;
-
+ 
             displayBatches();
             updatePagination();
         } else {
@@ -142,7 +157,7 @@ function displayBatches() {
             <td>${formatDate(batch.endDate)}</td>
             <td>${escapeHtml(batch.timing)}</td>
             <td>
-                <span class="badge-status ${batch.status === 'Active' ? 'badge-active' : 'badge-inactive'}">
+                <span class="badge-status ${batch.status === 'Active' ? 'badge-active' : (batch.status === 'Completed' ? 'badge-success' : 'badge-danger')}">
                     ${escapeHtml(batch.status)}
                 </span>
             </td>
@@ -232,45 +247,8 @@ function changePage(page) {
 
 // Handle search
 async function handleSearch() {
-    const searchTerm = document.getElementById('searchInput').value.trim();
-
-    try {
-        showLoading();
-        const response = await fetch('/api/batches/search', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                [csrfHeader]: csrfToken
-            },
-            body: JSON.stringify({
-                searchTerm: searchTerm || null,
-                page: 0,
-                size: pageSize
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('Search failed');
-        }
-
-        const data = await response.json();
-
-        if (data.success) {
-            batches = data.batches || [];
-            filteredBatches = [...batches];
-            totalElements = data.totalElements || 0;
-            totalPages = data.totalPages || 0;
-            currentPage = 0;
-
-            displayBatches();
-            updatePagination();
-        }
-    } catch (error) {
-        console.error('Error searching batches:', error);
-        showError('Search failed. Please try again.');
-    } finally {
-        hideLoading();
-    }
+    currentPage = 0; // Reset to first page on search
+    loadBatches();
 }
 
 // Handle page size change
@@ -326,6 +304,7 @@ function openAddBatchModal() {
     currentStep = 1;
     document.getElementById('batchModalTitle').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Create New Batch';
     document.getElementById('batchForm').reset();
+    document.getElementById('batchStatus').value = 'Active';
     document.getElementById('batchSize').value = '50';
     document.getElementById('startTime').value = '00:00';
     document.getElementById('endTime').value = '00:00';
@@ -342,7 +321,15 @@ function openAddBatchModal() {
 // Edit Batch
 async function editBatch(id) {
     try {
-        showLoading();
+        Swal.fire({
+            title: 'Loading...',
+            text: 'Fetching batch details',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         const response = await fetch(`/api/batches/${id}`);
 
         if (!response.ok) {
@@ -350,6 +337,7 @@ async function editBatch(id) {
         }
 
         const data = await response.json();
+        Swal.close();
 
         if (data.success && data.batch) {
             const batch = data.batch;
@@ -375,6 +363,9 @@ async function editBatch(id) {
             document.getElementById('dayFriday').checked = batch.isFriday || false;
             document.getElementById('daySaturday').checked = batch.isSaturday || false;
 
+            // Set status
+            document.getElementById('batchStatus').value = batch.status || 'Active';
+
             // Set course if attached
             if (batch.courseId) {
                 document.getElementById('attachCourse').checked = true;
@@ -386,17 +377,25 @@ async function editBatch(id) {
             modal.show();
         }
     } catch (error) {
-        console.error('Error loading batch:', error);
+        console.error('Error fetching batch:', error);
         showError('Failed to load batch details');
     } finally {
-        hideLoading();
+        Swal.close();
     }
 }
 
 // View Batch
 async function viewBatch(id) {
     try {
-        showLoading();
+        Swal.fire({
+            title: 'Loading...',
+            text: 'Fetching batch details',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         const response = await fetch(`/api/batches/${id}`);
 
         if (!response.ok) {
@@ -404,6 +403,7 @@ async function viewBatch(id) {
         }
 
         const data = await response.json();
+        Swal.close();
 
         if (data.success && data.batch) {
             const batch = data.batch;
@@ -427,7 +427,7 @@ async function viewBatch(id) {
                         <p><strong>Timing:</strong> ${escapeHtml(batch.timing)}</p>
                         <p><strong>Days:</strong> ${days.length > 0 ? days.join(', ') : 'Not specified'}</p>
                         <p><strong>Course:</strong> ${batch.courseName || 'Not attached'}</p>
-                        <p><strong>Status:</strong> <span class="badge-status ${batch.status === 'Active' ? 'badge-active' : 'badge-inactive'}">${escapeHtml(batch.status)}</span></p>
+                        <p><strong>Status:</strong> ${getStatusBadgeHtml(batch.status)}</p>
                     </div>
                 `,
                 confirmButtonColor: '#667eea',
@@ -438,7 +438,7 @@ async function viewBatch(id) {
         console.error('Error viewing batch:', error);
         showError('Failed to load batch details');
     } finally {
-        hideLoading();
+        Swal.close();
     }
 }
 
@@ -452,7 +452,14 @@ function deleteBatch(id) {
 // Confirm Delete - Hard Delete
 async function confirmDelete() {
     try {
-        showLoading();
+        Swal.fire({
+            title: 'Deleting...',
+            text: 'Deleting batch...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
         const response = await fetch(`/api/batches/${editingBatchId}`, {
             method: 'DELETE',
             headers: {
@@ -482,7 +489,7 @@ async function confirmDelete() {
         console.error('Error deleting batch:', error);
         showError(error.message || 'Failed to delete batch');
     } finally {
-        hideLoading();
+        Swal.close();
     }
 }
 
@@ -591,11 +598,18 @@ async function saveBatch() {
         isSaturday: document.getElementById('daySaturday').checked,
         courseId: document.getElementById('attachCourse').checked ?
                   (document.getElementById('courseSelect').value || null) : null,
-        status: 'Active'
+        status: document.getElementById('batchStatus').value || 'Active'
     };
 
     try {
-        showLoading();
+        Swal.fire({
+            title: 'Saving...',
+            text: 'Saving batch details...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
         const url = editingBatchId ? `/api/batches/${editingBatchId}` : '/api/batches';
         const method = editingBatchId ? 'PUT' : 'POST';
 
@@ -630,7 +644,7 @@ async function saveBatch() {
         console.error('Error saving batch:', error);
         showError(error.message || 'Failed to save batch');
     } finally {
-        hideLoading();
+        Swal.close();
     }
 }
 
@@ -703,7 +717,7 @@ function showLoading() {
 }
 
 function hideLoading() {
-    // Loading will be hidden when data is displayed
+    Swal.close();
 }
 
 function showError(message) {

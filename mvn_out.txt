@@ -1,0 +1,58 @@
+﻿[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------------< com.tts:sms >-----------------------------
+[INFO] Building sms 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ war ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.3.2:clean (default-clean) @ sms ---
+[INFO] Deleting C:\Users\TechnoKraft\Desktop\backup\project_tts_backup\tts-sms\sms\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ sms ---
+[INFO] Copying 4 resources from src\main\resources to target\classes
+[INFO] Copying 82 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ sms ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 205 source files with javac [debug release 21] to target\classes
+[INFO] /C:/Users/TechnoKraft/Desktop/backup/project_tts_backup/tts-sms/sms/src/main/java/com/tts/sms/config/SecurityConfig.java: Some input files use or override a deprecated API.
+[INFO] /C:/Users/TechnoKraft/Desktop/backup/project_tts_backup/tts-sms/sms/src/main/java/com/tts/sms/config/SecurityConfig.java: Recompile with -Xlint:deprecation for details.
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /C:/Users/TechnoKraft/Desktop/backup/project_tts_backup/tts-sms/sms/src/main/java/com/tts/sms/service/CertificateService.java:[757,80] incompatible types: java.util.Optional<com.tts.sms.model.Fees> cannot be converted to com.tts.sms.model.Fees
+[ERROR] /C:/Users/TechnoKraft/Desktop/backup/project_tts_backup/tts-sms/sms/src/main/java/com/tts/sms/service/CertificateService.java:[765,73] cannot find symbol
+  symbol:   method findByRegistrationNumberAndIsDeletedFalse(java.lang.String)
+  location: variable feeInstallmentRepository of type com.tts.sms.repository.FeeInstallmentRepository
+[ERROR] /C:/Users/TechnoKraft/Desktop/backup/project_tts_backup/tts-sms/sms/src/main/java/com/tts/sms/service/CertificateService.java:[767,44] cannot find symbol
+  symbol:   method setStudentName(java.lang.String)
+  location: variable i of type com.tts.sms.model.FeeInstallment
+[ERROR] /C:/Users/TechnoKraft/Desktop/backup/project_tts_backup/tts-sms/sms/src/main/java/com/tts/sms/service/AdmissionService.java:[819,40] cannot find symbol
+  symbol:   method getEmail()
+  location: variable admission of type com.tts.sms.model.Admission
+[INFO] 4 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  18.068 s
+[INFO] Finished at: 2026-03-16T12:29:26+05:30
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.11.0:compile (default-compile) on project sms: Compilation failure: Compilation failure: 
+[ERROR] /C:/Users/TechnoKraft/Desktop/backup/project_tts_backup/tts-sms/sms/src/main/java/com/tts/sms/service/CertificateService.java:[757,80] incompatible types: java.util.Optional<com.tts.sms.model.Fees> cannot be converted to com.tts.sms.model.Fees
+[ERROR] /C:/Users/TechnoKraft/Desktop/backup/project_tts_backup/tts-sms/sms/src/main/java/com/tts/sms/service/CertificateService.java:[765,73] cannot find symbol
+[ERROR]   symbol:   method findByRegistrationNumberAndIsDeletedFalse(java.lang.String)
+[ERROR]   location: variable feeInstallmentRepository of type com.tts.sms.repository.FeeInstallmentRepository
+[ERROR] /C:/Users/TechnoKraft/Desktop/backup/project_tts_backup/tts-sms/sms/src/main/java/com/tts/sms/service/CertificateService.java:[767,44] cannot find symbol
+[ERROR]   symbol:   method setStudentName(java.lang.String)
+[ERROR]   location: variable i of type com.tts.sms.model.FeeInstallment
+[ERROR] /C:/Users/TechnoKraft/Desktop/backup/project_tts_backup/tts-sms/sms/src/main/java/com/tts/sms/service/AdmissionService.java:[819,40] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable admission of type com.tts.sms.model.Admission
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

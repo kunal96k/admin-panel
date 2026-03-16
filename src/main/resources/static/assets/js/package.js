@@ -327,13 +327,13 @@ function renderPackagesTable() {
                 </td>
                 <td>₹${pkg.totalAmount.toLocaleString('en-IN')}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-info" onclick="viewPackage(${pkg.id})" title="View">
+                    <button class="action-btn" onclick="viewPackage(${pkg.id})" title="View">
                         <i class="bi bi-eye"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-warning" onclick="editPackage(${pkg.id})" title="Edit">
-                        <i class="bi bi-pencil"></i>
+                    <button class="action-btn" onclick="editPackage(${pkg.id})" title="Edit">
+                        <i class="bi bi-pencil-square"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deletePackage(${pkg.id})" title="Delete">
+                    <button class="action-btn" onclick="deletePackage(${pkg.id})" title="Delete">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>

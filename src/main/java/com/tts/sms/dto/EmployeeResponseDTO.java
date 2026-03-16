@@ -1,12 +1,13 @@
 package com.tts.sms.dto;
 
+import java.time.LocalDateTime;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -31,6 +32,9 @@ public class EmployeeResponseDTO {
     private Boolean applyBatchFilter;
     private Boolean isAdmin;
     private Boolean isActive;
+    private Boolean userActive;
+    private Boolean userLocked;
+    private Integer failedAttempts;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdDate;

@@ -1,3 +1,75 @@
+/**
+ * Global API Interceptor & Session Management
+ * Handles server restarts, network errors, and session expirations gracefully.
+ */
+(function() {
+    const originalFetch = window.fetch;
+    let isSessionAlertOpen = false;
+
+    window.fetch = async (...args) => {
+        try {
+            const response = await originalFetch(...args);
+
+            // 1. Handle Session Expiration / Redirect to Login
+            // If the response URL points to the login page but the original request wasn't for login,
+            // or if the status is 401 Unauthorized with an HTML response (Spring Security redirect).
+            const isLoginPage = response.url && (response.url.includes('/login') || response.url.endsWith('/login'));
+            const isApiRequest = args[0] && (typeof args[0] === 'string' ? args[0].includes('/api/') : args[0].url.includes('/api/'));
+            
+            const contentType = response.headers.get('content-type');
+            const isHtml = contentType && contentType.includes('text/html');
+
+            if (isLoginPage && isHtml && isApiRequest && !isSessionAlertOpen) {
+                isSessionAlertOpen = true;
+                Swal.fire({
+                    title: 'Session Expired',
+                    text: 'Your session has timed out. Please login again to continue your work.',
+                    icon: 'warning',
+                    showCancelButton: false,
+                    confirmButtonText: 'Login Now',
+                    confirmButtonColor: '#3b82f6',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                }).then(() => {
+                    window.location.href = '/login?expired=true';
+                });
+                
+                // Return a rejected promise to stop downstream data processing
+                return Promise.reject(new Error('Session expired'));
+            }
+
+            return response;
+        } catch (error) {
+            // 2. Handle Server Down / Restart (Network Error)
+            // TypeError usually indicates a network failure in fetch
+            const isNetworkError = error instanceof TypeError || 
+                                  (error.message && error.message.toLowerCase().includes('network'));
+            
+            if (isNetworkError && !isSessionAlertOpen) {
+                isSessionAlertOpen = true;
+                Swal.fire({
+                    title: 'Server Connection Lost',
+                    text: 'Unable to reach the server. It might be restarting or there might be a network issue.',
+                    icon: 'error',
+                    showCancelButton: true,
+                    confirmButtonText: 'Retry / Refresh',
+                    cancelButtonText: 'Wait',
+                    confirmButtonColor: '#ef4444',
+                    allowOutsideClick: false,
+                }).then((result) => {
+                    isSessionAlertOpen = false;
+                    if (result.isConfirmed) {
+                        window.location.reload();
+                    }
+                });
+                
+                return Promise.reject(new Error('Server unreachable'));
+            }
+            throw error;
+        }
+    };
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
 
     // ========================================
@@ -65,8 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
         link.addEventListener('click', function(e) {
             const menuId = this.getAttribute('data-menu-id');
 
-            // Skip check for Dashboard (menu_id = 1)
-            if (menuId && menuId !== '1') {
+            if (menuId) {
                 if (!checkMenuAccess(menuId)) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -77,19 +148,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }, true);
     });
 
-    // Prevent direct URL manipulation
-    window.addEventListener('load', function() {
-        const currentPath = window.location.pathname;
-        const currentLink = document.querySelector(`[href="${currentPath}"]`);
-
-        if (currentLink) {
-            const menuId = currentLink.getAttribute('data-menu-id');
-
-            if (menuId && menuId !== '1' && !checkMenuAccess(menuId)) {
-                window.location.href = '/access-denied';
-            }
-        }
-    });
+    // Note: Direct URL-based access control is now handled by the
+    // blur overlay in layout.html via currentMenuId + userPermissions check.
+    // No redirect needed here — the page blurs itself automatically.
 
     // ========================================
     // SIDEBAR COLLAPSE (DESKTOP ONLY)

@@ -17,13 +17,7 @@
             margin-bottom: 0.5rem;
         }
 
-        .btn-action {
-            padding: 0.625rem 1.25rem;
-            font-weight: 500;
-            border-radius: 0.5rem;
-            transition: all 0.2s;
-            font-size: 0.75rem;
-        }
+
 
         .table-responsive {
                 overflow-wrap: break-word !important;
@@ -338,19 +332,7 @@
             overflow: visible !important;
         }
 
-        /*  action menu trigger button */
-        .action-menu-trigger {
-            border: 1px solid #e2e8f0;
-            background: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
 
-        .action-menu-trigger:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
-        }
 
         /* Override Bootstrap table overflow */
         table {

@@ -1,15 +1,10 @@
 package com.tts.sms.service;
 
-import com.tts.sms.dto.EmployeeRequestDTO;
-import com.tts.sms.dto.EmployeeResponseDTO;
-import com.tts.sms.dto.MenuPermissionDTO;
-import com.tts.sms.exception.DuplicateResourceException;
-import com.tts.sms.exception.ResourceNotFoundException;
-import com.tts.sms.exception.UnauthorizedException;
-import com.tts.sms.model.*;
-import com.tts.sms.repository.*;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,8 +17,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import com.tts.sms.dto.EmployeeRequestDTO;
+import com.tts.sms.dto.EmployeeResponseDTO;
+import com.tts.sms.dto.MenuPermissionDTO;
+import com.tts.sms.exception.DuplicateResourceException;
+import com.tts.sms.exception.ResourceNotFoundException;
+import com.tts.sms.exception.UnauthorizedException;
+import com.tts.sms.model.Employee;
+import com.tts.sms.model.EmployeeMenuPermission;
+import com.tts.sms.model.Menu;
+import com.tts.sms.model.Role;
+import com.tts.sms.model.User;
+import com.tts.sms.repository.EmployeeMenuPermissionRepository;
+import com.tts.sms.repository.EmployeeRepository;
+import com.tts.sms.repository.MenuRepository;
+import com.tts.sms.repository.RoleRepository;
+import com.tts.sms.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -90,7 +102,17 @@ public class EmployeeService {
                 targetEmployee.getRole().getRoleTitle(),
                 operation);
 
-        // Rule 1: Only SUPER_ADMIN can modify SUPER_ADMIN accounts
+        // NEW RULE: Only SUPER_ADMIN can perform ANY modification (update, delete, lock, etc)
+        if (!"view".equalsIgnoreCase(operation) && !isSuperAdmin()) {
+            log.warn("⚠️ SECURITY ALERT: Non-SUPER_ADMIN {} attempted to {} account {}",
+                    currentEmployee.getEmployeeName(), operation, targetEmployee.getEmployeeName());
+            throw new UnauthorizedException(
+                    "🚫 Access Denied: Only SUPER_ADMIN can perform this action. " +
+                            "You only have permission to view employee details."
+            );
+        }
+
+        // Rule 1: Only SUPER_ADMIN can modify SUPER_ADMIN accounts (redundant now but safe)
         if (isTargetSuperAdmin(targetEmployee) && !isSuperAdmin()) {
             log.warn("⚠️ SECURITY ALERT: User {} attempted to {} SUPER_ADMIN account {}",
                     currentEmployee.getEmployeeName(), operation, targetEmployee.getEmployeeName());
@@ -121,6 +143,17 @@ public class EmployeeService {
             );
         }
 
+        // Rule 4: Prevent self-locking or deactivation (Super Admin Protection)
+        if (("lock".equalsIgnoreCase(operation) || "deactivate".equalsIgnoreCase(operation)) &&
+                currentEmployee.getId().equals(targetEmployee.getId())) {
+            log.warn("⚠️ User {} attempted to {} their own account",
+                    currentEmployee.getEmployeeName(), operation);
+            throw new UnauthorizedException(
+                    "🚫 Security Policy: You cannot " + operation + " your own account. " +
+                            "This safety measure prevents you from accidentally locking yourself out of the system."
+            );
+        }
+
         log.info(" Permission check passed for {} operation", operation);
     }
 
@@ -141,13 +174,14 @@ public class EmployeeService {
                     targetEmployee.getEmployeeName(),
                     employeeId);
 
-            validateModificationPermission(targetEmployee, "view");
+            // Change to check 'update' instead of 'view' so frontend gets actual modification permissions
+            validateModificationPermission(targetEmployee, "update");
 
             result.put("canModify", true);
             result.put("canDelete", true);
             result.put("message", " Access granted");
 
-            log.info(" Permission granted for {} operation", "view/modify");
+            log.info(" Permission granted for modify operation");
 
         } catch (UnauthorizedException e) {
             result.put("canModify", false);
@@ -164,15 +198,11 @@ public class EmployeeService {
     public EmployeeResponseDTO createEmployee(EmployeeRequestDTO requestDTO, MultipartFile photoFile) {
         log.info("📝 Creating employee: {}", requestDTO.getEmployeeName());
 
-        // Security: Only SUPER_ADMIN can create SUPER_ADMIN accounts
-        Role targetRole = roleRepository.findById(requestDTO.getRoleId())
-                .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
-
-        if (SUPER_ADMIN_ROLE.equalsIgnoreCase(targetRole.getRoleTitle()) && !isSuperAdmin()) {
-            log.warn("⚠️ SECURITY ALERT: Non-SUPER_ADMIN attempted to create SUPER_ADMIN account");
+        // Security: Only SUPER_ADMIN can create employees
+        if (!isSuperAdmin()) {
+            log.warn("⚠️ SECURITY ALERT: Non-SUPER_ADMIN attempted to create an account");
             throw new UnauthorizedException(
-                    "🚫 Access Denied: Only SUPER_ADMIN can create SUPER_ADMIN accounts. " +
-                            "This security violation has been logged."
+                    "🚫 Access Denied: Only SUPER_ADMIN can create new employees."
             );
         }
 
@@ -205,6 +235,11 @@ public class EmployeeService {
 
         if (requestDTO.getUsername() != null && !requestDTO.getUsername().trim().isEmpty()) {
             createUserCredentials(savedEmployee, requestDTO);
+
+            // SYNC to Employee entity
+            savedEmployee.setUsername(requestDTO.getUsername());
+            savedEmployee.setPassword(passwordEncoder.encode(requestDTO.getPassword()));
+            employeeRepository.save(savedEmployee);
 
             try {
                 emailTemplateService.sendCredentialsEmail(
@@ -270,6 +305,7 @@ public class EmployeeService {
                                 throw new DuplicateResourceException("Username already exists: " + requestDTO.getUsername());
                             }
                             existingUser.setUsername(requestDTO.getUsername());
+                            employee.setUsername(requestDTO.getUsername());
                             log.info("📝 Username updated for employee: {}", id);
                         }
 
@@ -283,17 +319,22 @@ public class EmployeeService {
                                 throw new IllegalArgumentException("Password does not meet security requirements");
                             }
 
-                            existingUser.setPassword(passwordEncoder.encode(requestDTO.getPassword()));
+                            String encodedPassword = passwordEncoder.encode(requestDTO.getPassword());
+                            existingUser.setPassword(encodedPassword);
+                            employee.setPassword(encodedPassword);
                             log.info("🔐 Password updated for employee: {}", id);
 
                             // Send email notification
                             try {
-                                emailTemplateService.sendPasswordChangedEmail(
+                                emailTemplateService.sendCredentialsEmail(
                                         employee.getEmailId(),
-                                        employee.getEmployeeName()
+                                        employee.getEmployeeName(),
+                                        existingUser.getUsername(),
+                                        requestDTO.getPassword(),
+                                        true
                                 );
                             } catch (Exception e) {
-                                log.warn("⚠️ Failed to send password change email: {}", e.getMessage());
+                                log.warn("⚠️ Failed to send credentials email: {}", e.getMessage());
                             }
                         }
 
@@ -306,6 +347,11 @@ public class EmployeeService {
                         // Create new credentials only if password is also provided
                         if (requestDTO.getPassword() != null && !requestDTO.getPassword().trim().isEmpty()) {
                             createUserCredentials(employee, requestDTO);
+                            
+                            // SYNC to employee
+                            employee.setUsername(requestDTO.getUsername());
+                            employee.setPassword(passwordEncoder.encode(requestDTO.getPassword()));
+                            
                             log.info(" New user credentials created");
                         }
                     }
@@ -332,6 +378,107 @@ public class EmployeeService {
 
         log.info(" Employee updated successfully: {}", id);
         return convertToResponseDTO(updatedEmployee);
+    }
+
+    @Transactional
+    public void unlockAndActivateUser(Long employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + employeeId));
+
+        validateModificationPermission(employee, "unlock");
+        if (!isSuperAdmin()) {
+            throw new UnauthorizedException("🚫 Access Denied: Only SUPER_ADMIN can unlock/activate users");
+        }
+
+        User user = userRepository.findByEmployee(employee)
+                .orElseThrow(() -> new IllegalStateException("Employee does not have login credentials"));
+
+        user.setIsActive(true);
+        user.setIsLocked(false);
+        user.setFailedAttempts(0);
+        user.setCaptchaAttempts(0);
+        user.setCaptchaLockedUntil(null);
+        user.setLastCaptchaFail(null);
+        userRepository.save(user);
+
+        log.info("🔓 User unlocked & activated for employeeId={}, username={}", employeeId, user.getUsername());
+    }
+
+    @Transactional
+    public void lockUser(Long employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + employeeId));
+
+        validateModificationPermission(employee, "lock");
+        if (!isSuperAdmin()) {
+            throw new UnauthorizedException("🚫 Access Denied: Only SUPER_ADMIN can lock users");
+        }
+
+        User user = userRepository.findByEmployee(employee)
+                .orElseThrow(() -> new IllegalStateException("Employee does not have login credentials"));
+
+        user.setIsLocked(true);
+        userRepository.save(user);
+        log.info("🔒 User locked for employeeId={}, username={}", employeeId, user.getUsername());
+    }
+
+    @Transactional
+    public void unlockUser(Long employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + employeeId));
+
+        validateModificationPermission(employee, "unlock");
+        if (!isSuperAdmin()) {
+            throw new UnauthorizedException("🚫 Access Denied: Only SUPER_ADMIN can unlock users");
+        }
+
+        User user = userRepository.findByEmployee(employee)
+                .orElseThrow(() -> new IllegalStateException("Employee does not have login credentials"));
+
+        user.setIsLocked(false);
+        user.setFailedAttempts(0);
+        user.setCaptchaAttempts(0);
+        user.setCaptchaLockedUntil(null);
+        user.setLastCaptchaFail(null);
+        userRepository.save(user);
+        log.info("🔓 User unlocked for employeeId={}, username={}", employeeId, user.getUsername());
+    }
+
+    @Transactional
+    public void deactivateUser(Long employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + employeeId));
+
+        validateModificationPermission(employee, "deactivate");
+        if (!isSuperAdmin()) {
+            throw new UnauthorizedException("🚫 Access Denied: Only SUPER_ADMIN can deactivate users");
+        }
+
+        User user = userRepository.findByEmployee(employee)
+                .orElseThrow(() -> new IllegalStateException("Employee does not have login credentials"));
+
+        user.setIsActive(false);
+        userRepository.save(user);
+        log.info("⛔ User deactivated for employeeId={}, username={}", employeeId, user.getUsername());
+    }
+
+    @Transactional
+    public void activateUser(Long employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + employeeId));
+
+        validateModificationPermission(employee, "activate");
+        if (!isSuperAdmin()) {
+            throw new UnauthorizedException("🚫 Access Denied: Only SUPER_ADMIN can activate users");
+        }
+
+        User user = userRepository.findByEmployee(employee)
+                .orElseThrow(() -> new IllegalStateException("Employee does not have login credentials"));
+
+        user.setIsActive(true);
+        user.setFailedAttempts(0);
+        userRepository.save(user);
+        log.info("✅ User activated for employeeId={}, username={}", employeeId, user.getUsername());
     }
 
     @Transactional
@@ -497,7 +644,9 @@ public class EmployeeService {
 
         emailTemplateService.sendPasswordChangedEmail(
                 employee.getEmailId(),
-                employee.getEmployeeName()
+                employee.getEmployeeName(),
+                user.getUsername(),
+                null // Password not available for resend
         );
 
         log.info("📧 Credentials email sent to: {}", employee.getEmailId());
@@ -507,6 +656,16 @@ public class EmployeeService {
         String photoUrl = null;
         if (employee.getPhoto() != null && !employee.getPhoto().isEmpty()) {
             photoUrl = baseUrl + "/api/files/employees/" + employee.getPhoto();
+        }
+
+        Boolean userActive = null;
+        Boolean userLocked = null;
+        Integer failedAttempts = null;
+        User user = userRepository.findByEmployee(employee).orElse(null);
+        if (user != null) {
+            userActive = user.getIsActive();
+            userLocked = user.getIsLocked();
+            failedAttempts = user.getFailedAttempts();
         }
 
         return EmployeeResponseDTO.builder()
@@ -524,6 +683,9 @@ public class EmployeeService {
                 .photoFilename(employee.getPhoto())
                 .photoUrl(photoUrl)
                 .isActive(employee.getIsActive())
+                .userActive(userActive)
+                .userLocked(userLocked)
+                .failedAttempts(failedAttempts)
                 .createdDate(employee.getCreatedDate())
                 .build();
     }

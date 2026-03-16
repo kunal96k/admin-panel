@@ -5,6 +5,12 @@ import com.tts.sms.dto.CertificateDTO;
 import com.tts.sms.model.Certificate;
 import com.tts.sms.repository.CertificateRepository;
 import com.tts.sms.repository.CourseRepository;
+import com.tts.sms.repository.AdmissionRepository;
+import com.tts.sms.repository.FeesRepository;
+import com.tts.sms.repository.FeeInstallmentRepository;
+import com.tts.sms.model.Admission;
+import com.tts.sms.model.Fees;
+import com.tts.sms.model.FeeInstallment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -49,6 +55,9 @@ public class CertificateService {
     private final EmailTemplateService emailTemplateService;
     private final CourseRepository courseRepository;
     private final AutoCertificateService autoCertificateService;
+    private final AdmissionRepository admissionRepository;
+    private final FeesRepository feesRepository;
+    private final FeeInstallmentRepository feeInstallmentRepository;
 
     /**
      * Send certificate email with pre-rendered image from frontend
@@ -147,16 +156,18 @@ public class CertificateService {
     }
 
     /**
-     * Delete certificate (soft delete)
+     * Delete certificate (hard delete - permanently removes from DB)
      */
     public void deleteCertificate(Long id) {
         Certificate certificate = certificateRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Certificate not found with id: " + id));
 
-        certificate.setIsActive(false);
-        certificateRepository.save(certificate);
-        log.info("Certificate deleted: {} for student: {}",
-                certificate.getRegistrationNo(), certificate.getStudentName());
+        String regNo = certificate.getRegistrationNo();
+        String studentName = certificate.getStudentName();
+
+        certificateRepository.delete(certificate);
+        certificateRepository.flush();
+        log.info("Certificate hard-deleted: {} for student: {}", regNo, studentName);
     }
 
     /**
@@ -680,6 +691,35 @@ public class CertificateService {
         }
 
         certificate.setCertificateNo(certNo);
+
+        // Update editable fields: studentName, courseName, batch
+        if (dto.getStudentName() != null && !dto.getStudentName().trim().isEmpty()) {
+            String newName = dto.getStudentName().trim();
+            if (!newName.equals(certificate.getStudentName())) {
+                String oldName = certificate.getStudentName();
+                certificate.setStudentName(newName);
+                // Propagate name change to Admission and Fees (Bi-directional sync)
+                syncStudentDataAcrossModules(certificate.getRegistrationNo(), newName);
+            }
+        }
+
+        if (dto.getCourseName() != null && !dto.getCourseName().trim().isEmpty()) {
+            String newCourseName = dto.getCourseName().trim();
+            // If course changed, re-link the Course entity for logo support
+            if (!newCourseName.equals(certificate.getCourseName())) {
+                certificate.setCourseName(newCourseName);
+                courseRepository.findByCourseNameAndIsActiveTrue(newCourseName)
+                        .ifPresentOrElse(
+                                certificate::setCourse,
+                                () -> certificate.setCourse(null)
+                        );
+            }
+        }
+
+        if (dto.getBatch() != null && !dto.getBatch().trim().isEmpty()) {
+            certificate.setBatch(dto.getBatch().trim());
+        }
+
         certificate.setGrade(dto.getGrade());
         certificate.setIssueDate(dto.getIssueDate());
         certificate.setCourseFromDate(dto.getCourseFromDate());
@@ -688,14 +728,50 @@ public class CertificateService {
         certificate.setStatus("Issued");
 
         Certificate savedCertificate = certificateRepository.save(certificate);
-        log.info("Certificate issued: {} for student: {}",
-                savedCertificate.getCertificateNo(), savedCertificate.getStudentName());
+        log.info("Certificate issued/updated: {} for student: {} course: {}",
+                savedCertificate.getCertificateNo(), savedCertificate.getStudentName(),
+                savedCertificate.getCourseName());
 
         // TRIGGER ADMISSION STATUS UPDATE
         autoCertificateService.updateAdmissionStatusAfterCertificate(
                 savedCertificate.getRegistrationNo());
 
         return convertToDTO(savedCertificate);
+    }
+
+    /**
+     * Propagate student name changes from Certificate module back to Admissions and Fees.
+     * This ensures the "Global Sync" requested by the user.
+     */
+    private void syncStudentDataAcrossModules(String regNo, String newName) {
+        try {
+            // 1. Update Admission
+            Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+            if (admission != null) {
+                admission.setFullName(newName);
+                admissionRepository.save(admission);
+                log.info("Synced name '{}' to Admission for regNo: {}", newName, regNo);
+            }
+
+            // 2. Update Fees
+            Fees fee = feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo).orElse(null);
+            if (fee != null) {
+                fee.setStudentName(newName);
+                feesRepository.save(fee);
+                log.info("Synced name '{}' to Fees for regNo: {}", newName, regNo);
+            }
+            
+            // 3. Update ALL other certificates for this student
+            List<Certificate> otherCerts = certificateRepository.findByRegistrationNoAndIsActiveTrue(regNo);
+            for (Certificate other : otherCerts) {
+                if (!newName.equals(other.getStudentName())) {
+                    other.setStudentName(newName);
+                    certificateRepository.save(other);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to propagate name change for regNo: {}", regNo, e);
+        }
     }
 
     /**

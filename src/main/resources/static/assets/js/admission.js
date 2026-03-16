@@ -366,7 +366,7 @@ function renderAdmissionsTable(admissions) {
                 <td>${adm.admissionDate ? new Date(adm.admissionDate).toLocaleDateString('en-GB') : 'N/A'}</td>
                 <td>
                     <div class="action-dropdown">
-                        <button class="btn btn-sm btn-light action-menu-trigger">
+                        <button class="action-btn action-menu-trigger">
                             <i class="bi bi-three-dots-vertical"></i>
                         </button>
                         <div class="action-menu">

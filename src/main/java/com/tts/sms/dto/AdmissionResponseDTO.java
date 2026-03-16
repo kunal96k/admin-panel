@@ -93,4 +93,5 @@ public class AdmissionResponseDTO {
 
     private String studentCategory;
     private LocalDateTime categoryUpdatedAt;
+    private String feesStatus;
 }
