@@ -178,7 +178,7 @@ public class FeesManagerService {
                     if ("Paid".equalsIgnoreCase(installment.getStatus())) {
                         paidInstallmentsCount++;
                     } else if (computedNextDueDate == null && 
-                            ("Pending".equalsIgnoreCase(installment.getStatus()) || "Partially Paid".equalsIgnoreCase(installment.getStatus()))) {
+                            (!"Paid".equalsIgnoreCase(installment.getStatus()) && !"Refund".equalsIgnoreCase(installment.getStatus()))) {
                         computedNextDueDate = installment.getDueDate();
                     }
                 }
@@ -608,8 +608,23 @@ public class FeesManagerService {
                                 List<FeeInstallment> installments = feeInstallmentRepository
                                         .findByRegistrationNumberOrderByDueDateAsc(regNo);
 
+                                // Auto-correct installment statuses (Pending <-> Overdue based on current date)
+                                installments.forEach(i -> {
+                                    if (i.getDueDate() != null) {
+                                        if ("Pending".equalsIgnoreCase(i.getStatus()) && i.getDueDate().isBefore(LocalDate.now())) {
+                                            i.setStatus("Overdue");
+                                            feeInstallmentRepository.save(i);
+                                        } else if ("Overdue".equalsIgnoreCase(i.getStatus()) && !i.getDueDate().isBefore(LocalDate.now())) {
+                                            i.setStatus("Pending");
+                                            feeInstallmentRepository.save(i);
+                                        }
+                                    }
+                                });
+
                                 nextDueDate = installments.stream()
-                                        .filter(i -> "Pending".equals(i.getStatus()))
+                                        .filter(i -> i.getStatus() != null && 
+                                               !"Paid".equalsIgnoreCase(i.getStatus()) && 
+                                               !"Refund".equalsIgnoreCase(i.getStatus()))
                                         .map(FeeInstallment::getDueDate)
                                         .findFirst()
                                         .orElse(null);
@@ -1234,9 +1249,9 @@ public class FeesManagerService {
         final String regNo = receipt.getRegistrationNumber();
         final Long installmentId = receipt.getInstallmentId();
 
-        receipt.setIsDeleted(true);
-        receipt.setDeletedAt(java.time.LocalDateTime.now());
-        feeReceiptRepository.save(receipt);
+        // HARD DELETE: Remove the record completely from database
+        feeReceiptRepository.delete(receipt);
+        feeReceiptRepository.flush();
 
         if (installmentId != null) {
             try {
@@ -1730,9 +1745,18 @@ public class FeesManagerService {
 
         // Delete existing installments (except refund installments)
         List<FeeInstallment> existing = feeInstallmentRepository.findByRegistrationNumberOrderByDueDateAsc(regNo);
-        existing.stream()
-                .filter(inst -> !"Refund".equalsIgnoreCase(inst.getStatus()))
-                .forEach(inst -> feeInstallmentRepository.delete(inst));
+        for (FeeInstallment inst : existing) {
+            if (!"Refund".equalsIgnoreCase(inst.getStatus())) {
+                // IMPORTANT: Clear foreign key links in receipts before deleting the installment
+                List<FeeReceipt> linkedReceipts = feeReceiptRepository.findByInstallmentIdAndIsDeletedFalse(inst.getId());
+                if (linkedReceipts != null && !linkedReceipts.isEmpty()) {
+                    linkedReceipts.forEach(r -> r.setInstallmentId(null));
+                    feeReceiptRepository.saveAll(linkedReceipts);
+                }
+                feeInstallmentRepository.delete(inst);
+            }
+        }
+        feeInstallmentRepository.flush();
 
         // Save new installments
         List<FeeInstallment> savedInstallments = new ArrayList<>();
@@ -1751,6 +1775,9 @@ public class FeesManagerService {
         }
 
         log.info(" Saved {} installments for regNo: {}", savedInstallments.size(), regNo);
+
+        // SYNC: Ensure main fees table is updated with new installment data
+        recalculateFeesFromTransactions(regNo);
 
         return savedInstallments.stream()
                 .map(this::toInstallmentDTO)
@@ -1864,7 +1891,9 @@ public class FeesManagerService {
         List<FeeInstallment> pendingInstallments = feeInstallmentRepository
                 .findByRegistrationNumberOrderByDueDateAsc(regNo)
                 .stream()
-                .filter(i -> "Pending".equals(i.getStatus()) || "Partial".equals(i.getStatus()))
+                .filter(i -> "Pending".equalsIgnoreCase(i.getStatus()) || 
+                          "Partial".equalsIgnoreCase(i.getStatus()) || 
+                          "Overdue".equalsIgnoreCase(i.getStatus()))
                 .collect(Collectors.toList());
 
         Double remaining = excessAmount;
@@ -1943,39 +1972,63 @@ public class FeesManagerService {
         return "SYSTEM";
     }
 
-    /**
-     * Update existing installment (edit amount/date)
-     */
     @Transactional
     public FeeInstallmentDTO updateInstallment(Long installmentId, FeeInstallmentUpdateDTO updateDTO) {
-        log.info("✏️ Updating installment: {}", installmentId);
+        log.info("✏️ Updating installment: {} with data: {}", installmentId, updateDTO);
 
         FeeInstallment installment = feeInstallmentRepository.findById(installmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Installment not found"));
 
-        if ("Paid".equals(installment.getStatus())) {
-            throw new IllegalStateException("Cannot edit paid installment");
-        }
-
         String currentUser = getCurrentUserName();
+        String regNo = installment.getRegistrationNumber();
 
-        // Update fields
+        // Update fields if provided
         if (updateDTO.getDueDate() != null) {
             installment.setDueDate(updateDTO.getDueDate());
         }
 
         if (updateDTO.getAmount() != null) {
-            installment.setOriginalAmount(installment.getAmount()); // Store original
+            installment.setOriginalAmount(installment.getAmount());
             installment.setAmount(updateDTO.getAmount());
-            installment.setRemainingAmount(updateDTO.getAmount());
+            
+            // If amount is changed, update remainingAmount based on already paid amount
+            Double paidAmount = installment.getPaidAmount() != null ? installment.getPaidAmount() : 0.0;
+            installment.setRemainingAmount(Math.max(0, updateDTO.getAmount() - paidAmount));
+            
             installment.setIsCustom(true);
+        }
+
+        if (updateDTO.getStatus() != null) {
+            installment.setStatus(updateDTO.getStatus());
+            // Logic for status change:
+            // If status changed to Paid, and no paidAmount set, set it to full amount
+            if ("Paid".equalsIgnoreCase(updateDTO.getStatus())) {
+                if (installment.getPaidAmount() == null || installment.getPaidAmount() <= 0) {
+                    installment.setPaidAmount(installment.getAmount());
+                }
+                installment.setRemainingAmount(0.0);
+                if (installment.getPaidDate() == null) {
+                    installment.setPaidDate(LocalDate.now());
+                }
+            } else if ("Pending".equalsIgnoreCase(updateDTO.getStatus())) {
+                installment.setPaidAmount(0.0);
+                installment.setRemainingAmount(installment.getAmount());
+                installment.setPaidDate(null);
+            }
+        }
+
+        if (updateDTO.getNotes() != null) {
+            installment.setNotes(updateDTO.getNotes());
         }
 
         installment.setUpdatedBy(currentUser);
 
         FeeInstallment updated = feeInstallmentRepository.saveAndFlush(installment);
 
-        log.info(" Installment {} updated", installmentId);
+        log.info(" Installment {} updated for student {}", installmentId, regNo);
+
+        // SYNC: Recalculate fees for the student
+        recalculateFeesFromTransactions(regNo);
 
         return toInstallmentDTO(updated);
     }

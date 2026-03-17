@@ -20,4 +20,8 @@ public class FeeInstallmentUpdateDTO {
 
     @Positive(message = "Amount must be positive")
     private Double amount;
-}
+
+    private String status;
+
+    private String notes;
+}

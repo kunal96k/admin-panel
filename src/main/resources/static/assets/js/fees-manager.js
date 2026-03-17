@@ -596,6 +596,7 @@ async function loadFeesFromBackend() {
                 feesDue: item.feesDue || 0,
                 totalPaid: item.totalPaid || 0,
                 dueDate: item.dueDate,
+                nextDueDate: item.nextDueDate, // map next due date too
                 feesRefund: item.feesRefund || 0,
                 status: item.status || 'Pending',
                 course: item.course || 'N/A'
@@ -794,25 +795,35 @@ async function openFeeInstallments(regNo) {
             tbody.innerHTML = installments.map(inst => {
                 const statusBadge = inst.status === 'Refund'
                     ? '<span class="badge bg-danger">Refund</span>'
-                    : `<span class="badge bg-${inst.status === 'Paid' ? 'success' : 'warning'}">${inst.status}</span>`;
+                    : `<span class="badge bg-${inst.status === 'Paid' ? 'success' : (inst.status === 'Partial' ? 'info' : 'warning')}">${inst.status}</span>`;
 
                 return `
-                <tr>
+                <tr data-installment-id="${inst.id}">
                     <td>${inst.dueDate}</td>
                     <td>₹${parseFloat(inst.amount).toFixed(2)}</td>
                     <td>${statusBadge}</td>
+                    <td class="small text-muted">${inst.notes || '-'}</td>
                     <td>
-                        ${inst.status !== 'Refund' ? `
-                        <button class="btn btn-sm btn-danger" onclick="deleteInstallment(${inst.id})">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                        ` : '-'}
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editInstallment(${inst.id}, '${inst.dueDate}', ${inst.amount}, '${inst.status}', '${(inst.notes || '').replace(/'/g, "\\'")}')">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            ${inst.status !== 'Refund' ? `
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteInstallment(${inst.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            ` : ''}
+                        </div>
                     </td>
                 </tr>
             `}).join('');
         }
 
-        new bootstrap.Modal(document.getElementById('feeInstallmentsModal')).show();
+        const modalEl = document.getElementById('feeInstallmentsModal');
+        const isShown = modalEl.classList.contains('show');
+        if (!isShown) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
 
     } catch (error) {
         Swal.close();
@@ -875,6 +886,83 @@ window.deleteInstallment = async function (installmentId) {
         }
     }
 };
+ 
+ // Edit installment function
+ window.editInstallment = async function (id, dueDate, amount, status, notes) {
+     const { value: formValues } = await Swal.fire({
+         title: 'Edit Installment',
+         html: `
+             <div class="text-start">
+                 <div class="mb-3">
+                     <label class="form-label">Due Date</label>
+                     <input type="date" class="form-control" id="editInstDueDate" value="${dueDate}">
+                 </div>
+                 <div class="mb-3">
+                     <label class="form-label">Amount</label>
+                     <input type="number" class="form-control" id="editInstAmount" value="${amount}" step="0.01">
+                 </div>
+                 <div class="mb-3">
+                     <label class="form-label">Status</label>
+                     <select class="form-select" id="editInstStatus">
+                         <option value="Pending" ${status === 'Pending' ? 'selected' : ''}>Pending</option>
+                         <option value="Paid" ${status === 'Paid' ? 'selected' : ''}>Paid</option>
+                         <option value="Partial" ${status === 'Partial' ? 'selected' : ''}>Partial</option>
+                         <option value="Overdue" ${status === 'Overdue' ? 'selected' : ''}>Overdue</option>
+                         <option value="Refund" ${status === 'Refund' ? 'selected' : ''}>Refund</option>
+                     </select>
+                 </div>
+                 <div class="mb-3">
+                     <label class="form-label">Notes</label>
+                     <textarea class="form-control" id="editInstNotes" rows="2">${notes || ''}</textarea>
+                 </div>
+                 <div class="mt-2 small text-muted border-top pt-2">
+                     <i class="bi bi-info-circle me-1"></i>Note: If fields are not clickable, please press the <b>ESC</b> key to reset focus.
+                 </div>
+             </div>
+         `,
+         focusConfirm: false,
+         showCancelButton: true,
+         confirmButtonText: 'Update',
+         confirmButtonColor: '#667eea',
+         preConfirm: () => {
+             return {
+                 dueDate: document.getElementById('editInstDueDate').value,
+                 amount: parseFloat(document.getElementById('editInstAmount').value),
+                 status: document.getElementById('editInstStatus').value,
+                 notes: document.getElementById('editInstNotes').value
+             }
+         }
+     });
+ 
+     if (formValues) {
+         try {
+             showLoading('Updating installment...');
+             const response = await fetch(`/api/fees-manager/installments/${id}`, {
+                 method: 'PUT',
+                 headers: getCsrfHeaders(),
+                 body: JSON.stringify(formValues)
+             });
+ 
+             if (!response.ok) throw new Error('Failed to update installment');
+ 
+             Swal.close();
+             showSuccess('Installment updated and fees synced!');
+ 
+             // Reload installments modal
+             const studentNameEl = document.getElementById('feeInstStudentName');
+             const student = feesData.find(s => s.studentName === studentNameEl.textContent);
+             if (student) {
+                 openFeeInstallments(student.regNo);
+             }
+             
+             // Also reload background table to reflect sync
+             loadFeesFromBackend();
+ 
+         } catch (error) {
+             showError(error.message);
+         }
+     }
+ };
 
 async function loadRefundHistory(regNo) {
     try {
@@ -934,9 +1022,10 @@ function renderTable() {
         let dueDateDisplay = '-'; // Default for clear fees
 
         if (actualDue > 0.01) {
-            // Fees pending - show due date
-            if (item.dueDate) {
-                dueDateDisplay = formatDate(item.dueDate);
+            // Fees pending - show due date (prefer computed nextDueDate)
+            const dateToShow = item.nextDueDate || item.dueDate;
+            if (dateToShow) {
+                dueDateDisplay = formatDate(dateToShow);
             } else {
                 dueDateDisplay = '<span class="text-muted">Not Set</span>';
             }
@@ -1671,18 +1760,29 @@ async function saveFeeInstallments() {
     }
 
     const installments = [];
+    let hasInputs = false;
+
     rows.forEach((row, index) => {
         const dateInput = row.querySelector('input[type="date"]');
         const amountInput = row.querySelector('input[type="number"]');
         const statusSelect = row.querySelector('select');
 
-        installments.push({
-            installmentNumber: index + 1,
-            dueDate: dateInput.value,
-            amount: parseFloat(amountInput.value),
-            status: statusSelect.value
-        });
+        // Check if row actually contains inputs
+        if (dateInput && amountInput && statusSelect) {
+            hasInputs = true;
+            installments.push({
+                installmentNumber: index + 1,
+                dueDate: dateInput.value,
+                amount: parseFloat(amountInput.value) || 0,
+                status: statusSelect.value
+            });
+        }
     });
+
+    if (!hasInputs) {
+        showError('No new installments found. Use the "Generate" button first if you want to replace current installments.');
+        return;
+    }
 
     try {
         showLoading('Saving installments...');
@@ -1701,6 +1801,7 @@ async function saveFeeInstallments() {
         Swal.close();
         showSuccess('Fee installments saved successfully!');
         bootstrap.Modal.getInstance(document.getElementById('feeInstallmentsModal')).hide();
+        await loadFeesFromBackend();
 
     } catch (error) {
         Swal.close();
@@ -2075,6 +2176,10 @@ async function openFeeReceipt(regNo) {
     // Reset form
     document.getElementById('feeReceiptForm').reset();
 
+    // Prefill notes with logged-in user's name
+    const currentUser = document.querySelector('.user-name')?.textContent || 'User';
+    document.getElementById('receiptNotes').value = `Created by: ${currentUser.trim()}`;
+
     // Populate form
     document.getElementById('receiptStudentName').value = student.studentName;
     document.getElementById('receiptTotalFees').value = student.totalFees;
@@ -2117,7 +2222,10 @@ async function openFeeReceipt(regNo) {
         document.getElementById('nextDueDate').value = nextDate.toISOString().split('T')[0];
     }
 
-    new bootstrap.Modal(document.getElementById('feeReceiptModal')).show();
+    const modalEl = document.getElementById('feeReceiptModal');
+    if (!modalEl.classList.contains('show')) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
 }
 
 // Set next installment due date based on existing installments
@@ -2563,7 +2671,14 @@ async function updateFeeReceipt(receiptId, regNo) {
         document.getElementById('nowReceiving').value = receipt.amountReceived;
         document.getElementById('receiptDate').value = receipt.receiptDate;
         document.getElementById('paymentMode').value = receipt.paymentMode;
-        document.getElementById('receiptNotes').value = receipt.notes || '';
+        
+        // Prefill notes with logged-in user's name (append or set as update info)
+        const currentUser = document.querySelector('.user-name')?.textContent || 'User';
+        const updateInfo = `Updated by: ${currentUser.trim()}`;
+        const existingNotes = receipt.notes || '';
+        document.getElementById('receiptNotes').value = existingNotes 
+            ? `${existingNotes} | ${updateInfo}`
+            : updateInfo;
 
         if (receipt.nextDueDate) {
             document.getElementById('nextDueDate').value = receipt.nextDueDate;

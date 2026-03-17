@@ -1971,10 +1971,11 @@ window.printTable = async function() {
                                 ${inst.status}
                             </span>
                         </td>
+                        <td class="small text-muted">${inst.notes || '-'}</td>
                     </tr>
                 `).join('');
             } else {
-                instBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No installments found</td></tr>';
+                instBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments found</td></tr>';
             }
 
             // Fetch Receipts
@@ -2250,17 +2251,23 @@ window.printTable = async function() {
             const tbody = document.getElementById('feeInstallmentsBody');
 
             if (installments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No installments found</td></tr>';
             } else {
                 tbody.innerHTML = installments.map(inst => `
                     <tr>
                         <td>${inst.dueDate}</td>
                         <td>₹${parseFloat(inst.amount).toFixed(2)}</td>
-                        <td><span class="badge bg-${inst.status === 'Paid' ? 'success' : 'warning'}">${inst.status}</span></td>
+                        <td><span class="badge bg-${inst.status === 'Paid' ? 'success' : (inst.status === 'Partial' ? 'info' : 'warning')}">${inst.status}</span></td>
+                        <td class="small text-muted">${inst.notes || '-'}</td>
                         <td>
-                            <button class="btn btn-sm btn-danger" onclick="deleteInstallment(${inst.id})">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-sm btn-outline-primary" onclick="window.editInstallment(${inst.id}, '${inst.dueDate}', ${inst.amount}, '${inst.status}', '${(inst.notes || '').replace(/'/g, "\\'")}')">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteInstallment(${inst.id})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `).join('');
@@ -2329,6 +2336,81 @@ window.printTable = async function() {
             }
         }
     };
+ 
+     window.editInstallment = async function(id, dueDate, amount, status, notes) {
+         const { value: formValues } = await Swal.fire({
+             title: 'Edit Installment',
+             html: `
+                 <div class="text-start">
+                     <div class="mb-3">
+                         <label class="form-label">Due Date</label>
+                         <input type="date" class="form-control" id="editInstDueDate" value="${dueDate}">
+                     </div>
+                     <div class="mb-3">
+                         <label class="form-label">Amount</label>
+                         <input type="number" class="form-control" id="editInstAmount" value="${amount}" step="0.01">
+                     </div>
+                     <div class="mb-3">
+                         <label class="form-label">Status</label>
+                         <select class="form-select" id="editInstStatus">
+                             <option value="Pending" ${status === 'Pending' ? 'selected' : ''}>Pending</option>
+                             <option value="Paid" ${status === 'Paid' ? 'selected' : ''}>Paid</option>
+                             <option value="Partial" ${status === 'Partial' ? 'selected' : ''}>Partial</option>
+                             <option value="Overdue" ${status === 'Overdue' ? 'selected' : ''}>Overdue</option>
+                             <option value="Refund" ${status === 'Refund' ? 'selected' : ''}>Refund</option>
+                         </select>
+                     </div>
+                     <div class="mb-3">
+                         <label class="form-label">Notes</label>
+                         <textarea class="form-control" id="editInstNotes" rows="2">${notes || ''}</textarea>
+                     </div>
+                 </div>
+             `,
+             focusConfirm: false,
+             showCancelButton: true,
+             confirmButtonText: 'Update',
+             confirmButtonColor: '#667eea',
+             preConfirm: () => {
+                 return {
+                     dueDate: document.getElementById('editInstDueDate').value,
+                     amount: parseFloat(document.getElementById('editInstAmount').value),
+                     status: document.getElementById('editInstStatus').value,
+                     notes: document.getElementById('editInstNotes').value
+                 }
+             }
+         });
+ 
+         if (formValues) {
+             try {
+                 showLoading('Updating installment...');
+                 
+                 const csrfToken = getCsrfToken();
+                 const headers = {
+                     'Accept': 'application/json',
+                     'Content-Type': 'application/json'
+                 };
+                 if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+ 
+                 const response = await fetch(`/api/fees-manager/installments/${id}`, {
+                     method: 'PUT',
+                     headers: headers,
+                     body: JSON.stringify(formValues),
+                     credentials: 'include'
+                 });
+ 
+                 if (!response.ok) throw new Error('Failed to update installment');
+ 
+                 Swal.close();
+                 showSuccess('Installment updated and fees synced!');
+                 
+                 // Reload the page to reflect changes in admissions table
+                 location.reload();
+ 
+             } catch (error) {
+                 showError(error.message);
+             }
+         }
+     };
 
    // ==================== OPEN TRANSFER MODAL WITH INSTALLMENTS ====================
 
