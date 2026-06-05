@@ -41,6 +41,7 @@ public class AdmissionMapper {
                 .pinCodePermanent(dto.getPinCodePermanent())
                 .packageName(dto.getPackageName())
                 .courses(dto.getCourses() != null ? dto.getCourses() : new ArrayList<>())
+                .courseFeesDetails(dto.getCourseFeesDetails())
                 .totalPayableFees(dto.getTotalPayableFees())
                 .totalReceivableFees(dto.getTotalReceivableFees())
                 .discountPercent(dto.getDiscountPercent())
@@ -93,6 +94,7 @@ public class AdmissionMapper {
                 .packageName(admission.getPackageName())
                 .courses(listToString(normalizeList(admission.getCourses())))
                 .coursesList(normalizeList(admission.getCourses()))
+                .courseFeesDetails(admission.getCourseFeesDetails())
                 .totalPayableFees(admission.getTotalPayableFees())
                 .totalReceivableFees(admission.getTotalReceivableFees())
                 .discountPercent(admission.getDiscountPercent())
@@ -109,6 +111,8 @@ public class AdmissionMapper {
                 .status(admission.getStatus())
                 .createdAt(admission.getCreatedAt())
                 .updatedAt(admission.getUpdatedAt())
+                .createdBy(admission.getCreatedBy())
+                .updatedBy(admission.getUpdatedBy())
                 .build();
     }
 
@@ -137,6 +141,7 @@ public class AdmissionMapper {
         if (dto.getPinCodePermanent() != null) admission.setPinCodePermanent(dto.getPinCodePermanent());
         if (dto.getPackageName() != null) admission.setPackageName(dto.getPackageName());
         if (dto.getCourses() != null) admission.setCourses(dto.getCourses());
+        if (dto.getCourseFeesDetails() != null) admission.setCourseFeesDetails(dto.getCourseFeesDetails());
         if (dto.getTotalPayableFees() != null) admission.setTotalPayableFees(dto.getTotalPayableFees());
         if (dto.getTotalReceivableFees() != null) admission.setTotalReceivableFees(dto.getTotalReceivableFees());
         if (dto.getDiscountPercent() != null) admission.setDiscountPercent(dto.getDiscountPercent());

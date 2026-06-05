@@ -46,17 +46,21 @@ public class DataLoader implements CommandLineRunner {
     }
 
     private void loadRoles() {
-        if (roleRepository.count() == 0) {
-            List<String> roleNames = Arrays.asList("SUPER_ADMIN", "ADMIN", "COUNSELOR", "TRAINER");
+        List<String> roleNames = Arrays.asList("SUPER_ADMIN", "ADMIN", "COUNSELOR", "TRAINER");
+        int count = 0;
 
-            roleNames.forEach(name -> {
+        for (String name : roleNames) {
+            if (!roleRepository.existsByRoleTitle(name)) {
                 Role role = new Role();
                 role.setRoleTitle(name);
                 role.setIsActive(true);
                 roleRepository.save(role);
-            });
+                count++;
+            }
+        }
 
-            log.info(" Loaded {} roles", roleNames.size());
+        if (count > 0) {
+            log.info(" Loaded {} roles", count);
         }
     }
 
@@ -111,52 +115,57 @@ public class DataLoader implements CommandLineRunner {
             // Grant full access to all menus for SUPER_ADMIN role
             List<Menu> allMenus = menuRepository.findAll();
             for (Menu menu : allMenus) {
-                RoleMenuPermission permission = new RoleMenuPermission();
-                permission.setRole(superAdminRole);
-                permission.setMenu(menu);
-                permission.setHasAccess(true);
-                roleMenuPermissionRepository.save(permission);
+                if (roleMenuPermissionRepository.findByRoleAndMenu(superAdminRole, menu).isEmpty()) {
+                    RoleMenuPermission permission = new RoleMenuPermission();
+                    permission.setRole(superAdminRole);
+                    permission.setMenu(menu);
+                    permission.setHasAccess(true);
+                    roleMenuPermissionRepository.save(permission);
+                }
             }
 
             log.info(" Granted full menu access to SUPER_ADMIN role");
 
             // Create Super Admin Employee
-            Employee superAdmin = new Employee();
-            superAdmin.setEmployeeName("Super Administrator");
-            superAdmin.setMobileNumber("9999999999");
-            superAdmin.setEmailId(superAdminEmail);
-            superAdmin.setDesignation("Super Admin");
-            superAdmin.setGender("M");
-            superAdmin.setDateOfBirth(LocalDate.of(1990, 1, 1));
-            superAdmin.setAddress("TTS Institute, Nashik");
-            superAdmin.setRole(superAdminRole);
-            superAdmin.setIsActive(true);
-            superAdmin.setIsAdmin(true);
+            Employee savedEmployee = employeeRepository.findByEmailId(superAdminEmail).orElseGet(() -> {
+                Employee superAdmin = new Employee();
+                superAdmin.setEmployeeName("Super Administrator");
+                superAdmin.setMobileNumber("9999999999");
+                superAdmin.setEmailId(superAdminEmail);
+                superAdmin.setDesignation("Super Admin");
+                superAdmin.setGender("M");
+                superAdmin.setDateOfBirth(LocalDate.of(1990, 1, 1));
+                superAdmin.setAddress("TTS Institute, Nashik");
+                superAdmin.setRole(superAdminRole);
+                superAdmin.setIsActive(true);
+                superAdmin.setIsAdmin(true);
 
-            // Grant all mobile permissions
-            superAdmin.setNewAdmission(true);
-            superAdmin.setViewAdmission(true);
-            superAdmin.setNewEnquiry(true);
-            superAdmin.setViewEnquiry(true);
-            superAdmin.setFeeManager(true);
-            superAdmin.setManageCourse(true);
-            superAdmin.setManageBatch(true);
-            superAdmin.setAccDashboard(true);
-            superAdmin.setCounsellorDash(true);
-            superAdmin.setTodaysFollowup(true);
-            superAdmin.setStudyNote(true);
-            superAdmin.setPaymentLink(true);
-            superAdmin.setTimeTable(true);
-            superAdmin.setTimeTableAttendance(true);
-            superAdmin.setOverdueFollowup(true);
-            superAdmin.setBatchWiseFee(true);
-            superAdmin.setSendAppMsg(true);
-            superAdmin.setShareVideo(true);
-            superAdmin.setLiveLecture(true);
-            superAdmin.setOfflineExam(true);
+                // Grant all mobile permissions
+                superAdmin.setNewAdmission(true);
+                superAdmin.setViewAdmission(true);
+                superAdmin.setNewEnquiry(true);
+                superAdmin.setViewEnquiry(true);
+                superAdmin.setFeeManager(true);
+                superAdmin.setManageCourse(true);
+                superAdmin.setManageBatch(true);
+                superAdmin.setAccDashboard(true);
+                superAdmin.setCounsellorDash(true);
+                superAdmin.setTodaysFollowup(true);
+                superAdmin.setStudyNote(true);
+                superAdmin.setPaymentLink(true);
+                superAdmin.setTimeTable(true);
+                superAdmin.setTimeTableAttendance(true);
+                superAdmin.setOverdueFollowup(true);
+                superAdmin.setBatchWiseFee(true);
+                superAdmin.setSendAppMsg(true);
+                superAdmin.setShareVideo(true);
+                superAdmin.setLiveLecture(true);
+                superAdmin.setOfflineExam(true);
 
-            Employee savedEmployee = employeeRepository.save(superAdmin);
-            log.info(" Super Admin employee created: {}", savedEmployee.getEmployeeName());
+                return employeeRepository.save(superAdmin);
+            });
+
+            log.info(" Super Admin employee initialized: {}", savedEmployee.getEmployeeName());
 
             // Create Super Admin User with credentials
             User superAdminUser = new User();

@@ -148,6 +148,7 @@
 
 <!-- Dashboard Content Fragment -->
 <main layout:fragment="content">
+    <input type="hidden" id="currentUserRole" th:value="${currentUser != null ? currentUser.role.roleTitle : ''}">
 
     <!-- Page Header -->
     <div class="container-fluid">
@@ -623,6 +624,32 @@
                                 <div class="col-12 mb-3">
                                     <label class="form-label">Note</label>
                                     <textarea class="form-control" id="viewNote" rows="4" readonly></textarea>
+                                </div>
+                                
+                                <!-- Superadmin Audit Info Section (Only visible to SUPER_ADMIN) -->
+                                <div class="col-12" id="enqSuperadminAuditSection" style="display: none;">
+                                    <hr class="my-4">
+                                    <h5 class="text-danger fw-bold mb-3 d-flex align-items-center">
+                                        <i class="bi bi-shield-lock-fill me-2"></i>Audit Information (Superadmin Only)
+                                    </h5>
+                                    <div class="row g-3">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Created By</label>
+                                            <input type="text" class="form-control" id="viewEnqCreatedBy" readonly>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Created Time</label>
+                                            <input type="text" class="form-control" id="viewEnqCreatedTime" readonly>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Updated By</label>
+                                            <input type="text" class="form-control" id="viewEnqUpdatedBy" readonly>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Updated Time</label>
+                                            <input type="text" class="form-control" id="viewEnqUpdatedTime" readonly>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

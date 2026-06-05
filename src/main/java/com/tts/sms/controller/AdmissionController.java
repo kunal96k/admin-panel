@@ -63,12 +63,13 @@ public class AdmissionController {
     }
 
     /**
-     * Get all admissions for export (with fees data)
+     * Get admissions for export (with fees data) filtered by criteria
      */
     @GetMapping(value = "/export", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<AdmissionExportDTO>> getAllAdmissionsForExport() {
-        log.info("GET /api/admissions/export");
-        List<AdmissionExportDTO> admissions = admissionService.getAllAdmissionsForExport();
+    public ResponseEntity<List<AdmissionExportDTO>> getAllAdmissionsForExport(
+            @ModelAttribute AdmissionSearchDTO searchDTO) {
+        log.info("GET /api/admissions/export - criteria: {}", searchDTO);
+        List<AdmissionExportDTO> admissions = admissionService.getAllAdmissionsForExport(searchDTO);
         return ResponseEntity.ok(admissions);
     }
 

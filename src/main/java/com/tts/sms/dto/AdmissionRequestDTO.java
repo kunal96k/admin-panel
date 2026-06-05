@@ -51,6 +51,7 @@ public class AdmissionRequestDTO {
     // Course Details
     private String packageName;
     private List<String> courses;
+    private String courseFeesDetails;
     private Double totalPayableFees;
     private Double totalReceivableFees;
     private Double discountPercent;
@@ -72,6 +73,7 @@ public class AdmissionRequestDTO {
 
     // Installment Configuration
     private InstallmentConfigDTO installmentConfig;
+    private List<FeeInstallmentCreateDTO> customInstallments;
 
     private String studentPhoto;
 }

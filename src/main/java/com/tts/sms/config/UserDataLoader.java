@@ -29,11 +29,13 @@ public class UserDataLoader implements CommandLineRunner {
     @Transactional
     public void run(String... args) {
         try {
-            // Check if admin already exists
-            if (userRepository.existsByUsername("admin")) {
-                log.info("✅ Default admin user already exists");
+            // Check if ANY users already exist. We only auto-create if the database is empty.
+            if (userRepository.count() > 0) {
+                log.info("ℹ️ Database already has users. Skipping default admin creation.");
                 return;
             }
+
+            log.info("⚠️ No users found in database. Initializing default superadmin...");
 
             // Create Admin Role if not exists
             Role adminRole = roleRepository.findByRoleTitle("ADMIN")
@@ -75,12 +77,13 @@ public class UserDataLoader implements CommandLineRunner {
             userRepository.save(adminUser);
 
             log.info("═══════════════════════════════════════════════════════");
-            log.info("✅ DEFAULT ADMIN USER CREATED SUCCESSFULLY!");
+            log.info("🚀  FIRST-TIME DATABASE INITIALIZATION COMPLETE!");
+            log.info("✅  DEFAULT SUPERADMIN CREATED SUCCESSFULLY!");
             log.info("═══════════════════════════════════════════════════════");
-            log.info("📧 Email: admin@tts.net.in");
-            log.info("👤 Username: admin");
-            log.info("🔑 Password: admin@123");
-            log.info("⚠️  IMPORTANT: Change the password after first login!");
+            log.info("👤  Username : admin");
+            log.info("🔑  Password : admin@123");
+            log.info("📧  Email    : ktm.lover0123@gmail.com");
+            log.info("⚠️  IMPORTANT: Change the password immediately!");
             log.info("═══════════════════════════════════════════════════════");
 
         } catch (Exception e) {

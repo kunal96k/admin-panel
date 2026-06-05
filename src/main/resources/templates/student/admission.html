@@ -29,6 +29,7 @@
 
 <!-- Dashboard Content Fragment -->
 <main layout:fragment="content">
+    <input type="hidden" id="currentUserRole" th:value="${currentUser != null ? currentUser.role.roleTitle : ''}">
 
     <div class="container-fluid">
         <!-- Page Header -->
@@ -39,64 +40,80 @@
 
         <!-- Action Bar -->
         <div class="action-card">
-            <div class="row g-3 align-items-end">
-                <div class="col-12 col-lg-4">
-                    <div class="row g-2">
-                        <div class="col-12 col-sm-4">
-                            <button class="btn btn-primary btn-action w-100" id="btnNewAdmission">
-                                <i class="bi bi-plus-circle me-2"></i>New
+            <!-- Row 1: Actions & Search -->
+            <div class="row g-3 align-items-center mb-3">
+                <!-- Buttons -->
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-action flex-fill" id="btnNewAdmission">
+                            <i class="bi bi-plus-circle me-2"></i>New
+                        </button>
+                        <button class="btn btn-success btn-action flex-fill" id="btnImportAdmissions">
+                            <i class="bi bi-upload me-2"></i>Import
+                        </button>
+                        <div class="btn-group flex-fill">
+                            <button class="btn btn-info btn-action dropdown-toggle w-100"
+                                    type="button"
+                                    id="btnExportAdmissions"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                <i class="bi bi-download me-2"></i>Export
                             </button>
-                        </div>
-                        <div class="col-12 col-sm-4">
-                            <button class="btn btn-success btn-action w-100" id="btnImportAdmissions">
-                                <i class="bi bi-upload me-2"></i>Import
-                            </button>
-                        </div>
-                        <div class="col-12 col-sm-4">
-                            <div class="btn-group w-100">
-                                <button class="btn btn-info btn-action dropdown-toggle w-100"
-                                        type="button"
-                                        id="btnExportAdmissions"
-                                        data-bs-toggle="dropdown"
-                                        aria-expanded="false">
-                                    <i class="bi bi-download me-2"></i>Export
-                                </button>
-                                <ul class="dropdown-menu" aria-labelledby="btnExportAdmissions">
-                                    <li>
-                                        <a class="dropdown-item" href="#" onclick="window.exportToCSV(); return false;">
-                                            <i class="bi bi-filetype-csv me-2"></i>Export as CSV
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="#" onclick="window.exportToExcel(); return false;">
-                                            <i class="bi bi-file-earmark-excel me-2"></i>Export as Excel
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="#" onclick="window.exportToPDF(); return false;">
-                                            <i class="bi bi-filetype-pdf me-2"></i>Export as PDF
-                                        </a>
-                                    </li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li>
-                                        <a class="dropdown-item" href="#" onclick="window.copyTableData(); return false;">
-                                            <i class="bi bi-clipboard me-2"></i>Copy to Clipboard
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="#" onclick="window.printTable(); return false;">
-                                            <i class="bi bi-printer me-2"></i>Print
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
+                            <ul class="dropdown-menu" aria-labelledby="btnExportAdmissions">
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="window.exportToCSV(); return false;">
+                                        <i class="bi bi-filetype-csv me-2"></i>Export as CSV
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="window.exportToExcel(); return false;">
+                                        <i class="bi bi-file-earmark-excel me-2"></i>Export as Excel
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="window.exportToPDF(); return false;">
+                                        <i class="bi bi-filetype-pdf me-2"></i>Export as PDF
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="window.copyTableData(); return false;">
+                                        <i class="bi bi-clipboard me-2"></i>Copy to Clipboard
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="window.printTable(); return false;">
+                                        <i class="bi bi-printer me-2"></i>Print
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>
 
+                <!-- Text Search & Page Size -->
+                <div class="col-12 col-md-6 col-lg-8">
+                    <div class="d-flex gap-2">
+                        <div class="input-group input-group-sm flex-grow-1">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="searchInput" placeholder="Search by Name, Mobile, Reg No...">
+                        </div>
+                        <select class="form-select form-select-sm" id="pageSizeSelect" style="max-width: 85px;">
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 2: Advanced Filters -->
+            <div class="row g-3 align-items-end pt-2 border-top">
                 <!-- Course Filter with Search -->
-                <div class="col-12 col-md-4 col-lg-3">
-                    <label class="form-label mb-1 fw-bold small">Course Filter</label>
+                <div class="col-12 col-sm-6 col-md-3 col-lg-3">
+                    <label class="form-label mb-1 fw-bold small text-muted">Course Filter</label>
                     <div class="position-relative">
                         <input type="text" class="form-control form-control-sm mb-1" id="courseSearchInput"
                                placeholder="Search courses..." style="font-size: 0.85rem;">
@@ -108,9 +125,9 @@
                 </div>
 
                 <!-- Status Filter -->
-                <div class="col-12 col-md-4 col-lg-2">
-                    <label class="form-label mb-1 fw-bold small">Status Filter</label>
-                    <select class="form-select form-select-sm" id="categoryFilter">
+                <div class="col-12 col-sm-6 col-md-2 col-lg-2">
+                    <label class="form-label mb-1 fw-bold small text-muted">Status Filter</label>
+                    <select class="form-select form-select-sm" id="categoryFilter" style="font-size: 0.85rem; height: 31px;">
                         <option value="">-- All Status --</option>
                         <option value="NEW_STUDENT">New Student</option>
                         <option value="PURSUING">Pursuing</option>
@@ -120,20 +137,23 @@
                     </select>
                 </div>
 
-                <!-- Search Bar -->
-                <div class="col-12 col-md-4 col-lg-3">
-                    <label class="form-label mb-1 fw-bold small">Search & Page Size</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white">
-                            <i class="bi bi-search"></i>
-                        </span>
-                        <input type="text" class="form-control" id="searchInput" placeholder="Name, Mobile, Reg...">
-                        <select class="form-select" id="pageSizeSelect" style="max-width: 70px;">
-                            <option value="25" selected>25</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
-                    </div>
+                <!-- From Date -->
+                <div class="col-12 col-sm-6 col-md-2 col-lg-2">
+                    <label class="form-label mb-1 fw-bold small text-muted">From Date</label>
+                    <input type="date" class="form-control form-control-sm" id="fromDateFilter" style="font-size: 0.85rem; height: 31px;">
+                </div>
+
+                <!-- To Date -->
+                <div class="col-12 col-sm-6 col-md-2 col-lg-2">
+                    <label class="form-label mb-1 fw-bold small text-muted">To Date</label>
+                    <input type="date" class="form-control form-control-sm" id="toDateFilter" style="font-size: 0.85rem; height: 31px;">
+                </div>
+
+                <!-- Reset Button -->
+                <div class="col-12 col-sm-6 col-md-3 col-lg-3">
+                    <button class="btn btn-outline-secondary btn-sm w-100" id="btnClearFilters" style="height: 31px;">
+                        <i class="bi bi-x-circle me-1"></i>Clear Filters
+                    </button>
                 </div>
             </div>
         </div>
@@ -196,6 +216,22 @@
                     <!-- Progress Bar -->
                     <div class="progress-wizard">
                         <div class="progress-wizard-bar" id="admissionProgressBar" style="width: 16.66%"></div>
+                    </div>
+
+                    <!-- Update Info Alert Banner -->
+                    <div class="alert alert-warning border border-warning-subtle shadow-sm rounded-3 mb-4" id="admissionUpdateAlert" style="display: none;">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-exclamation-triangle-fill fs-5 text-warning"></i>
+                            <div>
+                                <h6 class="alert-heading fw-bold mb-1">Update Admission Notice</h6>
+                                <p class="mb-1 text-secondary" style="font-size: 0.85rem;">
+                                    You are editing an existing admission record. Personal, contact, academic details, and notes will be updated.
+                                </p>
+                                <p class="mb-0 text-secondary" style="font-size: 0.85rem;">
+                                    <strong>Important Note on Installments:</strong> Changing courses, packages, or discount values updates the total receivable fees but does <strong>not</strong> automatically update the installment schedule. If you change courses/pricing, please go to the <strong>5. Installments</strong> tab to regenerate the installment dates and amounts.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Tabs -->
@@ -479,29 +515,33 @@
                         <div class="tab-pane fade" id="admTab5">
                             <form id="installmentsForm">
                                 <div class="row mb-3">
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label class="form-label">Total Amount</label>
                                         <input type="text" class="form-control" id="instTotalAmount" readonly>
                                     </div>
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label class="form-label">Total Installment Amount</label>
                                         <input type="text" class="form-control" id="instTotalInstAmount" readonly>
                                     </div>
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label class="form-label">Installment Start Date <span class="required">*</span></label>
                                         <input type="date" class="form-control" id="instStartDate" th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}" required>
                                     </div>
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label">2nd Installment Date</label>
+                                        <input type="date" class="form-control" id="instSecondDate">
+                                    </div>
+                                    <div class="col-md-3 mb-3">
                                         <label class="form-label">No. of Installments</label>
                                         <input type="number" class="form-control" id="instNoOfInstallments" min="1">
                                     </div>
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label class="form-label">Days Between Installments</label>
                                         <input type="number" class="form-control" id="instDays" min="1">
                                     </div>
-                                    <div class="col-md-4 mb-3 d-flex align-items-end">
+                                    <div class="col-md-6 mb-3 d-flex align-items-end">
                                         <button type="button" class="btn btn-primary w-100" id="btnGenerateInstallments">
-                                            <i class="bi bi-calculator me-2"></i>Generate
+                                            <i class="bi bi-calculator me-2"></i>Generate Installments
                                         </button>
                                     </div>
                                 </div>
@@ -510,7 +550,7 @@
                                         <thead>
                                         <tr>
                                             <th>Date</th>
-                                            <th>Amount</th>
+                                            <th>Amount (₹)</th>
                                             <th>Status</th>
                                             <th>Remove</th>
                                         </tr>
@@ -521,6 +561,12 @@
                                         </tr>
                                         </tbody>
                                     </table>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <button type="button" class="btn btn-sm btn-outline-success" id="btnAddInstallment">
+                                        <i class="bi bi-plus-circle me-1"></i>Add Installment Row
+                                    </button>
+                                    <small class="text-muted">Total: <strong id="instRowTotal">₹0.00</strong></small>
                                 </div>
                             </form>
                         </div>
@@ -658,106 +704,351 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-3 text-center mb-3">
-                            <img src="/assets/images/user-logo.png" alt="Student Photo" class="img-thumbnail" id="viewStudentPhoto" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22150%22%3E%3Crect fill=%22%23ddd%22 width=%22150%22 height=%22150%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22%3ENo Photo%3C/text%3E%3C/svg%3E'">
-                        </div>
-                        <div class="col-md-9">
-                            <h4 id="viewAdmStudentName">Student Name</h4>
-                            <p><strong>Reg No.:</strong> <span id="viewAdmRegNo">-</span></p>
-                            <p><strong>Admission Date:</strong> <span id="viewAdmDate">-</span></p>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-primary mb-3"><u>Personal Details</u></h6>
-                            <p><strong>Birth Date:</strong> <span id="viewAdmBirthDate">-</span></p>
-                            <p><strong>Gender:</strong> <span id="viewAdmGender">-</span></p>
-                            <p><strong>Aadhaar No.:</strong> <span id="viewAdmAadhaarNo">-</span></p>
-                            <p><strong>Blood Group:</strong> <span id="viewAdmBloodGroup">-</span></p>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="text-primary mb-3"><u>Communication Details</u></h6>
-                            <p><strong>Primary Mobile:</strong> <span id="viewAdmMobile1">-</span></p>
-                            <p><strong>Secondary Mobile:</strong> <span id="viewAdmMobile2">-</span></p>
-                            <p><strong>Email:</strong> <span id="viewAdmEmail">-</span></p>
-                            <p><strong>Address:</strong> <span id="viewAdmAddress">-</span></p>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <h6 class="text-primary mb-3"><u>Course & Batch details</u></h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p><strong>Package:</strong> <span id="viewAdmPackage">-</span></p>
-                                    <p><strong>Courses:</strong> <span id="viewAdmCourses">-</span></p>
-                                    <div class="mb-2"><strong>Batches:</strong> <div id="viewAdmBatches">-</div></div>
+                    <!-- Hero Card Section -->
+                    <div class="admission-hero-card p-4 mb-4 rounded-4 shadow-sm">
+                        <div class="row align-items-center">
+                            <div class="col-12 col-md-3 text-center text-md-start mb-3 mb-md-0">
+                                <div class="position-relative d-inline-block">
+                                    <img src="/assets/images/user-logo.png" alt="Student Photo" class="rounded-circle border border-4 border-white shadow" id="viewStudentPhoto" style="width: 120px; height: 120px; object-fit: cover;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22%3E%3Crect fill=%22%23ddd%22 width=%22120%22 height=%22120%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22%3ENo Photo%3C/text%3E%3C/svg%3E'">
                                 </div>
-                                <div class="col-md-6">
-                                    <p><strong>Academic Year:</strong> <span id="viewAdmAcademicYear">-</span></p>
-                                    <p><strong>Document:</strong> <span id="viewAdmDocument">-</span></p>
-                                    <p><strong>Notes:</strong> <span id="viewAdmNotes">-</span></p>
+                            </div>
+                            <div class="col-12 col-md-9 text-center text-md-start">
+                                <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-start gap-2 mb-2">
+                                    <h3 class="mb-0 fw-bold text-dark" id="viewAdmStudentName">Student Name</h3>
+                                    <span class="badge bg-success shadow-sm rounded-pill px-3 py-1.5" id="viewAdmStatusBadge">Active</span>
                                 </div>
+                                <p class="mb-2 text-muted">
+                                    <i class="bi bi-card-text me-1 text-primary"></i> <strong>Reg No:</strong> <span class="badge bg-white text-primary border border-primary-subtle fw-semibold px-2 py-1" id="viewAdmRegNo">-</span>
+                                </p>
+                                <p class="mb-0 text-muted">
+                                    <i class="bi bi-calendar-check me-1 text-primary"></i> <strong>Admission Date:</strong> <span id="viewAdmDate" class="fw-semibold text-secondary">-</span>
+                                </p>
                             </div>
                         </div>
                     </div>
-                    <hr>
-                    <div class="row">
-                        <div class="col-12">
-                            <h6 class="text-primary mb-3"><u>Payment Information</u></h6>
-                            <div class="row mb-3">
-                                <div class="col-md-4">
-                                    <p class="mb-1"><strong>Total Fees:</strong></p>
-                                    <h5 class="text-primary" id="viewAdmTotalFees">₹0.00</h5>
-                                </div>
-                                <div class="col-md-4">
-                                    <p class="mb-1"><strong>Paid Amount:</strong></p>
-                                    <h5 class="text-success" id="viewAdmPaidAmount">₹0.00</h5>
-                                </div>
-                                <div class="col-md-4">
-                                    <p class="mb-1"><strong>Due Amount:</strong></p>
-                                    <h5 class="text-danger" id="viewAdmDueAmount">₹0.00</h5>
-                                </div>
-                            </div>
-                            
-                            <!-- Installments Table -->
-                            <h6 class="small fw-bold mb-2">Installment Schedule</h6>
-                            <div class="table-responsive mb-3">
-                                <table class="table table-sm table-bordered">
-                                    <thead class="bg-light">
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Amount</th>
-                                            <th>Status</th>
-                                            <th>Notes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="viewAdmInstallmentsBody">
-                                        <tr><td colspan="3" class="text-center text-muted">No installments</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
 
-                            <!-- Receipts Table -->
-                            <h6 class="small fw-bold mb-2">Recent Receipts</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered">
-                                    <thead class="bg-light">
-                                        <tr>
-                                            <th>Receipt No.</th>
-                                            <th>Date</th>
-                                            <th>Amount</th>
-                                            <th>Mode</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="viewAdmReceiptsBody">
-                                        <tr><td colspan="4" class="text-center text-muted">No receipts found</td></tr>
-                                    </tbody>
-                                </table>
+                    <!-- Navigation Tabs for Mobile First View -->
+                    <ul class="nav nav-pills nav-fill gap-2 p-1 mb-4" id="viewAdmTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-semibold" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile-pane" type="button" role="tab" aria-controls="profile-pane" aria-selected="true">
+                                <i class="bi bi-person-circle me-2"></i>Profile
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold" id="academics-tab" data-bs-toggle="tab" data-bs-target="#academics-pane" type="button" role="tab" aria-controls="academics-pane" aria-selected="false">
+                                <i class="bi bi-mortarboard me-2"></i>Academics
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold" id="finance-tab" data-bs-toggle="tab" data-bs-target="#finance-pane" type="button" role="tab" aria-controls="finance-pane" aria-selected="false">
+                                <i class="bi bi-credit-card me-2"></i>Fees & Billing
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tabs Content -->
+                    <div class="tab-content" id="viewAdmTabContent">
+                        
+                        <!-- TAB 1: PROFILE DETAILS -->
+                        <div class="tab-pane fade show active" id="profile-pane" role="tabpanel" aria-labelledby="profile-tab" tabindex="0">
+                            <div class="row g-3">
+                                <!-- Personal Info Card -->
+                                <div class="col-12 col-md-6">
+                                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-primary fw-bold mb-4 d-flex align-items-center">
+                                                <i class="bi bi-person-badge-fill me-2 fs-5"></i>Personal Information
+                                            </h5>
+                                            <div class="row g-3">
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Date of Birth</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmBirthDate">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Gender</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmGender">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Aadhaar Card</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmAadhaarNo">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Blood Group</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmBloodGroup">-</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Contact Info Card -->
+                                <div class="col-12 col-md-6">
+                                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-primary fw-bold mb-4 d-flex align-items-center">
+                                                <i class="bi bi-telephone-fill me-2 fs-5"></i>Contact Details
+                                            </h5>
+                                            <div class="row g-3">
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Primary Mobile</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmMobile1">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Secondary Mobile</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmMobile2">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Email Address</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmEmail">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Current Address</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmAddress">-</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Superadmin Audit Info Card (Only visible to SUPER_ADMIN) -->
+                                <div class="col-12" id="superadminAuditSection" style="display: none;">
+                                    <div class="card border-0 shadow-sm rounded-4 mt-3">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-danger fw-bold mb-4 d-flex align-items-center">
+                                                <i class="bi bi-shield-lock-fill me-2 fs-5"></i>Audit Information (Superadmin Only)
+                                            </h5>
+                                            <div class="row g-3">
+                                                <div class="col-12 col-sm-6 col-md-3">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Created By</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmCreatedBy">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6 col-md-3">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Created Time</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmCreatedTime">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6 col-md-3">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Updated By</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmUpdatedBy">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6 col-md-3">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Updated Time</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmUpdatedTime">-</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- TAB 2: ACADEMIC DETAILS -->
+                        <div class="tab-pane fade" id="academics-pane" role="tabpanel" aria-labelledby="academics-tab" tabindex="0">
+                            <div class="row g-3">
+                                <!-- Overview info -->
+                                <div class="col-12">
+                                    <div class="card border-0 shadow-sm rounded-4">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-primary fw-bold mb-3 d-flex align-items-center">
+                                                <i class="bi bi-bookmark-star-fill me-2 fs-5"></i>Program Overview
+                                            </h5>
+                                            <div class="row g-3">
+                                                <div class="col-12 col-md-4">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Enrolled Package</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmPackage">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6 col-md-4">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Academic Year</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmAcademicYear">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6 col-md-4">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Submitted Document</small>
+                                                        <span class="fw-semibold text-dark" id="viewAdmDocument">-</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Courses & Batches tables -->
+                                <div class="col-12 col-md-6">
+                                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-primary fw-bold mb-3 d-flex align-items-center">
+                                                <i class="bi bi-journal-text me-2 fs-5"></i>Selected Courses
+                                            </h5>
+                                            <div id="viewAdmCourses">
+                                                -
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-primary fw-bold mb-3 d-flex align-items-center">
+                                                <i class="bi bi-people-fill me-2 fs-5"></i>Assigned Batches
+                                            </h5>
+                                            <div id="viewAdmBatches">
+                                                -
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Notes -->
+                                <div class="col-12">
+                                    <div class="card border-0 shadow-sm rounded-4">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-primary fw-bold mb-2 d-flex align-items-center">
+                                                <i class="bi bi-sticky-fill me-2 fs-5"></i>Admission Notes
+                                            </h5>
+                                            <div class="bg-light p-3 rounded-3 text-secondary text-break" id="viewAdmNotes" style="min-height: 80px;">
+                                                -
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: FEES & BILLING -->
+                        <div class="tab-pane fade" id="finance-pane" role="tabpanel" aria-labelledby="finance-tab" tabindex="0">
+                            <div class="row g-3">
+                                <!-- Fee Summary Cards -->
+                                <div class="col-12">
+                                    <div class="row g-3">
+                                        <div class="col-12 col-sm-6 col-md-3">
+                                            <div class="card border-0 shadow-sm rounded-4 bg-primary-subtle text-primary h-100">
+                                                <div class="card-body p-3 text-center">
+                                                    <div class="rounded-circle bg-white d-inline-flex p-2 mb-2 shadow-sm text-primary">
+                                                        <i class="bi bi-cash-stack fs-5"></i>
+                                                    </div>
+                                                    <small class="text-uppercase fw-semibold d-block text-primary-emphasis mb-1" style="font-size:0.7rem;">Course Fees</small>
+                                                    <h4 class="fw-bold mb-0 text-primary" id="viewAdmTotalFees">₹0.00</h4>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-sm-6 col-md-3">
+                                            <div class="card border-0 shadow-sm rounded-4 bg-warning-subtle text-warning h-100">
+                                                <div class="card-body p-3 text-center">
+                                                    <div class="rounded-circle bg-white d-inline-flex p-2 mb-2 shadow-sm text-warning">
+                                                        <i class="bi bi-tag-fill fs-5"></i>
+                                                    </div>
+                                                    <small class="text-uppercase fw-semibold d-block text-warning-emphasis mb-1" style="font-size:0.7rem;">Discount</small>
+                                                    <h4 class="fw-bold mb-0 text-warning" id="viewAdmDiscount">₹0.00</h4>
+                                                    <small class="text-muted" id="viewAdmDiscountPct" style="font-size:0.7rem;"></small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-sm-6 col-md-3">
+                                            <div class="card border-0 shadow-sm rounded-4 bg-success-subtle text-success h-100">
+                                                <div class="card-body p-3 text-center">
+                                                    <div class="rounded-circle bg-white d-inline-flex p-2 mb-2 shadow-sm text-success">
+                                                        <i class="bi bi-wallet2 fs-5"></i>
+                                                    </div>
+                                                    <small class="text-uppercase fw-semibold d-block text-success-emphasis mb-1" style="font-size:0.7rem;">Paid Amount</small>
+                                                    <h4 class="fw-bold mb-0 text-success" id="viewAdmPaidAmount">₹0.00</h4>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-sm-6 col-md-3">
+                                            <div class="card border-0 shadow-sm rounded-4 bg-danger-subtle text-danger h-100">
+                                                <div class="card-body p-3 text-center">
+                                                    <div class="rounded-circle bg-white d-inline-flex p-2 mb-2 shadow-sm text-danger">
+                                                        <i class="bi bi-exclamation-octagon-fill fs-5"></i>
+                                                    </div>
+                                                    <small class="text-uppercase fw-semibold d-block text-danger-emphasis mb-1" style="font-size:0.7rem;">Due Amount</small>
+                                                    <h4 class="fw-bold mb-0 text-danger" id="viewAdmDueAmount">₹0.00</h4>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Schedules and receipts -->
+                                <div class="col-12 col-md-6">
+                                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-primary fw-bold mb-3 d-flex align-items-center">
+                                                <i class="bi bi-calendar-range-fill me-2 fs-5"></i>Installment Schedule
+                                            </h5>
+                                            <div class="table-responsive">
+                                                <table class="table table-hover align-middle mb-0">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Date</th>
+                                                            <th>Amount</th>
+                                                            <th>Status</th>
+                                                            <th>Notes</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="viewAdmInstallmentsBody">
+                                                        <tr><td colspan="4" class="text-center text-muted">No installments found</td></tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-primary fw-bold mb-3 d-flex align-items-center">
+                                                <i class="bi bi-receipt-cutoff me-2 fs-5"></i>Recent Receipts
+                                            </h5>
+                                            <div class="table-responsive">
+                                                <table class="table table-hover align-middle mb-0">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Receipt No.</th>
+                                                            <th>Date</th>
+                                                            <th>Amount</th>
+                                                            <th>Mode</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="viewAdmReceiptsBody">
+                                                        <tr><td colspan="4" class="text-center text-muted">No receipts found</td></tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -806,52 +1097,60 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Total Amount</label>
-                            <input type="text" class="form-control" id="feeInstTotalAmount" readonly>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6 col-md-3">
+                            <label class="form-label form-label-sm">Total Amount</label>
+                            <input type="text" class="form-control form-control-sm" id="feeInstTotalAmount" readonly>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Total Inst. Amount</label>
-                            <input type="text" class="form-control" id="feeInstTotalInstAmount" readonly>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label form-label-sm">Total Inst. Amount</label>
+                            <input type="text" class="form-control form-control-sm" id="feeInstTotalInstAmount" readonly>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Inst. Start Date <span class="required">*</span></label>
-                            <input type="date" class="form-control" id="feeInstStartDate" required>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label form-label-sm">Start Date <span class="required">*</span></label>
+                            <input type="date" class="form-control form-control-sm" id="feeInstStartDate" required>
                         </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label">No. of Inst.</label>
-                            <input type="number" class="form-control" id="feeInstNoOfInstallments" min="1">
+                        <div class="col-6 col-md-3">
+                            <label class="form-label form-label-sm">2nd Inst. Date</label>
+                            <input type="date" class="form-control form-control-sm" id="feeInstSecondDate">
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Days</label>
-                            <input type="number" class="form-control" id="feeInstDays" min="1">
+                        <div class="col-6 col-md-3">
+                            <label class="form-label form-label-sm">No. of Installments</label>
+                            <input type="number" class="form-control form-control-sm" id="feeInstNoOfInstallments" min="1">
                         </div>
-                        <div class="col-md-4 d-flex align-items-end">
-                            <button type="button" class="btn btn-primary w-100" onclick="generateFeeInstallments()">
-                                <i class="bi bi-calculator me-2"></i>Generate
+                        <div class="col-6 col-md-3">
+                            <label class="form-label form-label-sm">Days Between</label>
+                            <input type="number" class="form-control form-control-sm" id="feeInstDays" min="1">
+                        </div>
+                        <div class="col-12 col-md-6 d-flex align-items-end">
+                            <button type="button" class="btn btn-primary btn-sm w-100" onclick="generateFeeInstallments()">
+                                <i class="bi bi-calculator me-2"></i>Generate Installments
                             </button>
                         </div>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-bordered installment-table">
-                            <thead>
+                        <table class="table table-bordered table-sm installment-table">
+                            <thead class="table-light">
                             <tr>
                                 <th>DATE</th>
-                                <th>AMOUNT</th>
+                                <th>AMOUNT (₹)</th>
                                 <th>STATUS</th>
                                 <th>NOTES</th>
-                                <th style="width: 100px;">ACTIONS</th>
+                                <th style="width: 80px;">ACTION</th>
                             </tr>
                             </thead>
                             <tbody id="feeInstallmentsBody">
                             <tr>
-                                <td colspan="4" class="text-center text-muted">No data available in table</td>
+                                <td colspan="5" class="text-center text-muted">No installments found</td>
                             </tr>
                             </tbody>
                         </table>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-success" id="btnFeeAddInstallment">
+                            <i class="bi bi-plus-circle me-1"></i>Add Installment Row
+                        </button>
+                        <small class="text-muted">Total: <strong id="feeInstRowTotal">₹0.00</strong></small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1190,7 +1489,7 @@
         </div>
     </div>
 
-    <script th:src="@{/assets/js/admission.js}" src="/assets/js/admission.js" defer></script>
+    <script th:src="@{/assets/js/admission.js(v='1.0.8')}" src="/assets/js/admission.js?v=1.0.8" defer></script>
 
     <script layout:fragment="page-scripts" th:if="${requiresBootstrapInit}">
         if (typeof window.reinitBootstrapDropdowns === 'function') {

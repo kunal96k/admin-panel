@@ -7,6 +7,12 @@ server:
   forward-headers-strategy: framework
   address: 0.0.0.0
 
+  servlet:
+    session:
+      cookie:
+        secure: false
+        same-site: lax
+
   error:
     include-message: never
     include-binding-errors: never
@@ -23,9 +29,8 @@ server:
   http2:
     enabled: true
 
-  # : Increase max HTTP header and body size
   max-http-header-size: 48KB
-  
+
   tomcat:
     max-swallow-size: 30MB
     max-http-post-size: 30MB
@@ -41,7 +46,7 @@ spring:
       on-profile: prod
 
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:tts_database}?useSSL=true&requireSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:tts_crm}?useSSL=true&requireSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -72,7 +77,6 @@ spring:
           json_format_mapper: jackson
         generate_statistics: false
 
-  # : Jackson JSON configuration for large payloads
   jackson:
     parser:
       allow-unquoted-field-names: false
@@ -85,7 +89,6 @@ spring:
       fail-on-ignored-properties: false
     default-property-inclusion: non_null
 
-  # : Increase max request size for large PDFs
   servlet:
     multipart:
       enabled: true
@@ -108,7 +111,6 @@ spring:
   security:
     require-ssl: false
 
-  # : Mail configuration
   mail:
     host: smtp.gmail.com
     port: 587
@@ -137,7 +139,7 @@ app:
 
   security:
     cors:
-      allowed-origins: ${CORS_ALLOWED_ORIGINS:https://team.ttsnashik.com,https://team.ttsnashik.com}
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
       allowed-methods: "GET,POST,PUT,DELETE,OPTIONS,PATCH"
       allowed-headers: "*"
       max-age: 3600
@@ -155,7 +157,7 @@ logging:
     name: logs/sms-application.log
     max-size: 50MB
     max-history: 90
-  
+
   pattern:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

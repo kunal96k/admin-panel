@@ -122,6 +122,10 @@ public class Admission {
     @Builder.Default
     private List<String> courses = new ArrayList<>();
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "course_fees_details", columnDefinition = "json")
+    private String courseFeesDetails;
+
     @Column(name = "total_payable_fees")
     private Double totalPayableFees;
 

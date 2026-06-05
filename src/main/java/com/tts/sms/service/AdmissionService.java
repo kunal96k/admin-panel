@@ -10,10 +10,12 @@ import com.tts.sms.model.FeeInstallment;
 import com.tts.sms.model.Fees;
 import com.tts.sms.model.Package;
 import com.tts.sms.repository.*;
+import com.tts.sms.specification.AdmissionSpecifications;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,12 +53,22 @@ public class AdmissionService {
     private static volatile boolean counterInitialized = false;
 
     /**
-     * Get all admissions with fees data for export
+     * Get admissions for export (with fees data) filtered by criteria
      */
-    public List<AdmissionExportDTO> getAllAdmissionsForExport() {
-        log.info("Fetching all admissions for export with fees data");
+    public List<AdmissionExportDTO> getAllAdmissionsForExport(AdmissionSearchDTO searchDTO) {
+        log.info("Fetching admissions for export with fees data - criteria: {}", searchDTO);
 
-        List<Admission> admissions = admissionRepository.findAllByOrderByCreatedAtDesc();
+        List<Admission> admissions;
+        if (searchDTO != null && (searchDTO.getSearchTerm() != null || searchDTO.getStatus() != null ||
+                searchDTO.getStudentCategory() != null || searchDTO.getCourse() != null ||
+                searchDTO.getBatch() != null || searchDTO.getAcademicYear() != null ||
+                searchDTO.getAdmissionDateFrom() != null || searchDTO.getAdmissionDateTo() != null)) {
+            Specification<Admission> spec = AdmissionSpecifications.getSearchSpecification(searchDTO);
+            Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+            admissions = admissionRepository.findAll(spec, sort);
+        } else {
+            admissions = admissionRepository.findAllByOrderByCreatedAtDesc();
+        }
 
         if (admissions.isEmpty()) {
             return Collections.emptyList();
@@ -274,26 +286,29 @@ public class AdmissionService {
     public Page<AdmissionResponseDTO> searchAdmissions(AdmissionSearchDTO searchDTO) {
         log.debug("Searching admissions with criteria: {}", searchDTO);
 
+        String sortByField = searchDTO.getSortBy();
+        if (sortByField == null || sortByField.trim().isEmpty()) {
+            sortByField = "createdAt";
+        } else if ("admission_date".equalsIgnoreCase(sortByField)) {
+            sortByField = "admissionDate";
+        } else if ("created_at".equalsIgnoreCase(sortByField)) {
+            sortByField = "createdAt";
+        } else if ("registration_number".equalsIgnoreCase(sortByField)) {
+            sortByField = "registrationNumber";
+        } else if ("mobile_primary".equalsIgnoreCase(sortByField)) {
+            sortByField = "mobilePrimary";
+        }
+
         Sort sort = Sort.by(
                 "DESC".equalsIgnoreCase(searchDTO.getSortDirection())
                         ? Sort.Direction.DESC
                         : Sort.Direction.ASC,
-                convertToSnakeCase(searchDTO.getSortBy()));
+                sortByField);
 
         Pageable pageable = PageRequest.of(searchDTO.getPage(), searchDTO.getSize(), sort);
 
-        Page<Admission> results = admissionRepository.advancedSearch(
-                searchDTO.getSearchTerm(), searchDTO.getSearchTerm(),
-                searchDTO.getSearchTerm(), searchDTO.getSearchTerm(),
-                searchDTO.getSearchTerm(), searchDTO.getSearchTerm(),
-                searchDTO.getStatus(), searchDTO.getStatus(),
-                searchDTO.getCourse(), searchDTO.getCourse(),
-                searchDTO.getBatch(), searchDTO.getBatch(),
-                searchDTO.getAcademicYear(), searchDTO.getAcademicYear(),
-                searchDTO.getAdmissionDateFrom(), searchDTO.getAdmissionDateFrom(),
-                searchDTO.getAdmissionDateTo(), searchDTO.getAdmissionDateTo(),
-                searchDTO.getStudentCategory(), searchDTO.getStudentCategory(),
-                pageable);
+        Specification<Admission> spec = AdmissionSpecifications.getSearchSpecification(searchDTO);
+        Page<Admission> results = admissionRepository.findAll(spec, pageable);
 
         log.info("Search returned {} results", results.getTotalElements());
         return mapToResponseDTOBatch(results);
@@ -432,7 +447,8 @@ public class AdmissionService {
         }
 
         admission.setImportSource(importSource);
-        admission.setCreatedBy("SYSTEM");
+        admission.setCreatedBy(getCurrentLoggedInUser());
+        admission.setUpdatedBy(getCurrentLoggedInUser());
 
         // SET CATEGORY BEFORE FIRST SAVE
         LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
@@ -480,12 +496,19 @@ public class AdmissionService {
                     savedAdmission.getRegistrationNumber());
         }
 
-        // Generate fee installments if config provided (only for new admissions)
-        if (isNewAdmission && requestDTO.getInstallmentConfig() != null) {
-            generateInstallments(
-                    savedAdmission.getRegistrationNumber(),
-                    requestDTO.getInstallmentConfig(),
-                    requestDTO.getTotalReceivableFees());
+        // Generate fee installments if config/custom installments provided (only for new admissions)
+        if (isNewAdmission) {
+            if (requestDTO.getCustomInstallments() != null && !requestDTO.getCustomInstallments().isEmpty()) {
+                saveCustomInstallments(
+                        savedAdmission.getRegistrationNumber(),
+                        requestDTO.getCustomInstallments(),
+                        requestDTO.getTotalReceivableFees());
+            } else if (requestDTO.getInstallmentConfig() != null) {
+                generateInstallments(
+                        savedAdmission.getRegistrationNumber(),
+                        requestDTO.getInstallmentConfig(),
+                        requestDTO.getTotalReceivableFees());
+            }
         }
 
         return toResponseDTOWithInstallments(savedAdmission);
@@ -534,7 +557,8 @@ public class AdmissionService {
                     .numberOfInstallments(null)
                     .daysBetweenInstallments(null)
                     .totalInstallmentAmount(null)
-                    .createdBy("SYSTEM")
+                    .createdBy(getCurrentLoggedInUser())
+                    .updatedBy(getCurrentLoggedInUser())
                     .build();
 
             Fees savedFees = feesRepository.save(fees);
@@ -573,10 +597,23 @@ public class AdmissionService {
             }
         }
 
-        existingAdmission.setUpdatedBy("SYSTEM");
+        existingAdmission.setUpdatedBy(getCurrentLoggedInUser());
 
         Admission updated = admissionRepository.save(existingAdmission);
         log.info("Updated admission with id: {}", id);
+
+        // Update fee installments if config/custom installments provided
+        if (requestDTO.getCustomInstallments() != null && !requestDTO.getCustomInstallments().isEmpty()) {
+            saveCustomInstallments(
+                    updated.getRegistrationNumber(),
+                    requestDTO.getCustomInstallments(),
+                    updated.getTotalReceivableFees());
+        } else if (requestDTO.getInstallmentConfig() != null) {
+            generateInstallments(
+                    updated.getRegistrationNumber(),
+                    requestDTO.getInstallmentConfig(),
+                    updated.getTotalReceivableFees());
+        }
 
         // SYNC WITH FEES MANAGER
         updateFeesRecord(updated);
@@ -634,7 +671,7 @@ public class AdmissionService {
         admission.setNotes(
                 (admission.getNotes() != null ? admission.getNotes() : "") + transferNote);
 
-        admission.setUpdatedBy("SYSTEM");
+        admission.setUpdatedBy(getCurrentLoggedInUser());
 
         Admission transferred = admissionRepository.save(admission);
         log.info("Transferred admission with id: {} to academic year: {}",
@@ -658,7 +695,7 @@ public class AdmissionService {
 
         admission.setIsDeleted(true);
         admission.setDeletedAt(java.time.LocalDateTime.now());
-        admission.setUpdatedBy("SYSTEM");
+        admission.setUpdatedBy(getCurrentLoggedInUser());
 
         admissionRepository.save(admission);
 
@@ -784,6 +821,29 @@ public class AdmissionService {
 
     // ==================== HELPER METHODS ====================
 
+    private String getCurrentLoggedInUser() {
+        try {
+            org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && 
+                !(authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof com.tts.sms.model.User) {
+                    com.tts.sms.model.User user = (com.tts.sms.model.User) principal;
+                    if (user.getEmployee() != null && user.getEmployee().getEmployeeName() != null) {
+                        return user.getEmployee().getEmployeeName();
+                    }
+                    return user.getUsername();
+                } else if (principal != null) {
+                    return principal.toString();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get current logged in user: {}", e.getMessage());
+        }
+        return "SYSTEM";
+    }
+
     /**
      * Update Fees record when admission is updated
      */
@@ -800,7 +860,7 @@ public class AdmissionService {
                         fees.setTotalFees(
                                 admission.getTotalReceivableFees() != null ? admission.getTotalReceivableFees() : 0.0);
                         fees.setCourse(courseName);
-                        fees.setUpdatedBy("SYSTEM");
+                        fees.setUpdatedBy(getCurrentLoggedInUser());
 
                         // Recalculate fees due
                         Double feesDue = fees.getTotalFees() - fees.getTotalPaid() + fees.getFeesRefund();
@@ -1248,6 +1308,74 @@ public class AdmissionService {
                 });
 
         log.info(" Generated and saved {} installments with config", saved.size());
+
+        return saved.stream()
+                .map(admissionMapper::toInstallmentDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<FeeInstallmentDTO> saveCustomInstallments(String registrationNumber,
+            List<FeeInstallmentCreateDTO> customInstallments,
+            Double totalAmount) {
+        log.debug("Saving {} custom installments for regNo: {}",
+                customInstallments.size(), registrationNumber);
+
+        // Delete existing installments (except refund ones)
+        List<FeeInstallment> existing = feeInstallmentRepository.findByRegistrationNumberOrderByDueDateAsc(registrationNumber);
+        for (FeeInstallment inst : existing) {
+            if (!"Refund".equalsIgnoreCase(inst.getStatus())) {
+                feeInstallmentRepository.delete(inst);
+            }
+        }
+        feeInstallmentRepository.flush();
+
+        List<FeeInstallment> installments = new ArrayList<>();
+        LocalDate firstDueDate = null;
+
+        for (FeeInstallmentCreateDTO dto : customInstallments) {
+            if (firstDueDate == null || dto.getDueDate().isBefore(firstDueDate)) {
+                firstDueDate = dto.getDueDate();
+            }
+
+            FeeInstallment installment = FeeInstallment.builder()
+                    .registrationNumber(registrationNumber)
+                    .installmentNumber(dto.getInstallmentNumber())
+                    .dueDate(dto.getDueDate())
+                    .amount(dto.getAmount())
+                    .status(dto.getStatus())
+                    .totalAmount(totalAmount)
+                    .totalInstallmentAmount(totalAmount)
+                    .installmentStartDate(dto.getDueDate()) // Temporary fallback, updated below
+                    .numberOfInstallments(customInstallments.size())
+                    .daysBetweenInstallments(30) // Fallback default
+                    .createdBy("SYSTEM")
+                    .build();
+
+            installments.add(installment);
+        }
+
+        // Set installmentStartDate on all to the first due date found
+        if (firstDueDate != null) {
+            for (FeeInstallment inst : installments) {
+                inst.setInstallmentStartDate(firstDueDate);
+            }
+        }
+
+        List<FeeInstallment> saved = feeInstallmentRepository.saveAll(installments);
+        feeInstallmentRepository.flush();
+
+        // Update Fees table with installment config
+        feesRepository.findByRegistrationNumberAndIsDeletedFalse(registrationNumber)
+                .ifPresent(fees -> {
+                    fees.setInstallmentStartDate(saved.isEmpty() ? null : saved.get(0).getInstallmentStartDate());
+                    fees.setNumberOfInstallments(saved.size());
+                    fees.setTotalInstallmentAmount(totalAmount);
+                    fees.setDueDate(saved.isEmpty() ? null : saved.get(0).getDueDate());
+                    feesRepository.save(fees);
+                });
+
+        log.info(" Saved {} custom installments", saved.size());
 
         return saved.stream()
                 .map(admissionMapper::toInstallmentDTO)

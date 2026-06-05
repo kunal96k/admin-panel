@@ -16,11 +16,14 @@
        let currentSearchTerm = '';
        let currentStudentCategory = '';
        let currentCourseFilter = '';
+       let currentFromDate = '';
+       let currentToDate = '';
 
        let currentPage = 0;
        let pageSize = 25;
        let totalPages = 0;
        let totalElements = 0;
+       let exportDataTable = null;
 
    function getCsrfToken() {
        // Try cookie first (for XSRF-TOKEN)
@@ -108,6 +111,20 @@
        // Generate installments
        document.getElementById('btnGenerateInstallments')?.addEventListener('click', generateInstallments);
 
+       // ── TAB 5: Date/Days auto-calculator ──
+       document.getElementById('instStartDate')?.addEventListener('change', calcInstDaysFromDates);
+       document.getElementById('instSecondDate')?.addEventListener('change', calcInstDaysFromDates);
+       document.getElementById('instDays')?.addEventListener('input', calcInstSecondDateFromDays);
+
+       // ── Fee Modal: Date/Days auto-calculator ──
+       document.getElementById('feeInstStartDate')?.addEventListener('change', calcFeeInstDaysFromDates);
+       document.getElementById('feeInstSecondDate')?.addEventListener('change', calcFeeInstDaysFromDates);
+       document.getElementById('feeInstDays')?.addEventListener('input', calcFeeInstSecondDateFromDays);
+
+       // ── Add Installment Row buttons ──
+       document.getElementById('btnAddInstallment')?.addEventListener('click', addInstallmentRow);
+       document.getElementById('btnFeeAddInstallment')?.addEventListener('click', addFeeInstallmentRow);
+
         // Search
         document.getElementById('searchInput')?.addEventListener('input', debounce(searchAdmissions, 800));
 
@@ -117,6 +134,13 @@
        // Course Filter
        document.getElementById('courseFilter')?.addEventListener('change', searchAdmissions);
        document.getElementById('courseSearchInput')?.addEventListener('input', filterCourseList);
+
+       // Date Filters
+       document.getElementById('fromDateFilter')?.addEventListener('change', searchAdmissions);
+       document.getElementById('toDateFilter')?.addEventListener('change', searchAdmissions);
+
+       // Clear Filters
+       document.getElementById('btnClearFilters')?.addEventListener('click', clearAllFilters);
 
        // Package selection
        document.getElementById('admPackage')?.addEventListener('change', handlePackageChange);
@@ -128,6 +152,182 @@
        document.getElementById('admDiscountPercent')?.addEventListener('input', calculateDiscount);
        document.getElementById('admDiscountAmount')?.addEventListener('input', calculateDiscountFromAmount);
    }
+
+   // ── Date/Days calculators for TAB 5 ──
+   function calcInstDaysFromDates() {
+       const start = document.getElementById('instStartDate')?.value;
+       const second = document.getElementById('instSecondDate')?.value;
+       if (start && second) {
+           const d1 = new Date(start);
+           const d2 = new Date(second);
+           const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+           if (diff > 0) {
+               const daysEl = document.getElementById('instDays');
+               if (daysEl) daysEl.value = diff;
+           }
+       }
+   }
+   function calcInstSecondDateFromDays() {
+       const start = document.getElementById('instStartDate')?.value;
+       const days = parseInt(document.getElementById('instDays')?.value);
+       if (start && days > 0) {
+           const d = new Date(start);
+           d.setDate(d.getDate() + days);
+           const secondEl = document.getElementById('instSecondDate');
+           if (secondEl) secondEl.value = d.toISOString().split('T')[0];
+       }
+   }
+
+   // ── Date/Days calculators for Fee Modal ──
+   function calcFeeInstDaysFromDates() {
+       const start = document.getElementById('feeInstStartDate')?.value;
+       const second = document.getElementById('feeInstSecondDate')?.value;
+       if (start && second) {
+           const d1 = new Date(start);
+           const d2 = new Date(second);
+           const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+           if (diff > 0) {
+               const daysEl = document.getElementById('feeInstDays');
+               if (daysEl) daysEl.value = diff;
+           }
+       }
+   }
+   function calcFeeInstSecondDateFromDays() {
+       const start = document.getElementById('feeInstStartDate')?.value;
+       const days = parseInt(document.getElementById('feeInstDays')?.value);
+       if (start && days > 0) {
+           const d = new Date(start);
+           d.setDate(d.getDate() + days);
+           const secondEl = document.getElementById('feeInstSecondDate');
+           if (secondEl) secondEl.value = d.toISOString().split('T')[0];
+       }
+   }
+
+   // ── Recalculate installment row total (Tab 5) ──
+   function recalculateInstallmentTotal() {
+       const tbody = document.getElementById('installmentsBody');
+       if (!tbody) return;
+       let sum = 0;
+       tbody.querySelectorAll('input[type="number"]').forEach(inp => {
+           sum += parseFloat(inp.value) || 0;
+       });
+       const totalEl = document.getElementById('instRowTotal');
+       const instTotalEl = document.getElementById('instTotalInstAmount');
+       if (totalEl) totalEl.textContent = '₹' + sum.toFixed(2);
+       if (instTotalEl) instTotalEl.value = sum.toFixed(2);
+   }
+
+   // ── Recalculate fee installment row total (Fee Modal) ──
+   function recalculateFeeInstallmentTotal() {
+       const tbody = document.getElementById('feeInstallmentsBody');
+       if (!tbody) return;
+       let sum = 0;
+       tbody.querySelectorAll('input[type="number"]').forEach(inp => {
+           sum += parseFloat(inp.value) || 0;
+       });
+       const totalEl = document.getElementById('feeInstRowTotal');
+       const instTotalEl = document.getElementById('feeInstTotalInstAmount');
+       if (totalEl) totalEl.textContent = '₹' + sum.toFixed(2);
+       if (instTotalEl) instTotalEl.value = sum.toFixed(2);
+   }
+
+   // ── Build a new editable installment row for Tab 5 ──
+   function buildInstallmentRow(date, amount, status, rowIndex) {
+       const tr = document.createElement('tr');
+       tr.innerHTML = `
+           <td><input type="date" class="form-control form-control-sm inst-date" value="${date || ''}"></td>
+           <td><input type="number" class="form-control form-control-sm inst-amount" value="${amount || ''}" step="0.01" min="0" placeholder="0.00"></td>
+           <td>
+               <select class="form-select form-select-sm inst-status">
+                   <option value="Pending"${status === 'Pending' ? ' selected' : ''}>Pending</option>
+                   <option value="Paid"${status === 'Paid' ? ' selected' : ''}>Paid</option>
+                   <option value="Overdue"${status === 'Overdue' ? ' selected' : ''}>Overdue</option>
+                   <option value="Waived"${status === 'Waived' ? ' selected' : ''}>Waived</option>
+               </select>
+           </td>
+           <td class="text-center">
+               <button type="button" class="btn btn-sm btn-outline-danger" onclick="window.removeInstallmentRow(this)">
+                   <i class="bi bi-trash"></i>
+               </button>
+           </td>
+       `;
+       tr.querySelector('.inst-amount').addEventListener('input', recalculateInstallmentTotal);
+       return tr;
+   }
+
+   // ── Add Installment Row (Tab 5) ──
+   function addInstallmentRow() {
+       const tbody = document.getElementById('installmentsBody');
+       if (!tbody) return;
+       // Remove the "no installments" placeholder row if present
+       const placeholder = tbody.querySelector('tr td[colspan]');
+       if (placeholder) placeholder.closest('tr').remove();
+       tbody.appendChild(buildInstallmentRow('', '', 'Pending'));
+       recalculateInstallmentTotal();
+   }
+
+   window.removeInstallmentRow = function(btn) {
+       btn.closest('tr').remove();
+       recalculateInstallmentTotal();
+       const tbody = document.getElementById('installmentsBody');
+       if (tbody && tbody.querySelectorAll('tr').length === 0) {
+           tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments generated</td></tr>';
+           const totalEl = document.getElementById('instRowTotal');
+           const instTotalEl = document.getElementById('instTotalInstAmount');
+           if (totalEl) totalEl.textContent = '₹0.00';
+           if (instTotalEl) instTotalEl.value = '0';
+       }
+   };
+
+   // ── Build a new editable fee installment row for Fee Modal ──
+   function buildFeeInstallmentRow(date, amount, status, notes, instId) {
+       const tr = document.createElement('tr');
+       tr.dataset.installmentId = instId || '';
+       tr.innerHTML = `
+           <td><input type="date" class="form-control form-control-sm fee-inst-date" value="${date || ''}"></td>
+           <td><input type="number" class="form-control form-control-sm fee-inst-amount" value="${amount || ''}" step="0.01" min="0" placeholder="0.00"></td>
+           <td>
+               <select class="form-select form-select-sm fee-inst-status">
+                   <option value="Pending"${status === 'Pending' ? ' selected' : ''}>Pending</option>
+                   <option value="Paid"${status === 'Paid' ? ' selected' : ''}>Paid</option>
+                   <option value="Partial"${status === 'Partial' ? ' selected' : ''}>Partial</option>
+                   <option value="Overdue"${status === 'Overdue' ? ' selected' : ''}>Overdue</option>
+                   <option value="Waived"${status === 'Waived' ? ' selected' : ''}>Waived</option>
+               </select>
+           </td>
+           <td><input type="text" class="form-control form-control-sm fee-inst-notes" value="${(notes||'').replace(/"/g,'&quot;')}" placeholder="Notes..."></td>
+           <td class="text-center">
+               <button type="button" class="btn btn-sm btn-outline-danger" onclick="window.removeFeeInstallmentRow(this)">
+                   <i class="bi bi-trash"></i>
+               </button>
+           </td>
+       `;
+       tr.querySelector('.fee-inst-amount').addEventListener('input', recalculateFeeInstallmentTotal);
+       return tr;
+   }
+
+   // ── Add Fee Installment Row (Fee Modal) ──
+   function addFeeInstallmentRow() {
+       const tbody = document.getElementById('feeInstallmentsBody');
+       if (!tbody) return;
+       const placeholder = tbody.querySelector('tr td[colspan]');
+       if (placeholder) placeholder.closest('tr').remove();
+       tbody.appendChild(buildFeeInstallmentRow('', '', 'Pending', ''));
+       recalculateFeeInstallmentTotal();
+   }
+
+   window.removeFeeInstallmentRow = function(btn) {
+       btn.closest('tr').remove();
+       recalculateFeeInstallmentTotal();
+       const tbody = document.getElementById('feeInstallmentsBody');
+       if (tbody && tbody.querySelectorAll('tr').length === 0) {
+           tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No installments found</td></tr>';
+           const totalEl = document.getElementById('feeInstRowTotal');
+           const instTotalEl = document.getElementById('feeInstTotalInstAmount');
+           if (totalEl) totalEl.textContent = '₹0.00';
+           if (instTotalEl) instTotalEl.value = '0';
+       }
+   };
 
    function navigateNext() {
            if (currentTab < totalTabs) {
@@ -194,10 +394,12 @@ async function loadAdmissions(page = 0, size = 25) {
         const hasSearch = !!(currentSearchTerm && currentSearchTerm.trim());
         const hasStudentCategory = !!(currentStudentCategory && currentStudentCategory.trim());
         const hasCourse = !!(currentCourseFilter && currentCourseFilter.trim());
+        const hasFromDate = !!(currentFromDate && currentFromDate.trim());
+        const hasToDate = !!(currentToDate && currentToDate.trim());
 
         let response;
 
-        if (hasSearch || hasStudentCategory || hasCourse) {
+        if (hasSearch || hasStudentCategory || hasCourse || hasFromDate || hasToDate) {
             const csrfToken = getCsrfToken();
             const headers = {
                 'Accept': 'application/json',
@@ -209,6 +411,8 @@ async function loadAdmissions(page = 0, size = 25) {
                 searchTerm: (currentSearchTerm || '').trim() || null,
                 studentCategory: (currentStudentCategory || '').trim() || null,
                 course: (currentCourseFilter || '').trim() || null,
+                admissionDateFrom: (currentFromDate || '').trim() || null,
+                admissionDateTo: (currentToDate || '').trim() || null,
                 page: page,
                 size: size,
                 sortBy: 'createdAt',
@@ -612,6 +816,9 @@ async function loadAdmissionForEdit(id) {
         const modalTitle = document.getElementById('admissionModalTitle');
         if (modalTitle) modalTitle.textContent = 'Update Admission';
 
+        const updateAlert = document.getElementById('admissionUpdateAlert');
+        if (updateAlert) updateAlert.style.display = 'block';
+
         const finishBtn = document.getElementById('btnFinish');
         if (finishBtn) {
             finishBtn.dataset.admissionId = id;
@@ -788,6 +995,10 @@ async function openNewAdmissionModal() {
     setValue('admAdmissionDate', today);
     setValue('instStartDate', today);
     
+    // Hide update alert
+    const updateAlert = document.getElementById('admissionUpdateAlert');
+    if (updateAlert) updateAlert.style.display = 'none';
+
     updateNavigationButtons();
     updateProgress(16.66);
     const modal = new bootstrap.Modal(document.getElementById('admissionModal'));
@@ -924,80 +1135,104 @@ function showErrorWithDetails(title, message, technicalError = null) {
              const matchedCourses = [];
              const seenCourseIds = new Set();
 
-             data.coursesList.forEach((courseName, index) => {
-                 const raw = String(courseName || '').trim();
-                 if (!raw) return;
+             let savedDetails = [];
+             if (data.courseFeesDetails) {
+                 try {
+                     savedDetails = JSON.parse(data.courseFeesDetails);
+                 } catch (e) {
+                     console.error('Error parsing courseFeesDetails:', e);
+                 }
+             }
 
-                 const normalizedRaw = raw.toLowerCase();
-                 const exact = coursesMaster.find(c => String(c.courseName || '').trim().toLowerCase() === normalizedRaw);
-
-                 if (exact) {
-                     if (!seenCourseIds.has(exact.id)) {
+             if (savedDetails && savedDetails.length > 0) {
+                 savedDetails.forEach((detail, index) => {
+                     const exact = coursesMaster.find(c => String(c.courseName || '').trim().toLowerCase() === String(detail.name || '').trim().toLowerCase());
+                     const courseId = exact ? exact.id : (index + 1);
+                     if (!seenCourseIds.has(courseId)) {
                          matchedCourses.push({
-                             id: exact.id,
-                             name: String(exact.courseName || raw).trim(),
-                             price: parseFloat(exact.courseFees) || 0
+                             id: courseId,
+                             name: detail.name,
+                             price: parseFloat(detail.price) || 0
                          });
-                         seenCourseIds.add(exact.id);
+                         seenCourseIds.add(courseId);
                      }
-                     return;
-                 }
-
-                 // Try splitting by comma/pipe
-                 const parts = raw
-                     .split(/\s*,\s*|\s*\|\s*/g)
-                     .map(p => p.trim())
-                     .filter(Boolean);
-
-                 if (parts.length > 1) {
-                     let added = false;
-                     parts.forEach(part => {
-                         const partNorm = part.toLowerCase();
-                         const partMatch = coursesMaster.find(c => String(c.courseName || '').trim().toLowerCase() === partNorm);
-                         if (partMatch && !seenCourseIds.has(partMatch.id)) {
-                             matchedCourses.push({
-                                 id: partMatch.id,
-                                 name: String(partMatch.courseName || part).trim(),
-                                 price: parseFloat(partMatch.courseFees) || 0
-                             });
-                             seenCourseIds.add(partMatch.id);
-                             added = true;
-                         }
-                     });
-
-                     if (added) return;
-                 }
-
-                 // Fallback: substring matches (handles strings like "FULL STACK FRONTEND PYTHON DJANGO")
-                 const substringMatches = coursesMaster
-                     .filter(c => {
-                         const name = String(c.courseName || '').trim();
-                         if (!name) return false;
-                         return normalizedRaw.includes(name.toLowerCase());
-                     })
-                     .sort((a, b) => String(b.courseName || '').length - String(a.courseName || '').length);
-
-                 if (substringMatches.length > 0) {
-                     substringMatches.forEach(m => {
-                         if (!seenCourseIds.has(m.id)) {
-                             matchedCourses.push({
-                                 id: m.id,
-                                 name: String(m.courseName || '').trim(),
-                                 price: parseFloat(m.courseFees) || 0
-                             });
-                             seenCourseIds.add(m.id);
-                         }
-                     });
-                     return;
-                 }
-
-                 // Nothing matched
-                 matchedCourses.push({
-                     id: index + 1,
-                     name: raw,
-                     price: amountPerCourse || 0
                  });
-             });
+             } else {
+                 data.coursesList.forEach((courseName, index) => {
+                     const raw = String(courseName || '').trim();
+                     if (!raw) return;
+
+                     const normalizedRaw = raw.toLowerCase();
+                     const exact = coursesMaster.find(c => String(c.courseName || '').trim().toLowerCase() === normalizedRaw);
+
+                     if (exact) {
+                         if (!seenCourseIds.has(exact.id)) {
+                             matchedCourses.push({
+                                 id: exact.id,
+                                 name: String(exact.courseName || raw).trim(),
+                                 price: parseFloat(exact.courseFees) || 0
+                             });
+                             seenCourseIds.add(exact.id);
+                         }
+                         return;
+                     }
+
+                     // Try splitting by comma/pipe
+                     const parts = raw
+                         .split(/\s*,\s*|\s*\|\s*/g)
+                         .map(p => p.trim())
+                         .filter(Boolean);
+
+                     if (parts.length > 1) {
+                         let added = false;
+                         parts.forEach(part => {
+                             const partNorm = part.toLowerCase();
+                             const partMatch = coursesMaster.find(c => String(c.courseName || '').trim().toLowerCase() === partNorm);
+                             if (partMatch && !seenCourseIds.has(partMatch.id)) {
+                                 matchedCourses.push({
+                                     id: partMatch.id,
+                                     name: String(partMatch.courseName || part).trim(),
+                                     price: parseFloat(partMatch.courseFees) || 0
+                                 });
+                                 seenCourseIds.add(partMatch.id);
+                                 added = true;
+                             }
+                         });
+
+                         if (added) return;
+                     }
+
+                     // Fallback: substring matches (handles strings like "FULL STACK FRONTEND PYTHON DJANGO")
+                     const substringMatches = coursesMaster
+                         .filter(c => {
+                             const name = String(c.courseName || '').trim();
+                             if (!name) return false;
+                             return normalizedRaw.includes(name.toLowerCase());
+                         })
+                         .sort((a, b) => String(b.courseName || '').length - String(a.courseName || '').length);
+
+                     if (substringMatches.length > 0) {
+                         substringMatches.forEach(m => {
+                             if (!seenCourseIds.has(m.id)) {
+                                 matchedCourses.push({
+                                     id: m.id,
+                                     name: String(m.courseName || '').trim(),
+                                     price: parseFloat(m.courseFees) || 0
+                                 });
+                                 seenCourseIds.add(m.id);
+                             }
+                         });
+                         return;
+                     }
+
+                     // Nothing matched
+                     matchedCourses.push({
+                         id: index + 1,
+                         name: raw,
+                         price: amountPerCourse || 0
+                     });
+                 });
+             }
 
              selectedCourses = matchedCourses;
              renderSelectedCourses();
@@ -1320,39 +1555,15 @@ function showErrorWithDetails(title, message, technicalError = null) {
             return;
         }
 
-        tbody.innerHTML = installments.map((inst, index) => `
-            <tr>
-                <td>
-                    <input type="date" class="form-control form-control-sm"
-                           value="${inst.dueDate}"
-                           id="instDate${index + 1}"
-                           required>
-                </td>
-                <td>
-                    <input type="number" class="form-control form-control-sm"
-                           value="${inst.amount.toFixed(2)}"
-                           id="instAmount${index + 1}"
-                           step="0.01"
-                           min="0"
-                           required>
-                </td>
-                <td>
-                    <select class="form-select form-select-sm" id="instStatus${index + 1}">
-                        <option value="Pending" ${inst.status === 'Pending' ? 'selected' : ''}>Pending</option>
-                        <option value="Paid" ${inst.status === 'Paid' ? 'selected' : ''}>Paid</option>
-                        <option value="Overdue" ${inst.status === 'Overdue' ? 'selected' : ''}>Overdue</option>
-                        <option value="Waived" ${inst.status === 'Waived' ? 'selected' : ''}>Waived</option>
-                    </select>
-                </td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-danger"
-                            onclick="window.removeInstallment(this)"
-                            data-installment-id="${inst.id || ''}">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = '';
+        installments.forEach((inst, index) => {
+            const date = inst.dueDate || '';
+            const amount = inst.amount != null ? parseFloat(inst.amount).toFixed(2) : '';
+            const status = inst.status || 'Pending';
+            const row = buildInstallmentRow(date, amount, status);
+            tbody.appendChild(row);
+        });
+        recalculateInstallmentTotal();
     }
 
     // ==================== FEE CALCULATIONS ====================
@@ -1406,82 +1617,343 @@ function showErrorWithDetails(title, message, technicalError = null) {
 
        // ==================== SAVE/UPDATE ADMISSION ====================
 
-      async function saveAdmission() {
-          const admissionData = collectAdmissionData();
-          const admissionId = document.getElementById('btnFinish').dataset.admissionId;
-          const isUpdate = !!admissionId;
+       async function saveAdmission() {
+        const admissionData = collectAdmissionData();
+        const admissionId = document.getElementById('btnFinish').dataset.admissionId;
+        const isUpdate = !!admissionId;
 
-          if (!validateAdmissionData(admissionData)) {
-              showErrorWithDetails(
-                  'Validation Failed',
-                  'Please fill all required fields',
-                  'Required: First Name, Last Name, Mobile, Lead Source, At least one course'
-              );
-              return;
-          }
+        if (!validateAdmissionData(admissionData)) {
+            showErrorWithDetails(
+                'Validation Failed',
+                'Please fill all required fields',
+                'Required: First Name, Last Name, Mobile, Lead Source, At least one course'
+            );
+            return;
+        }
 
-          try {
-              showLoading(isUpdate ? 'Updating admission...' : 'Saving admission...');
+        // Prompt confirmation if this is an update
+        if (isUpdate) {
+            let parsedCourses = [];
+            try {
+                parsedCourses = JSON.parse(admissionData.courseFeesDetails);
+            } catch (e) {
+                console.error('Error parsing courses for confirmation', e);
+            }
 
-              const url = isUpdate ? `/api/admissions/${admissionId}` : '/api/admissions';
-              const method = isUpdate ? 'PUT' : 'POST';
+            const coursesListHtml = parsedCourses.map(c => `
+                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                    <span class="text-dark"><i class="bi bi-journal-check text-primary me-2"></i>${c.name}</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1">₹${parseFloat(c.price || 0).toFixed(2)}</span>
+                </li>
+            `).join('');
 
-              // Get CSRF token
-              const csrfToken = getCsrfToken();
-              const csrfHeader = getCsrfHeader();
+            // Gather installments from DOM table rows
+            const installmentsList = [];
+            const instRows = document.querySelectorAll('#installmentsBody tr');
+            instRows.forEach((row) => {
+                const dateInput = row.querySelector('input[type="date"]');
+                const amountInput = row.querySelector('input[type="number"]');
+                const statusSelect = row.querySelector('select');
+                if (dateInput && amountInput) {
+                    installmentsList.push({
+                        date: dateInput.value,
+                        amount: parseFloat(amountInput.value) || 0,
+                        status: statusSelect ? statusSelect.value : 'Pending'
+                    });
+                }
+            });
 
-              const headers = {
-                  'Accept': 'application/json',
-                  'Content-Type': 'application/json'
-              };
+            let installmentsListHtml = '';
+            if (installmentsList.length > 0) {
+                installmentsListHtml = `
+                    <h6 class="fw-bold text-secondary mb-2 mt-3" style="font-size: 0.85rem;">Installment Schedule (2-Column):</h6>
+                    <div class="row g-2 mb-3 text-start" style="font-size: 0.8rem;">
+                        ${installmentsList.map((inst, idx) => `
+                            <div class="col-6">
+                                <div class="p-2 border rounded-3 bg-light d-flex justify-content-between align-items-center h-100">
+                                    <div>
+                                        <span class="text-muted d-block" style="font-size: 0.7rem; font-weight: 600;">Inst. ${idx + 1} (${inst.date ? new Date(inst.date).toLocaleDateString('en-GB') : '-'})</span>
+                                        <span class="badge bg-${inst.status === 'Paid' ? 'success' : inst.status === 'Overdue' ? 'danger' : 'warning'} px-1.5 py-0.5" style="font-size: 0.65rem;">${inst.status}</span>
+                                    </div>
+                                    <span class="fw-bold text-dark ms-2">₹${inst.amount.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
 
-              // Add CSRF token to headers
-              if (csrfToken) {
-                  headers[csrfHeader] = csrfToken;
-              }
+            const confirmHtml = `
+                <div class="text-start">
+                    <p class="mb-3 text-secondary" style="font-size: 0.9rem;">
+                        You are about to save changes to the admission record. Please review the updated details below before continuing:
+                    </p>
+                    <div class="card border border-light-subtle rounded-3 shadow-sm mb-3">
+                        <div class="card-header bg-light py-2 px-3 fw-bold text-secondary" style="font-size: 0.85rem;">
+                            Admission Summary
+                        </div>
+                        <div class="card-body p-3" style="font-size: 0.85rem;">
+                            <div class="row g-2">
+                                <div class="col-5 text-muted">Student Name:</div>
+                                <div class="col-7 fw-semibold text-dark">${admissionData.firstName} ${admissionData.lastName}</div>
+                                
+                                <div class="col-5 text-muted">Primary Mobile:</div>
+                                <div class="col-7 fw-semibold text-dark">${admissionData.mobilePrimary || '-'}</div>
 
-              const response = await fetch(url, {
-                  method: method,
-                  headers: headers,
-                  credentials: 'include', // Important for cookies
-                  body: JSON.stringify(admissionData)
-              });
+                                <div class="col-5 text-muted">Email:</div>
+                                <div class="col-7 fw-semibold text-dark text-break">${admissionData.emailPrimary || '-'}</div>
 
-              if (!response.ok) {
-                  const error = await response.json();
-                  throw new Error(error.message || `Failed to ${isUpdate ? 'update' : 'save'} admission`);
-              }
+                                <div class="col-5 text-muted">Admission Date:</div>
+                                <div class="col-7 fw-semibold text-dark">${admissionData.admissionDate || '-'}</div>
 
-              const result = await response.json();
+                                <div class="col-5 text-muted">Package:</div>
+                                <div class="col-7 fw-semibold text-dark">${admissionData.packageName || '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="fw-bold text-secondary mb-2" style="font-size: 0.85rem;">Selected Courses & Fees:</h6>
+                    <ul class="list-group mb-3" style="font-size: 0.85rem;">
+                        ${coursesListHtml || '<li class="list-group-item text-center text-muted">No courses selected</li>'}
+                    </ul>
 
-              Swal.close();
-              closeModal('admissionModal');
+                    ${installmentsListHtml}
 
-              showSuccessWithDetails(
-                  isUpdate ? 'Admission Updated!' : 'Admission Saved!',
-                  `Admission ${isUpdate ? 'updated' : 'created'} successfully`,
-                  `Registration No: ${result.registrationNumber || 'Generated'}`
-              );
+                    <div class="row g-2 mt-2 mb-2 text-center" style="font-size: 0.82rem;">
+                        <div class="col-4">
+                            <div class="p-2 bg-primary-subtle rounded-3">
+                                <div class="text-muted fw-semibold" style="font-size: 0.72rem;">COURSE FEES</div>
+                                <div class="fw-bold text-primary">₹${(admissionData.totalPayableFees || admissionData.totalReceivableFees || 0).toFixed(2)}</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 bg-warning-subtle rounded-3">
+                                <div class="text-muted fw-semibold" style="font-size: 0.72rem;">DISCOUNT ${admissionData.discountPercent > 0 ? '(' + admissionData.discountPercent + '%)' : ''}</div>
+                                <div class="fw-bold text-warning">- ₹${(admissionData.discountAmount || 0).toFixed(2)}</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 bg-success-subtle rounded-3">
+                                <div class="text-muted fw-semibold" style="font-size: 0.72rem;">NET RECEIVABLE</div>
+                                <div class="fw-bold text-success">₹${(admissionData.totalReceivableFees || 0).toFixed(2)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-danger d-block text-center mt-2">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Note: Installments will NOT auto-regenerate unless you regenerated them in the Installments tab.
+                    </small>
+                </div>
+            `;
 
-              loadAdmissions();
-              clearForms();
-              clearCourseSelection();
+            const confirmResult = await Swal.fire({
+                title: 'Confirm Admission Update',
+                html: confirmHtml,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#2563eb',
+                cancelButtonColor: '#dc2626',
+                confirmButtonText: 'Yes, Save Changes',
+                cancelButtonText: 'Cancel',
+                width: '520px'
+            });
 
-              document.getElementById('admissionModalTitle').textContent = 'New Admission';
-              document.getElementById('btnFinish').textContent = 'Finish';
-              delete document.getElementById('btnFinish').dataset.admissionId;
+            if (!confirmResult.isConfirmed) {
+                return; // Cancel saving
+            }
 
-          } catch (error) {
-              Swal.close();
-              console.error('Error saving admission:', error);
+            // ── Custom-installment amount-match validation ──
+            if (admissionData.customInstallments && admissionData.customInstallments.length > 0) {
+                const admTotal = admissionData.totalReceivableFees || 0;
+                const admSum = admissionData.customInstallments.reduce((s, i) => s + i.amount, 0);
+                const admDiff = Math.round((admSum - admTotal) * 100) / 100;
 
-              showErrorWithDetails(
-                  `Failed to ${isUpdate ? 'Update' : 'Save'} Admission`,
-                  error.message || `An error occurred while ${isUpdate ? 'updating' : 'saving'} the admission`,
-                  error.stack || error.toString()
-              );
-          }
-      }
+                if (admDiff > 0) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Installment Amount Mismatch',
+                        html: `
+                            <div class="text-start">
+                                <p class="mb-2">The total of all installment amounts <strong class="text-danger">cannot be greater than</strong> the Net Receivable Amount.</p>
+                                <div class="row g-2" style="font-size:0.88rem;">
+                                    <div class="col-6 text-muted">Net Receivable:</div>
+                                    <div class="col-6 fw-bold text-primary">&#8377;${admTotal.toFixed(2)}</div>
+                                    <div class="col-6 text-muted">Installments Sum:</div>
+                                    <div class="col-6 fw-bold text-danger">&#8377;${admSum.toFixed(2)}</div>
+                                    <div class="col-6 text-muted">Excess:</div>
+                                    <div class="col-6 fw-bold text-danger">+ &#8377;${admDiff.toFixed(2)}</div>
+                                </div>
+                                <p class="mt-2 mb-0 text-muted" style="font-size:0.82rem;">Go back to the Installments tab and reduce amounts by &#8377;${admDiff.toFixed(2)}.</p>
+                            </div>`,
+                        confirmButtonColor: '#dc2626',
+                        confirmButtonText: 'Go Fix'
+                    });
+                    return;
+                }
+
+                if (admDiff < 0) {
+                    const short = Math.abs(admDiff);
+                    await Swal.fire({
+                        icon: 'warning',
+                        title: 'Installment Amount Mismatch',
+                        html: `
+                            <div class="text-start">
+                                <p class="mb-2">The total of all installment amounts <strong class="text-warning">cannot be less than</strong> the Net Receivable Amount.</p>
+                                <div class="row g-2" style="font-size:0.88rem;">
+                                    <div class="col-6 text-muted">Net Receivable:</div>
+                                    <div class="col-6 fw-bold text-primary">&#8377;${admTotal.toFixed(2)}</div>
+                                    <div class="col-6 text-muted">Installments Sum:</div>
+                                    <div class="col-6 fw-bold text-warning">&#8377;${admSum.toFixed(2)}</div>
+                                    <div class="col-6 text-muted">Shortfall:</div>
+                                    <div class="col-6 fw-bold text-warning">- &#8377;${short.toFixed(2)}</div>
+                                </div>
+                                <p class="mt-2 mb-0 text-muted" style="font-size:0.82rem;">Go back to the Installments tab and add &#8377;${short.toFixed(2)} more.</p>
+                            </div>`,
+                        confirmButtonColor: '#d97706',
+                        confirmButtonText: 'Go Fix'
+                    });
+                    return;
+                }
+            }
+        }
+
+        try {
+            showLoading(isUpdate ? 'Updating admission...' : 'Saving admission...');
+
+            const url = isUpdate ? `/api/admissions/${admissionId}` : '/api/admissions';
+            const method = isUpdate ? 'PUT' : 'POST';
+
+            // Get CSRF token
+            const csrfToken = getCsrfToken();
+            const csrfHeader = getCsrfHeader();
+
+            const headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            };
+
+            // Add CSRF token to headers
+            if (csrfToken) {
+                headers[csrfHeader] = csrfToken;
+            }
+
+            const response = await fetch(url, {
+                method: method,
+                headers: headers,
+                credentials: 'include', // Important for cookies
+                body: JSON.stringify(admissionData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || `Failed to ${isUpdate ? 'update' : 'save'} admission`);
+            }
+
+            const result = await response.json();
+
+            Swal.close();
+            closeModal('admissionModal');
+
+            if (isUpdate) {
+                let updatedInstHtml = '';
+                if (result.installments && result.installments.length > 0) {
+                    updatedInstHtml = `
+                        <h6 class="fw-bold text-secondary mb-2 mt-3" style="font-size: 0.85rem;">Updated Installments (2-Column):</h6>
+                        <div class="row g-2 mb-1" style="font-size: 0.8rem;">
+                            ${result.installments.map((inst, idx) => `
+                                <div class="col-6">
+                                    <div class="p-2 border rounded-3 bg-light d-flex justify-content-between align-items-center h-100">
+                                        <div>
+                                            <span class="text-muted d-block" style="font-size: 0.7rem; font-weight: 600;">Inst. ${inst.installmentNumber || (idx + 1)} (${inst.dueDate ? new Date(inst.dueDate).toLocaleDateString('en-GB') : '-'})</span>
+                                            <span class="badge bg-${inst.status === 'Paid' ? 'success' : inst.status === 'Overdue' ? 'danger' : 'warning'} px-1.5 py-0.5" style="font-size: 0.65rem;">${inst.status}</span>
+                                        </div>
+                                        <span class="fw-bold text-dark ms-2">₹${(inst.amount || 0).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                const previewHtml = `
+                    <div class="text-start">
+                        <div class="alert alert-success border-0 mb-3" style="background-color: #ecfdf5; color: #065f46; border-radius: 12px; font-size: 0.9rem;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-check-circle-fill fs-5"></i>
+                                <div>
+                                    <strong>Admission updated successfully!</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card border border-light-subtle rounded-3 shadow-sm mb-3">
+                            <div class="card-header bg-light py-2 px-3 fw-bold text-secondary" style="font-size: 0.85rem;">
+                                Updated Data Preview
+                            </div>
+                            <div class="card-body p-3" style="font-size: 0.85rem;">
+                                <div class="row g-2">
+                                    <div class="col-6 text-muted">Student Name:</div>
+                                    <div class="col-6 fw-semibold text-dark">${result.studentName || (result.firstName + ' ' + result.lastName)}</div>
+                                    
+                                    <div class="col-6 text-muted">Reg No:</div>
+                                    <div class="col-6 fw-semibold text-primary">${result.registrationNumber}</div>
+                                    
+                                    <div class="col-6 text-muted">Primary Mobile:</div>
+                                    <div class="col-6 fw-semibold text-dark">${result.mobilePrimary || '-'}</div>
+
+                                    <div class="col-6 text-muted">Email:</div>
+                                    <div class="col-6 fw-semibold text-dark text-break">${result.emailPrimary || '-'}</div>
+
+                                    <div class="col-6 text-muted">Admission Date:</div>
+                                    <div class="col-6 fw-semibold text-dark">${result.admissionDate ? new Date(result.admissionDate).toLocaleDateString('en-GB') : '-'}</div>
+
+                                    <div class="col-6 text-muted">Enrolled Package:</div>
+                                    <div class="col-6 fw-semibold text-dark">${result.packageName || '-'}</div>
+
+                                    <div class="col-12"><hr class="my-2"></div>
+
+                                    <div class="col-6 text-muted">Receivable Fees:</div>
+                                    <div class="col-6 fw-bold text-success">₹${(result.totalReceivableFees || 0).toFixed(2)}</div>
+                                </div>
+                            </div>
+                        </div>
+                        ${updatedInstHtml}
+                    </div>
+                `;
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Admission Updated!',
+                    html: previewHtml,
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'Done'
+                });
+            } else {
+                showSuccessWithDetails(
+                    'Admission Saved!',
+                    `Admission created successfully`,
+                    `Registration No: ${result.registrationNumber || 'Generated'}`
+                );
+            }
+
+            loadAdmissions();
+            clearForms();
+            clearCourseSelection();
+
+            document.getElementById('admissionModalTitle').textContent = 'New Admission';
+            document.getElementById('btnFinish').textContent = 'Finish';
+            delete document.getElementById('btnFinish').dataset.admissionId;
+
+        } catch (error) {
+            Swal.close();
+            console.error('Error saving admission:', error);
+
+            showErrorWithDetails(
+                `Failed to ${isUpdate ? 'Update' : 'Save'} Admission`,
+                error.message || `An error occurred while ${isUpdate ? 'updating' : 'saving'} the admission`,
+                error.stack || error.toString()
+            );
+        }
+    }
 
        function collectAdmissionData() {
            const batchSelect = document.getElementById('admBatch');
@@ -1495,6 +1967,28 @@ function showErrorWithDetails(title, message, technicalError = null) {
                : [];
 
            const installmentConfig = collectInstallmentData();
+
+           // Collect custom installment rows from the table
+           const customInstallments = [];
+           const instBody = document.getElementById('installmentsBody');
+           if (instBody) {
+               instBody.querySelectorAll('tr').forEach((row, idx) => {
+                   const dateInput = row.querySelector('.inst-date, input[type="date"]');
+                   const amountInput = row.querySelector('.inst-amount, input[type="number"]');
+                   const statusSelect = row.querySelector('.inst-status, select');
+                   if (dateInput && amountInput && dateInput.value) {
+                       const amount = parseFloat(amountInput.value);
+                       if (!isNaN(amount) && amount >= 0) {
+                           customInstallments.push({
+                               installmentNumber: idx + 1,
+                               dueDate: dateInput.value,
+                               amount: amount,
+                               status: statusSelect ? statusSelect.value : 'Pending'
+                           });
+                       }
+                   }
+               });
+           }
 
            return {
                firstName: getValue('admFirstName'),
@@ -1525,12 +2019,14 @@ function showErrorWithDetails(title, message, technicalError = null) {
                packageName: getSelectedPackageName(),
                academicYear: getValue('admAcademicYear'),
                courses: selectedCourses.map(c => c.name),
+               courseFeesDetails: JSON.stringify(selectedCourses.map(c => ({ name: c.name, price: c.price }))),
                batches: selectedBatches,
                totalPayableFees: parseFloat(getValue('admTotalFees')) || 0,
                totalReceivableFees: parseFloat(getValue('admReceivableFees')) || 0,
                discountPercent: parseFloat(getValue('admDiscountPercent')) || 0,
                discountAmount: parseFloat(getValue('admDiscountAmount')) || 0,
                installmentConfig: installmentConfig,
+               customInstallments: customInstallments.length > 0 ? customInstallments : null,
                studentPhoto: document.getElementById('admCanvas').toDataURL('image/jpeg', 0.8)
            };
        }
@@ -1570,13 +2066,39 @@ function showErrorWithDetails(title, message, technicalError = null) {
         const searchTerm = document.getElementById('searchInput')?.value.trim() || '';
         const studentCategory = document.getElementById('categoryFilter')?.value || '';
         const course = document.getElementById('courseFilter')?.value || '';
+        const fromDate = document.getElementById('fromDateFilter')?.value || '';
+        const toDate = document.getElementById('toDateFilter')?.value || '';
 
         currentSearchTerm = searchTerm;
         currentStudentCategory = studentCategory;
         currentCourseFilter = course;
+        currentFromDate = fromDate;
+        currentToDate = toDate;
 
         currentPage = 0;
         await loadAdmissions(0, pageSize);
+    }
+
+    function clearAllFilters() {
+        if (document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
+        if (document.getElementById('categoryFilter')) document.getElementById('categoryFilter').value = '';
+        if (document.getElementById('courseFilter')) document.getElementById('courseFilter').value = '';
+        if (document.getElementById('courseSearchInput')) document.getElementById('courseSearchInput').value = '';
+        if (document.getElementById('fromDateFilter')) document.getElementById('fromDateFilter').value = '';
+        if (document.getElementById('toDateFilter')) document.getElementById('toDateFilter').value = '';
+
+        currentSearchTerm = '';
+        currentStudentCategory = '';
+        currentCourseFilter = '';
+        currentFromDate = '';
+        currentToDate = '';
+
+        if (typeof filterCourseList === 'function') {
+            filterCourseList();
+        }
+
+        currentPage = 0;
+        loadAdmissions(0, pageSize);
     }
 
 // Fetch export data with fees
@@ -1584,7 +2106,17 @@ async function prepareExportData() {
     try {
         showLoading('Fetching export data...');
 
-        const response = await fetch(`/api/admissions/export`);
+        const params = new URLSearchParams();
+        if (currentSearchTerm) params.append('searchTerm', currentSearchTerm.trim());
+        if (currentStudentCategory) params.append('studentCategory', currentStudentCategory.trim());
+        if (currentCourseFilter) params.append('course', currentCourseFilter.trim());
+        if (currentFromDate) params.append('admissionDateFrom', currentFromDate.trim());
+        if (currentToDate) params.append('admissionDateTo', currentToDate.trim());
+
+        const queryString = params.toString();
+        const url = `/api/admissions/export${queryString ? '?' + queryString : ''}`;
+
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch export data');
 
         const admissions = await response.json();
@@ -1608,13 +2140,20 @@ async function prepareExportData() {
 
 // Build export table
 function buildExportTable(admissions) {
+    let tempContainer = document.getElementById('tempExportTableContainer');
+    if (!tempContainer) {
+        tempContainer = document.createElement('div');
+        tempContainer.id = 'tempExportTableContainer';
+        tempContainer.style.display = 'none';
+        document.body.appendChild(tempContainer);
+    }
+
     let tempTable = document.getElementById('tempExportTable');
 
     if (!tempTable) {
         tempTable = document.createElement('table');
         tempTable.id = 'tempExportTable';
-        tempTable.style.display = 'none';
-        document.body.appendChild(tempTable);
+        tempContainer.appendChild(tempTable);
     }
 
     const tableHTML = `
@@ -1905,7 +2444,66 @@ window.printTable = async function() {
             
             // Course & Batch Details
             document.getElementById('viewAdmPackage').textContent = admission.packageName || '-';
-            document.getElementById('viewAdmCourses').textContent = admission.courses || '-';
+            
+            const coursesContainer = document.getElementById('viewAdmCourses');
+            let hasDetails = false;
+            let savedDetails = [];
+            if (admission.courseFeesDetails) {
+                try {
+                    savedDetails = typeof admission.courseFeesDetails === 'string'
+                        ? JSON.parse(admission.courseFeesDetails)
+                        : admission.courseFeesDetails;
+                    if (Array.isArray(savedDetails) && savedDetails.length > 0) {
+                        hasDetails = true;
+                    }
+                } catch (e) {
+                    console.error('Error parsing courseFeesDetails for view:', e);
+                }
+            }
+
+            if (hasDetails) {
+                const totalPayable = savedDetails.reduce((s, c) => s + (parseFloat(c.price) || 0), 0);
+                const discountAmt = admission.discountAmount || 0;
+                const discountPct = admission.discountPercent || 0;
+                const receivable = admission.totalReceivableFees || (totalPayable - discountAmt);
+
+                coursesContainer.innerHTML = `
+                    <div class="table-responsive mt-1">
+                        <table class="table table-sm table-bordered mb-0" style="font-size: 0.85rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Course Name</th>
+                                    <th style="width: 120px;">Fees</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${savedDetails.map(c => `
+                                    <tr>
+                                        <td><strong>${c.name}</strong></td>
+                                        <td>₹${parseFloat(c.price || 0).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot class="table-secondary">
+                                <tr>
+                                    <td class="text-muted" style="font-size:0.8rem;">Total Payable</td>
+                                    <td class="fw-semibold">₹${totalPayable.toFixed(2)}</td>
+                                </tr>
+                                ${discountAmt > 0 ? `<tr>
+                                    <td class="text-warning" style="font-size:0.8rem;">Discount (${discountPct}%)</td>
+                                    <td class="text-warning fw-semibold">- ₹${discountAmt.toFixed(2)}</td>
+                                </tr>` : ''}
+                                <tr>
+                                    <td class="fw-bold text-success" style="font-size:0.8rem;">Net Receivable</td>
+                                    <td class="fw-bold text-success">₹${receivable.toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+            } else {
+                coursesContainer.textContent = admission.courses || '-';
+            }
             
             // Render Detailed Batches
             const batchesContainer = document.getElementById('viewAdmBatches');
@@ -1942,6 +2540,18 @@ window.printTable = async function() {
             document.getElementById('viewAdmDocument').textContent = admission.documentType || '-';
             document.getElementById('viewAdmNotes').textContent = admission.notes || '-';
 
+            // Status Badge
+            const statusBadge = document.getElementById('viewAdmStatusBadge');
+            if (statusBadge) {
+                const status = admission.status || 'Active';
+                statusBadge.textContent = status;
+                statusBadge.className = `badge shadow-sm rounded-pill px-3 py-1.5 ${
+                    status.toLowerCase() === 'active' ? 'bg-success' : 
+                    status.toLowerCase() === 'pending' ? 'bg-warning text-dark' : 
+                    'bg-danger'
+                }`;
+            }
+
             // Photo
             const photoImg = document.getElementById('viewStudentPhoto');
             if (admission.photoPath) {
@@ -1951,13 +2561,37 @@ window.printTable = async function() {
             }
 
             // Payment Totals
-            const totalFees = admission.totalReceivableFees || 0;
+            const totalFees = admission.totalPayableFees || admission.totalReceivableFees || 0;
+            const discountAmt = admission.discountAmount || 0;
+            const discountPct = admission.discountPercent || 0;
+            const receivable = admission.totalReceivableFees || (totalFees - discountAmt);
             const paidAmount = admission.totalPaidAmount || 0;
-            const dueAmount = totalFees - paidAmount;
+            const dueAmount = receivable - paidAmount;
 
             document.getElementById('viewAdmTotalFees').textContent = `₹${totalFees.toFixed(2)}`;
+
+            const discountEl = document.getElementById('viewAdmDiscount');
+            const discountPctEl = document.getElementById('viewAdmDiscountPct');
+            if (discountEl) discountEl.textContent = `₹${discountAmt.toFixed(2)}`;
+            if (discountPctEl) discountPctEl.textContent = discountPct > 0 ? `${discountPct}% off` : '';
+
             document.getElementById('viewAdmPaidAmount').textContent = `₹${paidAmount.toFixed(2)}`;
             document.getElementById('viewAdmDueAmount').textContent = `₹${dueAmount.toFixed(2)}`;
+
+            // Populate Audit details for SUPER_ADMIN
+            const auditSection = document.getElementById('superadminAuditSection');
+            if (auditSection) {
+                const userRole = document.getElementById('currentUserRole')?.value;
+                if (userRole === 'SUPER_ADMIN') {
+                    auditSection.style.display = 'block';
+                    document.getElementById('viewAdmCreatedBy').textContent = admission.createdBy || '-';
+                    document.getElementById('viewAdmCreatedTime').textContent = formatDisplayDateTime(admission.createdAt);
+                    document.getElementById('viewAdmUpdatedBy').textContent = admission.updatedBy || '-';
+                    document.getElementById('viewAdmUpdatedTime').textContent = formatDisplayDateTime(admission.updatedAt);
+                } else {
+                    auditSection.style.display = 'none';
+                }
+            }
 
             // Installments
             const instBody = document.getElementById('viewAdmInstallmentsBody');
@@ -2001,6 +2635,13 @@ window.printTable = async function() {
                 console.error('Error fetching receipts:', receiptError);
             }
 
+            // Reset to first tab (Profile) when showing modal
+            const profileTabBtn = document.querySelector('#viewAdmissionModal #profile-tab');
+            if (profileTabBtn) {
+                const tabInstance = bootstrap.Tab.getOrCreateInstance(profileTabBtn);
+                tabInstance.show();
+            }
+
             const modal = new bootstrap.Modal(document.getElementById('viewAdmissionModal'));
             modal.show();
 
@@ -2039,6 +2680,26 @@ window.printTable = async function() {
         hours = hours % 12;
         hours = hours ? hours : 12;
         return `${hours}:${String(minutes).padStart(2, '0')} ${ampm}`;
+    }
+
+    function formatDisplayDateTime(dateTimeValue) {
+        if (!dateTimeValue) return '-';
+        try {
+            const date = new Date(dateTimeValue);
+            if (isNaN(date.getTime())) return dateTimeValue;
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            let hours = date.getHours();
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            const strTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+            return `${day}/${month}/${year} ${strTime}`;
+        } catch (e) {
+            return dateTimeValue;
+        }
     }
 
     // Initialize course search functionality
@@ -2237,6 +2898,13 @@ window.printTable = async function() {
                 setValue('feeInstDays', admission.daysBetweenInstallments);
             }
 
+            // Store regNo for save
+            const nameEl = document.getElementById('feeInstStudentName');
+            if (nameEl) {
+                nameEl.textContent = admission.studentName;
+                nameEl.dataset.regNo = admission.registrationNumber;
+            }
+
             const instResponse = await fetch(`/api/admissions/${id}/installments`, {
                 method: 'GET',
                 headers: {
@@ -2251,29 +2919,20 @@ window.printTable = async function() {
             const tbody = document.getElementById('feeInstallmentsBody');
 
             if (installments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No installments found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No installments found. Generate or add rows below.</td></tr>';
             } else {
-                tbody.innerHTML = installments.map(inst => `
-                    <tr>
-                        <td>${inst.dueDate}</td>
-                        <td>₹${parseFloat(inst.amount).toFixed(2)}</td>
-                        <td><span class="badge bg-${inst.status === 'Paid' ? 'success' : (inst.status === 'Partial' ? 'info' : 'warning')}">${inst.status}</span></td>
-                        <td class="small text-muted">${inst.notes || '-'}</td>
-                        <td>
-                            <div class="d-flex gap-1">
-                                <button class="btn btn-sm btn-outline-primary" onclick="window.editInstallment(${inst.id}, '${inst.dueDate}', ${inst.amount}, '${inst.status}', '${(inst.notes || '').replace(/'/g, "\\'")}')">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteInstallment(${inst.id})">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = '';
+                installments.forEach(inst => {
+                    tbody.appendChild(buildFeeInstallmentRow(
+                        inst.dueDate || '',
+                        inst.amount != null ? parseFloat(inst.amount).toFixed(2) : '',
+                        inst.status || 'Pending',
+                        inst.notes || '',
+                        inst.id
+                    ));
+                });
+                recalculateFeeInstallmentTotal();
             }
-
-            document.getElementById('feeInstStudentName').textContent = admission.studentName;
 
             const modal = new bootstrap.Modal(document.getElementById('feeInstallmentsModal'));
             modal.show();
@@ -3285,7 +3944,7 @@ window.printTable = async function() {
                          const startDate = getValue('instStartDate');
 
                          if (!totalAmount || !noOfInstallments || !startDate) {
-                             showError('Please fill all required fields');
+                             showError('Please fill Total Amount, No. of Installments and Start Date');
                              return;
                          }
 
@@ -3296,59 +3955,24 @@ window.printTable = async function() {
                          tbody.innerHTML = '';
 
                          for (let i = 1; i <= noOfInstallments; i++) {
-                             const dueDate = new Date(currentDate);
-                             const formattedDate = dueDate.toISOString().split('T')[0];
-
-                             const row = document.createElement('tr');
-                             row.innerHTML = `
-                                 <td>
-                                     <input type="date" class="form-control form-control-sm"
-                                            value="${formattedDate}"
-                                            id="instDate${i}"
-                                            required>
-                                 </td>
-                                 <td>
-                                     <input type="number" class="form-control form-control-sm"
-                                            value="${amountPerInstallment.toFixed(2)}"
-                                            id="instAmount${i}"
-                                            step="0.01"
-                                            min="0"
-                                            required>
-                                 </td>
-                                 <td>
-                                     <select class="form-select form-select-sm" id="instStatus${i}">
-                                         <option value="Pending">Pending</option>
-                                         <option value="Paid">Paid</option>
-                                         <option value="Overdue">Overdue</option>
-                                         <option value="Waived">Waived</option>
-                                     </select>
-                                 </td>
-                                 <td>
-                                     <button type="button" class="btn btn-sm btn-danger"
-                                             onclick="window.removeInstallment(this)">
-                                         <i class="bi bi-trash"></i>
-                                     </button>
-                                 </td>
-                             `;
-                             tbody.appendChild(row);
-
+                             const formattedDate = currentDate.toISOString().split('T')[0];
+                             tbody.appendChild(buildInstallmentRow(formattedDate, amountPerInstallment.toFixed(2), 'Pending'));
                              currentDate.setDate(currentDate.getDate() + daysBetween);
                          }
 
-                         setValue('instTotalInstAmount', totalAmount.toFixed(2));
+                         recalculateInstallmentTotal();
                          showSuccess(`Generated ${noOfInstallments} installments`);
                      }
 
                      window.removeInstallment = function(button) {
-                         const row = button.closest('tr');
-                         row.remove();
-
+                         button.closest('tr').remove();
+                         recalculateInstallmentTotal();
                          const tbody = document.getElementById('installmentsBody');
-                         const rows = tbody.querySelectorAll('tr');
-
-                         if (rows.length === 0) {
+                         if (tbody && tbody.querySelectorAll('tr').length === 0) {
                              tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments generated</td></tr>';
                              setValue('instTotalInstAmount', '0');
+                             const rowTotalEl = document.getElementById('instRowTotal');
+                             if (rowTotalEl) rowTotalEl.textContent = '\u20b90.00';
                          }
                      };
 
@@ -3359,7 +3983,7 @@ window.printTable = async function() {
                       const startDate = getValue('feeInstStartDate');
 
                       if (!totalAmount || !noOfInstallments || !startDate) {
-                          showError('Please fill all required fields');
+                          showError('Please fill Total Amount, No. of Installments and Start Date');
                           return;
                       }
 
@@ -3370,58 +3994,151 @@ window.printTable = async function() {
                       tbody.innerHTML = '';
 
                       for (let i = 1; i <= noOfInstallments; i++) {
-                          const dueDate = new Date(currentDate);
-                          const formattedDate = dueDate.toISOString().split('T')[0];
-
-                          const row = document.createElement('tr');
-                          row.innerHTML = `
-                              <td>
-                                  <input type="date" class="form-control form-control-sm"
-                                         value="${formattedDate}"
-                                         data-installment="${i}">
-                              </td>
-                              <td>
-                                  <input type="number" class="form-control form-control-sm"
-                                         value="${amountPerInstallment.toFixed(2)}"
-                                         step="0.01"
-                                         data-installment="${i}">
-                              </td>
-                              <td>
-                                  <select class="form-select form-select-sm" data-installment="${i}">
-                                      <option value="Pending">Pending</option>
-                                      <option value="Paid">Paid</option>
-                                      <option value="Overdue">Overdue</option>
-                                      <option value="Waived">Waived</option>
-                                  </select>
-                              </td>
-                              <td>
-                                  <button type="button" class="btn btn-sm btn-danger"
-                                          onclick="this.closest('tr').remove()">
-                                      <i class="bi bi-trash"></i>
-                                  </button>
-                              </td>
-                          `;
-                          tbody.appendChild(row);
-
+                          const formattedDate = currentDate.toISOString().split('T')[0];
+                          tbody.appendChild(buildFeeInstallmentRow(formattedDate, amountPerInstallment.toFixed(2), 'Pending', ''));
                           currentDate.setDate(currentDate.getDate() + daysBetween);
                       }
 
-                      setValue('feeInstTotalInstAmount', totalAmount.toFixed(2));
+                      recalculateFeeInstallmentTotal();
                       showSuccess(`Generated ${noOfInstallments} installments`);
                   }
 
 
                   async function saveFeeInstallments() {
                       const tbody = document.getElementById('feeInstallmentsBody');
-                      const rows = tbody.querySelectorAll('tr');
+                      const regNo = document.getElementById('feeInstStudentName')?.dataset?.regNo;
 
-                      if (rows.length === 0 || rows[0].cells.length === 1) {
-                          showError('No installments to save');
+                      if (!regNo) {
+                          showError('Student registration number not found');
                           return;
                       }
 
-                      showSuccess('Fee installments saved successfully!');
-                      closeModal('feeInstallmentsModal');
+                      const rows = tbody.querySelectorAll('tr');
+                      if (rows.length === 0 || (rows.length === 1 && rows[0].cells.length === 1)) {
+                          showError('No installments to save. Please generate or add installments first.');
+                          return;
+                      }
+
+                      // Collect inline-editable row data
+                      const installments = [];
+                      let idx = 1;
+                      let valid = true;
+                      rows.forEach(row => {
+                          const dateInput = row.querySelector('.fee-inst-date');
+                          const amountInput = row.querySelector('.fee-inst-amount');
+                          const statusSelect = row.querySelector('.fee-inst-status');
+                          const notesInput = row.querySelector('.fee-inst-notes');
+                          if (!dateInput || !amountInput) return;
+                          const dueDate = dateInput.value;
+                          const amount = parseFloat(amountInput.value);
+                          if (!dueDate || isNaN(amount) || amount < 0) {
+                              valid = false;
+                              return;
+                          }
+                          installments.push({
+                              installmentNumber: idx++,
+                              dueDate: dueDate,
+                              amount: amount,
+                              status: statusSelect ? statusSelect.value : 'Pending',
+                              notes: notesInput ? notesInput.value : ''
+                          });
+                      });
+
+                      if (!valid) {
+                          showError('Please fill valid Date and Amount for all installment rows.');
+                          return;
+                      }
+
+                      if (installments.length === 0) {
+                          showError('No valid installments to save.');
+                          return;
+                      }
+
+                      // ── Amount-match validation ──
+                      const feeInstTotal = parseFloat(document.getElementById('feeInstTotalAmount')?.value) || 0;
+                      const feeInstSum = installments.reduce((s, i) => s + i.amount, 0);
+                      const feeInstDiff = Math.round((feeInstSum - feeInstTotal) * 100) / 100; // round to 2dp
+
+                      if (feeInstDiff > 0) {
+                          Swal.fire({
+                              icon: 'error',
+                              title: 'Amount Mismatch',
+                              html: `
+                                  <div class="text-start">
+                                      <p class="mb-2">The total of all installment amounts <strong class="text-danger">cannot be greater than</strong> the Total Receivable Amount.</p>
+                                      <div class="row g-2" style="font-size:0.88rem;">
+                                          <div class="col-6 text-muted">Total Receivable:</div>
+                                          <div class="col-6 fw-bold text-primary">&#8377;${feeInstTotal.toFixed(2)}</div>
+                                          <div class="col-6 text-muted">Installments Sum:</div>
+                                          <div class="col-6 fw-bold text-danger">&#8377;${feeInstSum.toFixed(2)}</div>
+                                          <div class="col-6 text-muted">Excess:</div>
+                                          <div class="col-6 fw-bold text-danger">+ &#8377;${feeInstDiff.toFixed(2)}</div>
+                                      </div>
+                                      <p class="mt-2 mb-0 text-muted" style="font-size:0.82rem;">Please reduce the installment amounts by &#8377;${feeInstDiff.toFixed(2)} before saving.</p>
+                                  </div>`,
+                              confirmButtonColor: '#dc2626',
+                              confirmButtonText: 'Fix Amounts'
+                          });
+                          return;
+                      }
+
+                      if (feeInstDiff < 0) {
+                          const short = Math.abs(feeInstDiff);
+                          Swal.fire({
+                              icon: 'warning',
+                              title: 'Amount Mismatch',
+                              html: `
+                                  <div class="text-start">
+                                      <p class="mb-2">The total of all installment amounts <strong class="text-warning">cannot be less than</strong> the Total Receivable Amount.</p>
+                                      <div class="row g-2" style="font-size:0.88rem;">
+                                          <div class="col-6 text-muted">Total Receivable:</div>
+                                          <div class="col-6 fw-bold text-primary">&#8377;${feeInstTotal.toFixed(2)}</div>
+                                          <div class="col-6 text-muted">Installments Sum:</div>
+                                          <div class="col-6 fw-bold text-warning">&#8377;${feeInstSum.toFixed(2)}</div>
+                                          <div class="col-6 text-muted">Shortfall:</div>
+                                          <div class="col-6 fw-bold text-warning">- &#8377;${short.toFixed(2)}</div>
+                                      </div>
+                                      <p class="mt-2 mb-0 text-muted" style="font-size:0.82rem;">Please add &#8377;${short.toFixed(2)} more across the installment rows before saving.</p>
+                                  </div>`,
+                              confirmButtonColor: '#d97706',
+                              confirmButtonText: 'Fix Amounts'
+                          });
+                          return;
+                      }
+
+                      try {
+                          showLoading('Saving installments...');
+
+                          const csrfToken = getCsrfToken();
+                          const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+                          if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
+                          const payload = {
+                              registrationNumber: regNo,
+                              installments: installments
+                          };
+
+                          const response = await fetch(`/api/fees-manager/installments/${regNo}`, {
+                              method: 'POST',
+                              headers: headers,
+                              credentials: 'include',
+                              body: JSON.stringify(payload)
+                          });
+
+                          if (!response.ok) {
+                              const err = await response.json();
+                              throw new Error(err.message || 'Failed to save installments');
+                          }
+
+                          Swal.close();
+                          showSuccess('Fee installments saved and synced successfully!');
+                          closeModal('feeInstallmentsModal');
+                          loadAdmissions(currentPage, pageSize);
+
+                      } catch (error) {
+                          Swal.close();
+                          showError(error.message || 'Failed to save installments');
+                      }
                   }
 
                   function removeCourse(button) {

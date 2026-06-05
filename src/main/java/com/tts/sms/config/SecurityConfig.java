@@ -62,12 +62,14 @@ public class SecurityConfig {
         csrfRepo.setHeaderName("X-CSRF-TOKEN");
         csrfRepo.setCookiePath("/"); // Critical for cross-path access
 
-        // Industry Standard: Only enforce secure cookies if profile is prod AND we are
-        // explicitly using HTTPS
+        // Industry Standard: Only enforce secure cookies if explicitly configured
         // This prevents the JSESSIONID/XSRF-TOKEN from being rejected on HTTP
-        // production test servers
-        boolean isProd = "prod".equalsIgnoreCase(activeProfile);
-        csrfRepo.setSecure(isProd); // We'll set this based on profile, but for testing IPs, HTTP is common.
+        // production/test servers
+        boolean isCookieSecure = Boolean
+                .parseBoolean(environment.getProperty("server.servlet.session.cookie.secure", "false"));
+
+        log.info("🔒 CSRF Secure Cookie: {}", isCookieSecure);
+        csrfRepo.setSecure(isCookieSecure);
 
         // Also ensure JSESSIONID follows the same pattern
         http.sessionManagement(session -> session
@@ -205,25 +207,33 @@ public class SecurityConfig {
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        log.info("Configuring CORS with allowed origins: {}", allowedOrigins);
+        log.info("═════════════════════════════ CORS CONFIGURATION ═════════════════════════════");
+        log.info("🌐 Configured Allowed Origins: {}", allowedOrigins);
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        if ("*".equals(allowedOrigins)) {
+        if ("*".equals(allowedOrigins) || allowedOrigins.isEmpty()) {
+            log.info("⚠️  CORS: Allowing all origin patterns (*)");
             configuration.addAllowedOriginPattern("*");
         } else {
-            configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+            String[] origins = allowedOrigins.split(",");
+            for (String origin : origins) {
+                log.info("CORS: Allowing origin -> {}", origin.trim());
+            }
+            configuration.setAllowedOrigins(Arrays.asList(origins));
         }
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setExposedHeaders(Arrays.asList("X-CSRF-TOKEN"));
+        configuration.setAllowedHeaders(
+                Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin", "X-CSRF-TOKEN"));
+        configuration.setExposedHeaders(Arrays.asList("X-CSRF-TOKEN", "Content-Disposition"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
 
+        log.info("═════════════════════════════════════════════════════════════════════════════");
         return source;
     }
 

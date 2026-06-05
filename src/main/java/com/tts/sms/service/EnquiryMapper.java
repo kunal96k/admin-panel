@@ -59,6 +59,8 @@ public class EnquiryMapper {
                 .importSource(enquiry.getImportSource())
                 .createdAt(enquiry.getCreatedAt())
                 .updatedAt(enquiry.getUpdatedAt())
+                .createdBy(enquiry.getCreatedBy())
+                .updatedBy(enquiry.getUpdatedBy())
                 .build();
     }
 

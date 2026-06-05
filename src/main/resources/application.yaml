@@ -141,10 +141,11 @@ server:
     session:
       timeout: 30m
       cookie:
-        http-only: true
-        secure: ${SESSION_COOKIE_SECURE:true}
-      persistent: false  # Disable session persistence
-      store-type: none   # Don't store sessions on disk
+        secure: ${SESSION_COOKIE_SECURE:false}
+        http-only: ${SESSION_COOKIE_HTTP_ONLY:true}
+        same-site: ${SESSION_COOKIE_SAME_SITE:lax}
+      persistent: false 
+      store-type: none  
 
   compression:
     enabled: true

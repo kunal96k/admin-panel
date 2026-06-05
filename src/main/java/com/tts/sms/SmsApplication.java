@@ -38,30 +38,50 @@ public class SmsApplication extends SpringBootServletInitializer {
     }
 
     /**
-     * Log application startup information
+     * Log application startup information including CORS and Security settings
      */
     private static void logApplicationStartup(Environment env) {
-        String protocol = env.getProperty("server.ssl.enabled", "false").equals("true")
-                ? "https" : "http";
-        String serverPort = env.getProperty("server.port");
-        String contextPath = env.getProperty("server.servlet.context-path", "/");
+        String protocol = "http";
+        if (env.getProperty("server.ssl.key-store") != null || 
+            "true".equals(env.getProperty("server.ssl.enabled")) ||
+            "true".equals(env.getProperty("spring.security.require-ssl"))) {
+            protocol = "https";
+        }
+        
+        String serverPort = env.getProperty("server.port", "8080");
+        String contextPath = env.getProperty("server.servlet.context-path", "");
+        if ("/".equals(contextPath)) contextPath = "";
+        
         String hostAddress = "localhost";
-
         try {
             hostAddress = InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
-            log.warn("Unable to determine host address", e);
+            log.warn("Unable to determine host address, using 'localhost'");
         }
 
-        log.info("\n----------------------------------------------------------\n" +
-                        "Application '{}' is running!\n" +
-                        "Profile(s): {}\n" +
-                        "Access URLs:\n" +
-                        "  Local:      {}://localhost:{}{}\n" +
-                        "  External:   {}://{}:{}{}\n" +
-                        "----------------------------------------------------------",
-                env.getProperty("spring.application.name"),
-                env.getActiveProfiles().length == 0 ? "default" : String.join(", ", env.getActiveProfiles()),
+        String allowedOrigins = env.getProperty("app.security.cors.allowed-origins", "*");
+        String activeProfiles = env.getActiveProfiles().length == 0 ? "default" : String.join(", ", env.getActiveProfiles());
+
+        log.info("\n" +
+                        "══════════════════════════════════════════════════════════════════════════\n" +
+                        "                🚀  TTS SMS APPLICATION STARTED SUCCESSFULLY!             \n" +
+                        "══════════════════════════════════════════════════════════════════════════\n" +
+                        "  Application   : {}\n" +
+                        "  Profiles      : {}\n" +
+                        "  Port          : {}\n" +
+                        "  SSL Enabled   : {}\n" +
+                        "  Context Path  : {}\n" +
+                        "  CORS Allowed  : {}\n" +
+                        "  Access URLs   :\n" +
+                        "    Local       : {}://localhost:{}{}\n" +
+                        "    External    : {}://{}:{}{}\n" +
+                        "══════════════════════════════════════════════════════════════════════════",
+                env.getProperty("spring.application.name", "TTS-SMS"),
+                activeProfiles,
+                serverPort,
+                protocol.equals("https") ? "✅ YES" : "❌ NO (HTTP Mode)",
+                contextPath.isEmpty() ? "/" : contextPath,
+                allowedOrigins,
                 protocol, serverPort, contextPath,
                 protocol, hostAddress, serverPort, contextPath
         );

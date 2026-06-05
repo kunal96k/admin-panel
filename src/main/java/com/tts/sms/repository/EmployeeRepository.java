@@ -9,11 +9,15 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     boolean existsByEmailId(String emailId);
+
+    Optional<Employee> findByEmailId(String emailId);
+
 
     boolean existsByEmailIdAndIdNot(String emailId, Long id);
 

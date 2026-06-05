@@ -101,7 +101,8 @@ public class EnquiryService {
 
         Enquiry enquiry = enquiryMapper.toEntity(requestDTO);
         enquiry.setImportSource("MANUAL");
-        enquiry.setCreatedBy("SYSTEM");
+        enquiry.setCreatedBy(getCurrentLoggedInUser());
+        enquiry.setUpdatedBy(getCurrentLoggedInUser());
         Enquiry saved = enquiryRepository.save(enquiry);
         log.info("Created enquiry with id: {} for {}", saved.getId(), saved.getDisplayName());
         return enquiryMapper.toResponseDTO(saved);
@@ -124,7 +125,7 @@ public class EnquiryService {
 //            );
 //        }
         enquiryMapper.updateEntityFromDTO(requestDTO, existingEnquiry);
-        existingEnquiry.setUpdatedBy("SYSTEM");
+        existingEnquiry.setUpdatedBy(getCurrentLoggedInUser());
         Enquiry updated = enquiryRepository.save(existingEnquiry);
         log.info("Updated enquiry with id: {}", id);
         return enquiryMapper.toResponseDTO(updated);
@@ -140,7 +141,7 @@ public class EnquiryService {
                     return new ResourceNotFoundException("Enquiry not found with id: " + id);
                 });
         enquiry.setStatus(status);
-        enquiry.setUpdatedBy("SYSTEM");
+        enquiry.setUpdatedBy(getCurrentLoggedInUser());
         Enquiry updated = enquiryRepository.save(enquiry);
         log.info("Updated status for enquiry with id: {} to {}", id, status);
         return enquiryMapper.toResponseDTO(updated);
@@ -155,7 +156,7 @@ public class EnquiryService {
                     return new ResourceNotFoundException("Enquiry not found with id: " + id);
                 });
         enquiry.setIsDeleted(true);
-        enquiry.setUpdatedBy("SYSTEM");
+        enquiry.setUpdatedBy(getCurrentLoggedInUser());
         enquiryRepository.save(enquiry);
         log.info("Soft deleted enquiry with id: {}", id);
     }
@@ -342,5 +343,28 @@ public class EnquiryService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveEnquiryInNewTransaction(Enquiry enquiry) {
         enquiryRepository.save(enquiry);
+    }
+
+    private String getCurrentLoggedInUser() {
+        try {
+            org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && 
+                !(authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof com.tts.sms.model.User) {
+                    com.tts.sms.model.User user = (com.tts.sms.model.User) principal;
+                    if (user.getEmployee() != null && user.getEmployee().getEmployeeName() != null) {
+                        return user.getEmployee().getEmployeeName();
+                    }
+                    return user.getUsername();
+                } else if (principal != null) {
+                    return principal.toString();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get current logged in user: {}", e.getMessage());
+        }
+        return "SYSTEM";
     }
 }

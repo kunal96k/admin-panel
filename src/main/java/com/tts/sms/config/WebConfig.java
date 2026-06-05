@@ -66,18 +66,11 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addViewController("/login").setViewName("login");
     }
 
+    // CORS is now managed centrally in SecurityConfig.java for better reliability and security.
+    // This prevents conflicting CORS headers and ensures consistent behavior.
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        log.info("🌐 Configuring CORS for production");
-
-        registry.addMapping("/api/**")
-                .allowedOrigins("*") // In production, specify your domain
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
-                .allowedHeaders("*")
-                .allowCredentials(false)
-                .maxAge(3600);
-
-        log.info(" CORS configured for /api/** endpoints");
+        log.debug("Global CORS is handled by SecurityConfig's CorsConfigurationSource");
     }
 
     @Override

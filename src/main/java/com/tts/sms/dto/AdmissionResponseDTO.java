@@ -52,6 +52,7 @@ public class AdmissionResponseDTO {
     private String packageName;
     private String courses; // Comma-separated string
     private List<String> coursesList; // Parsed list
+    private String courseFeesDetails;
     private Double totalPayableFees;
     private Double totalReceivableFees;
     private Double discountPercent;
@@ -94,4 +95,7 @@ public class AdmissionResponseDTO {
     private String studentCategory;
     private LocalDateTime categoryUpdatedAt;
     private String feesStatus;
+
+    private String createdBy;
+    private String updatedBy;
 }
