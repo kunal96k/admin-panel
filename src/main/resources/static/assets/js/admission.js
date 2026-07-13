@@ -46,6 +46,7 @@
 
 // Initialize on page load
    document.addEventListener('DOMContentLoaded', async function() {
+       populateAcademicYears();
        initializeEventListeners();
        loadAdmissions();
        await loadDropdownData();
@@ -111,17 +112,17 @@
        // Generate installments
        document.getElementById('btnGenerateInstallments')?.addEventListener('click', generateInstallments);
 
-       // ── TAB 5: Date/Days auto-calculator ──
+       // â”€â”€ TAB 5: Date/Days auto-calculator â”€â”€
        document.getElementById('instStartDate')?.addEventListener('change', calcInstDaysFromDates);
        document.getElementById('instSecondDate')?.addEventListener('change', calcInstDaysFromDates);
        document.getElementById('instDays')?.addEventListener('input', calcInstSecondDateFromDays);
 
-       // ── Fee Modal: Date/Days auto-calculator ──
+       // â”€â”€ Fee Modal: Date/Days auto-calculator â”€â”€
        document.getElementById('feeInstStartDate')?.addEventListener('change', calcFeeInstDaysFromDates);
        document.getElementById('feeInstSecondDate')?.addEventListener('change', calcFeeInstDaysFromDates);
        document.getElementById('feeInstDays')?.addEventListener('input', calcFeeInstSecondDateFromDays);
 
-       // ── Add Installment Row buttons ──
+       // â”€â”€ Add Installment Row buttons â”€â”€
        document.getElementById('btnAddInstallment')?.addEventListener('click', addInstallmentRow);
        document.getElementById('btnFeeAddInstallment')?.addEventListener('click', addFeeInstallmentRow);
 
@@ -153,7 +154,7 @@
        document.getElementById('admDiscountAmount')?.addEventListener('input', calculateDiscountFromAmount);
    }
 
-   // ── Date/Days calculators for TAB 5 ──
+   // â”€â”€ Date/Days calculators for TAB 5 â”€â”€
    function calcInstDaysFromDates() {
        const start = document.getElementById('instStartDate')?.value;
        const second = document.getElementById('instSecondDate')?.value;
@@ -178,7 +179,7 @@
        }
    }
 
-   // ── Date/Days calculators for Fee Modal ──
+   // â”€â”€ Date/Days calculators for Fee Modal â”€â”€
    function calcFeeInstDaysFromDates() {
        const start = document.getElementById('feeInstStartDate')?.value;
        const second = document.getElementById('feeInstSecondDate')?.value;
@@ -203,7 +204,7 @@
        }
    }
 
-   // ── Recalculate installment row total (Tab 5) ──
+   // â”€â”€ Recalculate installment row total (Tab 5) â”€â”€
    function recalculateInstallmentTotal() {
        const tbody = document.getElementById('installmentsBody');
        if (!tbody) return;
@@ -217,7 +218,7 @@
        if (instTotalEl) instTotalEl.value = sum.toFixed(2);
    }
 
-   // ── Recalculate fee installment row total (Fee Modal) ──
+   // â”€â”€ Recalculate fee installment row total (Fee Modal) â”€â”€
    function recalculateFeeInstallmentTotal() {
        const tbody = document.getElementById('feeInstallmentsBody');
        if (!tbody) return;
@@ -231,7 +232,7 @@
        if (instTotalEl) instTotalEl.value = sum.toFixed(2);
    }
 
-   // ── Build a new editable installment row for Tab 5 ──
+   // â”€â”€ Build a new editable installment row for Tab 5 â”€â”€
    function buildInstallmentRow(date, amount, status, rowIndex) {
        const tr = document.createElement('tr');
        tr.innerHTML = `
@@ -255,7 +256,7 @@
        return tr;
    }
 
-   // ── Add Installment Row (Tab 5) ──
+   // â”€â”€ Add Installment Row (Tab 5) â”€â”€
    function addInstallmentRow() {
        const tbody = document.getElementById('installmentsBody');
        if (!tbody) return;
@@ -279,55 +280,119 @@
        }
    };
 
-   // ── Build a new editable fee installment row for Fee Modal ──
-   function buildFeeInstallmentRow(date, amount, status, notes, instId) {
-       const tr = document.createElement('tr');
-       tr.dataset.installmentId = instId || '';
-       tr.innerHTML = `
-           <td><input type="date" class="form-control form-control-sm fee-inst-date" value="${date || ''}"></td>
-           <td><input type="number" class="form-control form-control-sm fee-inst-amount" value="${amount || ''}" step="0.01" min="0" placeholder="0.00"></td>
-           <td>
-               <select class="form-select form-select-sm fee-inst-status">
-                   <option value="Pending"${status === 'Pending' ? ' selected' : ''}>Pending</option>
-                   <option value="Paid"${status === 'Paid' ? ' selected' : ''}>Paid</option>
-                   <option value="Partial"${status === 'Partial' ? ' selected' : ''}>Partial</option>
-                   <option value="Overdue"${status === 'Overdue' ? ' selected' : ''}>Overdue</option>
-                   <option value="Waived"${status === 'Waived' ? ' selected' : ''}>Waived</option>
-               </select>
-           </td>
-           <td><input type="text" class="form-control form-control-sm fee-inst-notes" value="${(notes||'').replace(/"/g,'&quot;')}" placeholder="Notes..."></td>
-           <td class="text-center">
-               <button type="button" class="btn btn-sm btn-outline-danger" onclick="window.removeFeeInstallmentRow(this)">
-                   <i class="bi bi-trash"></i>
-               </button>
-           </td>
-       `;
-       tr.querySelector('.fee-inst-amount').addEventListener('input', recalculateFeeInstallmentTotal);
-       return tr;
-   }
+    // ── Build a new editable fee installment row for Fee Modal ──
+    function buildFeeInstallmentRow(date, amount, status, notes, instId, createdBy, createdAt, updatedBy, updatedAt) {
+        const tr = document.createElement('tr');
+        tr.dataset.installmentId = instId || '';
+        
+        const createdTimeStr = createdAt ? formatDisplayDateTime(createdAt) : 'N/A';
+        const updatedTimeStr = updatedAt ? formatDisplayDateTime(updatedAt) : 'N/A';
 
-   // ── Add Fee Installment Row (Fee Modal) ──
-   function addFeeInstallmentRow() {
-       const tbody = document.getElementById('feeInstallmentsBody');
-       if (!tbody) return;
-       const placeholder = tbody.querySelector('tr td[colspan]');
-       if (placeholder) placeholder.closest('tr').remove();
-       tbody.appendChild(buildFeeInstallmentRow('', '', 'Pending', ''));
-       recalculateFeeInstallmentTotal();
-   }
+        tr.dataset.createdBy = createdBy || 'SYSTEM';
+        tr.dataset.createdTime = createdTimeStr;
+        tr.dataset.updatedBy = updatedBy || '-';
+        tr.dataset.updatedTime = updatedTimeStr;
+        tr.style.cursor = 'pointer';
 
-   window.removeFeeInstallmentRow = function(btn) {
-       btn.closest('tr').remove();
-       recalculateFeeInstallmentTotal();
-       const tbody = document.getElementById('feeInstallmentsBody');
-       if (tbody && tbody.querySelectorAll('tr').length === 0) {
-           tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No installments found</td></tr>';
-           const totalEl = document.getElementById('feeInstRowTotal');
-           const instTotalEl = document.getElementById('feeInstTotalInstAmount');
-           if (totalEl) totalEl.textContent = '₹0.00';
-           if (instTotalEl) instTotalEl.value = '0';
-       }
-   };
+        tr.innerHTML = `
+            <td><input type="date" class="form-control form-control-sm fee-inst-date" value="${date || ''}"></td>
+            <td><input type="number" class="form-control form-control-sm fee-inst-amount" value="${amount || ''}" step="0.01" min="0" placeholder="0.00"></td>
+            <td>
+                <select class="form-select form-select-sm fee-inst-status">
+                    <option value="Pending"${status === 'Pending' ? ' selected' : ''}>Pending</option>
+                    <option value="Paid"${status === 'Paid' ? ' selected' : ''}>Paid</option>
+                    <option value="Partial"${status === 'Partial' ? ' selected' : ''}>Partial</option>
+                    <option value="Overdue"${status === 'Overdue' ? ' selected' : ''}>Overdue</option>
+                    <option value="Waived"${status === 'Waived' ? ' selected' : ''}>Waived</option>
+                </select>
+            </td>
+            <td><input type="text" class="form-control form-control-sm fee-inst-notes" value="${(notes||'').replace(/"/g,'&quot;')}" placeholder="Notes..."></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="window.removeFeeInstallmentRow(this)">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        tr.querySelector('.fee-inst-amount').addEventListener('input', recalculateFeeInstallmentTotal);
+        return tr;
+    }
+
+    // ── Setup Fee Installments Audit Logic ──
+    function setupFeeInstallmentsAuditLogic() {
+        const userRole = document.getElementById('currentUserRole')?.value;
+        const isSuperAdmin = userRole && (userRole.toUpperCase().replace(/\s+|_/g, '') === 'SUPERADMIN');
+        const auditSection = document.getElementById('feeInstAuditSection');
+        
+        if (auditSection) {
+            auditSection.style.display = isSuperAdmin ? 'block' : 'none';
+        }
+
+        // Reset details
+        if (document.getElementById('feeInstCreatedBy')) document.getElementById('feeInstCreatedBy').textContent = '-';
+        if (document.getElementById('feeInstCreatedTime')) document.getElementById('feeInstCreatedTime').textContent = '-';
+        if (document.getElementById('feeInstUpdatedBy')) document.getElementById('feeInstUpdatedBy').textContent = '-';
+        if (document.getElementById('feeInstUpdatedTime')) document.getElementById('feeInstUpdatedTime').textContent = '-';
+
+        if (!isSuperAdmin) return;
+
+        const tbody = document.getElementById('feeInstallmentsBody');
+        if (!tbody) return;
+
+        const rows = tbody.querySelectorAll('tr');
+        if (rows.length === 0 || (rows.length === 1 && rows[0].cells.length === 1)) {
+            return;
+        }
+
+        rows.forEach(row => {
+            row.addEventListener('click', function(e) {
+                if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) {
+                    return;
+                }
+                rows.forEach(r => r.classList.remove('table-active'));
+                this.classList.add('table-active');
+                
+                document.getElementById('feeInstCreatedBy').textContent = this.dataset.createdBy || '-';
+                document.getElementById('feeInstCreatedTime').textContent = this.dataset.createdTime || '-';
+                document.getElementById('feeInstUpdatedBy').textContent = this.dataset.updatedBy || '-';
+                document.getElementById('feeInstUpdatedTime').textContent = this.dataset.updatedTime || '-';
+            });
+        });
+
+        // Auto click/select the first row
+        if (rows.length > 0) {
+            const firstRow = rows[0];
+            firstRow.classList.add('table-active');
+            document.getElementById('feeInstCreatedBy').textContent = firstRow.dataset.createdBy || '-';
+            document.getElementById('feeInstCreatedTime').textContent = firstRow.dataset.createdTime || '-';
+            document.getElementById('feeInstUpdatedBy').textContent = firstRow.dataset.updatedBy || '-';
+            document.getElementById('feeInstUpdatedTime').textContent = firstRow.dataset.updatedTime || '-';
+        }
+    }
+
+    // ── Add Fee Installment Row (Fee Modal) ──
+    function addFeeInstallmentRow() {
+        const tbody = document.getElementById('feeInstallmentsBody');
+        if (!tbody) return;
+        const placeholder = tbody.querySelector('tr td[colspan]');
+        if (placeholder) placeholder.closest('tr').remove();
+        tbody.appendChild(buildFeeInstallmentRow('', '', 'Pending', ''));
+        recalculateFeeInstallmentTotal();
+        setupFeeInstallmentsAuditLogic();
+    }
+
+    window.removeFeeInstallmentRow = function(btn) {
+        btn.closest('tr').remove();
+        recalculateFeeInstallmentTotal();
+        const tbody = document.getElementById('feeInstallmentsBody');
+        if (tbody && tbody.querySelectorAll('tr').length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No installments found</td></tr>';
+            const totalEl = document.getElementById('feeInstRowTotal');
+            const instTotalEl = document.getElementById('feeInstTotalInstAmount');
+            if (totalEl) totalEl.textContent = '₹0.00';
+            if (instTotalEl) instTotalEl.value = '0';
+        }
+        setupFeeInstallmentsAuditLogic();
+    };
 
    function navigateNext() {
            if (currentTab < totalTabs) {
@@ -606,7 +671,7 @@ function renderAdmissionsTable(admissions) {
 }
 
 /**
- * ✨ CHANGE STUDENT CATEGORY STATUS
+ * âœ¨ CHANGE STUDENT CATEGORY STATUS
  */
 async function changeStudentStatus(admissionId) {
     try {
@@ -933,7 +998,7 @@ async function openNewAdmissionModal() {
                     setValue('instStartDate', today);
                     window.location.reload();
                 } else {
-                    // ⚠️ NO ENQUIRY FOUND - REDIRECT TO ENQUIRY PAGE
+                    // âš ï¸ NO ENQUIRY FOUND - REDIRECT TO ENQUIRY PAGE
                     Swal.close();
 
                     const result = await Swal.fire({
@@ -1247,7 +1312,7 @@ function showErrorWithDetails(title, message, technicalError = null) {
          setValue('admReceivableFees', receivable || 0);
          setValue('admDiscountPercent', data.discountPercent || 0);
          setValue('admDiscountAmount', data.discountAmount || 0);
-         setValue('admAcademicYear', data.academicYear || '2024-25');
+         setValue('admAcademicYear', data.academicYear || getCurrentAcademicYear());
      
          // Tab 4: Batch & Subject (Subjects removed per user request)
         if (data.batchesList && data.batchesList.length > 0) {
@@ -1762,7 +1827,7 @@ function showErrorWithDetails(title, message, technicalError = null) {
                 return; // Cancel saving
             }
 
-            // ── Custom-installment amount-match validation ──
+            // â”€â”€ Custom-installment amount-match validation â”€â”€
             if (admissionData.customInstallments && admissionData.customInstallments.length > 0) {
                 const admTotal = admissionData.totalReceivableFees || 0;
                 const admSum = admissionData.customInstallments.reduce((s, i) => s + i.amount, 0);
@@ -2461,6 +2526,20 @@ window.printTable = async function() {
                 }
             }
 
+            if (!hasDetails && admission.courses && admission.courses !== '-') {
+                const courseNames = admission.courses.split(',').map(c => c.trim()).filter(Boolean);
+                savedDetails = courseNames.map(name => {
+                    const matchedCourse = (allCoursesForFilter || []).find(c => c.courseName.trim().toLowerCase() === name.toLowerCase());
+                    return {
+                        name: name,
+                        price: matchedCourse ? matchedCourse.courseFees : 0
+                    };
+                });
+                if (savedDetails.length > 0) {
+                    hasDetails = true;
+                }
+            }
+
             if (hasDetails) {
                 const totalPayable = savedDetails.reduce((s, c) => s + (parseFloat(c.price) || 0), 0);
                 const discountAmt = admission.discountAmount || 0;
@@ -2582,7 +2661,7 @@ window.printTable = async function() {
             const auditSection = document.getElementById('superadminAuditSection');
             if (auditSection) {
                 const userRole = document.getElementById('currentUserRole')?.value;
-                if (userRole === 'SUPER_ADMIN') {
+                if (userRole && (userRole.toUpperCase().replace(/\s+|_/g, '') === 'SUPERADMIN')) {
                     auditSection.style.display = 'block';
                     document.getElementById('viewAdmCreatedBy').textContent = admission.createdBy || '-';
                     document.getElementById('viewAdmCreatedTime').textContent = formatDisplayDateTime(admission.createdAt);
@@ -2595,21 +2674,44 @@ window.printTable = async function() {
 
             // Installments
             const instBody = document.getElementById('viewAdmInstallmentsBody');
+            const thAudit = document.getElementById('viewAdmInstallmentsThAudit');
+            const userRole = document.getElementById('currentUserRole')?.value;
+            const isSuperAdmin = userRole && (userRole.toUpperCase().replace(/\s+|_/g, '') === 'SUPERADMIN');
+
+            if (thAudit) {
+                thAudit.style.display = isSuperAdmin ? 'table-cell' : 'none';
+            }
+
             if (admission.installments && admission.installments.length > 0) {
-                instBody.innerHTML = admission.installments.map(inst => `
-                    <tr>
-                        <td>${new Date(inst.dueDate).toLocaleDateString('en-GB')}</td>
-                        <td>₹${parseFloat(inst.amount).toFixed(2)}</td>
-                        <td>
-                            <span class="badge bg-${inst.status === 'Paid' ? 'success' : inst.status === 'Overdue' ? 'danger' : 'warning'}">
-                                ${inst.status}
-                            </span>
+                instBody.innerHTML = admission.installments.map(inst => {
+                    const auditTd = isSuperAdmin ? `
+                        <td style="font-size: 0.8rem; line-height: 1.2;">
+                            <div><strong>Created By:</strong> ${inst.createdBy || 'SYSTEM'}</div>
+                            <div class="text-muted">${inst.createdAt ? formatDisplayDateTime(inst.createdAt) : 'N/A'}</div>
+                            ${inst.updatedBy ? `
+                                <div class="mt-1"><strong>Updated By:</strong> ${inst.updatedBy}</div>
+                                <div class="text-muted">${inst.updatedAt ? formatDisplayDateTime(inst.updatedAt) : 'N/A'}</div>
+                            ` : ''}
                         </td>
-                        <td class="small text-muted">${inst.notes || '-'}</td>
-                    </tr>
-                `).join('');
+                    ` : '';
+
+                    return `
+                        <tr>
+                            <td>${new Date(inst.dueDate).toLocaleDateString('en-GB')}</td>
+                            <td>₹${parseFloat(inst.amount).toFixed(2)}</td>
+                            <td>
+                                <span class="badge bg-${inst.status === 'Paid' ? 'success' : inst.status === 'Overdue' ? 'danger' : 'warning'}">
+                                    ${inst.status}
+                                </span>
+                            </td>
+                            <td class="small text-muted">${inst.notes || '-'}</td>
+                            ${auditTd}
+                        </tr>
+                    `;
+                }).join('');
             } else {
-                instBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments found</td></tr>';
+                const colspanVal = isSuperAdmin ? 5 : 4;
+                instBody.innerHTML = `<tr><td colspan="${colspanVal}" class="text-center text-muted">No installments found</td></tr>`;
             }
 
             // Fetch Receipts
@@ -2685,20 +2787,35 @@ window.printTable = async function() {
     function formatDisplayDateTime(dateTimeValue) {
         if (!dateTimeValue) return '-';
         try {
-            const date = new Date(dateTimeValue);
-            if (isNaN(date.getTime())) return dateTimeValue;
+            let date;
+            if (Array.isArray(dateTimeValue)) {
+                const [year, month, day, hours = 0, minutes = 0, seconds = 0] = dateTimeValue;
+                date = new Date(year, month - 1, day, hours, minutes, seconds);
+            } else {
+                const str = String(dateTimeValue).trim();
+                if (str.includes(',')) {
+                    const parts = str.split(',').map(Number);
+                    if (parts.length >= 3 && parts.every(p => !isNaN(p))) {
+                        const [year, month, day, hours = 0, minutes = 0, seconds = 0] = parts;
+                        date = new Date(year, month - 1, day, hours, minutes, seconds);
+                    }
+                }
+                if (!date || isNaN(date.getTime())) {
+                    date = new Date(str);
+                }
+            }
+
+            if (isNaN(date.getTime())) return String(dateTimeValue);
+
             const day = String(date.getDate()).padStart(2, '0');
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const year = date.getFullYear();
-            let hours = date.getHours();
+            const hours = String(date.getHours()).padStart(2, '0');
             const minutes = String(date.getMinutes()).padStart(2, '0');
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12;
-            const strTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
-            return `${day}/${month}/${year} ${strTime}`;
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
         } catch (e) {
-            return dateTimeValue;
+            return String(dateTimeValue);
         }
     }
 
@@ -2724,7 +2841,7 @@ window.printTable = async function() {
 
                 allCourses = await response.json();
             } catch (error) {
-                console.error('❌ Error loading courses:', error);
+                console.error('â Œ Error loading courses:', error);
             }
         }
 
@@ -2920,6 +3037,7 @@ window.printTable = async function() {
 
             if (installments.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No installments found. Generate or add rows below.</td></tr>';
+                setupFeeInstallmentsAuditLogic();
             } else {
                 tbody.innerHTML = '';
                 installments.forEach(inst => {
@@ -2928,13 +3046,18 @@ window.printTable = async function() {
                         inst.amount != null ? parseFloat(inst.amount).toFixed(2) : '',
                         inst.status || 'Pending',
                         inst.notes || '',
-                        inst.id
+                        inst.id,
+                        inst.createdBy,
+                        inst.createdAt,
+                        inst.updatedBy,
+                        inst.updatedAt
                     ));
                 });
                 recalculateFeeInstallmentTotal();
+                setupFeeInstallmentsAuditLogic();
             }
 
-            const modal = new bootstrap.Modal(document.getElementById('feeInstallmentsModal'));
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('feeInstallmentsModal'));
             modal.show();
 
         } catch (error) {
@@ -2981,7 +3104,7 @@ window.printTable = async function() {
                 showSuccess('Installment deleted successfully!');
 
                 // Reload installments modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('feeInstallmentsModal'));
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('feeInstallmentsModal'));
                 if (modal) {
                     const studentName = document.getElementById('feeInstStudentName').textContent;
                     // Reload current view
@@ -2997,20 +3120,34 @@ window.printTable = async function() {
     };
  
      window.editInstallment = async function(id, dueDate, amount, status, notes) {
+         // Hide the parent Fee Installments modal so SweetAlert inputs are fully accessible
+         const feeInstModalEl = document.getElementById('feeInstallmentsModal');
+         let feeInstModalInstance = feeInstModalEl ? bootstrap.Modal.getOrCreateInstance(feeInstModalEl) : null;
+         if (feeInstModalInstance) {
+             feeInstModalInstance.hide();
+         }
+
+         // Wait a brief moment for Bootstrap hide transitions and backdrop cleanup to complete
+         await new Promise(resolve => setTimeout(resolve, 150));
+         document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+         document.body.classList.remove('modal-open');
+         document.body.style.overflow = '';
+         document.body.style.paddingRight = '';
+
          const { value: formValues } = await Swal.fire({
-             title: 'Edit Installment',
+             title: '<i class="bi bi-pencil-square me-2"></i>Edit Installment',
              html: `
                  <div class="text-start">
                      <div class="mb-3">
-                         <label class="form-label">Due Date</label>
+                         <label class="form-label fw-semibold">Due Date</label>
                          <input type="date" class="form-control" id="editInstDueDate" value="${dueDate}">
                      </div>
                      <div class="mb-3">
-                         <label class="form-label">Amount</label>
-                         <input type="number" class="form-control" id="editInstAmount" value="${amount}" step="0.01">
+                         <label class="form-label fw-semibold">Amount (&#8377;)</label>
+                         <input type="number" class="form-control" id="editInstAmount" value="${amount}" step="0.01" min="0">
                      </div>
                      <div class="mb-3">
-                         <label class="form-label">Status</label>
+                         <label class="form-label fw-semibold">Status</label>
                          <select class="form-select" id="editInstStatus">
                              <option value="Pending" ${status === 'Pending' ? 'selected' : ''}>Pending</option>
                              <option value="Paid" ${status === 'Paid' ? 'selected' : ''}>Paid</option>
@@ -3020,57 +3157,104 @@ window.printTable = async function() {
                          </select>
                      </div>
                      <div class="mb-3">
-                         <label class="form-label">Notes</label>
+                         <label class="form-label fw-semibold">Notes</label>
                          <textarea class="form-control" id="editInstNotes" rows="2">${notes || ''}</textarea>
                      </div>
                  </div>
              `,
              focusConfirm: false,
              showCancelButton: true,
-             confirmButtonText: 'Update',
+             confirmButtonText: '<i class="bi bi-check-circle me-1"></i> Update',
+             cancelButtonText: 'Cancel',
              confirmButtonColor: '#667eea',
+             didOpen: () => {
+                 setTimeout(() => {
+                     const el = document.getElementById('editInstDueDate');
+                     if (el) el.focus();
+                 }, 80);
+             },
              preConfirm: () => {
+                 const d = document.getElementById('editInstDueDate').value;
+                 const a = parseFloat(document.getElementById('editInstAmount').value);
+                 if (!d) { Swal.showValidationMessage('Due Date is required'); return false; }
+                 if (isNaN(a) || a < 0) { Swal.showValidationMessage('Enter a valid amount'); return false; }
                  return {
-                     dueDate: document.getElementById('editInstDueDate').value,
-                     amount: parseFloat(document.getElementById('editInstAmount').value),
+                     dueDate: d,
+                     amount: a,
                      status: document.getElementById('editInstStatus').value,
                      notes: document.getElementById('editInstNotes').value
-                 }
+                 };
              }
          });
- 
+
+         // Helper: refresh rows in the parent modal and re-show it
+         const reopenFeeModal = async () => {
+             if (!feeInstModalEl) return;
+             const nameEl = document.getElementById('feeInstStudentName');
+             const regNo = nameEl?.dataset?.regNo;
+             if (regNo) {
+                 try {
+                     const res = await fetch(`/api/fees-manager/installments/reg/${regNo}`);
+                     if (res.ok) {
+                         const updatedList = await res.json();
+                         const tbody = document.getElementById('feeInstallmentsBody');
+                         if (tbody) {
+                             tbody.innerHTML = '';
+                             updatedList.forEach(inst => {
+                                 tbody.appendChild(buildFeeInstallmentRow(
+                                     inst.dueDate || '',
+                                     inst.amount != null ? parseFloat(inst.amount).toFixed(2) : '',
+                                     inst.status || 'Pending',
+                                     inst.notes || '',
+                                     inst.id,
+                                     inst.createdBy,
+                                     inst.createdAt,
+                                     inst.updatedBy,
+                                     inst.updatedAt
+                                 ));
+                             });
+                             recalculateFeeInstallmentTotal();
+                             setupFeeInstallmentsAuditLogic();
+                         }
+                     }
+                 } catch (e) {
+                     console.warn('Could not refresh installment rows:', e);
+                 }
+             }
+             bootstrap.Modal.getOrCreateInstance(feeInstModalEl).show();
+         };
+
          if (formValues) {
              try {
                  showLoading('Updating installment...');
-                 
                  const csrfToken = getCsrfToken();
-                 const headers = {
-                     'Accept': 'application/json',
-                     'Content-Type': 'application/json'
-                 };
+                 const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
                  if (csrfToken) headers[getCsrfHeader()] = csrfToken;
- 
+
                  const response = await fetch(`/api/fees-manager/installments/${id}`, {
                      method: 'PUT',
                      headers: headers,
                      body: JSON.stringify(formValues),
                      credentials: 'include'
                  });
- 
+
                  if (!response.ok) throw new Error('Failed to update installment');
- 
+
                  Swal.close();
-                 showSuccess('Installment updated and fees synced!');
-                 
-                 // Reload the page to reflect changes in admissions table
-                 location.reload();
- 
+                 showSuccess('Installment updated successfully!');
+                 loadAdmissions(currentPage, pageSize);
+                 await reopenFeeModal();
+
              } catch (error) {
-                 showError(error.message);
+                 Swal.close();
+                 showError(error.message || 'Failed to update installment');
+                 await reopenFeeModal();
              }
+         } else {
+             // User cancelled — re-open the parent modal
+             await reopenFeeModal();
          }
      };
-
    // ==================== OPEN TRANSFER MODAL WITH INSTALLMENTS ====================
 
    async function openTransferModal(id) {
@@ -4000,6 +4184,7 @@ window.printTable = async function() {
                       }
 
                       recalculateFeeInstallmentTotal();
+                      setupFeeInstallmentsAuditLogic();
                       showSuccess(`Generated ${noOfInstallments} installments`);
                   }
 
@@ -4054,7 +4239,7 @@ window.printTable = async function() {
                           return;
                       }
 
-                      // ── Amount-match validation ──
+                      // â”€â”€ Amount-match validation â”€â”€
                       const feeInstTotal = parseFloat(document.getElementById('feeInstTotalAmount')?.value) || 0;
                       const feeInstSum = installments.reduce((s, i) => s + i.amount, 0);
                       const feeInstDiff = Math.round((feeInstSum - feeInstTotal) * 100) / 100; // round to 2dp
@@ -4336,7 +4521,7 @@ window.printTable = async function() {
                       return cleaned || null;
                   }
 
-                  function toIsoDateFromJsDate(dateStr) {
+                  function toIsoDateFromJsDate(d) {
                       // Use local date parts (not UTC) because we want calendar date as shown in Excel
                         const yyyy = d.getFullYear();
                         const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -4352,7 +4537,7 @@ window.printTable = async function() {
                           return toIsoDateFromJsDate(cell);
                         }
 
-                        // If it's a number (Excel sometimes gives timestamps) — try to convert
+                        // If it's a number (Excel sometimes gives timestamps) â€” try to convert
                         if (typeof cell === 'number') {
                           const d = new Date(cell);
                           if (!isNaN(d)) return toIsoDateFromJsDate(d);
@@ -4391,6 +4576,84 @@ window.printTable = async function() {
                       return new Date().toISOString().split('T')[0];
                   }
 
+                 function populateAcademicYears() {
+                     const select = document.getElementById('admAcademicYear');
+                     const transferSelect = document.getElementById('transferAcademicYear');
+                     if (!select) return;
+
+                     const now = new Date();
+                     const currentYear = now.getFullYear();
+                     
+                     // Start 3 years ago and generate 15 options (covers current and 10+ future years)
+                     const startYear = currentYear - 3;
+                     const currentValue = select.value;
+                     select.innerHTML = '';
+                     
+                     if (transferSelect) {
+                         transferSelect.innerHTML = '<option value="">-- Select Academic Year --</option>';
+                     }
+
+                     for (let i = 0; i < 15; i++) {
+                         const year = startYear + i;
+                         const shortEndYear = (year + 1) % 100;
+                         const shortEndYearStr = String(shortEndYear).padStart(2, '0');
+                         const optionValue = `${year}-${shortEndYearStr}`; // e.g. "2026-27"
+                         
+                         // Populate admAcademicYear
+                         const option = document.createElement('option');
+                         option.value = optionValue;
+                         option.textContent = optionValue;
+                         select.appendChild(option);
+
+                         // Populate transferAcademicYear (format YYYY-YYYY, e.g. "2026-2027")
+                         if (transferSelect) {
+                             const longOptionValue = `${year}-${year + 1}`;
+                             const transOption = document.createElement('option');
+                             transOption.value = longOptionValue;
+                             transOption.textContent = longOptionValue;
+                             transferSelect.appendChild(transOption);
+                         }
+                     }
+
+                     // Restore selection
+                     if (currentValue) {
+                         select.value = currentValue;
+                     }
+                 }
+
+                 function getCurrentAcademicYear() {
+                     const now = new Date();
+                     const currentYear = now.getFullYear();
+                     const currentMonth = now.getMonth();
+                     let startYear = currentYear;
+                     if (currentMonth < 3) {
+                         startYear = currentYear - 1;
+                     }
+                     const endYear = (startYear + 1) % 100;
+                     const endYearStr = String(endYear).padStart(2, '0');
+                     return `${startYear}-${endYearStr}`;
+                 }
+
+                 function selectDefaultAcademicYear() {
+                     const select = document.getElementById('admAcademicYear');
+                     if (!select) return;
+                     const currentAcadYear = getCurrentAcademicYear();
+                     let exists = false;
+                     for (let i = 0; i < select.options.length; i++) {
+                         if (select.options[i].value === currentAcadYear) {
+                             exists = true;
+                             break;
+                         }
+                     }
+                     if (!exists) {
+                         const option = document.createElement('option');
+                         option.value = currentAcadYear;
+                         option.textContent = currentAcadYear;
+                         select.add(option, 0);
+                     }
+                     select.value = currentAcadYear;
+                 }
+
                  // ==================== CLEAR FORMS (RESET FOR NEW ADMISSION) ====================
 
                 function clearForms() {
@@ -4414,6 +4677,9 @@ window.printTable = async function() {
                     const today = getTodayDate();
                     setValue('admAdmissionDate', today);
                     setValue('instStartDate', today);
+
+                    // Set default academic year dynamically
+                    selectDefaultAcademicYear();
 
                     const tbody = document.getElementById('selectedCoursesBody');
                     if (tbody) {

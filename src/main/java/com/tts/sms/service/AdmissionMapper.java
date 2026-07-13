@@ -172,6 +172,10 @@ public class AdmissionMapper {
                 .status(installment.getStatus())
                 .notes(installment.getNotes())
                 .isOverdue(installment.isOverdue())
+                .createdBy(installment.getCreatedBy())
+                .updatedBy(installment.getUpdatedBy())
+                .createdAt(installment.getCreatedAt())
+                .updatedAt(installment.getUpdatedAt())
                 .build();
     }
 

@@ -7,6 +7,7 @@ import com.tts.sms.model.Certificate;
 import com.tts.sms.model.Course;
 import com.tts.sms.model.Enquiry;
 import com.tts.sms.model.FeeInstallment;
+import com.tts.sms.model.FeeReceipt;
 import com.tts.sms.model.Fees;
 import com.tts.sms.model.Package;
 import com.tts.sms.repository.*;
@@ -47,6 +48,7 @@ public class AdmissionService {
     private final BatchRepository batchRepository;
     private final BatchService batchService;
     private final CertificateRepository certificateRepository;
+    private final FeeReceiptRepository feeReceiptRepository;
 
     private static final AtomicInteger registrationCounter = new AtomicInteger(8000);
     private static final String REGISTRATION_PREFIX = "REG";
@@ -209,11 +211,37 @@ public class AdmissionService {
 
     @Transactional(readOnly = true)
     public Page<AdmissionResponseDTO> getAllAdmissions(int page, int size) {
-        log.debug("Fetching admissions - page: {}, size: {}", page, size);
+        return getAllAdmissions(page, size, null);
+    }
 
-        Pageable pageable = PageRequest.of(page, size,
-                Sort.by(Sort.Direction.DESC, "admission_date", "created_at"));
+    @Transactional(readOnly = true)
+    public Page<AdmissionResponseDTO> getAllAdmissions(int page, int size, String sort) {
+        log.debug("Fetching admissions - page: {}, size: {}, sort: {}", page, size, sort);
 
+        String sortByField = "createdAt";
+        Sort.Direction direction = Sort.Direction.DESC;
+
+        if (sort != null && !sort.trim().isEmpty()) {
+            String[] parts = sort.split(",");
+            String field = parts[0].trim();
+            if (parts.length > 1 && "asc".equalsIgnoreCase(parts[1].trim())) {
+                direction = Sort.Direction.ASC;
+            }
+
+            if ("admission_date".equalsIgnoreCase(field) || "admissionDate".equalsIgnoreCase(field)) {
+                sortByField = "admissionDate";
+            } else if ("created_at".equalsIgnoreCase(field) || "createdAt".equalsIgnoreCase(field)) {
+                sortByField = "createdAt";
+            } else if ("registration_number".equalsIgnoreCase(field) || "registrationNumber".equalsIgnoreCase(field)) {
+                sortByField = "registrationNumber";
+            } else if ("mobile_primary".equalsIgnoreCase(field) || "mobilePrimary".equalsIgnoreCase(field)) {
+                sortByField = "mobilePrimary";
+            } else {
+                sortByField = field;
+            }
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortByField));
         Page<Admission> admissions = admissionRepository.findByIsDeletedFalse(pageable);
 
         log.info("Retrieved {} admissions out of {} total",
@@ -356,11 +384,11 @@ public class AdmissionService {
                         // Override with Cancelled if student category is CANCELLED
                         if ("CANCELLED".equalsIgnoreCase(admission.getStudentCategory())) {
                             feesStatus = "Cancelled";
-                        } 
-                        // Dynamically check for Overdue if not Clear or Cancelled
-                        else if (!"Clear".equalsIgnoreCase(feesStatus) && fees.getDueDate() != null && fees.getDueDate().isBefore(LocalDate.now())) {
-                            feesStatus = "Overdue";
                         }
+                        // NOTE: Overdue is NOT dynamically re-checked here.
+                        // The stored status is computed accurately by recalculateFeesForStudent()
+                        // which uses actual installment due dates. Using fees.getDueDate() here
+                        // risks setting Overdue from a stale date field.
                         
                         dto.setFeesStatus(feesStatus);
                     } else {
@@ -438,7 +466,7 @@ public class AdmissionService {
         // Generate registration number if not provided
         if (requestDTO.getRegistrationNumber() != null && !requestDTO.getRegistrationNumber().trim().isEmpty()) {
             admission.setRegistrationNumber(requestDTO.getRegistrationNumber());
-            isNewAdmission = requestDTO.getRegistrationNumber().startsWith("REG");
+            isNewAdmission = requestDTO.getRegistrationNumber().trim().toUpperCase().startsWith("REG");
             importSource = isNewAdmission ? "NEW_ENTRY" : "IMPORTED_OLD_DATA";
         } else {
             admission.setRegistrationNumber(generateRegistrationNumber());
@@ -521,7 +549,7 @@ public class AdmissionService {
     private void createFeesRecord(Admission admission) {
         try {
             // Double-check: Only proceed if registration number starts with REG
-            if (!admission.getRegistrationNumber().startsWith("REG")) {
+            if (admission.getRegistrationNumber() == null || !admission.getRegistrationNumber().trim().toUpperCase().startsWith("REG")) {
                 log.warn(" Skipping fees record - Not a REG number: {}",
                         admission.getRegistrationNumber());
                 return;
@@ -1029,9 +1057,11 @@ public class AdmissionService {
                     
                     if ("CANCELLED".equalsIgnoreCase(admission.getStudentCategory())) {
                         feesStatus = "Cancelled";
-                    } else if (!"Clear".equalsIgnoreCase(feesStatus) && fees.getDueDate() != null && fees.getDueDate().isBefore(LocalDate.now())) {
-                        feesStatus = "Overdue";
                     }
+                    // NOTE: Overdue is NOT dynamically re-checked here.
+                    // The stored status is computed accurately by recalculateFeesForStudent()
+                    // which uses actual installment due dates. Using fees.getDueDate() here
+                    // risks setting Overdue from a stale date field.
                     
                     dto.setFeesStatus(feesStatus);
                     
@@ -1171,7 +1201,7 @@ public class AdmissionService {
                 String regNumber = dto.getRegistrationNumber();
                 if (regNumber != null && !regNumber.trim().isEmpty()) {
                     // Check if it's a NEW admission (starts with REG)
-                    isNewAdmission = regNumber.startsWith("REG");
+                    isNewAdmission = regNumber.trim().toUpperCase().startsWith("REG");
                     importSource = isNewAdmission ? "NEW_ENTRY" : "IMPORTED_OLD_DATA";
 
                     try {
@@ -1260,6 +1290,19 @@ public class AdmissionService {
     // ==================== GENERATE INSTALLMENTS - STORE CONFIG
     // ====================
 
+    private Set<Long> getLockedInstallmentIds(String registrationNumber) {
+        try {
+            List<FeeReceipt> receipts = feeReceiptRepository.findByRegistrationNumberAndIsDeletedFalseOrderByReceiptDateDesc(registrationNumber);
+            return receipts.stream()
+                    .map(FeeReceipt::getInstallmentId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+        } catch (Exception e) {
+            log.error("Error finding locked installments for {}: {}", registrationNumber, e.getMessage());
+            return Collections.emptySet();
+        }
+    }
+
     @Transactional
     public List<FeeInstallmentDTO> generateInstallments(String registrationNumber,
             InstallmentConfigDTO config,
@@ -1267,34 +1310,93 @@ public class AdmissionService {
         log.debug("Generating {} installments for regNo: {}",
                 config.getNumberOfInstallments(), registrationNumber);
 
-        // Delete existing installments
-        feeInstallmentRepository.deleteByRegistrationNumber(registrationNumber);
+        // Find existing installments
+        List<FeeInstallment> existingInstallments = feeInstallmentRepository.findByRegistrationNumberOrderByDueDateAsc(registrationNumber);
+        
+        // Find locked installments
+        Set<Long> lockedIds = getLockedInstallmentIds(registrationNumber);
+        
+        Map<Integer, FeeInstallment> existingMap = existingInstallments.stream()
+                .collect(Collectors.toMap(FeeInstallment::getInstallmentNumber, inst -> inst, (a, b) -> a));
 
-        List<FeeInstallment> installments = new ArrayList<>();
+        List<FeeInstallment> toSave = new ArrayList<>();
+        List<FeeInstallment> toDelete = new ArrayList<>();
+        
         Double amountPerInstallment = totalAmount / config.getNumberOfInstallments();
         LocalDate currentDate = config.getStartDate();
 
         for (int i = 1; i <= config.getNumberOfInstallments(); i++) {
-            FeeInstallment installment = FeeInstallment.builder()
-                    .registrationNumber(registrationNumber)
-                    .installmentNumber(i)
-                    .dueDate(currentDate)
-                    .amount(amountPerInstallment)
-                    .status("Pending")
-                    // Store config in each installment
-                    .totalAmount(totalAmount)
-                    .totalInstallmentAmount(totalAmount)
-                    .installmentStartDate(config.getStartDate())
-                    .numberOfInstallments(config.getNumberOfInstallments())
-                    .daysBetweenInstallments(config.getDaysBetween())
-                    .createdBy("SYSTEM")
-                    .build();
+            FeeInstallment existing = existingMap.get(i);
+            boolean isLocked = false;
+            if (existing != null) {
+                isLocked = lockedIds.contains(existing.getId()) || 
+                           "Paid".equalsIgnoreCase(existing.getStatus()) || 
+                           "Refund".equalsIgnoreCase(existing.getStatus()) ||
+                           (existing.getPaidAmount() != null && existing.getPaidAmount() > 0);
+            }
 
-            installments.add(installment);
+            if (isLocked) {
+                // Keep the locked installment exactly as is
+                toSave.add(existing);
+            } else {
+                FeeInstallment installment;
+                if (existing != null) {
+                    // Update the unlocked existing installment
+                    installment = existing;
+                    installment.setDueDate(currentDate);
+                    installment.setAmount(amountPerInstallment);
+                    installment.setTotalAmount(totalAmount);
+                    installment.setTotalInstallmentAmount(totalAmount);
+                    installment.setInstallmentStartDate(config.getStartDate());
+                    installment.setNumberOfInstallments(config.getNumberOfInstallments());
+                    installment.setDaysBetweenInstallments(config.getDaysBetween());
+                    installment.setUpdatedBy(getCurrentLoggedInUser());
+                } else {
+                    // Create new installment
+                    installment = FeeInstallment.builder()
+                            .registrationNumber(registrationNumber)
+                            .installmentNumber(i)
+                            .dueDate(currentDate)
+                            .amount(amountPerInstallment)
+                            .status("Pending")
+                            .totalAmount(totalAmount)
+                            .totalInstallmentAmount(totalAmount)
+                            .installmentStartDate(config.getStartDate())
+                            .numberOfInstallments(config.getNumberOfInstallments())
+                            .daysBetweenInstallments(config.getDaysBetween())
+                            .createdBy(getCurrentLoggedInUser())
+                            .build();
+                }
+                toSave.add(installment);
+            }
             currentDate = currentDate.plusDays(config.getDaysBetween());
         }
 
-        List<FeeInstallment> saved = feeInstallmentRepository.saveAll(installments);
+        // Identify any existing installments that are no longer needed
+        for (FeeInstallment existing : existingInstallments) {
+            if (existing.getInstallmentNumber() > config.getNumberOfInstallments()) {
+                boolean isLocked = lockedIds.contains(existing.getId()) || 
+                                   "Paid".equalsIgnoreCase(existing.getStatus()) || 
+                                   "Refund".equalsIgnoreCase(existing.getStatus()) ||
+                                   (existing.getPaidAmount() != null && existing.getPaidAmount() > 0);
+                if (isLocked) {
+                    // Cannot delete, keep it
+                    toSave.add(existing);
+                } else {
+                    toDelete.add(existing);
+                }
+            }
+        }
+
+        // Delete unneeded unlocked installments
+        if (!toDelete.isEmpty()) {
+            feeInstallmentRepository.deleteAll(toDelete);
+            feeInstallmentRepository.flush();
+        }
+
+        // Save/Update installments
+        List<FeeInstallment> saved = feeInstallmentRepository.saveAll(toSave);
+        feeInstallmentRepository.flush();
 
         // Update Fees table with installment config
         feesRepository.findByRegistrationNumberAndIsDeletedFalse(registrationNumber)
@@ -1307,7 +1409,7 @@ public class AdmissionService {
                     feesRepository.save(fees);
                 });
 
-        log.info(" Generated and saved {} installments with config", saved.size());
+        log.info(" Generated/merged and saved {} installments with config, deleted {}", saved.size(), toDelete.size());
 
         return saved.stream()
                 .map(admissionMapper::toInstallmentDTO)
@@ -1321,48 +1423,107 @@ public class AdmissionService {
         log.debug("Saving {} custom installments for regNo: {}",
                 customInstallments.size(), registrationNumber);
 
-        // Delete existing installments (except refund ones)
-        List<FeeInstallment> existing = feeInstallmentRepository.findByRegistrationNumberOrderByDueDateAsc(registrationNumber);
-        for (FeeInstallment inst : existing) {
-            if (!"Refund".equalsIgnoreCase(inst.getStatus())) {
-                feeInstallmentRepository.delete(inst);
-            }
-        }
-        feeInstallmentRepository.flush();
+        // Find existing installments
+        List<FeeInstallment> existingInstallments = feeInstallmentRepository.findByRegistrationNumberOrderByDueDateAsc(registrationNumber);
 
-        List<FeeInstallment> installments = new ArrayList<>();
+        // Find locked installments
+        Set<Long> lockedIds = getLockedInstallmentIds(registrationNumber);
+
+        Map<Integer, FeeInstallment> existingMap = existingInstallments.stream()
+                .collect(Collectors.toMap(FeeInstallment::getInstallmentNumber, inst -> inst, (a, b) -> a));
+
+        List<FeeInstallment> toSave = new ArrayList<>();
+        List<FeeInstallment> toDelete = new ArrayList<>();
+
         LocalDate firstDueDate = null;
-
         for (FeeInstallmentCreateDTO dto : customInstallments) {
             if (firstDueDate == null || dto.getDueDate().isBefore(firstDueDate)) {
                 firstDueDate = dto.getDueDate();
             }
+        }
 
-            FeeInstallment installment = FeeInstallment.builder()
-                    .registrationNumber(registrationNumber)
-                    .installmentNumber(dto.getInstallmentNumber())
-                    .dueDate(dto.getDueDate())
-                    .amount(dto.getAmount())
-                    .status(dto.getStatus())
-                    .totalAmount(totalAmount)
-                    .totalInstallmentAmount(totalAmount)
-                    .installmentStartDate(dto.getDueDate()) // Temporary fallback, updated below
-                    .numberOfInstallments(customInstallments.size())
-                    .daysBetweenInstallments(30) // Fallback default
-                    .createdBy("SYSTEM")
-                    .build();
+        Set<Integer> incomingInstallmentNumbers = customInstallments.stream()
+                .map(FeeInstallmentCreateDTO::getInstallmentNumber)
+                .collect(Collectors.toSet());
 
-            installments.add(installment);
+        for (FeeInstallmentCreateDTO dto : customInstallments) {
+            FeeInstallment existing = existingMap.get(dto.getInstallmentNumber());
+            boolean isLocked = false;
+            if (existing != null) {
+                isLocked = lockedIds.contains(existing.getId()) || 
+                           "Paid".equalsIgnoreCase(existing.getStatus()) || 
+                           "Refund".equalsIgnoreCase(existing.getStatus()) ||
+                           (existing.getPaidAmount() != null && existing.getPaidAmount() > 0);
+            }
+
+            if (isLocked) {
+                // Keep the locked installment exactly as is
+                toSave.add(existing);
+            } else {
+                FeeInstallment installment;
+                if (existing != null) {
+                    // Update the unlocked existing installment
+                    installment = existing;
+                    installment.setDueDate(dto.getDueDate());
+                    installment.setAmount(dto.getAmount());
+                    installment.setStatus(dto.getStatus());
+                    installment.setTotalAmount(totalAmount);
+                    installment.setTotalInstallmentAmount(totalAmount);
+                    installment.setNumberOfInstallments(customInstallments.size());
+                    installment.setUpdatedBy(getCurrentLoggedInUser());
+                } else {
+                    // Create new installment
+                    installment = FeeInstallment.builder()
+                            .registrationNumber(registrationNumber)
+                            .installmentNumber(dto.getInstallmentNumber())
+                            .dueDate(dto.getDueDate())
+                            .amount(dto.getAmount())
+                            .status(dto.getStatus())
+                            .totalAmount(totalAmount)
+                            .totalInstallmentAmount(totalAmount)
+                            .numberOfInstallments(customInstallments.size())
+                            .daysBetweenInstallments(30) // Fallback default
+                            .createdBy(getCurrentLoggedInUser())
+                            .build();
+                }
+                toSave.add(installment);
+            }
         }
 
         // Set installmentStartDate on all to the first due date found
         if (firstDueDate != null) {
-            for (FeeInstallment inst : installments) {
-                inst.setInstallmentStartDate(firstDueDate);
+            for (FeeInstallment inst : toSave) {
+                // Only update if not locked or if start date is null
+                if (inst.getInstallmentStartDate() == null) {
+                    inst.setInstallmentStartDate(firstDueDate);
+                }
             }
         }
 
-        List<FeeInstallment> saved = feeInstallmentRepository.saveAll(installments);
+        // Identify any existing installments that are no longer needed
+        for (FeeInstallment existing : existingInstallments) {
+            if (!incomingInstallmentNumbers.contains(existing.getInstallmentNumber())) {
+                boolean isLocked = lockedIds.contains(existing.getId()) || 
+                                   "Paid".equalsIgnoreCase(existing.getStatus()) || 
+                                   "Refund".equalsIgnoreCase(existing.getStatus()) ||
+                                   (existing.getPaidAmount() != null && existing.getPaidAmount() > 0);
+                if (isLocked) {
+                    // Cannot delete, keep it
+                    toSave.add(existing);
+                } else {
+                    toDelete.add(existing);
+                }
+            }
+        }
+
+        // Delete unneeded unlocked installments
+        if (!toDelete.isEmpty()) {
+            feeInstallmentRepository.deleteAll(toDelete);
+            feeInstallmentRepository.flush();
+        }
+
+        // Save/Update installments
+        List<FeeInstallment> saved = feeInstallmentRepository.saveAll(toSave);
         feeInstallmentRepository.flush();
 
         // Update Fees table with installment config
@@ -1375,7 +1536,7 @@ public class AdmissionService {
                     feesRepository.save(fees);
                 });
 
-        log.info(" Saved {} custom installments", saved.size());
+        log.info(" Saved/merged {} custom installments, deleted {}", saved.size(), toDelete.size());
 
         return saved.stream()
                 .map(admissionMapper::toInstallmentDTO)
@@ -1504,7 +1665,7 @@ public class AdmissionService {
                     saved.getRegistrationNumber(), saved.getStudentCategory());
 
             // ONLY create fees record for NEW admissions (REG* numbers)
-            if (isNewAdmission && saved.getRegistrationNumber().startsWith("REG")) {
+            if (isNewAdmission && saved.getRegistrationNumber() != null && saved.getRegistrationNumber().trim().toUpperCase().startsWith("REG")) {
                 try {
                     createFeesRecordInNewTransaction(saved);
                 } catch (Exception feesEx) {
@@ -1528,7 +1689,7 @@ public class AdmissionService {
     public void createFeesRecordInNewTransaction(Admission admission) {
         try {
             // Double-check: Only proceed if registration number starts with REG
-            if (!admission.getRegistrationNumber().startsWith("REG")) {
+            if (admission.getRegistrationNumber() == null || !admission.getRegistrationNumber().trim().toUpperCase().startsWith("REG")) {
                 log.warn(" Skipping fees record - Not a REG number: {}",
                         admission.getRegistrationNumber());
                 return;

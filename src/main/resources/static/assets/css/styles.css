@@ -605,41 +605,7 @@
             flex: 1;
         }
 
-        .welcome-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 1rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            color: white;
-            position: relative;
-            overflow: hidden;
-        }
 
-        .welcome-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 300px;
-            height: 300px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-        }
-
-        .welcome-section h2 {
-            font-size: 1.875rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .welcome-section p {
-            font-size: 1rem;
-            opacity: 0.95;
-            position: relative;
-            z-index: 1;
-        }
 
         /* Quick Stats */
         .quick-stats {
@@ -969,9 +935,7 @@
                 font-size: 1.375rem;
             }
 
-            .welcome-section h2 {
-                font-size: 1.5rem;
-            }
+
 
             .quick-stats {
                 grid-template-columns: 1fr;
@@ -1005,9 +969,7 @@
                 padding: 1.5rem 1rem;
             }
 
-            .welcome-section {
-                padding: 1.5rem;
-            }
+
         }
 
         /* ========================================
@@ -1185,6 +1147,10 @@
             padding: 1.25rem 2rem;
         }
 
+        #viewAdmissionModal .modal-header .btn-close {
+            filter: none;
+        }
+
         #viewAdmissionModal .modal-header .modal-title {
             font-size: 1.25rem;
             font-weight: 700;
@@ -1289,4 +1255,9 @@
                 border-radius: 8px;
                 text-align: left;
             }
+        }
+
+        /* Globally hide the large purple page headers as they consume too much space */
+        .page-header {
+            display: none !important;
         }

@@ -152,7 +152,7 @@ public class StudentCategoryService {
         }
 
         // PRIORITY 3: Check if NEW_STUDENT (REG* number)
-        if (regNo != null && regNo.startsWith("REG")) {
+        if (regNo != null && regNo.trim().toUpperCase().startsWith("REG")) {
             if (log.isDebugEnabled()) {
                 log.debug(" {} -> NEW_STUDENT (REG number)", regNo);
             }
@@ -269,7 +269,7 @@ public class StudentCategoryService {
         }
 
         // PRIORITY 3: Check if NEW_STUDENT (REG* number)
-        if (regNo != null && regNo.startsWith("REG")) {
+        if (regNo != null && regNo.trim().toUpperCase().startsWith("REG")) {
             log.debug(" {} -> NEW_STUDENT (REG number)", regNo);
             return "NEW_STUDENT";
         }

@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Backup, logs and uploads ###
+uploads/
+logs/
+*.zip
+*.sql

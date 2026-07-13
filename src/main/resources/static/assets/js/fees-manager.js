@@ -11,7 +11,9 @@ let totalElements = 0;
 let feesFilters = {
     searchTerm: '',
     status: '',
-    course: ''
+    course: '',
+    fromDate: '',
+    toDate: ''
 };
 let currentStudentId = null;
 let importedFeesData = [];
@@ -220,47 +222,7 @@ function initializeEventListeners() {
         new bootstrap.Modal(document.getElementById('importModal')).show();
     });
 
-    document.getElementById('btnExportFees')?.addEventListener('click', async function () {
-        const result = await Swal.fire({
-            title: 'Export Fees Data',
-            text: 'Choose export format',
-            showCancelButton: true,
-            showConfirmButton: false,
-            cancelButtonText: 'Close',
-            cancelButtonColor: '#6b7280',
-            html: `
-                <div class="d-grid gap-2 text-start">
-                    <button type="button" class="swal2-confirm swal2-styled" id="swalExportCSV" style="background:#0ea5e9;">CSV</button>
-                    <button type="button" class="swal2-confirm swal2-styled" id="swalExportExcel" style="background:#16a34a;">Excel</button>
-                    <button type="button" class="swal2-confirm swal2-styled" id="swalExportPDF" style="background:#ef4444;">PDF</button>
-                    <button type="button" class="swal2-confirm swal2-styled" id="swalExportCopy" style="background:#6366f1;">Copy</button>
-                    <button type="button" class="swal2-confirm swal2-styled" id="swalExportPrint" style="background:#111827;">Print</button>
-                </div>
-            `,
-            didOpen: () => {
-                document.getElementById('swalExportCSV')?.addEventListener('click', () => {
-                    Swal.close();
-                    window.exportFeesToCSV && window.exportFeesToCSV();
-                });
-                document.getElementById('swalExportExcel')?.addEventListener('click', () => {
-                    Swal.close();
-                    window.exportFeesToExcel && window.exportFeesToExcel();
-                });
-                document.getElementById('swalExportPDF')?.addEventListener('click', () => {
-                    Swal.close();
-                    window.exportFeesToPDF && window.exportFeesToPDF();
-                });
-                document.getElementById('swalExportCopy')?.addEventListener('click', () => {
-                    Swal.close();
-                    window.copyFeesTableData && window.copyFeesTableData();
-                });
-                document.getElementById('swalExportPrint')?.addEventListener('click', () => {
-                    Swal.close();
-                    window.printFeesTable && window.printFeesTable();
-                });
-            }
-        });
-    });
+
 
     // Export dropdown actions are exposed on window.* (see bottom of file)
 
@@ -306,6 +268,9 @@ function initializeEventListeners() {
     document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
     document.getElementById('courseFilter')?.addEventListener('change', applyFilters);
     document.getElementById('courseSearchInput')?.addEventListener('input', filterCourseList);
+    document.getElementById('fromDateFilter')?.addEventListener('change', applyFilters);
+    document.getElementById('toDateFilter')?.addEventListener('change', applyFilters);
+    document.getElementById('btnClearFilters')?.addEventListener('click', clearFilters);
 }
 
 // ==================== FILTERS ====================
@@ -358,6 +323,38 @@ function applyFilters() {
     feesFilters.status = document.getElementById('statusFilter')?.value || '';
     feesFilters.course = document.getElementById('courseFilter')?.value || '';
     feesFilters.searchTerm = document.getElementById('searchInput')?.value || '';
+    feesFilters.fromDate = document.getElementById('fromDateFilter')?.value || '';
+    feesFilters.toDate = document.getElementById('toDateFilter')?.value || '';
+
+    currentPage = 1;
+    loadFeesFromBackend();
+}
+
+function clearFilters() {
+    const statusFilter = document.getElementById('statusFilter');
+    const courseFilter = document.getElementById('courseFilter');
+    const searchInput = document.getElementById('searchInput');
+    const courseSearchInput = document.getElementById('courseSearchInput');
+    const fromDateFilter = document.getElementById('fromDateFilter');
+    const toDateFilter = document.getElementById('toDateFilter');
+
+    if (statusFilter) statusFilter.value = '';
+    if (courseFilter) courseFilter.value = '';
+    if (searchInput) searchInput.value = '';
+    if (courseSearchInput) courseSearchInput.value = '';
+    if (fromDateFilter) fromDateFilter.value = '';
+    if (toDateFilter) toDateFilter.value = '';
+
+    feesFilters = {
+        searchTerm: '',
+        status: '',
+        course: '',
+        fromDate: '',
+        toDate: ''
+    };
+
+    filteredCourses = [...allCourses];
+    populateCourseFilter();
 
     currentPage = 1;
     loadFeesFromBackend();
@@ -569,6 +566,12 @@ async function loadFeesFromBackend() {
         }
         if (feesFilters.course && feesFilters.course.trim() !== '') {
             params.set('course', feesFilters.course.trim());
+        }
+        if (feesFilters.fromDate && feesFilters.fromDate.trim() !== '') {
+            params.set('dueDateFrom', feesFilters.fromDate.trim());
+        }
+        if (feesFilters.toDate && feesFilters.toDate.trim() !== '') {
+            params.set('dueDateTo', feesFilters.toDate.trim());
         }
 
         const response = await fetch(`/api/fees-manager?${params.toString()}`, {
@@ -787,18 +790,40 @@ async function openFeeInstallments(regNo) {
             document.getElementById('feeInstDays').value = installmentConfig.daysBetween;
         }
 
-        // Display installments table (same as before)
+        // Display installments table
         const tbody = document.getElementById('feeInstallmentsBody');
+        const userRole = document.getElementById('currentUserRole')?.value;
+        const isSuperAdmin = userRole && (userRole.toUpperCase().replace(/\s+|_/g, '') === 'SUPERADMIN');
+
+        const auditSection = document.getElementById('feeInstAuditSection');
+        if (auditSection) {
+            auditSection.style.display = isSuperAdmin ? 'block' : 'none';
+        }
+
+        // Reset details
+        if (document.getElementById('feeInstCreatedBy')) document.getElementById('feeInstCreatedBy').textContent = '-';
+        if (document.getElementById('feeInstCreatedTime')) document.getElementById('feeInstCreatedTime').textContent = '-';
+        if (document.getElementById('feeInstUpdatedBy')) document.getElementById('feeInstUpdatedBy').textContent = '-';
+        if (document.getElementById('feeInstUpdatedTime')) document.getElementById('feeInstUpdatedTime').textContent = '-';
+
         if (installments.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments found. Click Generate to create installments.</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No installments found. Click Generate to create installments.</td></tr>`;
         } else {
             tbody.innerHTML = installments.map(inst => {
                 const statusBadge = inst.status === 'Refund'
                     ? '<span class="badge bg-danger">Refund</span>'
                     : `<span class="badge bg-${inst.status === 'Paid' ? 'success' : (inst.status === 'Partial' ? 'info' : 'warning')}">${inst.status}</span>`;
 
+                const createdTimeStr = inst.createdAt ? formatDateTime(inst.createdAt) : 'N/A';
+                const updatedTimeStr = inst.updatedAt ? formatDateTime(inst.updatedAt) : 'N/A';
+
                 return `
-                <tr data-installment-id="${inst.id}">
+                <tr data-installment-id="${inst.id}" 
+                    data-created-by="${inst.createdBy || 'SYSTEM'}" 
+                    data-created-time="${createdTimeStr}"
+                    data-updated-by="${inst.updatedBy || '-'}" 
+                    data-updated-time="${updatedTimeStr}"
+                    style="cursor: pointer;">
                     <td>${inst.dueDate}</td>
                     <td>₹${parseFloat(inst.amount).toFixed(2)}</td>
                     <td>${statusBadge}</td>
@@ -817,6 +842,35 @@ async function openFeeInstallments(regNo) {
                     </td>
                 </tr>
             `}).join('');
+
+            // Highlight and populate logic
+            if (isSuperAdmin) {
+                const rows = tbody.querySelectorAll('tr');
+                rows.forEach(row => {
+                    row.addEventListener('click', function(e) {
+                        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) {
+                            return;
+                        }
+                        rows.forEach(r => r.classList.remove('table-active'));
+                        this.classList.add('table-active');
+                        
+                        document.getElementById('feeInstCreatedBy').textContent = this.dataset.createdBy;
+                        document.getElementById('feeInstCreatedTime').textContent = this.dataset.createdTime;
+                        document.getElementById('feeInstUpdatedBy').textContent = this.dataset.updatedBy;
+                        document.getElementById('feeInstUpdatedTime').textContent = this.dataset.updatedTime;
+                    });
+                });
+
+                // Auto click/select the first row
+                if (rows.length > 0) {
+                    const firstRow = rows[0];
+                    firstRow.classList.add('table-active');
+                    document.getElementById('feeInstCreatedBy').textContent = firstRow.dataset.createdBy;
+                    document.getElementById('feeInstCreatedTime').textContent = firstRow.dataset.createdTime;
+                    document.getElementById('feeInstUpdatedBy').textContent = firstRow.dataset.updatedBy;
+                    document.getElementById('feeInstUpdatedTime').textContent = firstRow.dataset.updatedTime;
+                }
+            }
         }
 
         const modalEl = document.getElementById('feeInstallmentsModal');
@@ -886,83 +940,103 @@ window.deleteInstallment = async function (installmentId) {
         }
     }
 };
- 
- // Edit installment function
- window.editInstallment = async function (id, dueDate, amount, status, notes) {
-     const { value: formValues } = await Swal.fire({
-         title: 'Edit Installment',
-         html: `
-             <div class="text-start">
-                 <div class="mb-3">
-                     <label class="form-label">Due Date</label>
-                     <input type="date" class="form-control" id="editInstDueDate" value="${dueDate}">
-                 </div>
-                 <div class="mb-3">
-                     <label class="form-label">Amount</label>
-                     <input type="number" class="form-control" id="editInstAmount" value="${amount}" step="0.01">
-                 </div>
-                 <div class="mb-3">
-                     <label class="form-label">Status</label>
-                     <select class="form-select" id="editInstStatus">
-                         <option value="Pending" ${status === 'Pending' ? 'selected' : ''}>Pending</option>
-                         <option value="Paid" ${status === 'Paid' ? 'selected' : ''}>Paid</option>
-                         <option value="Partial" ${status === 'Partial' ? 'selected' : ''}>Partial</option>
-                         <option value="Overdue" ${status === 'Overdue' ? 'selected' : ''}>Overdue</option>
-                         <option value="Refund" ${status === 'Refund' ? 'selected' : ''}>Refund</option>
-                     </select>
-                 </div>
-                 <div class="mb-3">
-                     <label class="form-label">Notes</label>
-                     <textarea class="form-control" id="editInstNotes" rows="2">${notes || ''}</textarea>
-                 </div>
-                 <div class="mt-2 small text-muted border-top pt-2">
-                     <i class="bi bi-info-circle me-1"></i>Note: If fields are not clickable, please press the <b>ESC</b> key to reset focus.
-                 </div>
-             </div>
-         `,
-         focusConfirm: false,
-         showCancelButton: true,
-         confirmButtonText: 'Update',
-         confirmButtonColor: '#667eea',
-         preConfirm: () => {
-             return {
-                 dueDate: document.getElementById('editInstDueDate').value,
-                 amount: parseFloat(document.getElementById('editInstAmount').value),
-                 status: document.getElementById('editInstStatus').value,
-                 notes: document.getElementById('editInstNotes').value
-             }
-         }
-     });
- 
-     if (formValues) {
-         try {
-             showLoading('Updating installment...');
-             const response = await fetch(`/api/fees-manager/installments/${id}`, {
-                 method: 'PUT',
-                 headers: getCsrfHeaders(),
-                 body: JSON.stringify(formValues)
-             });
- 
-             if (!response.ok) throw new Error('Failed to update installment');
- 
-             Swal.close();
-             showSuccess('Installment updated and fees synced!');
- 
-             // Reload installments modal
-             const studentNameEl = document.getElementById('feeInstStudentName');
-             const student = feesData.find(s => s.studentName === studentNameEl.textContent);
-             if (student) {
-                 openFeeInstallments(student.regNo);
-             }
-             
-             // Also reload background table to reflect sync
-             loadFeesFromBackend();
- 
-         } catch (error) {
-             showError(error.message);
-         }
-     }
- };
+
+// Edit installment function
+window.editInstallment = async function (id, dueDate, amount, status, notes) {
+    // Close installments modal first to avoid z-index/backdrop focus locking issues
+    const installmentsModalElement = document.getElementById('feeInstallmentsModal');
+    const installmentsModalInstance = bootstrap.Modal.getOrCreateInstance(installmentsModalElement);
+    if (installmentsModalInstance) {
+        installmentsModalInstance.hide();
+    }
+
+    // Wait for the modal transition to complete and clean up leftover backdrops
+    await new Promise(resolve => setTimeout(resolve, 150));
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+
+    const { value: formValues } = await Swal.fire({
+        title: 'Edit Installment',
+        html: `
+            <div class="text-start">
+                <div class="mb-3">
+                    <label class="form-label">Due Date</label>
+                    <input type="date" class="form-control" id="editInstDueDate" value="${dueDate}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Amount</label>
+                    <input type="number" class="form-control" id="editInstAmount" value="${amount}" step="0.01">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" id="editInstStatus">
+                        <option value="Pending" ${status === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option value="Paid" ${status === 'Paid' ? 'selected' : ''}>Paid</option>
+                        <option value="Partial" ${status === 'Partial' ? 'selected' : ''}>Partial</option>
+                        <option value="Overdue" ${status === 'Overdue' ? 'selected' : ''}>Overdue</option>
+                        <option value="Refund" ${status === 'Refund' ? 'selected' : ''}>Refund</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" id="editInstNotes" rows="2">${notes || ''}</textarea>
+                </div>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Update',
+        confirmButtonColor: '#667eea',
+        preConfirm: () => {
+            return {
+                dueDate: document.getElementById('editInstDueDate').value,
+                amount: parseFloat(document.getElementById('editInstAmount').value),
+                status: document.getElementById('editInstStatus').value,
+                notes: document.getElementById('editInstNotes').value
+            }
+        }
+    });
+
+    if (formValues) {
+        try {
+            showLoading('Updating installment...');
+            const response = await fetch(`/api/fees-manager/installments/${id}`, {
+                method: 'PUT',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify(formValues)
+            });
+
+            if (!response.ok) throw new Error('Failed to update installment');
+
+            Swal.close();
+            showSuccess('Installment updated and fees synced!');
+
+            // Reload installments modal
+            const studentNameEl = document.getElementById('feeInstStudentName');
+            const student = feesData.find(s => s.studentName === studentNameEl.textContent);
+            if (student) {
+                openFeeInstallments(student.regNo);
+            }
+            
+            // Also reload background table to reflect sync
+            loadFeesFromBackend();
+
+        } catch (error) {
+            showError(error.message);
+            // Re-open installments modal on failure
+            if (installmentsModalInstance) {
+                installmentsModalInstance.show();
+            }
+        }
+    } else {
+        // Re-open installments modal when canceled/dismissed
+        if (installmentsModalInstance) {
+            installmentsModalInstance.show();
+        }
+    }
+};
 
 async function loadRefundHistory(regNo) {
     try {
@@ -1128,6 +1202,8 @@ async function viewReceipts(regNo) {
     }
 
     currentStudentRegNo = regNo;
+    const userRole = document.getElementById('currentUserRole')?.value;
+    const isSuperAdmin = userRole && (userRole.toUpperCase().replace(/\s+|_/g, '') === 'SUPERADMIN');
 
     try {
         showLoading('Loading receipts...');
@@ -1172,12 +1248,17 @@ async function viewReceipts(regNo) {
                             title="View">
                             <i class="bi bi-eye"></i>
                         </button>
-                       ${!isOldData ? `
-                       <button class="btn btn-sm btn-info me-1"
-                           onclick="emailReceipt('${receipt.receiptNumber}', '${student.studentName}', '${student.mobile}')"
-                           title="Email">
-                           <i class="bi bi-envelope"></i>
-                       </button>
+                        <button class="btn btn-sm btn-success me-1"
+                            onclick="downloadReceiptPDF('${receipt.receiptNumber}', '${regNo}')"
+                            title="Download PDF">
+                            <i class="bi bi-download"></i>
+                        </button>
+                        ${!isOldData ? `
+                        <button class="btn btn-sm btn-info me-1"
+                            onclick="emailReceipt('${receipt.receiptNumber}', '${student.studentName}', '${student.mobile}')"
+                            title="Email">
+                            <i class="bi bi-envelope"></i>
+                        </button>
                         <button class="btn btn-sm btn-warning me-1"
                             onclick="updateFeeReceipt(${receipt.id}, '${regNo}')"
                             title="Edit">
@@ -1188,13 +1269,31 @@ async function viewReceipts(regNo) {
                             title="Delete">
                             <i class="bi bi-trash"></i>
                         </button>
-                        ` : '<span class="text-muted small">View Only</span>'}
+                        ` : (isSuperAdmin ? `
+                        <button class="btn btn-sm btn-info me-1"
+                            onclick="emailReceipt('${receipt.receiptNumber}', '${student.studentName}', '${student.mobile}')"
+                            title="Email">
+                            <i class="bi bi-envelope"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger"
+                            onclick="deleteOldCollection(${receipt.id}, '${regNo}')"
+                            title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                         ` : '<span class="text-muted small">View Only</span>')}
                     </td>
                 </tr>
             `}).join('');
         }
 
-        new bootstrap.Modal(document.getElementById('viewReceiptsModal')).show();
+        const modalElement = document.getElementById('viewReceiptsModal');
+        if (!modalElement.classList.contains('show')) {
+            let modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (!modalInstance) {
+                modalInstance = new bootstrap.Modal(modalElement);
+            }
+            modalInstance.show();
+        }
 
     } catch (error) {
         Swal.close();
@@ -1563,8 +1662,16 @@ async function printReceiptWithData(receiptNo, regNo) {
             throw new Error('Receipt not found');
         }
 
-        // Generate receipt HTML
-        const receiptHTML = generateReceiptHTML(receipt);
+        // Generate receipt HTML - use receipt's own snapshot data (historical)
+        // Only merge contact info from live student data (mobile, course)
+        const student = feesData.find(s => s.regNo === regNo);
+        const receiptHTML = generateReceiptHTML({
+            ...receipt,
+            mobile: student?.mobile || receipt.mobile || 'N/A',
+            course: student?.course || receipt.course || 'N/A',
+            pendingFees: receipt.pendingFees != null ? receipt.pendingFees : 0,
+            nextDueDate: receipt.nextDueDate || null
+        });
         printReceiptContent(receiptHTML);
 
     } catch (error) {
@@ -1628,6 +1735,10 @@ async function saveReceipt() {
         return;
     }
 
+    const currentFeesDue = parseFloat(document.getElementById('receiptPendingFees').value) || 0;
+    // pendingFees = fees remaining AFTER this payment (not before)
+    const pendingFeesAfterPayment = Math.max(0, currentFeesDue - nowReceiving);
+
     const receiptData = {
         regNo: regNo,
         installmentId: installmentId ? parseInt(installmentId) : null, //   Include installment ID
@@ -1635,7 +1746,7 @@ async function saveReceipt() {
         amountReceived: nowReceiving,
         previousPaid: parseFloat(document.getElementById('receivedFees').value) || 0,
         totalFees: parseFloat(document.getElementById('receiptTotalFees').value) || 0,
-        pendingFees: parseFloat(document.getElementById('receiptPendingFees').value) || 0,
+        pendingFees: pendingFeesAfterPayment,   // AFTER this payment
         gstEnabled: document.getElementById('enableGst').checked,
         sgstPercent: document.getElementById('enableGst').checked ? parseFloat(document.getElementById('sgstPercent').value) : null,
         cgstPercent: document.getElementById('enableGst').checked ? parseFloat(document.getElementById('cgstPercent').value) : null,
@@ -1647,7 +1758,7 @@ async function saveReceipt() {
         transactionNumber: document.getElementById('transactionNo').value || null,
         ifscCode: document.getElementById('ifscCode').value || null,
         onlinePaymentMode: document.getElementById('onlinePaymentMode').value || null,
-        nextDueDate: nextDueDate,
+        nextDueDate: nextDueDate || null,       // next installment's due date (null if last installment)
         receiptType: 'Regular',
         notes: document.getElementById('receiptNotes').value || null
     };
@@ -1800,7 +1911,7 @@ async function saveFeeInstallments() {
 
         Swal.close();
         showSuccess('Fee installments saved successfully!');
-        bootstrap.Modal.getInstance(document.getElementById('feeInstallmentsModal')).hide();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('feeInstallmentsModal')).hide();
         await loadFeesFromBackend();
 
     } catch (error) {
@@ -2123,7 +2234,9 @@ async function deleteReceipt(receiptId) {
                     confirmButtonColor: '#667eea'
                 }).then(() => {
                     // Reload receipts for current student
-                    if (currentStudentId) {
+                    if (typeof currentStudentRegNo !== 'undefined' && currentStudentRegNo) {
+                        viewReceipts(currentStudentRegNo);
+                    } else if (currentStudentId) {
                         viewReceipts(currentStudentId);
                     }
 
@@ -2139,6 +2252,51 @@ async function deleteReceipt(receiptId) {
                 icon: 'error',
                 title: 'Error',
                 text: 'Failed to delete receipt',
+                confirmButtonColor: '#ef4444'
+            });
+        }
+    }
+}
+
+async function deleteOldCollection(id, regNo) {
+    const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You are deleting an old imported receipt. This will update the student's due fees!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#667eea',
+        cancelButtonColor: '#ef4444',
+        confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            showLoading('Deleting old receipt...');
+            const response = await fetch(`/api/fee-collections/${id}`, {
+                method: 'DELETE',
+                headers: getCsrfHeaders()
+            });
+
+            if (response.ok) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Deleted!',
+                    text: 'Old imported receipt has been deleted.',
+                    confirmButtonColor: '#667eea'
+                }).then(() => {
+                    // Reload receipts for current student
+                    viewReceipts(regNo);
+                    // Refresh main fees table totals/status after backend recalculation
+                    loadFeesFromBackend();
+                });
+            } else {
+                throw new Error('Delete failed');
+            }
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to delete old receipt',
                 confirmButtonColor: '#ef4444'
             });
         }
@@ -2191,7 +2349,14 @@ async function openFeeReceipt(regNo) {
     document.getElementById('receiptDate').value = today;
 
     //  Handle installments based on student type
-    if (isOldStudent) {
+    let installmentCount = 0;
+    try {
+        installmentCount = await loadInstallmentsForReceipt(regNo);
+    } catch (e) {
+        console.error("Failed to load installments for receipt:", e);
+    }
+
+    if (installmentCount === 0 && isOldStudent) {
         // For old students: Make installment optional
         const installmentLabel = document.querySelector('label[for="installment"]');
         if (installmentLabel) {
@@ -2207,15 +2372,6 @@ async function openFeeReceipt(regNo) {
         installmentSelect.innerHTML = '<option value="" selected>Not Applicable (Old Student)</option>';
         installmentSelect.disabled = false; // Keep enabled but with NA option
 
-    } else {
-        // For new students (REG*): Load installments normally
-        await loadInstallmentsForReceipt(regNo);
-    }
-
-    // Set next due date automatically
-    if (!isOldStudent) {
-        setNextInstallmentDueDate(regNo);
-    } else {
         // For old students, set next due date to 30 days from now
         const nextDate = new Date();
         nextDate.setDate(nextDate.getDate() + 30);
@@ -2421,15 +2577,17 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                 // Get CURRENT fees data from feesData array
                 const student = feesData.find(s => s.regNo === actualRegNo);
 
-                // Use CURRENT data instead of receipt's historical data
+                // Use receipt's own historical snapshot data
+                // Only merge contact info (mobile, course, email) from live data
                 const receiptData = {
                     ...receipt,
                     mobile: student?.mobile || mobile || 'N/A',
-                    course: student?.course || 'N/A',
+                    course: student?.course || receipt.course || 'N/A',
                     email: email,
-                    // Override with CURRENT pending fees and due date
-                    pendingFees: student?.feesDue || 0,
-                    nextDueDate: student?.dueDate || null
+                    // pendingFees: use receipt's own stored snapshot
+                    pendingFees: receipt.pendingFees != null ? receipt.pendingFees : 0,
+                    // nextDueDate: ONLY use receipt's own stored value
+                    nextDueDate: receipt.nextDueDate || null
                 };
 
 
@@ -2694,7 +2852,7 @@ async function updateFeeReceipt(receiptId, regNo) {
         if (receipt.onlinePaymentMode) document.getElementById('onlinePaymentMode').value = receipt.onlinePaymentMode;
 
         // Load installments
-        await loadInstallmentsForReceipt(regNo);
+        await loadInstallmentsForReceipt(regNo, receipt.installmentId);
 
         // Store receipt ID for update
         document.getElementById('btnSaveReceipt').dataset.receiptId = receiptId;
@@ -2709,7 +2867,7 @@ async function updateFeeReceipt(receiptId, regNo) {
     }
 }
 
-async function loadInstallmentsForReceipt(regNo) {
+async function loadInstallmentsForReceipt(regNo, selectedInstallmentId = null) {
     try {
         const response = await fetch(`${API_BASE}/installments/${regNo}`, {
             headers: getCsrfHeaders()
@@ -2719,60 +2877,108 @@ async function loadInstallmentsForReceipt(regNo) {
             const installments = await response.json();
             const select = document.getElementById('installment');
 
-            select.innerHTML = '<option value="">-- Select Installment --</option>';
-
-            // Only show pending installments
-            const pendingInstallments = installments.filter(i => i.status === 'Pending');
-
-            //  ADD: Store all installments for next due date calculation
+            // Store all installments for next due date calculation
             select.dataset.allInstallments = JSON.stringify(installments);
+
+            // Bind change listener once
+            select.removeEventListener('change', updateNextDueDateFromInstallment);
+            select.addEventListener('change', updateNextDueDateFromInstallment);
+
+            if (!installments || installments.length === 0) {
+                // If student has no installments at all
+                select.innerHTML = '<option value="" selected>N/A</option>';
+                const nowReceivingInput = document.getElementById('nowReceiving');
+                if (nowReceivingInput) nowReceivingInput.value = '';
+                const nextDueDateInput = document.getElementById('nextDueDate');
+                if (nextDueDateInput) nextDueDateInput.value = '';
+                return 0;
+            }
+
+            // Show pending, overdue, or currently selected installment (e.g. during edit)
+            const pendingInstallments = installments.filter(i => 
+                i.status === 'Pending' || 
+                i.status === 'Overdue' || 
+                (selectedInstallmentId && String(i.id) === String(selectedInstallmentId))
+            );
+
+            if (pendingInstallments.length === 0) {
+                // If all installments are paid
+                select.innerHTML = '<option value="" selected>N/A (All Paid)</option>';
+                const nowReceivingInput = document.getElementById('nowReceiving');
+                if (nowReceivingInput) nowReceivingInput.value = '';
+                const nextDueDateInput = document.getElementById('nextDueDate');
+                if (nextDueDateInput) nextDueDateInput.value = '';
+                return installments.length;
+            }
+
+            select.innerHTML = '<option value="">-- Select Installment --</option>';
 
             pendingInstallments.forEach(inst => {
                 const option = document.createElement('option');
                 option.value = inst.id;
-                option.textContent = `Installment ${inst.installmentNumber} - ₹${inst.amount.toFixed(2)} (Due: ${inst.dueDate})`;
-                //  ADD: Store installment number in option
+                // Add status suffix if not Pending/Overdue (e.g., Paid) so it's clear
+                const statusStr = (inst.status !== 'Pending' && inst.status !== 'Overdue') ? ` [${inst.status}]` : '';
+                option.textContent = `Installment ${inst.installmentNumber} - ₹${inst.amount.toFixed(2)} (Due: ${inst.dueDate})${statusStr}`;
                 option.dataset.installmentNumber = inst.installmentNumber;
                 option.dataset.dueDate = inst.dueDate;
+                option.dataset.amount = inst.amount;
                 select.appendChild(option);
             });
 
-            if (pendingInstallments.length === 0) {
-                select.innerHTML = '<option value="">All installments paid</option>';
-            }
+            // Add N/A option at the end
+            const naOption = document.createElement('option');
+            naOption.value = '';
+            naOption.textContent = 'N/A';
+            select.appendChild(naOption);
 
-            //  ADD: Auto-update next due date when installment is selected
-            select.addEventListener('change', updateNextDueDateFromInstallment);
+            // Pre-select or set value
+            if (selectedInstallmentId) {
+                select.value = selectedInstallmentId;
+            } else if (pendingInstallments.length > 0) {
+                select.value = pendingInstallments[0].id;
+                updateNextDueDateFromInstallment();
+            }
+            return installments.length;
         }
+        return 0;
     } catch (error) {
         console.error('Error loading installments:', error);
+        return 0;
     }
 }
 
-// New function to auto-update next due date
+// New function to auto-update next due date and amount received
 function updateNextDueDateFromInstallment() {
     const select = document.getElementById('installment');
     const nextDueDateInput = document.getElementById('nextDueDate');
+    const nowReceivingInput = document.getElementById('nowReceiving');
 
     const selectedOption = select.options[select.selectedIndex];
 
     if (!selectedOption || !selectedOption.value) {
-        return; // No installment selected
+        // Clear inputs when N/A or empty is selected
+        nextDueDateInput.value = '';
+        return;
+    }
+
+    // Auto-update amount from selected installment
+    if (selectedOption.dataset.amount) {
+        nowReceivingInput.value = parseFloat(selectedOption.dataset.amount).toFixed(2);
     }
 
     const currentInstallmentNumber = parseInt(selectedOption.dataset.installmentNumber);
     const allInstallments = JSON.parse(select.dataset.allInstallments || '[]');
 
-    //  Find the NEXT installment (current + 1)
+    // Find the NEXT installment (current + 1)
     const nextInstallment = allInstallments.find(
         inst => inst.installmentNumber === currentInstallmentNumber + 1
     );
 
     if (nextInstallment) {
-        //  Set next installment's due date
+        // Set next installment's due date
         nextDueDateInput.value = nextInstallment.dueDate;
     } else {
-        //  This is the last installment - clear next due date
+        // This is the last installment - clear next due date
         nextDueDateInput.value = '';
     }
 }
@@ -2879,6 +3085,92 @@ async function saveRefund() {
     }
 }
 
+// ==================== Download Receipt PDF ====================
+
+async function downloadReceiptPDF(receiptNo, regNo) {
+    try {
+        showLoading('Generating PDF...');
+
+        const response = await fetch(`${API_BASE}/receipts/${regNo}`, {
+            headers: getCsrfHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: Failed to load receipt`);
+        }
+
+        const receipts = await response.json();
+        const receipt = receipts.find(r => r.receiptNumber === receiptNo);
+
+        if (!receipt) {
+            throw new Error(`Receipt ${receiptNo} not found in response`);
+        }
+
+        // Use receipt's own historical snapshot for amounts/dates
+        // Only merge contact info from live student and admission data
+        const student = feesData.find(s => s.regNo === regNo);
+
+        let email = 'N/A';
+        try {
+            const admResponse = await fetch(`/api/admissions/by-regno/${regNo}`, {
+                headers: getCsrfHeaders()
+            });
+            if (admResponse.ok) {
+                const admission = await admResponse.json();
+                email = admission.emailPrimary || 'N/A';
+            }
+        } catch (e) {
+            console.error('Error fetching email for PDF:', e);
+        }
+
+        const receiptData = {
+            ...receipt,
+            mobile: student?.mobile || receipt.mobile || 'N/A',
+            course: student?.course || receipt.course || 'N/A',
+            email: email,
+            // pendingFees: use receipt's own stored snapshot
+            pendingFees: receipt.pendingFees != null ? receipt.pendingFees : 0,
+            // nextDueDate: ONLY use receipt's own stored value
+            nextDueDate: receipt.nextDueDate || null
+        };
+
+        const pdfBase64 = await generateInvoicePDF(receiptData);
+
+        if (!pdfBase64) {
+            throw new Error('Failed to generate PDF');
+        }
+
+        const byteCharacters = atob(pdfBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `Receipt_${receiptNo || 'N/A'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+
+        Swal.close();
+
+    } catch (error) {
+        Swal.close();
+        console.error('Error in downloadReceiptPDF:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to download receipt PDF',
+            confirmButtonColor: '#ef4444'
+        });
+    }
+}
+
 // ==================== View Receipt Preview ====================
 
 async function viewReceiptPreview(receiptNo, regNo) {
@@ -2900,27 +3192,18 @@ async function viewReceiptPreview(receiptNo, regNo) {
             throw new Error(`Receipt ${receiptNo} not found in response`);
         }
 
+        // Use receipt's own historical snapshot for amounts/dates
+        // Only merge contact info from live student data
         const student = feesData.find(s => s.regNo === regNo);
-
-        let currentPendingFees = 0;
-        let currentNextDueDate = null;
-
-        if (student) {
-            currentPendingFees = student.feesDue || 0;
-            currentNextDueDate = student.dueDate || null;
-        }
-
-        const pendingAtReceiptTime = receipt.pendingFees || 0;
 
         Swal.close();
 
         const receiptHTML = generateReceiptHTML({
             ...receipt,
-            mobile: student?.mobile || 'N/A',
-            course: student?.course || 'N/A',
-            pendingFees: currentPendingFees,
-            nextDueDate: currentNextDueDate,
-            pendingFeesAtTime: pendingAtReceiptTime
+            mobile: student?.mobile || receipt.mobile || 'N/A',
+            course: student?.course || receipt.course || 'N/A',
+            pendingFees: receipt.pendingFees != null ? receipt.pendingFees : 0,
+            nextDueDate: receipt.nextDueDate || null
         });
 
         Swal.fire({
@@ -2966,7 +3249,12 @@ async function generateInvoicePDF(receiptData) {
     return new Promise((resolve, reject) => {
         try {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('p', 'mm', 'a4');
+            const doc = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+            });
 
             const pageWidth = doc.internal.pageSize.getWidth();
             const margin = 15;
@@ -2975,7 +3263,7 @@ async function generateInvoicePDF(receiptData) {
             // ===== ADD LOGO =====
             const logoUrl = '/assets/images/tts-logo-ev.png';
             try {
-                doc.addImage(logoUrl, 'PNG', margin, y, 20, 25);
+                doc.addImage(logoUrl, 'PNG', margin, y, 20, 25, undefined, 'FAST');
             } catch (e) {
                 console.warn('Logo not found:', e);
             }
@@ -3160,7 +3448,7 @@ async function generateInvoicePDF(receiptData) {
             // =====  Due Date Row - Show "Paid in Full" when fees are zero =====
             const dueDateValue = (receiptData.nextDueDate && receiptData.pendingFees > 0.01)
                 ? formatDate(receiptData.nextDueDate)
-                : 'Paid in Full';
+                : (receiptData.pendingFees > 0.01 ? 'N/A' : 'Paid in Full');
 
             doc.rect(margin, y, labelWidth, rowHeight);
             doc.setFont('helvetica', 'bold');
@@ -3316,6 +3604,12 @@ async function fetchAllFeesForExport() {
         if (feesFilters.course && feesFilters.course.trim() !== '') {
             baseParams.set('course', feesFilters.course.trim());
         }
+        if (feesFilters.fromDate && feesFilters.fromDate.trim() !== '') {
+            baseParams.set('dueDateFrom', feesFilters.fromDate.trim());
+        }
+        if (feesFilters.toDate && feesFilters.toDate.trim() !== '') {
+            baseParams.set('dueDateTo', feesFilters.toDate.trim());
+        }
 
         const pageSize = 500;
         let page = 0;
@@ -3363,12 +3657,19 @@ async function fetchAllFeesForExport() {
 }
 
 function buildFeesExportTable(rows) {
+    let tempContainer = document.getElementById('tempFeesExportTableContainer');
+    if (!tempContainer) {
+        tempContainer = document.createElement('div');
+        tempContainer.id = 'tempFeesExportTableContainer';
+        tempContainer.style.display = 'none';
+        document.body.appendChild(tempContainer);
+    }
+
     let tempTable = document.getElementById('tempFeesExportTable');
     if (!tempTable) {
         tempTable = document.createElement('table');
         tempTable.id = 'tempFeesExportTable';
-        tempTable.style.display = 'none';
-        document.body.appendChild(tempTable);
+        tempContainer.appendChild(tempTable);
     }
 
     const tableHTML = `
@@ -3493,3 +3794,56 @@ window.printFeesTable = async function () {
     const dt = initFeesExportDataTable(table);
     dt.button('.buttons-print').trigger();
 };
+
+// Manual dropdown toggle fallback for Export button
+document.addEventListener('DOMContentLoaded', function() {
+    const exportBtn = document.getElementById('btnExportFees');
+    const exportMenu = document.querySelector('#btnExportFees + .dropdown-menu');
+
+    if (exportBtn && exportMenu) {
+        exportBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Close other dropdowns
+            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                if (menu !== exportMenu) {
+                    menu.classList.remove('show');
+                }
+            });
+
+            // Toggle this dropdown
+            exportMenu.classList.toggle('show');
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target)) {
+                exportMenu.classList.remove('show');
+            }
+        });
+
+        // Prevent menu from closing when clicking inside
+        exportMenu.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A') {
+                exportMenu.classList.remove('show');
+            }
+        });
+    }
+});
+
+function formatDateTime(dateTimeString) {
+    if (!dateTimeString) return 'N/A';
+    const normalized = dateTimeString.replace(' ', 'T');
+    const date = new Date(normalized);
+    if (isNaN(date)) return dateTimeString;
+    return date.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    });
+}

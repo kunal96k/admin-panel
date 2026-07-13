@@ -20,6 +20,7 @@ public class BulkImportResponseDTO {
     private int totalRecords;
     private int successfulImports;
     private int failedImports;
+    private int duplicateCount;
     private String message;
     private List<ImportError> errors;
 

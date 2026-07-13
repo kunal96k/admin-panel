@@ -23,7 +23,7 @@ public class CustomLocalDateDeserializer extends JsonDeserializer<LocalDate> {
         String dateStr = p.getText();
 
         if (dateStr == null || dateStr.trim().isEmpty()) {
-            return LocalDate.now();
+            return null;
         }
 
         dateStr = dateStr.trim();
@@ -37,7 +37,7 @@ public class CustomLocalDateDeserializer extends JsonDeserializer<LocalDate> {
             }
         }
 
-        // If all formats fail, return current date
-        return LocalDate.now();
+        // If all formats fail, return null
+        return null;
     }
 }

@@ -52,6 +52,7 @@ public class EnquiryMapper {
                 .source(enquiry.getSource())
                 .referenceName(enquiry.getReferenceName())
                 .date(enquiry.getEnquiryDate())
+                .enquiryDate(enquiry.getEnquiryDate())
                 .followupDate(enquiry.getFollowupDate())
                 .assign(enquiry.getAssignTo())
                 .status(enquiry.getStatus())
@@ -205,7 +206,7 @@ public class EnquiryMapper {
         enquiry.setInterestLevel(dto.getInterestLevel());
         enquiry.setSource(dto.getSource());
         enquiry.setReferenceName(dto.getReferenceName());
-        enquiry.setEnquiryDate(dto.getEnquiryDate());
+        enquiry.setEnquiryDate(dto.getEnquiryDate() != null ? dto.getEnquiryDate() : (enquiry.getEnquiryDate() != null ? enquiry.getEnquiryDate() : LocalDate.now()));
         enquiry.setFollowupDate(dto.getFollowupDate());
         enquiry.setAssignTo(dto.getAssignTo());
 

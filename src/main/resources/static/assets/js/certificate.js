@@ -1706,6 +1706,9 @@ const customStyles = `
     z-index: 10;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
+#modalStudentTableBody tr {
+    cursor: pointer;
+}
 </style>
 `;
 
@@ -1810,6 +1813,24 @@ document.getElementById('btnClearSelection')?.addEventListener('click', () => {
 
 // Generate button
 document.getElementById('btnGenerateForSelected')?.addEventListener('click', generateCertificatesForSelected);
+
+// Row selection click handler
+document.getElementById('modalStudentTableBody')?.addEventListener('click', function(e) {
+    const tr = e.target.closest('tr');
+    if (!tr) return;
+    
+    // Skip if clicking directly on checkbox to avoid double-toggling
+    if (e.target.classList.contains('student-checkbox') || e.target.closest('.student-checkbox')) {
+        return;
+    }
+    
+    const checkbox = tr.querySelector('.student-checkbox');
+    if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        const regNo = checkbox.getAttribute('data-regno');
+        window.toggleStudentSelection(regNo, checkbox);
+    }
+});
 
 /**
  * Load students from server using POST /api/admissions/search

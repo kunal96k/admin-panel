@@ -24,6 +24,7 @@ public class BulkImportRequestDTO {
 
     public enum ImportType {
         OLD_FORMAT,
-        NEW_FORMAT
+        NEW_FORMAT,
+        COUNSELOR_FORMAT
     }
 }

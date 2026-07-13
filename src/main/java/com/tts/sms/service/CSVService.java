@@ -181,6 +181,90 @@ public class CSVService {
     }
 
     /**
+     * Counselor CSV Format: DATE, STUDENT NAME, SOURCE, CONTACT NO, COURSE, COUNSELOR NAME
+     */
+    public List<EnquiryRequestDTO> parseCounselorFormatCSV(MultipartFile file) throws IOException {
+        log.info("📥 STRICT PARSING - COUNSELOR FORMAT: {}", file.getOriginalFilename());
+
+        List<EnquiryRequestDTO> dtos = new ArrayList<>();
+        int totalRows = 0;
+
+        try (Reader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
+             CSVReader csvReader = new CSVReader(reader)) {
+
+            List<String[]> records = csvReader.readAll();
+
+            if (records.isEmpty()) {
+                throw new IllegalArgumentException("CSV file is empty");
+            }
+
+            log.debug("CSV Header: {}", Arrays.toString(records.get(0)));
+
+            for (int i = 1; i < records.size(); i++) {
+                totalRows++;
+                String[] row = records.get(i);
+
+                try {
+                    // Column 0: DATE
+                    LocalDate enquiryDate = parseDate(getOriginalValue(row, 0));
+                    if (enquiryDate == null) {
+                        enquiryDate = LocalDate.now();
+                    }
+
+                    // Column 1: STUDENT NAME
+                    String studentName = getOriginalValue(row, 1);
+                    if (studentName.equalsIgnoreCase("N/A")) {
+                        studentName = "";
+                    }
+                    String[] nameParts = splitNameExact(studentName);
+
+                    // Column 2: SOURCE
+                    String source = getOriginalValue(row, 2);
+
+                    // Column 3: CONTACT NO
+                    String mobile = getOriginalValue(row, 3);
+                    if (mobile == null || mobile.equals("N/A")) {
+                        mobile = "";
+                    }
+
+                    // Column 4: COURSE
+                    String courseStr = getOriginalValue(row, 4);
+                    List<String> coursesList = parseCoursesExact(courseStr);
+
+                    // Column 5: COUNSELOR NAME
+                    String counselorName = getOriginalValue(row, 5);
+
+                    EnquiryRequestDTO dto = EnquiryRequestDTO.builder()
+                            .enquiryDate(enquiryDate)
+                            .name(studentName)
+                            .firstName(nameParts[0])
+                            .middleName(nameParts[1])
+                            .lastName(nameParts[2])
+                            .source(source)
+                            .mobile(mobile)
+                            .courses(coursesList)
+                            .assignTo(counselorName)
+                            .status("New")
+                            .build();
+
+                    dtos.add(dto);
+
+                } catch (Exception e) {
+                    log.error("❌ Row {}: Error parsing counselor format - {}", i + 1, e.getMessage());
+                    dtos.add(createFallbackEnquiryDTO(i));
+                }
+            }
+
+            log.info(" Parsed {} records (COUNSELOR FORMAT)", dtos.size());
+            return dtos;
+
+        } catch (CsvException e) {
+            log.error("CSV parsing error", e);
+            throw new IOException("Failed to parse CSV file: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Parse OLD FORMAT Admission CSV - STRICT MODE
      */
     public List<AdmissionRequestDTO> parseOldFormatAdmissionCSV(MultipartFile file) throws IOException {

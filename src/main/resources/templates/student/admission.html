@@ -29,7 +29,7 @@
 
 <!-- Dashboard Content Fragment -->
 <main layout:fragment="content">
-    <input type="hidden" id="currentUserRole" th:value="${currentUser != null ? currentUser.role.roleTitle : ''}">
+    <input type="hidden" id="currentUserRole" th:value="${currentUser != null ? (currentUser.employee != null && currentUser.employee.role != null ? currentUser.employee.role.roleTitle : (currentUser.role != null ? currentUser.role.roleTitle : '')) : ''}">
 
     <div class="container-fluid">
         <!-- Page Header -->
@@ -1011,10 +1011,11 @@
                                                             <th>Amount</th>
                                                             <th>Status</th>
                                                             <th>Notes</th>
+                                                            <th id="viewAdmInstallmentsThAudit" style="display: none;">Audit</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="viewAdmInstallmentsBody">
-                                                        <tr><td colspan="4" class="text-center text-muted">No installments found</td></tr>
+                                                        <tr><td colspan="5" class="text-center text-muted">No installments found</td></tr>
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -1151,6 +1152,43 @@
                             <i class="bi bi-plus-circle me-1"></i>Add Installment Row
                         </button>
                         <small class="text-muted">Total: <strong id="feeInstRowTotal">₹0.00</strong></small>
+                    </div>
+
+                    <!-- Superadmin Audit Info Card (Only visible to SUPER_ADMIN) -->
+                    <div class="col-12 mt-3" id="feeInstAuditSection" style="display: none;">
+                        <div class="card border-0 shadow-sm rounded-4">
+                            <div class="card-body p-3">
+                                <h6 class="card-title text-danger fw-bold mb-3 d-flex align-items-center">
+                                    <i class="bi bi-shield-lock-fill me-2 fs-6"></i>Audit Information (Superadmin Only)
+                                </h6>
+                                <div class="row g-2">
+                                    <div class="col-12 col-sm-6 col-md-3">
+                                        <div class="view-detail-card p-2 rounded-3 bg-light">
+                                            <small class="text-muted d-block uppercase-label" style="font-size: 0.75rem;">CREATED BY</small>
+                                            <span class="fw-semibold text-dark small" id="feeInstCreatedBy">-</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-md-3">
+                                        <div class="view-detail-card p-2 rounded-3 bg-light">
+                                            <small class="text-muted d-block uppercase-label" style="font-size: 0.75rem;">CREATED TIME</small>
+                                            <span class="fw-semibold text-dark small" id="feeInstCreatedTime">-</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-md-3">
+                                        <div class="view-detail-card p-2 rounded-3 bg-light">
+                                            <small class="text-muted d-block uppercase-label" style="font-size: 0.75rem;">UPDATED BY</small>
+                                            <span class="fw-semibold text-dark small" id="feeInstUpdatedBy">-</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-md-3">
+                                        <div class="view-detail-card p-2 rounded-3 bg-light">
+                                            <small class="text-muted d-block uppercase-label" style="font-size: 0.75rem;">UPDATED TIME</small>
+                                            <span class="fw-semibold text-dark small" id="feeInstUpdatedTime">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

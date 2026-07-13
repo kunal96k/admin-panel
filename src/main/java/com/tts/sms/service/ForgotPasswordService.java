@@ -5,8 +5,14 @@ import com.tts.sms.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -15,6 +21,7 @@ public class ForgotPasswordService {
 
     private final UserRepository userRepository;
     private final EmailTemplateService emailTemplateService;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${app.superadmin.email:kunalpatil192001@gmail.com}")
     private String superAdminEmail;
@@ -24,38 +31,84 @@ public class ForgotPasswordService {
 
     /**
      * Process forgot password request
-     * Only allows super admin email
+     * Checks if the user exists and has the SUPER_ADMIN role.
+     * If so, resets their password to a secure temporary password,
+     * updates it in the database, and emails the new password.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public boolean processForgotPassword(String email) {
         log.info("🔐 Processing forgot password request for email: {}", email);
 
-        // Verify if email matches super admin email
-        if (!email.equalsIgnoreCase(superAdminEmail)) {
-            log.warn("⚠️ Unauthorized forgot password attempt for email: {}", email);
-            return false;
-        }
-
         try {
-            // Find user by super admin email
-            User user = userRepository.findByEmployee_EmailId(superAdminEmail)
+            // Find user by employee email
+            User user = userRepository.findByEmployee_EmailId(email)
                     .orElse(null);
 
             if (user == null) {
-                log.error("❌ Super admin user not found with email: {}", superAdminEmail);
+                log.warn("⚠️ Forgot password attempt for non-existent user email: {}", email);
                 return false;
             }
 
-            // Send password email with configured password
-            sendPasswordEmail(user, superAdminPassword);
+            // Verify if user's role is SUPER_ADMIN
+            if (user.getRole() == null || !"SUPER_ADMIN".equalsIgnoreCase(user.getRole().getRoleTitle())) {
+                log.warn("⚠️ Unauthorized forgot password attempt (not a SUPER_ADMIN) for email: {}", email);
+                return false;
+            }
 
-            log.info("✅ Password sent successfully to: {}", superAdminEmail);
+            // Generate a secure random temporary password
+            String tempPassword = generateTemporaryPassword();
+
+            // Update user password in the database (encrypt using BCrypt)
+            user.setPassword(passwordEncoder.encode(tempPassword));
+            userRepository.save(user);
+
+            // Send password email with new temporary password
+            sendPasswordEmail(user, tempPassword);
+
+            log.info("✅ Password successfully reset and sent to super admin: {}", email);
             return true;
 
         } catch (Exception e) {
             log.error("❌ Error processing forgot password: {}", e.getMessage(), e);
             return false;
         }
+    }
+
+    /**
+     * Generate a secure 10-character temporary password
+     */
+    private String generateTemporaryPassword() {
+        String upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String lower = "abcdefghijklmnopqrstuvwxyz";
+        String digits = "0123456789";
+        String specials = "!@#$%^&*";
+        
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder();
+        
+        // Ensure at least one character from each class
+        sb.append(upper.charAt(random.nextInt(upper.length())));
+        sb.append(lower.charAt(random.nextInt(lower.length())));
+        sb.append(digits.charAt(random.nextInt(digits.length())));
+        sb.append(specials.charAt(random.nextInt(specials.length())));
+        
+        String allChars = upper + lower + digits + specials;
+        for (int i = 4; i < 10; i++) {
+            sb.append(allChars.charAt(random.nextInt(allChars.length())));
+        }
+        
+        // Shuffle characters
+        List<Character> list = new ArrayList<>();
+        for (char c : sb.toString().toCharArray()) {
+            list.add(c);
+        }
+        Collections.shuffle(list);
+        
+        StringBuilder result = new StringBuilder();
+        for (char c : list) {
+            result.append(c);
+        }
+        return result.toString();
     }
 
     /**

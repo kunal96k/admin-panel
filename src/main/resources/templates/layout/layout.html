@@ -720,10 +720,12 @@
                         <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i> Settings</a></li>
 
                         <!-- SUPER ADMIN ONLY: Cutoff Date Configuration -->
-                        <li th:if="${currentUser != null && currentUser.role.roleTitle == 'SUPER_ADMIN'}">
+                        <li
+                            th:if="${currentUser != null && ((currentUser.employee != null && currentUser.employee.role != null && currentUser.employee.role.roleTitle == 'SUPER_ADMIN') || (currentUser.role != null && currentUser.role.roleTitle == 'SUPER_ADMIN'))}">
                             <hr class="dropdown-divider">
                         </li>
-                        <li th:if="${currentUser != null && currentUser.role.roleTitle == 'SUPER_ADMIN'}">
+                        <li
+                            th:if="${currentUser != null && ((currentUser.employee != null && currentUser.employee.role != null && currentUser.employee.role.roleTitle == 'SUPER_ADMIN') || (currentUser.role != null && currentUser.role.roleTitle == 'SUPER_ADMIN'))}">
                             <a class="dropdown-item" href="#" id="btnConfigureCutoffDate">
                                 <i class="bi bi-calendar-date me-2"></i> Configure Cutoff Date
                             </a>
@@ -776,7 +778,7 @@
                                         <label class="form-label fw-bold">
                                             Cutoff Date <span class="text-danger">*</span>
                                         </label>
-                                        <!-- ✅ : Remove any overlays and ensure proper z-index -->
+                                        <!-- Remove any overlays and ensure proper z-index -->
                                         <input type="date" class="form-control" id="cutoffDateInput" required
                                             style="position: relative; z-index: 1050; cursor: pointer;"
                                             onclick="this.showPicker()">

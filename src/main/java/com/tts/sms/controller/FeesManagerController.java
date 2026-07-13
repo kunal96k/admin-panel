@@ -339,12 +339,6 @@ public class FeesManagerController {
 
         log.info("GET /api/fees-manager/installments/{}", regNo);
 
-        // Check if this is a NEW student (REG* number)
-        if (!regNo.startsWith("REG")) {
-            log.info(" Skipping installments for old student: {}", regNo);
-            return ResponseEntity.ok(List.of());
-        }
-
         List<FeeInstallmentDTO> installments = feesManagerService.getInstallmentsByRegNo(regNo);
         return ResponseEntity.ok(installments);
     }

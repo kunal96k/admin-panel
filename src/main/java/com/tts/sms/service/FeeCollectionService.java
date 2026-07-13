@@ -24,11 +24,14 @@ import com.opencsv.CSVReader;
 import com.tts.sms.dto.FeeCollectionDTO;
 import com.tts.sms.dto.FeeCollectionSearchDTO;
 import com.tts.sms.dto.FeeCollectionStatsDTO;
+import com.tts.sms.model.Admission;
 import com.tts.sms.model.FeeCollection;
 import com.tts.sms.model.FeeReceipt;
+import com.tts.sms.model.Fees;
 import com.tts.sms.repository.AdmissionRepository;
 import com.tts.sms.repository.FeeCollectionRepository;
 import com.tts.sms.repository.FeeReceiptRepository;
+import com.tts.sms.repository.FeesRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +44,8 @@ public class FeeCollectionService {
     private final FeeCollectionRepository feeCollectionRepository;
     private final AdmissionRepository admissionRepository;
     private final FeeReceiptRepository feeReceiptRepository;
+    private final FeesRepository feesRepository;
+    private final FeesManagerService feesManagerService;
 
     private static final DateTimeFormatter[] DATE_FORMATTERS = {
             DateTimeFormatter.ofPattern("dd/MM/yyyy"),
@@ -322,6 +327,32 @@ public class FeeCollectionService {
         feeCollectionRepository.save(feeCollection);
 
         log.info("✅ Deleted fee collection: {}", id);
+
+        // Recalculate fees for the student associated with this mobile number
+        String mobile = feeCollection.getMobileNo();
+        if (mobile != null && !mobile.trim().isEmpty() && !"N/A".equalsIgnoreCase(mobile)) {
+            // Find admission records
+            List<Admission> admissions = admissionRepository.findByMobilePrimaryAndIsDeletedFalse(mobile);
+            if (!admissions.isEmpty()) {
+                for (Admission admission : admissions) {
+                    String regNo = admission.getRegistrationNumber();
+                    if (regNo != null && !regNo.trim().isEmpty()) {
+                        log.info("Recalculating fees for regNo: {} after deleting fee collection: {}", regNo, id);
+                        feesManagerService.recalculateFeesFromTransactions(regNo);
+                    }
+                }
+            } else {
+                // If not found in admissions, check fees table directly
+                List<Fees> feesList = feesRepository.findByMobileAndIsDeletedFalse(mobile);
+                for (Fees fees : feesList) {
+                    String regNo = fees.getRegistrationNumber();
+                    if (regNo != null && !regNo.trim().isEmpty()) {
+                        log.info("Recalculating fees for regNo: {} from Fees table after deleting fee collection: {}", regNo, id);
+                        feesManagerService.recalculateFeesFromTransactions(regNo);
+                    }
+                }
+            }
+        }
     }
 
     // ==================== HELPER METHODS ====================

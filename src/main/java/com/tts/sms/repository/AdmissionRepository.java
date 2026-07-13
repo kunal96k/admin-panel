@@ -110,7 +110,7 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long>, Jpa
          * : Find recent admissions - Use created_at
          */
         @Query(value = "SELECT * FROM admissions a WHERE a.is_deleted = false " +
-                        "ORDER BY a.admission_date DESC, a.created_at DESC", nativeQuery = true)
+                        "ORDER BY a.created_at DESC", nativeQuery = true)
         List<Admission> findRecentAdmissions(Pageable pageable);
 
         /**
@@ -141,7 +141,7 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long>, Jpa
                         AND (?15 IS NULL OR a.admission_date >= ?16)
                         AND (?17 IS NULL OR a.admission_date <= ?18)
                         AND (?19 IS NULL OR a.student_category = ?20)
-                        ORDER BY a.admission_date DESC, a.created_at DESC
+                        ORDER BY a.created_at DESC
                             """, countQuery = """
                         SELECT COUNT(*) FROM admissions a
                         WHERE a.is_deleted = false
@@ -176,8 +176,6 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long>, Jpa
         /**
          * Find all with pagination - Sort by ADMISSION_DATE DESC
          */
-        @Query(value = "SELECT * FROM admissions a WHERE a.is_deleted = false " +
-                        "ORDER BY a.admission_date DESC, a.created_at DESC", countQuery = "SELECT COUNT(*) FROM admissions a WHERE a.is_deleted = false", nativeQuery = true)
         Page<Admission> findByIsDeletedFalse(Pageable pageable);
 
         /**

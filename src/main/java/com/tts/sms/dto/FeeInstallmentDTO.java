@@ -40,6 +40,16 @@ public class FeeInstallmentDTO {
 
     private Boolean isOverdue;
 
+    private String createdBy;
+
+    private String updatedBy;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private java.time.LocalDateTime createdAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private java.time.LocalDateTime updatedAt;
+
     // Helper method to check if overdue
     public Boolean getIsOverdue() {
         if ("Pending".equals(status) && dueDate != null) {

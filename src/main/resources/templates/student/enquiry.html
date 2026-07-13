@@ -148,7 +148,7 @@
 
 <!-- Dashboard Content Fragment -->
 <main layout:fragment="content">
-    <input type="hidden" id="currentUserRole" th:value="${currentUser != null ? currentUser.role.roleTitle : ''}">
+    <input type="hidden" id="currentUserRole" th:value="${currentUser != null ? (currentUser.employee != null && currentUser.employee.role != null ? currentUser.employee.role.roleTitle : (currentUser.role != null ? currentUser.role.roleTitle : '')) : ''}">
 
     <!-- Page Header -->
     <div class="container-fluid">
@@ -159,30 +159,86 @@
 
         <!-- Action Bar -->
         <div class="action-card">
-            <div class="row align-items-center">
-                <div class="col-lg-6 mb-3 mb-lg-0">
-                    <button class="btn btn-primary btn-action me-2" id="btnAddEnquiry">
-                        <i class="bi bi-plus-circle me-2"></i>New Enquiry
-                    </button>
-                    <button class="btn btn-success btn-action me-2" id="btnImportCSV">
-                        <i class="bi bi-upload me-2"></i>Import CSV
-                    </button>
-                    <button class="btn btn-info btn-action" id="btnExportCSV">
-                        <i class="bi bi-download me-2"></i>Export CSV
-                    </button>
+            <!-- Row 1: Actions & Search -->
+            <div class="row g-3 align-items-center mb-3">
+                <!-- Buttons -->
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-primary btn-action flex-fill" id="btnAddEnquiry">
+                            <i class="bi bi-plus-circle me-2"></i>New
+                        </button>
+                        <button class="btn btn-sm btn-success btn-action flex-fill" id="btnImportCSV">
+                            <i class="bi bi-upload me-2"></i>Import
+                        </button>
+                        <button class="btn btn-sm btn-info btn-action flex-fill" id="btnExportCSV">
+                            <i class="bi bi-download me-2"></i>Export
+                        </button>
+                    </div>
                 </div>
-                <div class="col-lg-6">
-                    <div class="input-group">
-                    <span class="input-group-text bg-white">
-                        <i class="bi bi-search"></i>
-                    </span>
-                        <input type="text" class="form-control" id="searchInput" placeholder="Search by name, mobile, course...">
-                        <select class="form-select" style="max-width: 150px;">
-                            <option value="25">25</option>
+
+                <!-- Text Search & Page Size -->
+                <div class="col-12 col-md-6 col-lg-8">
+                    <div class="d-flex gap-2">
+                        <div class="input-group input-group-sm flex-grow-1">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="searchInput" placeholder="Search by name, mobile, course...">
+                        </div>
+                        <select class="form-select form-select-sm" id="pageSizeSelect" style="max-width: 85px;">
+                            <option value="25" selected>25</option>
                             <option value="50">50</option>
                             <option value="100">100</option>
                         </select>
                     </div>
+                </div>
+            </div>
+
+            <!-- Row 2: Advanced Filters -->
+            <div class="row g-3 align-items-end pt-2 border-top">
+                <!-- Course Filter with Search -->
+                <div class="col-12 col-sm-6 col-md-3 col-lg-3">
+                    <label class="form-label mb-1 fw-bold small text-muted">Course Filter</label>
+                    <div class="position-relative">
+                        <input type="text" class="form-control form-control-sm mb-1" id="courseSearchInputFilter"
+                               placeholder="Search courses..." style="font-size: 0.85rem;">
+                        <select class="form-select form-select-sm" id="courseFilter"
+                                style="font-size: 0.85rem;">
+                            <option value="">-- All Courses --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-12 col-sm-6 col-md-2 col-lg-2">
+                    <label class="form-label mb-1 fw-bold small text-muted">Status Filter</label>
+                    <select class="form-select form-select-sm" id="statusFilter" style="font-size: 0.85rem; height: 31px;">
+                        <option value="">-- All Status --</option>
+                        <option value="New">New</option>
+                        <option value="In Process">In Process</option>
+                        <option value="Closed">Closed</option>
+                        <option value="Lost">Lost</option>
+                        <option value="Admitted">Admitted</option>
+                    </select>
+                </div>
+
+                <!-- From Date -->
+                <div class="col-12 col-sm-6 col-md-2 col-lg-2">
+                    <label class="form-label mb-1 fw-bold small text-muted">From Date</label>
+                    <input type="date" class="form-control form-control-sm" id="fromDateFilter" style="font-size: 0.85rem; height: 31px;">
+                </div>
+
+                <!-- To Date -->
+                <div class="col-12 col-sm-6 col-md-2 col-lg-2">
+                    <label class="form-label mb-1 fw-bold small text-muted">To Date</label>
+                    <input type="date" class="form-control form-control-sm" id="toDateFilter" style="font-size: 0.85rem; height: 31px;">
+                </div>
+
+                <!-- Reset Button -->
+                <div class="col-12 col-sm-6 col-md-3 col-lg-3">
+                    <button class="btn btn-outline-secondary btn-sm w-100" id="btnClearFilters" style="height: 31px;">
+                        <i class="bi bi-x-circle me-1"></i>Clear Filters
+                    </button>
                 </div>
             </div>
         </div>
@@ -472,187 +528,284 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="bi bi-eye me-2"></i>Enquiry Details: <span id="viewStudentName"></span>
+                        <i class="bi bi-eye me-2"></i>Enquiry Details
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Progress Bar -->
-                    <div class="progress-wizard">
-                        <div class="progress-wizard-bar" id="viewProgressBar" style="width: 25%"></div>
+                    <!-- Hero Card Section -->
+                    <div class="admission-hero-card p-4 mb-4 rounded-4 shadow-sm">
+                        <div class="row align-items-center">
+                            <div class="col-12 col-md-3 text-center text-md-start mb-3 mb-md-0">
+                                <div class="position-relative d-inline-block">
+                                    <img src="/assets/images/user-logo.png" alt="Student Photo" class="rounded-circle border border-4 border-white shadow" id="viewStudentPhoto" style="width: 120px; height: 120px; object-fit: cover;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22%3E%3Crect fill=%22%23ddd%22 width=%22120%22 height=%22120%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22%3ENo Photo%3C/text%3E%3C/svg%3E'">
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-9 text-center text-md-start">
+                                <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-start gap-2 mb-2">
+                                    <h3 class="mb-0 fw-bold text-dark" id="viewStudentName">Student Name</h3>
+                                    <span class="badge bg-success shadow-sm rounded-pill px-3 py-1.5" id="viewStatusBadge">New</span>
+                                </div>
+                                <p class="mb-2 text-muted">
+                                    <i class="bi bi-card-text me-1 text-primary"></i> <strong>Enquiry No:</strong> <span class="badge bg-white text-primary border border-primary-subtle fw-semibold px-2 py-1" id="viewEnquiryNo">-</span>
+                                </p>
+                                <p class="mb-0 text-muted">
+                                    <i class="bi bi-calendar-check me-1 text-primary"></i> <strong>Enquiry Date:</strong> <span id="viewEnquiryDate" class="fw-semibold text-secondary">-</span>
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Tabs -->
-                    <ul class="nav nav-pills nav-justified mb-4">
-                        <li class="nav-item">
-                            <a class="nav-link active" data-bs-toggle="pill" href="#viewTab1" data-view-progress="25">
-                                <small>1.</small> Personal Information
-                            </a>
+                    <!-- Navigation Tabs for Mobile First View -->
+                    <ul class="nav nav-pills nav-fill gap-2 p-1 mb-4" id="viewEnqTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-semibold" id="enq-profile-tab" data-bs-toggle="tab" data-bs-target="#enq-profile-pane" type="button" role="tab" aria-controls="enq-profile-pane" aria-selected="true">
+                                <i class="bi bi-person-circle me-2"></i>Profile
+                            </button>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="pill" href="#viewTab2" data-view-progress="50">
-                                <small>2.</small> Communication Details
-                            </a>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold" id="enq-course-tab" data-bs-toggle="tab" data-bs-target="#enq-course-pane" type="button" role="tab" aria-controls="enq-course-pane" aria-selected="false">
+                                <i class="bi bi-mortarboard me-2"></i>Course & Interest
+                            </button>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="pill" href="#viewTab3" data-view-progress="75">
-                                <small>3.</small> Follow-up Details
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="pill" href="#viewTab4" data-view-progress="100">
-                                <small>4.</small> How You Know Us?
-                            </a>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold" id="enq-source-tab" data-bs-toggle="tab" data-bs-target="#enq-source-pane" type="button" role="tab" aria-controls="enq-source-pane" aria-selected="false">
+                                <i class="bi bi-share me-2"></i>Source & Assignment
+                            </button>
                         </li>
                     </ul>
 
-                    <!-- Tab Content (Read-only) -->
-                    <div class="tab-content">
-                        <div class="tab-pane fade show active" id="viewTab1">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">First Name</label>
-                                    <input type="text" class="form-control" id="viewFirstName" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Middle Name</label>
-                                    <input type="text" class="form-control" id="viewMiddleName" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Last Name</label>
-                                    <input type="text" class="form-control" id="viewLastName" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">College/School</label>
-                                    <input type="text" class="form-control" id="viewCollege" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Qualification</label>
-                                    <input type="text" class="form-control" id="viewQualification" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Aadhaar No.</label>
-                                    <input type="text" class="form-control" id="viewAadhaar" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Birth Date</label>
-                                    <input type="date" class="form-control" id="viewDob" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Gender</label>
-                                    <input type="text" class="form-control" id="viewGender" readonly>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="tab-pane fade" id="viewTab2">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Primary Mobile No.</label>
-                                    <input type="tel" class="form-control" id="viewMobilePrimary" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Secondary Mobile No.</label>
-                                    <input type="tel" class="form-control" id="viewMobileSecondary" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Primary Email</label>
-                                    <input type="email" class="form-control" id="viewEmailPrimary" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Secondary Email</label>
-                                    <input type="email" class="form-control" id="viewEmailSecondary" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Current Address</label>
-                                    <textarea class="form-control" id="viewCurrentAddress" rows="3" readonly></textarea>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Permanent Address</label>
-                                    <textarea class="form-control" id="viewPermanentAddress" rows="3" readonly></textarea>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Pin Code (Current)</label>
-                                    <input type="text" class="form-control" id="viewPinCodeCurrent" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Pin Code (Permanent)</label>
-                                    <input type="text" class="form-control" id="viewPinCodePermanent" readonly>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="tab-pane fade" id="viewTab3">
-                            <div class="row">
-                                <div class="col-12 mb-3">
-                                    <label class="form-label">Course Interested</label>
-                                    <input type="text" class="form-control" id="viewCourse" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Package</label>
-                                    <input type="text" class="form-control" id="viewPackage" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Requires Demo Lecture</label>
-                                    <input type="text" class="form-control" id="viewDemoLecture" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Interest Level</label>
-                                    <input type="text" class="form-control" id="viewInterestLevel" readonly>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="tab-pane fade" id="viewTab4">
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">Lead Source</label>
-                                    <input type="text" class="form-control" id="viewLeadSource" readonly>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">Reference Name</label>
-                                    <input type="text" class="form-control" id="viewReferenceName" readonly>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">Assign To</label>
-                                    <input type="text" class="form-control" id="viewAssignTo" readonly>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Enquiry Date</label>
-                                    <input type="date" class="form-control" id="viewEnquiryDate" readonly>
-                                </div>
-                                <div class="col-12 mb-3">
-                                    <label class="form-label">Note</label>
-                                    <textarea class="form-control" id="viewNote" rows="4" readonly></textarea>
+                    <!-- Tabs Content -->
+                    <div class="tab-content" id="viewEnqTabContent">
+                        
+                        <!-- TAB 1: PROFILE DETAILS -->
+                        <div class="tab-pane fade show active" id="enq-profile-pane" role="tabpanel" aria-labelledby="enq-profile-tab" tabindex="0">
+                            <div class="row g-3">
+                                <!-- Personal Info Card -->
+                                <div class="col-12 col-md-6">
+                                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-primary fw-bold mb-4 d-flex align-items-center">
+                                                <i class="bi bi-person-badge-fill me-2 fs-5"></i>Personal Information
+                                            </h5>
+                                            <div class="row g-3">
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Date of Birth</small>
+                                                        <span class="fw-semibold text-dark" id="viewDob">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Gender</small>
+                                                        <span class="fw-semibold text-dark" id="viewGender">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Aadhaar Card</small>
+                                                        <span class="fw-semibold text-dark" id="viewAadhaar">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">College/School</small>
+                                                        <span class="fw-semibold text-dark" id="viewCollege">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Qualification</small>
+                                                        <span class="fw-semibold text-dark" id="viewQualification">-</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 
-                                <!-- Superadmin Audit Info Section (Only visible to SUPER_ADMIN) -->
-                                <div class="col-12" id="enqSuperadminAuditSection" style="display: none;">
-                                    <hr class="my-4">
-                                    <h5 class="text-danger fw-bold mb-3 d-flex align-items-center">
-                                        <i class="bi bi-shield-lock-fill me-2"></i>Audit Information (Superadmin Only)
-                                    </h5>
-                                    <div class="row g-3">
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label">Created By</label>
-                                            <input type="text" class="form-control" id="viewEnqCreatedBy" readonly>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label">Created Time</label>
-                                            <input type="text" class="form-control" id="viewEnqCreatedTime" readonly>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label">Updated By</label>
-                                            <input type="text" class="form-control" id="viewEnqUpdatedBy" readonly>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label">Updated Time</label>
-                                            <input type="text" class="form-control" id="viewEnqUpdatedTime" readonly>
+                                <!-- Contact Info Card -->
+                                <div class="col-12 col-md-6">
+                                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-primary fw-bold mb-4 d-flex align-items-center">
+                                                <i class="bi bi-telephone-fill me-2 fs-5"></i>Contact Details
+                                            </h5>
+                                            <div class="row g-3">
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Primary Mobile</small>
+                                                        <span class="fw-semibold text-dark" id="viewMobilePrimary">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Secondary Mobile</small>
+                                                        <span class="fw-semibold text-dark" id="viewMobileSecondary">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Primary Email</small>
+                                                        <span class="fw-semibold text-dark" id="viewEmailPrimary">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Secondary Email</small>
+                                                        <span class="fw-semibold text-dark" id="viewEmailSecondary">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Current Address</small>
+                                                        <span class="fw-semibold text-dark" id="viewCurrentAddress">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Permanent Address</small>
+                                                        <span class="fw-semibold text-dark" id="viewPermanentAddress">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Pin Code (Current)</small>
+                                                        <span class="fw-semibold text-dark" id="viewPinCodeCurrent">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Pin Code (Permanent)</small>
+                                                        <span class="fw-semibold text-dark" id="viewPinCodePermanent">-</span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- TAB 2: COURSE & INTEREST -->
+                        <div class="tab-pane fade" id="enq-course-pane" role="tabpanel" aria-labelledby="enq-course-tab" tabindex="0">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="card border-0 shadow-sm rounded-4">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-primary fw-bold mb-4 d-flex align-items-center">
+                                                <i class="bi bi-journal-bookmark-fill me-2 fs-5"></i>Course Interest Details
+                                            </h5>
+                                            <div class="row g-3">
+                                                <div class="col-12">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Course Interested</small>
+                                                        <span class="fw-semibold text-dark" id="viewCourse">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-4">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Package</small>
+                                                        <span class="fw-semibold text-dark" id="viewPackage">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-4">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Requires Demo Lecture</small>
+                                                        <span class="fw-semibold text-dark" id="viewDemoLecture">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-4">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Interest Level</small>
+                                                        <span class="fw-semibold text-dark" id="viewInterestLevel">-</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: SOURCE & ASSIGNMENT -->
+                        <div class="tab-pane fade" id="enq-source-pane" role="tabpanel" aria-labelledby="enq-source-tab" tabindex="0">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="card border-0 shadow-sm rounded-4">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-primary fw-bold mb-4 d-flex align-items-center">
+                                                <i class="bi bi-share-fill me-2 fs-5"></i>Lead Assignment & Details
+                                            </h5>
+                                            <div class="row g-3">
+                                                <div class="col-12 col-sm-4">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Lead Source</small>
+                                                        <span class="fw-semibold text-dark" id="viewLeadSource">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-4">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Reference Name</small>
+                                                        <span class="fw-semibold text-dark" id="viewReferenceName">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-4">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Assign To</small>
+                                                        <span class="fw-semibold text-dark" id="viewAssignTo">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Additional Note</small>
+                                                        <span class="fw-semibold text-dark text-break" id="viewNote" style="display: block; min-height: 50px;">-</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Superadmin Audit Info Card (Only visible to SUPER_ADMIN) -->
+                                <div class="col-12" id="enqSuperadminAuditSection" style="display: none;">
+                                    <div class="card border-0 shadow-sm rounded-4">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title text-danger fw-bold mb-4 d-flex align-items-center">
+                                                <i class="bi bi-shield-lock-fill me-2 fs-5"></i>Audit Information (Superadmin Only)
+                                            </h5>
+                                            <div class="row g-3">
+                                                <div class="col-12 col-sm-6 col-md-3">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Created By</small>
+                                                        <span class="fw-semibold text-dark" id="viewEnqCreatedBy">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6 col-md-3">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Created Time</small>
+                                                        <span class="fw-semibold text-dark" id="viewEnqCreatedTime">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6 col-md-3">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Updated By</small>
+                                                        <span class="fw-semibold text-dark" id="viewEnqUpdatedBy">-</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 col-sm-6 col-md-3">
+                                                    <div class="view-detail-card p-3 rounded-3 bg-light">
+                                                        <small class="text-muted d-block uppercase-label">Updated Time</small>
+                                                        <span class="fw-semibold text-dark" id="viewEnqUpdatedTime">-</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -686,6 +839,11 @@
                             <label class="btn btn-outline-primary" for="importNew">
                                 <i class="bi bi-file-earmark-plus me-2"></i>New Format (First, Middle, Last Name)
                             </label>
+
+                            <input type="radio" class="btn-check" name="importType" id="importCounselor" value="counselor">
+                            <label class="btn btn-outline-primary" for="importCounselor">
+                                <i class="bi bi-file-earmark-person me-2"></i>Counselor Format (Date, Name, Source, Contact, Course, Counselor)
+                            </label>
                         </div>
                     </div>
 
@@ -703,6 +861,16 @@
                         <strong>New CSV Format:</strong> Your CSV file should contain:
                         <br>
                         <small>Enquiry No., First Name, Middle Name, Last Name, Mobile Primary, Mobile Secondary, Email Primary, Current Address, Permanent Address, College, Enquiry Date, Followup Date, Note, Course, Lead Source</small>
+                    </div>
+
+                    <!-- Counselor Format Info -->
+                    <div class="alert alert-info" id="counselorFormatInfo" style="display: none;">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Counselor CSV Format:</strong> Your CSV/TSV file should contain:
+                        <br>
+                        <small>DATE, STUDENT NAME, SOURCE, CONTACT NO, COURSE, COUNSOLR NAME</small>
+                        <br>
+                        <small class="text-warning"><i class="bi bi-exclamation-triangle-fill"></i> Note: If the contact number already exists in the database, the existing record will be updated instead of creating a duplicate.</small>
                     </div>
 
                     <div class="import-area" id="importArea">

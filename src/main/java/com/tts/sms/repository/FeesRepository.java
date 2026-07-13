@@ -21,6 +21,8 @@ public interface FeesRepository extends JpaRepository<Fees, Long>, JpaSpecificat
 
     List<Fees> findByIsDeletedFalse();
 
+    List<Fees> findByMobileAndIsDeletedFalse(String mobile);
+
     /**
      *  Use native query with LIMIT 1 to avoid NonUniqueResultException
      */

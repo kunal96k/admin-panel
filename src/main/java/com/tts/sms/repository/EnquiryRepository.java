@@ -186,6 +186,6 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Long>,
      * Recent enquiries
      */
     @Query("SELECT e FROM Enquiry e WHERE e.isDeleted = false " +
-            "ORDER BY e.enquiryDate DESC")
+            "ORDER BY e.createdAt DESC")
     List<Enquiry> findRecentEnquiries(Pageable pageable);
 }

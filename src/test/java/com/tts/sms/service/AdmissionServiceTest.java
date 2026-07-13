@@ -7,6 +7,7 @@ import com.tts.sms.repository.AdmissionRepository;
 import com.tts.sms.repository.EnquiryRepository;
 import com.tts.sms.repository.FeeInstallmentRepository;
 import com.tts.sms.repository.FeesRepository;
+import com.tts.sms.repository.FeeReceiptRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
@@ -28,6 +29,8 @@ class AdmissionServiceTest {
     private FeeInstallmentRepository feeInstallmentRepository;
     @Mock
     private FeesRepository feesRepository;
+    @Mock
+    private FeeReceiptRepository feeReceiptRepository;
     @Mock
     private AdmissionMapper admissionMapper;
     @Mock

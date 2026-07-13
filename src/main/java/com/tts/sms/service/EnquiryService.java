@@ -4,11 +4,13 @@ import com.tts.sms.dto.*;
 import com.tts.sms.model.Enquiry;
 import com.tts.sms.exception.ResourceNotFoundException;
 import com.tts.sms.repository.EnquiryRepository;
+import com.tts.sms.specification.EnquirySpecifications;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +39,7 @@ public class EnquiryService {
     @Transactional(readOnly = true)
     public Page<EnquiryResponseDTO> getAllEnquiries(int page, int size) {
         log.debug("Fetching enquiries - page: {}, size: {}", page, size);
-        Pageable pageable = PageRequest.of(page, size, Sort.by("enquiryDate").descending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Enquiry> enquiries = enquiryRepository.findByIsDeletedFalse(pageable);
         log.info("Retrieved {} enquiries out of {} total",
                 enquiries.getNumberOfElements(), enquiries.getTotalElements());
@@ -48,15 +50,16 @@ public class EnquiryService {
     public Page<EnquiryResponseDTO> searchEnquiries(EnquirySearchDTO searchDTO) {
         log.debug("Searching enquiries with criteria: {}", searchDTO);
 
-        //  Map camelCase to snake_case for database columns
-        String sortColumn = "enquiry_date"; // Default
+        String sortColumn = "createdAt"; // Default
 
-        if ("enquiryDate".equals(searchDTO.getSortBy())) {
-            sortColumn = "enquiry_date";
+        if ("createdAt".equals(searchDTO.getSortBy())) {
+            sortColumn = "createdAt";
+        } else if ("enquiryDate".equals(searchDTO.getSortBy())) {
+            sortColumn = "enquiryDate";
         } else if ("firstName".equals(searchDTO.getSortBy())) {
-            sortColumn = "first_name";
+            sortColumn = "firstName";
         } else if ("lastName".equals(searchDTO.getSortBy())) {
-            sortColumn = "last_name";
+            sortColumn = "lastName";
         } else if ("mobile".equals(searchDTO.getSortBy())) {
             sortColumn = "mobile";
         }
@@ -70,14 +73,9 @@ public class EnquiryService {
 
         Pageable pageable = PageRequest.of(searchDTO.getPage(), searchDTO.getSize(), sort);
 
-        Page<Enquiry> results = enquiryRepository.advancedSearch(
-                searchDTO.getSearchTerm(),
-                searchDTO.getStatus(),
-                searchDTO.getSource(),
-                searchDTO.getCourse(),
-                searchDTO.getAssignTo(),
-                pageable
-        );
+        Specification<Enquiry> spec = EnquirySpecifications.getSearchSpecification(searchDTO);
+        Page<Enquiry> results = enquiryRepository.findAll(spec, pageable);
+        
         log.info("Search returned {} results", results.getTotalElements());
         return results.map(enquiryMapper::toResponseDTO);
     }
@@ -170,6 +168,8 @@ public class EnquiryService {
             List<EnquiryRequestDTO> dtos;
             if (importType == BulkImportRequestDTO.ImportType.OLD_FORMAT) {
                 dtos = csvService.parseOldFormatCSV(file);
+            } else if (importType == BulkImportRequestDTO.ImportType.COUNSELOR_FORMAT) {
+                dtos = csvService.parseCounselorFormatCSV(file);
             } else {
                 dtos = csvService.parseNewFormatCSV(file);
             }
@@ -190,7 +190,7 @@ public class EnquiryService {
     public byte[] exportEnquiriesToCSV() {
         log.info("Exporting enquiries to CSV");
         List<Enquiry> enquiries = enquiryRepository.findAll(
-                Sort.by("enquiryDate").descending()
+                Sort.by("createdAt").descending()
         );
         List<EnquiryResponseDTO> dtos = enquiries.stream()
                 .filter(e -> !e.getIsDeleted())
@@ -235,33 +235,96 @@ public class EnquiryService {
         int successCount = 0;
         int duplicateCount = 0;
         List<BulkImportResponseDTO.ImportError> errors = new ArrayList<>();
+        Set<String> processedMobiles = new HashSet<>();
+        String currentLoggedUser = getCurrentLoggedInUser();
 
         for (int i = 0; i < dtos.size(); i++) {
             final int rowNumber = i + 2;
             EnquiryRequestDTO dto = dtos.get(i);
 
             try {
-                // Handle duplicate mobile - append suffix
                 String originalMobile = dto.getMobile();
                 String finalMobile = originalMobile;
 
-                List<Enquiry> existingEnquiries = enquiryRepository.findByMobileContaining(originalMobile);
+                if (importSource.equalsIgnoreCase("COUNSELOR_FORMAT")) {
+                    dto.setAssignTo(currentLoggedUser);
+                    String cleanMobile = (originalMobile != null) ? originalMobile.trim() : "";
+                    if (!cleanMobile.isEmpty() && !cleanMobile.equalsIgnoreCase("N/A") && !cleanMobile.equalsIgnoreCase("null")) {
+                        // Check if exists in DB
+                        Optional<Enquiry> existingEnquiryOpt = enquiryRepository.findFirstByMobileAndIsDeletedFalse(cleanMobile);
+                        if (existingEnquiryOpt.isPresent()) {
+                            Enquiry existingEnquiry = existingEnquiryOpt.get();
+                            
+                            // Update name fields
+                            if (dto.getFirstName() != null && !dto.getFirstName().equalsIgnoreCase("N/A")) {
+                                existingEnquiry.setFirstName(dto.getFirstName());
+                            }
+                            if (dto.getMiddleName() != null && !dto.getMiddleName().equalsIgnoreCase("N/A")) {
+                                existingEnquiry.setMiddleName(dto.getMiddleName());
+                            }
+                            if (dto.getLastName() != null && !dto.getLastName().equalsIgnoreCase("N/A")) {
+                                existingEnquiry.setLastName(dto.getLastName());
+                            }
+                            // Re-calculate full name
+                            StringBuilder fullNameBuilder = new StringBuilder();
+                            if (existingEnquiry.getFirstName() != null) fullNameBuilder.append(existingEnquiry.getFirstName());
+                            if (existingEnquiry.getMiddleName() != null && !existingEnquiry.getMiddleName().equalsIgnoreCase("N/A")) {
+                                if (fullNameBuilder.length() > 0) fullNameBuilder.append(" ");
+                                fullNameBuilder.append(existingEnquiry.getMiddleName());
+                            }
+                            if (existingEnquiry.getLastName() != null) {
+                                if (fullNameBuilder.length() > 0) fullNameBuilder.append(" ");
+                                fullNameBuilder.append(existingEnquiry.getLastName());
+                            }
+                            existingEnquiry.setFullName(fullNameBuilder.toString());
 
-                if (!existingEnquiries.isEmpty()) {
-                    int suffix = existingEnquiries.size() + 1;
-                    finalMobile = originalMobile + "_" + suffix;
-                    dto.setMobile(finalMobile);
-                    duplicateCount++;
+                            // Update courses
+                            if (dto.getCourses() != null && !dto.getCourses().isEmpty()) {
+                                existingEnquiry.setCourses(dto.getCourses());
+                            }
 
-                    log.warn("⚠️ Row {}: Duplicate mobile '{}' → '{}'",
-                            rowNumber, originalMobile, finalMobile);
+                            // Update source
+                            if (dto.getSource() != null && !dto.getSource().equalsIgnoreCase("N/A")) {
+                                existingEnquiry.setSource(dto.getSource());
+                            }
 
-                    errors.add(BulkImportResponseDTO.ImportError.builder()
-                            .rowNumber(rowNumber)
-                            .fieldName("mobile")
-                            .errorMessage("Duplicate - appended suffix")
-                            .rejectedValue(originalMobile + " → " + finalMobile)
-                            .build());
+                            // Update enquiry date
+                            if (dto.getEnquiryDate() != null) {
+                                existingEnquiry.setEnquiryDate(dto.getEnquiryDate());
+                            }
+
+                            // Update Counselor Name to the current logged-in user
+                            existingEnquiry.setAssignTo(currentLoggedUser);
+                            existingEnquiry.setUpdatedBy(currentLoggedUser);
+
+                            // Save the updated enquiry
+                            saveEnquiryInNewTransaction(existingEnquiry);
+                            successCount++;
+                            duplicateCount++;
+                            continue;
+                        }
+                        processedMobiles.add(cleanMobile);
+                    }
+                } else {
+                    // Handle duplicate mobile by appending suffix for other formats
+                    List<Enquiry> existingEnquiries = enquiryRepository.findByMobileContaining(originalMobile);
+
+                    if (!existingEnquiries.isEmpty()) {
+                        int suffix = existingEnquiries.size() + 1;
+                        finalMobile = originalMobile + "_" + suffix;
+                        dto.setMobile(finalMobile);
+                        duplicateCount++;
+
+                        log.warn("⚠️ Row {}: Duplicate mobile '{}' → '{}'",
+                                rowNumber, originalMobile, finalMobile);
+
+                        errors.add(BulkImportResponseDTO.ImportError.builder()
+                                .rowNumber(rowNumber)
+                                .fieldName("mobile")
+                                .errorMessage("Duplicate - appended suffix")
+                                .rejectedValue(originalMobile + " → " + finalMobile)
+                                .build());
+                    }
                 }
 
                 // Convert DTO to Entity (no validation)
@@ -292,9 +355,9 @@ public class EnquiryService {
         log.info("📊 ==================== IMPORT COMPLETE ====================");
         log.info("   Total Records: {}", dtos.size());
         log.info("   ✅ Imported: {}", successCount);
-        log.info("   🔄 Duplicates Handled: {}", duplicateCount);
+        log.info("   🔄 Duplicates: {}", duplicateCount);
         log.info("   ❌ Failed: {}", failedCount);
-        log.info("   📈 Success Rate: {}%", (successCount * 100 / dtos.size()));
+        log.info("   📈 Success Rate: {}%", (dtos.isEmpty() ? 0 : (successCount * 100 / dtos.size())));
         log.info("==========================================================");
 
         return BulkImportResponseDTO.builder()
@@ -302,9 +365,10 @@ public class EnquiryService {
                 .totalRecords(dtos.size())
                 .successfulImports(successCount)
                 .failedImports(failedCount)
+                .duplicateCount(duplicateCount)
                 .errors(errors)
                 .message(String.format(
-                        "Import completed: %d/%d successful (%d duplicates, %d failed)",
+                        "Import completed: %d/%d successful (%d duplicates updated/appended, %d failed)",
                         successCount, dtos.size(), duplicateCount, failedCount
                 ))
                 .build();

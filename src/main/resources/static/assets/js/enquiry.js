@@ -20,6 +20,13 @@
     let totalPages = 0;
     let totalElements = 0;
 
+    let currentSearchTerm = '';
+    let currentStatusFilter = '';
+    let currentCourseFilter = '';
+    let currentFromDate = '';
+    let currentToDate = '';
+    let allCoursesForFilter = [];
+
     const COURSE_NAMES = [
       "SPRING BOOT",
       "MongoDB",
@@ -200,10 +207,12 @@
         return 'X-CSRF-TOKEN';
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', async function() {
+        await fetchCurrentUser();
         initializeEventListeners();
         loadEnquiries();
         initializeCourseSelector();
+        await loadCoursesForFilter();
     });
 
     function initializeCourseSelector() {
@@ -470,16 +479,30 @@ async function loadCoursesForSearch() {
         }
 
         // Search with debounce
-       document.getElementById('searchInput')?.addEventListener('input', debounce(searchEnquiries, 500));
+       document.getElementById('searchInput')?.addEventListener('input', debounce(triggerSearch, 500));
 
-
-       const pageSizeSelect = document.querySelector('.form-select[style*="max-width: 150px"]');
+       const pageSizeSelect = document.getElementById('pageSizeSelect');
        if (pageSizeSelect) {
            pageSizeSelect.addEventListener('change', function() {
                pageSize = parseInt(this.value);
+               currentPage = 0;
                loadEnquiries(0, pageSize);
            });
        }
+
+        // Status Filter
+        document.getElementById('statusFilter')?.addEventListener('change', triggerSearch);
+
+        // Course Filter
+        document.getElementById('courseFilter')?.addEventListener('change', triggerSearch);
+        document.getElementById('courseSearchInputFilter')?.addEventListener('input', filterCourseList);
+
+        // Date Filters
+        document.getElementById('fromDateFilter')?.addEventListener('change', triggerSearch);
+        document.getElementById('toDateFilter')?.addEventListener('change', triggerSearch);
+
+        // Clear Filters
+        document.getElementById('btnClearFilters')?.addEventListener('click', clearAllFilters);
     }
 
     // Load Enquiries from API
@@ -487,14 +510,51 @@ async function loadCoursesForSearch() {
         try {
             currentPage = page;
             pageSize = size;
-            const response = await fetch(`/api/enquiries?page=${page}&size=${size}`, {
-                method: 'GET',
-                headers: {
+
+            const hasSearch = !!(currentSearchTerm && currentSearchTerm.trim());
+            const hasStatus = !!(currentStatusFilter && currentStatusFilter.trim());
+            const hasCourse = !!(currentCourseFilter && currentCourseFilter.trim());
+            const hasFromDate = !!(currentFromDate && currentFromDate.trim());
+            const hasToDate = !!(currentToDate && currentToDate.trim());
+
+            let response;
+
+            if (hasSearch || hasStatus || hasCourse || hasFromDate || hasToDate) {
+                const csrfToken = getCsrfToken();
+                const headers = {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
-                },
-                credentials: 'include'
-            });
+                };
+                if (csrfToken) headers[getCsrfHeader()] = csrfToken;
+
+                const searchDTO = {
+                    searchTerm: (currentSearchTerm || '').trim() || null,
+                    status: (currentStatusFilter || '').trim() || null,
+                    course: (currentCourseFilter || '').trim() || null,
+                    fromDate: (currentFromDate || '').trim() || null,
+                    toDate: (currentToDate || '').trim() || null,
+                    page: page,
+                    size: size,
+                    sortBy: 'createdAt',
+                    sortDirection: 'DESC'
+                };
+
+                response = await fetch('/api/enquiries/search', {
+                    method: 'POST',
+                    headers: headers,
+                    credentials: 'include',
+                    body: JSON.stringify(searchDTO)
+                });
+            } else {
+                response = await fetch(`/api/enquiries?page=${page}&size=${size}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+            }
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -515,63 +575,86 @@ async function loadCoursesForSearch() {
         }
     }
 
-    // Search Enquiries
-    async function searchEnquiries(e) {
-        const searchTerm = e.target.value.trim();
+    // Search Enquiries with filters combined
+    async function triggerSearch() {
+        const searchTerm = document.getElementById('searchInput')?.value.trim() || '';
+        const status = document.getElementById('statusFilter')?.value || '';
+        const course = document.getElementById('courseFilter')?.value || '';
+        const fromDate = document.getElementById('fromDateFilter')?.value || '';
+        const toDate = document.getElementById('toDateFilter')?.value || '';
 
-        try {
-            // If search is empty, just reload normal enquiries
-            if (!searchTerm) {
-                await loadEnquiries(0, pageSize);
-                return;
-            }
+        currentSearchTerm = searchTerm;
+        currentStatusFilter = status;
+        currentCourseFilter = course;
+        currentFromDate = fromDate;
+        currentToDate = toDate;
 
-            const searchDTO = {
-                searchTerm: searchTerm,
-                page: 0,
-                size: pageSize,
-                sortBy: 'enquiryDate',
-                sortDirection: 'DESC'
-            };
+        currentPage = 0;
+        await loadEnquiries(0, pageSize);
+    }
 
-            const response = await fetch('/api/enquiries/search', {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    [getCsrfHeader()]: getCsrfToken()
-                },
-                credentials: 'include',
-                body: JSON.stringify(searchDTO)
-            });
+    // Clear all filters
+    function clearAllFilters() {
+        if (document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
+        if (document.getElementById('statusFilter')) document.getElementById('statusFilter').value = '';
+        if (document.getElementById('courseFilter')) document.getElementById('courseFilter').value = '';
+        if (document.getElementById('courseSearchInputFilter')) document.getElementById('courseSearchInputFilter').value = '';
+        if (document.getElementById('fromDateFilter')) document.getElementById('fromDateFilter').value = '';
+        if (document.getElementById('toDateFilter')) document.getElementById('toDateFilter').value = '';
 
-            // Check if response is JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                console.error('Server returned non-JSON response:', await response.text());
-                throw new Error('Search endpoint returned invalid response. Please check server logs.');
-            }
+        currentSearchTerm = '';
+        currentStatusFilter = '';
+        currentCourseFilter = '';
+        currentFromDate = '';
+        currentToDate = '';
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Search failed');
-            }
-
-            const data = await response.json();
-            currentPage = 0;
-            totalPages = data.totalPages || 0;
-            totalElements = data.totalElements || 0;
-
-            renderEnquiriesTable(data.content || []);
-            updatePaginationControls();
-            updateEntriesInfo();
-
-        } catch (error) {
-            console.error('Search error:', error);
-            showError(error.message || 'Search failed. Please try again.');
-            // Fallback to showing existing data
-            await loadEnquiries(0, pageSize);
+        if (typeof filterCourseList === 'function') {
+            filterCourseList();
         }
+
+        currentPage = 0;
+        loadEnquiries(0, pageSize);
+    }
+
+    // Load Courses for Advanced Filter Dropdown
+    async function loadCoursesForFilter() {
+        try {
+            const response = await fetch('/api/courses/dropdown');
+            if (response.ok) {
+                allCoursesForFilter = await response.json();
+                populateCourseFilter(allCoursesForFilter);
+            }
+        } catch (error) {
+            console.error('Error loading courses for filter:', error);
+        }
+    }
+
+    // Populate Course Filter select options
+    function populateCourseFilter(courses) {
+        const select = document.getElementById('courseFilter');
+        if (!select) return;
+
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">-- All Courses --</option>';
+
+        (courses || []).forEach(course => {
+            const option = document.createElement('option');
+            option.value = course.courseName;
+            option.textContent = course.courseName;
+            select.appendChild(option);
+        });
+
+        if (currentValue) select.value = currentValue;
+    }
+
+    // Filter courses in select list based on text input
+    function filterCourseList() {
+        const input = document.getElementById('courseSearchInputFilter');
+        const searchTerm = (input?.value || '').toLowerCase().trim();
+        const filtered = (allCoursesForFilter || []).filter(c =>
+            String(c.courseName || '').toLowerCase().includes(searchTerm)
+        );
+        populateCourseFilter(filtered);
     }
 
     async function saveEnquiry() {
@@ -632,14 +715,14 @@ async function loadCoursesForSearch() {
             showError('No data to import');
             return;
         }
-
+ 
         const importType = document.querySelector('input[name="importType"]:checked').value;
-        const typeEnum = importType === 'old' ? 'OLD_FORMAT' : 'NEW_FORMAT';
-
+        const typeEnum = importType === 'old' ? 'OLD_FORMAT' : (importType === 'counselor' ? 'COUNSELOR_FORMAT' : 'NEW_FORMAT');
+ 
         const dtoList = importedData.map(record => {
             // CRITICAL FIX: Ensure courses is ALWAYS a valid array
             let coursesArray = [];
-
+ 
             if (Array.isArray(record.courses)) {
                 coursesArray = record.courses.filter(c => c && c.trim());
             } else if (typeof record.courses === 'string' && record.courses.trim()) {
@@ -647,13 +730,13 @@ async function loadCoursesForSearch() {
                     .map(c => c.trim())
                     .filter(Boolean);
             }
-
+ 
             // Ensure at least one course exists
             if (coursesArray.length === 0) {
                 console.warn(`Skipping record - no valid courses for mobile: ${record.mobilePrimary}`);
                 return null;
             }
-
+ 
             const dto = {
                 enquiryNo: record.enquiryNo,
                 mobile: record.mobilePrimary,
@@ -662,9 +745,14 @@ async function loadCoursesForSearch() {
                 enquiryDate: record.enquiryDate || null,
                 status: record.status || 'New'
             };
-
+ 
             if (importType === 'old') {
                 dto.name = `${record.firstName || ''} ${record.middleName || ''} ${record.lastName || ''}`.trim();
+            } else if (importType === 'counselor') {
+                dto.firstName = record.firstName;
+                dto.middleName = record.middleName;
+                dto.lastName = record.lastName;
+                dto.assignTo = currentLoggedInUser || record.assignTo || 'Unassigned';
             } else {
                 dto.firstName = record.firstName;
                 dto.middleName = record.middleName;
@@ -677,9 +765,11 @@ async function loadCoursesForSearch() {
                 dto.followupDate = record.followupDate || null;
                 dto.note = record.note;
             }
-
-            if (record.assignTo) dto.assignTo = record.assignTo;
-
+ 
+            if (importType !== 'counselor' && record.assignTo) {
+                dto.assignTo = record.assignTo;
+            }
+ 
             // Debug log
             console.log('Prepared DTO:', {
                 mobile: dto.mobile,
@@ -687,41 +777,41 @@ async function loadCoursesForSearch() {
                 coursesType: Array.isArray(dto.courses) ? 'array' : typeof dto.courses,
                 coursesLength: dto.courses.length
             });
-
+ 
             return dto;
         }).filter(dto => dto !== null);
-
+ 
         if (dtoList.length === 0) {
             showError('No valid records to import. All records are missing required fields (courses).');
             return;
         }
-
+ 
         try {
             showLoading(`Importing ${dtoList.length} records...`);
-
+ 
             const csrfToken = getCsrfToken();
             const headers = {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             };
             if (csrfToken) headers[getCsrfHeader()] = csrfToken;
-
+ 
             const response = await fetch(`/api/enquiries/bulk-import-json?importSource=${typeEnum}`, {
                 method: 'POST',
                 headers: headers,
                 credentials: 'include',
                 body: JSON.stringify(dtoList)
             });
-
+ 
             const contentType = response.headers.get('content-type');
-
+ 
             if (!response.ok) {
                 let errorMessage = 'Import failed';
-
+ 
                 if (contentType && contentType.includes('application/json')) {
                     const errorData = await response.json();
                     errorMessage = errorData.message || errorMessage;
-
+ 
                     // Log detailed error for debugging
                     console.error('Import error details:', errorData);
                 } else {
@@ -729,28 +819,58 @@ async function loadCoursesForSearch() {
                     console.error('Server error:', errorText);
                     errorMessage = 'Server error occurred. Check console for details.';
                 }
-
+ 
                 throw new Error(errorMessage);
             }
-
+ 
             const result = await response.json();
             Swal.close();
             closeModal('importModal');
-
-            let message = `Successfully imported ${result.successfulImports} out of ${result.totalRecords} records`;
-            if (result.failedImports > 0) {
-                message += `\n${result.failedImports} records failed`;
-
-                // Show detailed errors if available
-                if (result.errors && result.errors.length > 0) {
-                    console.warn('Import errors:', result.errors);
-                }
+ 
+            // Show detailed errors if available
+            if (result.errors && result.errors.length > 0) {
+                console.warn('Import errors:', result.errors);
             }
-
-            showSuccess(message);
+ 
+            Swal.fire({
+                title: 'Import Summary',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-3 fs-6">Bulk import completed successfully.</p>
+                        <div class="card border-0 bg-light p-3 mb-3" style="border-radius: 8px;">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted"><i class="bi bi-files me-2"></i>Total Records:</span>
+                                <span class="fw-bold">${result.totalRecords}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 text-success">
+                                <span><i class="bi bi-check-circle-fill me-2"></i>Successfully Imported:</span>
+                                <span class="fw-bold">${result.successfulImports}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 text-warning">
+                                <span><i class="bi bi-slash-circle-fill me-2"></i>Duplicates Skipped:</span>
+                                <span class="fw-bold">${result.duplicateCount || 0}</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-danger">
+                                <span><i class="bi bi-x-circle-fill me-2"></i>Failed Records:</span>
+                                <span class="fw-bold">${result.failedImports}</span>
+                            </div>
+                        </div>
+                        ${result.failedImports > 0 ? `
+                        <div class="alert alert-danger py-2 px-3 small" style="border-radius: 6px;">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            Check the browser console logs for details on failed rows.
+                        </div>` : ''}
+                    </div>
+                `,
+                icon: result.failedImports > 0 ? 'warning' : 'success',
+                confirmButtonText: 'Done',
+                confirmButtonColor: '#667eea',
+                width: '450px'
+            });
+ 
             loadEnquiries();
             resetImport();
-
+ 
         } catch (error) {
             Swal.close();
             console.error('Import error:', error);
@@ -959,7 +1079,10 @@ function updateEntriesInfo() {
 
     // Load Enquiry for Edit - Handle multiple courses
     async function loadEnquiryForEdit(id) {
+        showLoading('Loading enquiry details...');
         try {
+            await loadAllDropdownData();
+
             const response = await fetch(`/api/enquiries/${id}`, {
                 credentials: 'include'
             });
@@ -970,6 +1093,24 @@ function updateEntriesInfo() {
 
             const enquiry = await response.json();
             currentEnquiryId = id;
+
+            // Helper to parse date to YYYY-MM-DD format for date input
+            const toDateInputString = (dateVal) => {
+                if (!dateVal) return '';
+                const str = String(dateVal).split('T')[0].trim();
+                if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+                    return str;
+                }
+                if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
+                    const parts = str.split('/');
+                    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+                if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
+                    const parts = str.split('-');
+                    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+                return '';
+            };
 
             // Personal info
             setValue('firstName', enquiry.firstName);
@@ -986,7 +1127,7 @@ function updateEntriesInfo() {
             setValue('college', enquiry.college);
             setValue('qualification', enquiry.qualification);
             setValue('aadhaar', enquiry.aadhaar);
-            setValue('dob', enquiry.birthDate);
+            setValue('dob', toDateInputString(enquiry.birthDate));
             setValue('gender', enquiry.gender);
 
             // Handle multiple courses
@@ -1030,12 +1171,14 @@ function updateEntriesInfo() {
             setValue('leadSource', enquiry.source);
             setValue('referenceName', enquiry.referenceName);
             setValue('assignTo', enquiry.assign || enquiry.assignTo);
-            setValue('enquiryDate', enquiry.date || enquiry.enquiryDate);
-            setValue('followupDate', enquiry.followupDate);
+            setValue('enquiryDate', toDateInputString(enquiry.date || enquiry.enquiryDate));
+            setValue('followupDate', toDateInputString(enquiry.followupDate));
             setValue('note', enquiry.note);
 
             document.getElementById('modalTitle').innerHTML =
                 '<i class="bi bi-pencil-square me-2"></i>Update Enquiry';
+
+            Swal.close();
 
             const modal = new bootstrap.Modal(document.getElementById('enquiryModal'));
             modal.show();
@@ -1055,43 +1198,71 @@ function updateEntriesInfo() {
 
             const enquiry = await response.json();
 
-            setValue('viewStudentName', enquiry.name || `${enquiry.firstName || ''} ${enquiry.lastName || ''}`.trim());
-            setValue('viewFirstName', enquiry.firstName);
-            setValue('viewMiddleName', enquiry.middleName);
-            setValue('viewLastName', enquiry.lastName);
-            setValue('viewMobilePrimary', enquiry.mobile);
-            setValue('viewMobileSecondary', enquiry.secondaryMobile);
-            setValue('viewEmailPrimary', enquiry.email);
-            setValue('viewEmailSecondary', enquiry.secondaryEmail);
-            setValue('viewCurrentAddress', enquiry.currentAddress);
-            setValue('viewPermanentAddress', enquiry.permanentAddress);
-            setValue('viewPinCodeCurrent', enquiry.pinCurrent);
-            setValue('viewPinCodePermanent', enquiry.pinPermanent);
-            setValue('viewCollege', enquiry.college);
-            setValue('viewQualification', enquiry.qualification);
-            setValue('viewAadhaar', enquiry.aadhaar);
-            setValue('viewDob', formatDateDDMMYYYY(enquiry.birthDate));
-            setValue('viewGender', enquiry.gender);
-            setValue('viewCourse', enquiry.courses);
-            setValue('viewPackage', enquiry.packageName);
-            setValue('viewDemoLecture', enquiry.demoLectureRequired ? 'Yes' : 'No');
-            setValue('viewInterestLevel', enquiry.interestLevel);
-            setValue('viewLeadSource', enquiry.source);
-            setValue('viewReferenceName', enquiry.referenceName);
-            setValue('viewAssignTo', enquiry.assign);
-            setValue('viewEnquiryDate', formatDateDDMMYYYY(enquiry.date));
-            setValue('viewNote', enquiry.note);
+            const setTxt = (elementId, value) => {
+                const el = document.getElementById(elementId);
+                if (el) el.textContent = value || '-';
+            };
+
+            setTxt('viewStudentName', enquiry.name || `${enquiry.firstName || ''} ${enquiry.lastName || ''}`.trim());
+            
+            const badge = document.getElementById('viewStatusBadge');
+            if (badge) {
+                badge.textContent = enquiry.status || 'New';
+                badge.className = 'badge shadow-sm rounded-pill px-3 py-1.5';
+                const status = (enquiry.status || 'New').toLowerCase();
+                if (status === 'new') {
+                    badge.classList.add('bg-primary');
+                } else if (status === 'in process') {
+                    badge.classList.add('bg-warning', 'text-dark');
+                } else if (status === 'closed') {
+                    badge.classList.add('bg-success');
+                } else if (status === 'lost') {
+                    badge.classList.add('bg-danger');
+                } else if (status === 'admitted') {
+                    badge.classList.add('bg-info', 'text-dark');
+                } else {
+                    badge.classList.add('bg-secondary');
+                }
+            }
+
+            setTxt('viewEnquiryNo', enquiry.enquiryNo || `ENQ${String(enquiry.id).padStart(6, '0')}`);
+            setTxt('viewEnquiryDate', formatDateDDMMYYYY(enquiry.date || enquiry.enquiryDate));
+
+            setTxt('viewDob', formatDateDDMMYYYY(enquiry.birthDate));
+            setTxt('viewGender', enquiry.gender === 'M' ? 'Male' : (enquiry.gender === 'F' ? 'Female' : (enquiry.gender === 'O' ? 'Other' : enquiry.gender)));
+            setTxt('viewAadhaar', enquiry.aadhaar);
+            setTxt('viewCollege', enquiry.college);
+            setTxt('viewQualification', enquiry.qualification);
+
+            setTxt('viewMobilePrimary', enquiry.mobile);
+            setTxt('viewMobileSecondary', enquiry.secondaryMobile);
+            setTxt('viewEmailPrimary', enquiry.email);
+            setTxt('viewEmailSecondary', enquiry.secondaryEmail);
+            setTxt('viewCurrentAddress', enquiry.currentAddress);
+            setTxt('viewPermanentAddress', enquiry.permanentAddress);
+            setTxt('viewPinCodeCurrent', enquiry.pinCurrent);
+            setTxt('viewPinCodePermanent', enquiry.pinPermanent);
+
+            setTxt('viewCourse', enquiry.courses);
+            setTxt('viewPackage', enquiry.packageName);
+            setTxt('viewDemoLecture', enquiry.demoLectureRequired ? 'Yes' : 'No');
+            setTxt('viewInterestLevel', enquiry.interestLevel);
+
+            setTxt('viewLeadSource', enquiry.source);
+            setTxt('viewReferenceName', enquiry.referenceName);
+            setTxt('viewAssignTo', enquiry.assign || enquiry.assignTo);
+            setTxt('viewNote', enquiry.note);
 
             // Populate Audit details for SUPER_ADMIN
             const auditSection = document.getElementById('enqSuperadminAuditSection');
             if (auditSection) {
                 const userRole = document.getElementById('currentUserRole')?.value;
-                if (userRole === 'SUPER_ADMIN') {
+                if (userRole && (userRole.toUpperCase().replace(/\s+|_/g, '') === 'SUPERADMIN')) {
                     auditSection.style.display = 'block';
-                    setValue('viewEnqCreatedBy', enquiry.createdBy || '-');
-                    setValue('viewEnqCreatedTime', formatDisplayDateTime(enquiry.createdAt));
-                    setValue('viewEnqUpdatedBy', enquiry.updatedBy || '-');
-                    setValue('viewEnqUpdatedTime', formatDisplayDateTime(enquiry.updatedAt));
+                    setTxt('viewEnqCreatedBy', enquiry.createdBy || '-');
+                    setTxt('viewEnqCreatedTime', formatDisplayDateTime(enquiry.createdAt));
+                    setTxt('viewEnqUpdatedBy', enquiry.updatedBy || '-');
+                    setTxt('viewEnqUpdatedTime', formatDisplayDateTime(enquiry.updatedAt));
                 } else {
                     auditSection.style.display = 'none';
                 }
@@ -1310,20 +1481,35 @@ function updateEntriesInfo() {
     function formatDisplayDateTime(dateTimeValue) {
         if (!dateTimeValue) return '-';
         try {
-            const date = new Date(dateTimeValue);
-            if (isNaN(date.getTime())) return dateTimeValue;
+            let date;
+            if (Array.isArray(dateTimeValue)) {
+                const [year, month, day, hours = 0, minutes = 0, seconds = 0] = dateTimeValue;
+                date = new Date(year, month - 1, day, hours, minutes, seconds);
+            } else {
+                const str = String(dateTimeValue).trim();
+                if (str.includes(',')) {
+                    const parts = str.split(',').map(Number);
+                    if (parts.length >= 3 && parts.every(p => !isNaN(p))) {
+                        const [year, month, day, hours = 0, minutes = 0, seconds = 0] = parts;
+                        date = new Date(year, month - 1, day, hours, minutes, seconds);
+                    }
+                }
+                if (!date || isNaN(date.getTime())) {
+                    date = new Date(str);
+                }
+            }
+
+            if (isNaN(date.getTime())) return String(dateTimeValue);
+
             const day = String(date.getDate()).padStart(2, '0');
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const year = date.getFullYear();
-            let hours = date.getHours();
+            const hours = String(date.getHours()).padStart(2, '0');
             const minutes = String(date.getMinutes()).padStart(2, '0');
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12;
-            const strTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
-            return `${day}/${month}/${year} ${strTime}`;
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
         } catch (e) {
-            return dateTimeValue;
+            return String(dateTimeValue);
         }
     }
 
@@ -1506,9 +1692,28 @@ async function deleteFollowUp(followUpId, enquiryId) {
        importedData = [];
        const previewData = [];
    
+       // Robust helper to split CSV line, respecting double quotes and commas within quotes
+       function parseCSVLine(line) {
+           const result = [];
+           let current = '';
+           let inQuotes = false;
+           for (let i = 0; i < line.length; i++) {
+               const char = line[i];
+               if (char === '"') {
+                   inQuotes = !inQuotes;
+               } else if (char === ',' && !inQuotes) {
+                   result.push(current.trim());
+                   current = '';
+               } else {
+                   current += char;
+               }
+           }
+           result.push(current.trim());
+           return result;
+       }
+
        for (let i = 1; i < lines.length; i++) {
-           const values = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
-           const row = values.map(v => v.trim().replace(/^"|"$/g, ''));
+           const row = parseCSVLine(lines[i]).map(v => v.replace(/^"|"$/g, '').trim());
    
            if (row.length > 0) {
                let record;
@@ -1528,15 +1733,35 @@ async function deleteFollowUp(followUpId, enquiryId) {
    
                    record = {
                        enquiryNo: row[0] && row[0].trim() ? row[0].trim() : null,
-                       firstName: nameParts[0] || '',
-                       middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '',
-                       lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : '',
-                       mobilePrimary: row[2],
+                       firstName: nameParts[0] || 'N/A',
+                       middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : 'N/A',
+                       lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : 'N/A',
+                       mobilePrimary: row[2] || 'N/A',
                        courses: rawCourses,
                        leadSource: row[4] || 'Unknown',
                        enquiryDate: validateDate(row[5]) || getTodayDate(),
                        assignTo: row[6] || null,
                        status: row[7] || 'New'
+                   };
+               } else if (importType === 'counselor') {
+                   const nameParts = (row[1] || '').split(/\s+/).filter(Boolean);
+                   const coursesStr = row[4] || '';
+                   const rawCourses = coursesStr
+                       .split(/[,\n]/)
+                       .map(c => c.trim())
+                       .filter(Boolean);
+
+                   record = {
+                       enquiryNo: null,
+                       firstName: nameParts[0] || 'N/A',
+                       middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : 'N/A',
+                       lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : 'N/A',
+                       mobilePrimary: row[3] || 'N/A',
+                       courses: rawCourses.length > 0 ? rawCourses : ['N/A'],
+                       leadSource: row[2] || 'Unknown',
+                       enquiryDate: validateDate(row[0]) || getTodayDate(),
+                       assignTo: row[5] || 'Unassigned',
+                       status: 'New'
                    };
                } else {
                    const coursesStr = row[13] || '';
@@ -1547,19 +1772,19 @@ async function deleteFollowUp(followUpId, enquiryId) {
    
                    record = {
                        enquiryNo: row[0] && row[0].trim() ? row[0].trim() : null,
-                       firstName: row[1],
-                       middleName: row[2],
-                       lastName: row[3],
-                       mobilePrimary: row[4],
-                       mobileSecondary: row[5],
-                       emailPrimary: row[6],
-                       currentAddress: row[7],
-                       permanentAddress: row[8],
-                       college: row[9],
+                       firstName: row[1] || 'N/A',
+                       middleName: row[2] || 'N/A',
+                       lastName: row[3] || 'N/A',
+                       mobilePrimary: row[4] || 'N/A',
+                       mobileSecondary: row[5] || 'N/A',
+                       emailPrimary: row[6] || 'N/A',
+                       currentAddress: row[7] || 'N/A',
+                       permanentAddress: row[8] || 'N/A',
+                       college: row[9] || 'N/A',
                        enquiryDate: validateDate(row[10]) || getTodayDate(), //  Validate date
                        followupDate: validateDate(row[11]) || null,
-                       note: row[12],
-                       courses: rawCourses,
+                       note: row[12] || 'N/A',
+                       courses: rawCourses.length > 0 ? rawCourses : ['N/A'],
                        leadSource: row[14] || 'Unknown'
                    };
                }
@@ -1617,10 +1842,12 @@ async function deleteFollowUp(followUpId, enquiryId) {
     function handleImportTypeChange() {
         const oldFormatInfo = document.getElementById('oldFormatInfo');
         const newFormatInfo = document.getElementById('newFormatInfo');
-        const isOld = this.value === 'old';
+        const counselorFormatInfo = document.getElementById('counselorFormatInfo');
+        const val = this.value;
 
-        oldFormatInfo.style.display = isOld ? 'block' : 'none';
-        newFormatInfo.style.display = isOld ? 'none' : 'block';
+        if (oldFormatInfo) oldFormatInfo.style.display = val === 'old' ? 'block' : 'none';
+        if (newFormatInfo) newFormatInfo.style.display = val === 'new' ? 'block' : 'none';
+        if (counselorFormatInfo) counselorFormatInfo.style.display = val === 'counselor' ? 'block' : 'none';
 
         resetImport();
     }

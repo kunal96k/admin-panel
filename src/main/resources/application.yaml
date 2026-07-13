@@ -8,6 +8,9 @@ app:
     email: ${SUPERADMIN_EMAIL:kunalpatil192001@gmail.com}
     username: ${SUPERADMIN_USERNAME:admin}
     password: ${SUPERADMIN_PASSWORD:admin@123}
+  backup:
+    email: ${BACKUP_EMAIL:kunalpatil192001@gmail.com}
+    passcode: ${BACKUP_PASSCODE:Kuanl@217}
 
   base-url: ${APP_BASE_URL:https://team.ttsnashik.com}
 
@@ -139,7 +142,7 @@ server:
       enabled: true
       force: true
     session:
-      timeout: 30m
+      timeout: 3h
       cookie:
         secure: ${SESSION_COOKIE_SECURE:false}
         http-only: ${SESSION_COOKIE_HTTP_ONLY:true}

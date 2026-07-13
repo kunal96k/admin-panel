@@ -102,13 +102,30 @@ public class FeesManagerService {
             // Always exclude deleted records
             predicates.add(cb.isFalse(root.get("isDeleted")));
 
-            // Search term (Reg No, Student Name, Mobile)
+            // Search term (Reg No, Student Name, Mobile) supporting multi-word whitespace-tokenized name searching
             if (searchDTO.getSearchTerm() != null && !searchDTO.getSearchTerm().trim().isEmpty()) {
-                String pattern = "%" + searchDTO.getSearchTerm().toLowerCase() + "%";
-                predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("registrationNumber")), pattern),
-                        cb.like(cb.lower(root.get("studentName")), pattern),
-                        cb.like(cb.lower(root.get("mobile")), pattern)));
+                String[] tokens = searchDTO.getSearchTerm().trim().split("\\s+");
+                Predicate searchPredicate;
+                if (tokens.length >= 3) {
+                    String pattern = "%" + tokens[0].toLowerCase() + "%" + tokens[1].toLowerCase() + "%" + tokens[2].toLowerCase() + "%";
+                    searchPredicate = cb.or(
+                            cb.like(cb.lower(root.get("registrationNumber")), "%" + searchDTO.getSearchTerm().trim().toLowerCase() + "%"),
+                            cb.like(cb.lower(root.get("studentName")), pattern),
+                            cb.like(cb.lower(root.get("mobile")), "%" + searchDTO.getSearchTerm().trim().toLowerCase() + "%"));
+                } else if (tokens.length == 2) {
+                    String pattern = "%" + tokens[0].toLowerCase() + "%" + tokens[1].toLowerCase() + "%";
+                    searchPredicate = cb.or(
+                            cb.like(cb.lower(root.get("registrationNumber")), "%" + searchDTO.getSearchTerm().trim().toLowerCase() + "%"),
+                            cb.like(cb.lower(root.get("studentName")), pattern),
+                            cb.like(cb.lower(root.get("mobile")), "%" + searchDTO.getSearchTerm().trim().toLowerCase() + "%"));
+                } else {
+                    String pattern = "%" + tokens[0].toLowerCase() + "%";
+                    searchPredicate = cb.or(
+                            cb.like(cb.lower(root.get("registrationNumber")), pattern),
+                            cb.like(cb.lower(root.get("studentName")), pattern),
+                            cb.like(cb.lower(root.get("mobile")), pattern));
+                }
+                predicates.add(searchPredicate);
             }
 
             // Status filter
@@ -167,6 +184,7 @@ public class FeesManagerService {
 
         if (fees.getFeesDue() != null && fees.getFeesDue() > 0.01) {
             // Only compute for students with pending fees
+            boolean nextDueDateFromInstallment = false;
             try {
                 List<FeeInstallment> installments = feeInstallmentRepository
                         .findByRegistrationNumberOrderByDueDateAsc(fees.getRegistrationNumber());
@@ -177,44 +195,79 @@ public class FeesManagerService {
                 for (FeeInstallment installment : installments) {
                     if ("Paid".equalsIgnoreCase(installment.getStatus())) {
                         paidInstallmentsCount++;
-                    } else if (computedNextDueDate == null && 
+                    } else if (computedNextDueDate == null &&
                             (!"Paid".equalsIgnoreCase(installment.getStatus()) && !"Refund".equalsIgnoreCase(installment.getStatus()))) {
                         computedNextDueDate = installment.getDueDate();
+                        nextDueDateFromInstallment = true; // came from actual installment data
                     }
                 }
 
+                // Only fall back to fees.getDueDate() for display — never use it for Overdue determination
                 if (computedNextDueDate == null) {
                     computedNextDueDate = fees.getDueDate();
+                    // nextDueDateFromInstallment stays false — stale fallback, not reliable for status
                 }
 
             } catch (Exception e) {
                 log.warn("Could not compute next due date or installments for {}", fees.getRegistrationNumber());
                 computedNextDueDate = fees.getDueDate();
             }
-        } else if ("Clear".equalsIgnoreCase(fees.getStatus())) {
-            paidInstallmentsCount = totalInstallmentsCount;
-        }
 
-        return FeesSummaryDTO.builder()
-                .admissionId(fees.getAdmissionId())
-                .registrationNumber(fees.getRegistrationNumber())
-                .studentName(fees.getStudentName())
-                .mobile(fees.getMobile())
-                .course(fees.getCourse() != null ? fees.getCourse() : "N/A")
-                .totalFees(fees.getTotalFees())
-                .totalPaid(fees.getTotalPaid())
-                .feesDue(fees.getFeesDue())
-                .feesRefund(fees.getFeesRefund())
-                .dueDate(fees.getDueDate())
-                .nextDueDate(computedNextDueDate)
-                .status(fees.getStatus())
-                .totalInstallments(totalInstallmentsCount)
-                .paidInstallments(paidInstallmentsCount)
-                .pendingInstallments(totalInstallmentsCount - paidInstallmentsCount)
-                .installmentStartDate(fees.getInstallmentStartDate())
-                .numberOfInstallments(fees.getNumberOfInstallments())
-                .daysBetweenInstallments(fees.getDaysBetweenInstallments())
-                .build();
+            // Determine status dynamically:
+            // Only mark Overdue when the nextDueDate came from an actual installment record,
+            // not from the stale fees.getDueDate() fallback field
+            String finalStatus = fees.getStatus() != null ? fees.getStatus() : "Pending";
+            if (!"Refund".equalsIgnoreCase(finalStatus) && !"Cancelled".equalsIgnoreCase(finalStatus)) {
+                if (nextDueDateFromInstallment && computedNextDueDate != null && computedNextDueDate.isBefore(LocalDate.now())) {
+                    finalStatus = "Overdue";
+                } else {
+                    finalStatus = "Pending";
+                }
+            }
+            return FeesSummaryDTO.builder()
+                    .admissionId(fees.getAdmissionId())
+                    .registrationNumber(fees.getRegistrationNumber())
+                    .studentName(fees.getStudentName())
+                    .mobile(fees.getMobile())
+                    .course(fees.getCourse() != null ? fees.getCourse() : "N/A")
+                    .totalFees(fees.getTotalFees())
+                    .totalPaid(fees.getTotalPaid())
+                    .feesDue(fees.getFeesDue())
+                    .feesRefund(fees.getFeesRefund())
+                    .dueDate(fees.getDueDate())
+                    .nextDueDate(computedNextDueDate)
+                    .status(finalStatus)
+                    .totalInstallments(totalInstallmentsCount)
+                    .paidInstallments(paidInstallmentsCount)
+                    .pendingInstallments(totalInstallmentsCount - paidInstallmentsCount)
+                    .installmentStartDate(fees.getInstallmentStartDate())
+                    .numberOfInstallments(fees.getNumberOfInstallments())
+                    .daysBetweenInstallments(fees.getDaysBetweenInstallments())
+                    .build();
+        } else {
+            // Fully paid — status is Clear
+            paidInstallmentsCount = totalInstallmentsCount;
+            return FeesSummaryDTO.builder()
+                    .admissionId(fees.getAdmissionId())
+                    .registrationNumber(fees.getRegistrationNumber())
+                    .studentName(fees.getStudentName())
+                    .mobile(fees.getMobile())
+                    .course(fees.getCourse() != null ? fees.getCourse() : "N/A")
+                    .totalFees(fees.getTotalFees())
+                    .totalPaid(fees.getTotalPaid())
+                    .feesDue(fees.getFeesDue())
+                    .feesRefund(fees.getFeesRefund())
+                    .dueDate(fees.getDueDate())
+                    .nextDueDate(null) // no next due date when fully paid
+                    .status("Clear")
+                    .totalInstallments(totalInstallmentsCount)
+                    .paidInstallments(paidInstallmentsCount)
+                    .pendingInstallments(0)
+                    .installmentStartDate(fees.getInstallmentStartDate())
+                    .numberOfInstallments(fees.getNumberOfInstallments())
+                    .daysBetweenInstallments(fees.getDaysBetweenInstallments())
+                    .build();
+        }
     }
 
     /**
@@ -573,9 +626,39 @@ public class FeesManagerService {
                     .findByRegistrationNumberAndIsDeletedFalseOrderByRefundDateDesc(regNo);
 
             // Calculate gross total paid (sum of all receipts)
-            Double grossTotalPaid = receipts.stream()
+            final Double grossTotalPaidFromReceipts = receipts.stream()
                     .mapToDouble(r -> r.getAmountReceived() != null ? r.getAmountReceived() : 0.0)
                     .sum();
+
+            // For OLD students, also add amounts from fee_collections
+            boolean isOldStudent = (regNo != null && !regNo.trim().toUpperCase().startsWith("REG"));
+            Double totalPaidFromOldRecords = 0.0;
+            if (isOldStudent) {
+                try {
+                    String mobile = null;
+                    Optional<Fees> feesOpt = feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+                    if (feesOpt.isPresent()) {
+                        mobile = feesOpt.get().getMobile();
+                    }
+                    if (mobile == null || mobile.trim().isEmpty() || "N/A".equalsIgnoreCase(mobile)) {
+                        Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+                        if (admission != null) {
+                            mobile = admission.getMobilePrimary();
+                        }
+                    }
+                    if (mobile != null && !mobile.trim().isEmpty() && !"N/A".equalsIgnoreCase(mobile)) {
+                        List<FeeCollection> oldCollections = feeCollectionRepository
+                                .findByMobileNoAndIsDeletedFalse(mobile);
+                        totalPaidFromOldRecords = oldCollections.stream()
+                                .mapToDouble(fc -> fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
+                                .sum();
+                        log.debug("📊 Total from fee_collections for recalculation: ₹{}", totalPaidFromOldRecords);
+                    }
+                } catch (Exception e) {
+                    log.warn(" Could not fetch old records for recalculation: {}", e.getMessage());
+                }
+            }
+            final Double grossTotalPaid = grossTotalPaidFromReceipts + totalPaidFromOldRecords;
 
             // Calculate total refunds
             Double totalRefund = refunds.stream()
@@ -637,12 +720,13 @@ public class FeesManagerService {
                         fees.setDueDate(nextDueDate); // Set to null if clear
 
                         // Auto-update status
+                        // nextDueDate was computed from actual installment data above, so Overdue check is accurate
                         if (totalRefund > 0 && feesDue > 0.01) {
                             fees.setStatus("Refund");
                         } else if (feesDue <= 0.01) {
                             fees.setStatus("Clear");
                             fees.setDueDate(null); // Clear due date when paid
-                        } else if (fees.getDueDate() != null && fees.getDueDate().isBefore(LocalDate.now())) {
+                        } else if (nextDueDate != null && nextDueDate.isBefore(LocalDate.now())) {
                             fees.setStatus("Overdue");
                         } else {
                             fees.setStatus("Pending");
@@ -668,7 +752,7 @@ public class FeesManagerService {
         log.debug("Creating fee receipt for regNo: {}", requestDTO.getRegNo());
 
         // Detect old vs new student
-        boolean isOldStudent = !requestDTO.getRegNo().startsWith("REG");
+        boolean isOldStudent = (requestDTO.getRegNo() != null && !requestDTO.getRegNo().trim().toUpperCase().startsWith("REG"));
 
         if (isOldStudent) {
             log.info("🔧 Processing receipt for OLD STUDENT: {}", requestDTO.getRegNo());
@@ -717,12 +801,11 @@ public class FeesManagerService {
             log.debug("Generated invoice number: {}", invoiceNumber);
         }
 
-        // Handle installment only for new students
-        if (!isOldStudent && requestDTO.getInstallmentId() != null) {
+        // Handle installment if provided (for both new and old/imported students who have installments)
+        if (requestDTO.getInstallmentId() != null) {
             log.debug("🔗 Linking receipt to installment: {}", requestDTO.getInstallmentId());
             receipt.setInstallmentId(requestDTO.getInstallmentId()); // CRITICAL: Set installment ID
-        } else if (isOldStudent) {
-            log.info("⏭️ Skipping installment link for old student");
+        } else {
             receipt.setInstallmentId(null);
         }
 
@@ -731,7 +814,7 @@ public class FeesManagerService {
         log.info(" Created fee receipt: {} for regNo: {}", receiptNumber, requestDTO.getRegNo());
 
         // CRITICAL FIX: Update installment BEFORE updating fees
-        if (!isOldStudent && requestDTO.getInstallmentId() != null) {
+        if (requestDTO.getInstallmentId() != null) {
             try {
                 updateInstallmentStatus(
                         requestDTO.getInstallmentId(),
@@ -743,8 +826,6 @@ public class FeesManagerService {
                 log.error("❌ Failed to update installment: {}", requestDTO.getInstallmentId(), e);
                 // Don't throw - receipt is already saved
             }
-        } else if (isOldStudent) {
-            log.info("⏭️ Skipped installment update for old student");
         }
 
         // Update Fees table - WORKS FOR BOTH OLD AND NEW STUDENTS
@@ -753,6 +834,15 @@ public class FeesManagerService {
             log.info(" Updated fees table for regNo: {}", requestDTO.getRegNo());
         } catch (Exception e) {
             log.error("❌ Failed to update fees table for regNo: {}", requestDTO.getRegNo(), e);
+        }
+
+        // Full recalculation: recomputes status (Pending/Overdue/Clear) from actual installment due dates
+        // This ensures the badge shown after receipt save is immediately correct
+        try {
+            recalculateFeesFromTransactions(requestDTO.getRegNo());
+            log.info(" Full recalculation completed for regNo: {}", requestDTO.getRegNo());
+        } catch (Exception e) {
+            log.warn(" Full recalculation failed for regNo: {} - status may need manual refresh: {}", requestDTO.getRegNo(), e.getMessage());
         }
 
         return feesManagerMapper.toReceiptResponseDTO(savedReceipt);
@@ -878,7 +968,7 @@ public class FeesManagerService {
         log.debug("📊 Total from fee_receipts table: ₹{}", totalPaidFromReceipts);
 
         // For OLD students, also add amounts from fee_collections
-        boolean isOldStudent = !registrationNumber.startsWith("REG");
+        boolean isOldStudent = (registrationNumber != null && !registrationNumber.trim().toUpperCase().startsWith("REG"));
         Double totalPaidFromOldRecords = 0.0;
 
         if (isOldStudent) {
@@ -917,10 +1007,11 @@ public class FeesManagerService {
         fees.setFeesDue(Math.max(0, feesDue));
 
         // Update status
+        // NOTE: We use 'Pending' as default here — Overdue is determined accurately
+        // by recalculateFeesForStudent() which checks actual installment due dates.
+        // Using fees.getDueDate() here risks setting Overdue from a stale date.
         if (feesDue <= 0.01) {
             fees.setStatus("Clear");
-        } else if (fees.getDueDate() != null && fees.getDueDate().isBefore(LocalDate.now())) {
-            fees.setStatus("Overdue");
         } else {
             fees.setStatus("Pending");
         }
@@ -1009,7 +1100,7 @@ public class FeesManagerService {
 
         try {
             // Check if this is an OLD imported student (non-REG numbers)
-            boolean isOldStudent = (regNo != null && !regNo.startsWith("REG"));
+            boolean isOldStudent = (regNo != null && !regNo.trim().toUpperCase().startsWith("REG"));
 
             // ALWAYS fetch NEW receipts from fee_receipts table FIRST
             log.info("🔍 Fetching NEW receipts from fee_receipts table for: {}", regNo);
@@ -1025,9 +1116,9 @@ public class FeesManagerService {
                         .collect(Collectors.toList()));
             }
 
-            // THEN fetch OLD receipts ONLY if it's an old student
+            // THEN fetch OLD receipts from fee_collections table if present
             if (isOldStudent) {
-                log.info("🔍 OLD STUDENT detected ({}), also fetching from fee_collections", regNo);
+                log.info("🔍 Checking fee_collections table for old receipts: {}", regNo);
 
                 try {
                     // Get mobile from FEES table (most reliable for old students)
@@ -1079,14 +1170,14 @@ public class FeesManagerService {
                             log.warn(" Mobile number is null/empty/N/A for regNo: {}", regNo);
                         }
                     } else {
-                        log.warn(" No fees record found for OLD regNo: {}", regNo);
+                        log.warn(" No fees record found for regNo: {}", regNo);
                     }
 
                 } catch (Exception e) {
                     log.error("❌ Error fetching from fee_collections for {}: {}", regNo, e.getMessage(), e);
                 }
             } else {
-                log.info(" NEW STUDENT ({}), only using fee_receipts table", regNo);
+                log.info(" Skipping fee_collections search for new student (starts with REG): {}", regNo);
             }
 
             // Sort all receipts by date (newest first)
@@ -1194,6 +1285,10 @@ public class FeesManagerService {
     @Transactional(readOnly = true)
     public List<FeeReceiptResponseDTO> getReceiptsFromFeeCollections(String regNo) {
         log.debug("🔍 Fetching receipts from fee_collections for regNo: {}", regNo);
+        if (regNo != null && regNo.trim().toUpperCase().startsWith("REG")) {
+            log.info(" Skipping fee_collections search for new student (REG*): {}", regNo);
+            return new ArrayList<>();
+        }
 
         try {
             Admission admission = admissionRepository
@@ -1361,11 +1456,40 @@ public class FeesManagerService {
                     .mapToDouble(r -> r.getAmountReceived() != null ? r.getAmountReceived() : 0.0)
                     .sum();
 
+            // For OLD students, also add amounts from fee_collections
+            boolean isOldStudent = (regNo != null && !regNo.trim().toUpperCase().startsWith("REG"));
+            Double totalPaidFromOldRecords = 0.0;
+            if (isOldStudent) {
+                try {
+                    String mobile = null;
+                    Optional<Fees> feesOpt = feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+                    if (feesOpt.isPresent()) {
+                        mobile = feesOpt.get().getMobile();
+                    }
+                    if (mobile == null || mobile.trim().isEmpty() || "N/A".equalsIgnoreCase(mobile)) {
+                        Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+                        if (admission != null) {
+                            mobile = admission.getMobilePrimary();
+                        }
+                    }
+                    if (mobile != null && !mobile.trim().isEmpty() && !"N/A".equalsIgnoreCase(mobile)) {
+                        List<FeeCollection> oldCollections = feeCollectionRepository
+                                .findByMobileNoAndIsDeletedFalse(mobile);
+                        totalPaidFromOldRecords = oldCollections.stream()
+                                .mapToDouble(fc -> fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
+                                .sum();
+                    }
+                } catch (Exception e) {
+                    log.warn(" Could not fetch old records for recalculation: {}", e.getMessage());
+                }
+            }
+            final Double totalPaidSum = totalPaid + totalPaidFromOldRecords;
+
             feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo)
                     .ifPresent(fees -> {
-                        fees.setTotalPaid(totalPaid);
+                        fees.setTotalPaid(totalPaidSum);
 
-                        Double feesDue = fees.getTotalFees() - totalPaid +
+                        Double feesDue = fees.getTotalFees() - totalPaidSum +
                                 (fees.getFeesRefund() != null ? fees.getFeesRefund() : 0.0);
                         fees.setFeesDue(Math.max(0, feesDue));
 
@@ -1373,9 +1497,9 @@ public class FeesManagerService {
                             fees.setStatus("Refund");
                         } else if (feesDue <= 0.01) {
                             fees.setStatus("Clear");
-                        } else if (fees.getDueDate() != null && fees.getDueDate().isBefore(LocalDate.now())) {
-                            fees.setStatus("Overdue");
                         } else {
+                            // NOTE: Use 'Pending' as safe default — accurate Overdue detection
+                            // (based on actual installment due dates) is done by recalculateFeesForStudent()
                             fees.setStatus("Pending");
                         }
 
@@ -1490,6 +1614,13 @@ public class FeesManagerService {
                 .status(installment.getStatus())
                 .paidAmount(installment.getPaidAmount())
                 .paidDate(installment.getPaidDate())
+                .paymentMode(installment.getPaymentMode())
+                .transactionId(installment.getTransactionId())
+                .notes(installment.getNotes())
+                .createdBy(installment.getCreatedBy())
+                .updatedBy(installment.getUpdatedBy())
+                .createdAt(installment.getCreatedAt())
+                .updatedAt(installment.getUpdatedAt())
                 .build();
     }
 
@@ -1558,6 +1689,22 @@ public class FeesManagerService {
         FeeReceipt receipt = feeReceiptRepository.findById(receiptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Receipt not found: " + receiptId));
 
+        // Get current user for audit trail
+        String currentUser = "SYSTEM";
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof User) {
+                User user = (User) auth.getPrincipal();
+                currentUser = user.getEmployee().getEmployeeName();
+            }
+        } catch (Exception e) {
+            log.warn("Could not get current user: {}", e.getMessage());
+        }
+        final String finalCurrentUser = currentUser;
+
+        Long oldInstallmentId = receipt.getInstallmentId();
+        Long newInstallmentId = requestDTO.getInstallmentId();
+
         // Update fields
         receipt.setReceiptDate(requestDTO.getReceiptDate() != null ? requestDTO.getReceiptDate() : LocalDate.now());
         receipt.setAmountReceived(requestDTO.getAmountReceived());
@@ -1583,9 +1730,41 @@ public class FeesManagerService {
         receipt.setOnlinePaymentMode(requestDTO.getOnlinePaymentMode());
         receipt.setNextDueDate(requestDTO.getNextDueDate());
         receipt.setNotes(requestDTO.getNotes());
-        receipt.setUpdatedBy("SYSTEM");
+        receipt.setUpdatedBy(currentUser);
+        receipt.setInstallmentId(newInstallmentId);
 
         FeeReceipt updated = feeReceiptRepository.save(receipt);
+
+        // Sync Installment Status
+        if (oldInstallmentId != null && !oldInstallmentId.equals(newInstallmentId)) {
+            try {
+                feeInstallmentRepository.findById(oldInstallmentId)
+                        .ifPresent(installment -> {
+                            installment.setStatus("Pending");
+                            installment.setPaidAmount(null);
+                            installment.setPaidDate(null);
+                            installment.setUpdatedBy(finalCurrentUser);
+                            feeInstallmentRepository.saveAndFlush(installment);
+                            log.info(" Reverted old installment: {} to Pending", oldInstallmentId);
+                        });
+            } catch (Exception e) {
+                log.error("Failed to revert old installment: {}", oldInstallmentId, e);
+            }
+        }
+
+        if (newInstallmentId != null) {
+            try {
+                updateInstallmentStatus(newInstallmentId, requestDTO.getAmountReceived(), currentUser);
+                log.info(" Updated new/existing installment: {}", newInstallmentId);
+            } catch (Exception e) {
+                log.error("Failed to update new installment: {}", newInstallmentId, e);
+            }
+        }
+
+        // Recalculate student fees from transactions
+        if (requestDTO.getRegNo() != null && !requestDTO.getRegNo().trim().isEmpty()) {
+            recalculateFeesFromTransactions(requestDTO.getRegNo());
+        }
 
         Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(requestDTO.getRegNo());
 
@@ -1608,10 +1787,10 @@ public class FeesManagerService {
             fees.setFeesDue(Math.max(0, feesDue));
 
             // Update status
+            // NOTE: Use 'Pending' as safe default — accurate Overdue detection
+            // (based on actual installment due dates) is done by recalculateFeesForStudent()
             if (feesDue <= 0.01) {
                 fees.setStatus("Clear");
-            } else if (fees.getDueDate() != null && fees.getDueDate().isBefore(LocalDate.now())) {
-                fees.setStatus("Overdue");
             } else {
                 fees.setStatus("Pending");
             }
@@ -1768,7 +1947,7 @@ public class FeesManagerService {
                     .dueDate(dto.getDueDate())
                     .amount(dto.getAmount())
                     .status(dto.getStatus())
-                    .createdBy("SYSTEM")
+                    .createdBy(getCurrentUserName())
                     .build();
 
             savedInstallments.add(feeInstallmentRepository.save(installment));

@@ -152,10 +152,11 @@ public class AdmissionController {
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Page<AdmissionResponseDTO>> getAllAdmissions(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "25") int size) {
+            @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort) {
 
-        log.debug("GET /api/admissions - page: {}, size: {}", page, size);
-        Page<AdmissionResponseDTO> admissions = admissionService.getAllAdmissions(page, size);
+        log.debug("GET /api/admissions - page: {}, size: {}, sort: {}", page, size, sort);
+        Page<AdmissionResponseDTO> admissions = admissionService.getAllAdmissions(page, size, sort);
         return ResponseEntity.ok(admissions);
     }
 
