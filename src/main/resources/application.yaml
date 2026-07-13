@@ -10,7 +10,11 @@ app:
     password: ${SUPERADMIN_PASSWORD:admin@123}
   backup:
     email: ${BACKUP_EMAIL:kunalpatil192001@gmail.com}
-    passcode: ${BACKUP_PASSCODE:Kuanl@217}
+    passcode: ${BACKUP_PASSCODE:Kunal@217}
+    google-drive:
+      enabled: ${GOOGLE_DRIVE_BACKUP_ENABLED:true}
+      credentials-path: ${GOOGLE_DRIVE_CREDENTIALS_PATH:credentials/global-email-monitor-e4ef0cd5ef08.json}
+      folder-name: ${GOOGLE_DRIVE_FOLDER_NAME:TTS_SMS_Daily_Backups}
 
   base-url: ${APP_BASE_URL:https://team.ttsnashik.com}
 

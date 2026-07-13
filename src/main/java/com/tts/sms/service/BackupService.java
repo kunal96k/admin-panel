@@ -25,6 +25,7 @@ import java.util.zip.ZipOutputStream;
 public class BackupService {
 
     private final JavaMailSender mailSender;
+    private final GoogleDriveService googleDriveService;
 
     @Value("${spring.datasource.url}")
     private String dbUrl;
@@ -42,7 +43,7 @@ public class BackupService {
     private String fromEmail;
 
     /**
-     * Executes the full backup process (DB, uploads, logs) and emails it to the configured recipient.
+     * Executes the full backup process (DB, uploads, logs), uploads to Google Drive, and emails status.
      * Temporary files are automatically cleaned up in a finally block.
      */
     public void performBackupAndSendEmail() throws Exception {
@@ -51,9 +52,11 @@ public class BackupService {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         File tempDir = new File(System.getProperty("java.io.tmpdir"));
         
-        File sqlFile = new File(tempDir, "db_backup_" + timestamp + ".sql");
-        File uploadsZip = new File(tempDir, "uploads_backup_" + timestamp + ".zip");
-        File logsZip = new File(tempDir, "logs_backup_" + timestamp + ".zip");
+        File sqlFile = new File(tempDir, "tts_sms_db_backup_" + timestamp + ".sql");
+        File uploadsZip = new File(tempDir, "tts_sms_uploads_backup_" + timestamp + ".zip");
+        File logsZip = new File(tempDir, "tts_sms_logs_backup_" + timestamp + ".zip");
+
+        Map<String, Map<String, String>> driveUploadResults = new HashMap<>();
 
         try {
             // 1. Generate MySQL Database Backup
@@ -79,11 +82,22 @@ public class BackupService {
                 log.warn("Logs directory not found at: {}", logsDir.getAbsolutePath());
             }
 
-            // 4. Send Email with Attachments
-            sendBackupEmail(sqlFile, uploadsZip, logsZip, timestamp);
+            // 4. Upload Files to Google Drive
+            if (sqlFile.exists() && sqlFile.length() > 0) {
+                driveUploadResults.put("db", googleDriveService.uploadFile(sqlFile, "application/sql"));
+            }
+            if (uploadsZip.exists() && uploadsZip.length() > 0) {
+                driveUploadResults.put("uploads", googleDriveService.uploadFile(uploadsZip, "application/zip"));
+            }
+            if (logsZip.exists() && logsZip.length() > 0) {
+                driveUploadResults.put("logs", googleDriveService.uploadFile(logsZip, "application/zip"));
+            }
+
+            // 5. Send Email Notification with Attachments & Google Drive Links
+            sendBackupEmail(sqlFile, uploadsZip, logsZip, driveUploadResults, timestamp);
 
         } finally {
-            // 5. Clean up temporary files
+            // 6. Clean up temporary files
             cleanupTempFile(sqlFile);
             cleanupTempFile(uploadsZip);
             cleanupTempFile(logsZip);
@@ -203,7 +217,7 @@ public class BackupService {
         }
     }
 
-    private void sendBackupEmail(File sqlFile, File uploadsZip, File logsZip, String timestamp) throws Exception {
+    private void sendBackupEmail(File sqlFile, File uploadsZip, File logsZip, Map<String, Map<String, String>> driveResults, String timestamp) throws Exception {
         log.info("Sending backup email to: {}", backupEmail);
 
         MimeMessage message = mailSender.createMimeMessage();
@@ -211,29 +225,37 @@ public class BackupService {
 
         helper.setFrom(fromEmail);
         helper.setTo(backupEmail);
-        helper.setSubject("System Backup - " + timestamp);
+        helper.setSubject("TechnoKraft Daily System Backup - " + timestamp);
 
         StringBuilder emailBody = new StringBuilder();
-        emailBody.append("<h3>TechnoKraft CRM System Backup Details</h3>");
-        emailBody.append("<p>An automated backup process was successfully executed on <b>").append(timestamp).append("</b>.</p>");
-        emailBody.append("<p>Please find the following zip/sql attachments in this email:</p>");
+        emailBody.append("<h3>TechnoKraft CRM System Backup Summary</h3>");
+        emailBody.append("<p>An automated backup execution completed on <b>").append(timestamp).append("</b>.</p>");
+
+        emailBody.append("<h4>☁️ Google Drive Backup Status:</h4>");
+        emailBody.append("<ul>");
+        appendDriveLinkInfo(emailBody, "Database SQL Backup", driveResults.get("db"));
+        appendDriveLinkInfo(emailBody, "Uploads Directory Zip", driveResults.get("uploads"));
+        appendDriveLinkInfo(emailBody, "Logs Directory Zip", driveResults.get("logs"));
+        emailBody.append("</ul>");
+
+        emailBody.append("<h4>📎 Local Email Attachments:</h4>");
         emailBody.append("<ul>");
         
         if (sqlFile.exists() && sqlFile.length() > 0) {
-            helper.addAttachment("db_backup_" + timestamp + ".sql", new FileSystemResource(sqlFile));
-            emailBody.append("<li><b>Database SQL Backup:</b> db_backup_").append(timestamp).append(".sql (").append(sqlFile.length()).append(" bytes)</li>");
+            helper.addAttachment(sqlFile.getName(), new FileSystemResource(sqlFile));
+            emailBody.append("<li><b>Database SQL Backup:</b> ").append(sqlFile.getName()).append(" (").append(sqlFile.length()).append(" bytes)</li>");
         } else {
             emailBody.append("<li><span style='color:red;'>Database SQL Backup: Failed to generate</span></li>");
         }
 
         if (uploadsZip.exists() && uploadsZip.length() > 0) {
-            helper.addAttachment("uploads_backup_" + timestamp + ".zip", new FileSystemResource(uploadsZip));
-            emailBody.append("<li><b>Uploads Folder Zip:</b> uploads_backup_").append(timestamp).append(".zip (").append(uploadsZip.length()).append(" bytes)</li>");
+            helper.addAttachment(uploadsZip.getName(), new FileSystemResource(uploadsZip));
+            emailBody.append("<li><b>Uploads Folder Zip:</b> ").append(uploadsZip.getName()).append(" (").append(uploadsZip.length()).append(" bytes)</li>");
         }
 
         if (logsZip.exists() && logsZip.length() > 0) {
-            helper.addAttachment("logs_backup_" + timestamp + ".zip", new FileSystemResource(logsZip));
-            emailBody.append("<li><b>Logs Folder Zip:</b> logs_backup_").append(timestamp).append(".zip (").append(logsZip.length()).append(" bytes)</li>");
+            helper.addAttachment(logsZip.getName(), new FileSystemResource(logsZip));
+            emailBody.append("<li><b>Logs Folder Zip:</b> ").append(logsZip.getName()).append(" (").append(logsZip.length()).append(" bytes)</li>");
         }
         
         emailBody.append("</ul>");
@@ -242,7 +264,18 @@ public class BackupService {
         helper.setText(emailBody.toString(), true);
 
         mailSender.send(message);
-        log.info("Backup email sent successfully.");
+        log.info("Backup notification email sent successfully.");
+    }
+
+    private void appendDriveLinkInfo(StringBuilder sb, String title, Map<String, String> result) {
+        if (result != null && "SUCCESS".equalsIgnoreCase(result.get("status"))) {
+            sb.append("<li><b>").append(title).append(":</b> Uploaded to Drive - ")
+              .append("<a href='").append(result.get("webViewLink")).append("' target='_blank'>View on Google Drive</a>")
+              .append("</li>");
+        } else if (result != null) {
+            sb.append("<li><b>").append(title).append(":</b> <span style='color:red;'>Drive Upload Failed (")
+              .append(result.get("error")).append(")</span></li>");
+        }
     }
 
     private void cleanupTempFile(File file) {

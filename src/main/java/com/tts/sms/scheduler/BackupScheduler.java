@@ -7,8 +7,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Scheduler to automatically trigger database and file backup
- * Runs on the last date of each and every month
+ * Scheduler to automatically trigger daily database and file backup to Google Drive & Email
+ * Runs every day at 02:00 AM IST
  */
 @Component
 @RequiredArgsConstructor
@@ -18,16 +18,16 @@ public class BackupScheduler {
     private final BackupService backupService;
 
     /**
-     * Automatically triggers the monthly backup on the last date of every month at 11:00 PM
+     * Automatically triggers the daily backup every night at 2:00 AM IST
      */
-    @Scheduled(cron = "0 0 23 L * ?", zone = "Asia/Kolkata")
-    public void scheduleMonthlyBackup() {
-        log.info("⏰ Scheduled monthly backup execution started...");
+    @Scheduled(cron = "0 0 2 * * ?", zone = "Asia/Kolkata")
+    public void scheduleDailyBackup() {
+        log.info("⏰ Scheduled daily backup execution started...");
         try {
             backupService.performBackupAndSendEmail();
-            log.info("✅ Scheduled monthly backup execution completed successfully.");
+            log.info("✅ Scheduled daily backup execution completed successfully.");
         } catch (Exception e) {
-            log.error("❌ Scheduled monthly backup failed: {}", e.getMessage(), e);
+            log.error("❌ Scheduled daily backup failed: {}", e.getMessage(), e);
         }
     }
 }

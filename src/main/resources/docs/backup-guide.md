@@ -1,69 +1,118 @@
-# System Backup & Archival Guide
+# System Daily Google Drive & Email Backup Guide
 
-This document describes the automated and manual backup mechanism implemented in the TechnoKraft Student Management System (SMS) CRM.
+This document describes the automated daily backup system implemented in the **TechnoKraft Student Management System (SMS) CRM**.
 
 ---
 
 ## 1. Architecture Overview
 
-The backup system is structured around three key components:
-1. **`BackupService`**: The core execution engine responsible for invoking `mysqldump`, compressing the file systems, sending emails with attachments, and cleaning up temporary space.
-2. **`BackupScheduler`**: The automated runner configured to invoke the service on the last day of each month.
-3. **`BackupController`**: The secure API endpoint that allows administrators to manually trigger backups on demand using a dedicated passcode.
+The system executes daily automated backups that upload database SQL dumps and application archive zip files directly to **Google Drive** in the project-isolated **`TTS_SMS_Daily_Backups`** folder while simultaneously dispatching summary emails with view links and attachments.
+
+### Key System Components
+1. **`GoogleDriveService`**: Authenticates with Google Cloud using a Service Account and handles uploads to the project-specific Google Drive folder `TTS_SMS_Daily_Backups`.
+2. **`BackupService`**: Core orchestrator responsible for executing `mysqldump`, zipping user upload files (`uploads/`) and system logs (`logs/`), uploading files prefixed with `tts_sms_` to Google Drive, sending summary emails, and clearing temporary storage.
+3. **`BackupScheduler`**: Automated runner configured to trigger daily at **2:00 AM IST**.
+4. **`BackupController`**: Secure REST API endpoint (`POST /api/auth/backup`) allowing authorized administrators to trigger backups on-demand.
 
 ### System Workflow
 ```
-[Backup Scheduler (Cron)] ──────┐
-                                ├─> [BackupService] ─> Executes mysqldump & zips uploads/logs ─> Emails Zip & cleanups temp files
-[Manual Trigger API (POST)] ────┘
+[Daily Backup Scheduler (02:00 AM IST)] ─────┐
+                                              ├─> [BackupService] ─> Generates tts_sms_db_backup_*.sql & zips uploads/logs
+[Manual Trigger Endpoint (POST /backup)] ─────┘        │
+                                                       ├─> [GoogleDriveService] ─> Uploads to folder 'TTS_SMS_Daily_Backups'
+                                                       └─> [MailSender] ─────────> Dispatches status email with links
 ```
 
 ---
 
-## 2. Configuration & Environment Settings
+## 2. Credentials Requirement & Reusability Guide
 
-The backup system is fully configurable using environment variables. The configuration is defined in the base `application.yaml` file:
+### ⚠️ Is the JSON Credentials File Required?
+> [!CAUTION]
+> **YES, IT IS STRICTLY MANDATORY.**
+> The file `src/main/resources/credentials/global-email-monitor-e4ef0cd5ef08.json` contains the Google Service Account private key required to authenticate with the Google Drive API.
+> **Without this file, Google Drive backup uploads will FAIL.**
+
+---
+
+### Service Account & Project Details
+
+* **Service Account Email**: `sms-backup-bot@global-email-monitor.iam.gserviceaccount.com`
+* **Google Cloud Project ID**: `global-email-monitor`
+* **Local Project Credentials Path**: `src/main/resources/credentials/global-email-monitor-e4ef0cd5ef08.json`
+* **Target Google Drive Folder**: `TTS_SMS_Daily_Backups`
+
+---
+
+### 📋 How to Set Up this Backup System in a New / Other Project
+
+To reuse this Google Drive backup setup in any other project:
+
+1. **Copy Credentials File**:
+   Copy `global-email-monitor-e4ef0cd5ef08.json` into the new project's resources directory:
+   `src/main/resources/credentials/global-email-monitor-e4ef0cd5ef08.json`
+
+2. **Create & Share Google Drive Folder**:
+   - Open [Google Drive](https://drive.google.com/).
+   - Create a new folder for the project (e.g., `PROJECT_NAME_Daily_Backups`).
+   - Share the new folder with **`sms-backup-bot@global-email-monitor.iam.gserviceaccount.com`** as **Editor**.
+
+3. **Configure `application.yaml` in the New Project**:
+   ```yaml
+   app:
+     backup:
+       email: ${BACKUP_EMAIL:kunalpatil192001@gmail.com}
+       passcode: ${BACKUP_PASSCODE:Kunal@217}
+       google-drive:
+         enabled: ${GOOGLE_DRIVE_BACKUP_ENABLED:true}
+         credentials-path: ${GOOGLE_DRIVE_CREDENTIALS_PATH:credentials/global-email-monitor-e4ef0cd5ef08.json}
+         folder-name: ${GOOGLE_DRIVE_FOLDER_NAME:PROJECT_NAME_Daily_Backups}
+   ```
+
+4. **Isolate File Names**:
+   In `BackupService.java`, prefix generated backup files with the project code (e.g., `project_name_db_backup_*.sql`).
+
+---
+
+## 3. Environment & Configuration Reference
+
+Configuration parameters defined in `application.yaml`:
 
 | Property | Environment Variable | Default Value | Description |
 | :--- | :--- | :--- | :--- |
-| `app.backup.email` | `BACKUP_EMAIL` | `kunalpatil192001@gmail.com` | The destination email where all backup files will be sent. |
-| `app.backup.passcode` | `BACKUP_PASSCODE` | `Kuanl@217` | The passcode required to authenticate the manual trigger API. |
-
-### SMTP Config
-The system uses the configured Spring Mail Sender (`spring.mail.*`) to dispatch the backups. Ensure that the SMTP credentials in `application-prod.yaml` or standard environment variables (`MAIL_USERNAME` and `MAIL_PASSWORD`) are correct and have permissions to send attachments up to 25MB.
-
----
-
-## 3. Automation Scheduler
-
-The backup scheduler is configured in `BackupScheduler.java` using Spring's `@Scheduled` annotation.
-
-- **Cron Expression**: `0 0 23 L * ?`
-- **Execution Time**: 11:00 PM on the Last day (`L`) of every month (`*`).
-- **Timezone**: `Asia/Kolkata` (Indian Standard Time / IST).
-
-This ensures that the database and files are safely backed up at the end of each month without manual intervention.
-
-### Implementation & Initialization Guidance
-To ensure the automated scheduler executes properly:
-1. **Enable Scheduling**: The application config must have Spring's `@EnableScheduling` annotation. This is configured centrally in `SchedulerConfig.java` and `ApplicationConfig.java`.
-2. **Execution Context**: Unlike manual backups, the scheduled task runs synchronously within the scheduler's own task execution thread pool (configured in the background by Spring). There are no external proxy or HTTP gateway timeout constraints.
-3. **Local Testing Configuration**: To verify or test the scheduled execution locally without waiting until the end of the month:
-   * Open `BackupScheduler.java`.
-   * Change the `@Scheduled` annotation to run every 10 seconds:
-     ```java
-     @Scheduled(cron = "*/10 * * * * ?", zone = "Asia/Kolkata")
-     ```
-   * Start the application locally and check the console logs to see the backup starting and zipping log entries.
-   * **Important**: Always restore the cron expression to `0 0 23 L * ?` before pushing changes to production.
+| `app.backup.email` | `BACKUP_EMAIL` | `kunalpatil192001@gmail.com` | Destination email recipient for status summary reports. |
+| `app.backup.passcode` | `BACKUP_PASSCODE` | `Kunal@217` | Passcode for authorized manual REST API triggers. |
+| `app.backup.google-drive.enabled` | `GOOGLE_DRIVE_BACKUP_ENABLED` | `true` | Toggles Google Drive integration on or off. |
+| `app.backup.google-drive.credentials-path` | `GOOGLE_DRIVE_CREDENTIALS_PATH` | `credentials/global-email-monitor-e4ef0cd5ef08.json` | Relative path to Service Account JSON key. |
+| `app.backup.google-drive.folder-name` | `GOOGLE_DRIVE_FOLDER_NAME` | `TTS_SMS_Daily_Backups` | Dedicated destination folder for this project. |
 
 ---
 
-## 4. API Reference: Manual Backup Trigger
+## 4. Daily Backup Scheduler
 
-For on-demand backups, a public REST endpoint is provided. This endpoint is configured to bypass Spring Security's standard filters and ignores CSRF token checks.
+Configured in `BackupScheduler.java` using Spring's `@Scheduled` annotation:
 
-* **Route**: `/api/auth/backup`
+- **Cron Expression**: `0 0 2 * * ?`
+- **Execution Time**: **Every night at 02:00 AM IST** (`Asia/Kolkata`).
+- **Cost**: **100% Free** (Google Drive API free quota allows 1M requests/day; free personal Drive accounts include 15 GB storage).
+
+### Testing the Scheduler Locally
+To test scheduled execution without waiting until 2:00 AM:
+1. Open `BackupScheduler.java`.
+2. Temporarily set the cron expression to run every 10 seconds:
+   ```java
+   @Scheduled(cron = "*/10 * * * * ?", zone = "Asia/Kolkata")
+   ```
+3. Boot up the Spring Boot application locally and observe the console logs for Google Drive upload confirmations.
+4. **Remember to revert** the cron back to `0 0 2 * * ?` prior to pushing updates to production.
+
+---
+
+## 5. API Reference: Manual On-Demand Backup
+
+For instant backups on demand:
+
+* **Endpoint**: `/api/auth/backup`
 * **Method**: `POST`
 * **Content-Type**: `application/json`
 
@@ -71,135 +120,47 @@ For on-demand backups, a public REST endpoint is provided. This endpoint is conf
 ```json
 {
   "email": "kunalpatil192001@gmail.com",
-  "passcode": "Kuanl@217"
+  "passcode": "Kunal@217"
 }
 ```
 
-### Response Formats
+### 1. Using `curl` (Linux / macOS / Git Bash)
 
-#### 1. Success (200 OK)
-```json
-{
-  "success": true,
-  "message": "Backup successfully generated and sent to: kunalpatil192001@gmail.com"
-}
-```
-
-#### 2. Unauthorized (401 Unauthorized)
-Returned if the email or passcode does not match the configured environment variables.
-```json
-{
-  "success": false,
-  "message": "Invalid email or passcode."
-}
-```
-
-#### 3. Bad Request (400 Bad Request)
-Returned if input parameters are missing.
-```json
-{
-  "success": false,
-  "message": "Email and passcode inputs are required."
-}
-```
-
-#### 4. Server Error (500 Internal Server Error)
-Returned if `mysqldump` fails, file system errors occur, or SMTP transmission fails.
-```json
-{
-  "success": false,
-  "message": "Backup failed: <Error details>"
-}
-```
-
-#### 5. Method Not Allowed (405 Method Not Allowed)
-Returned if a method other than `POST` (such as `GET` or `PUT`) is used.
-```json
-{
-  "timestamp": "2026-06-15T12:06:23.963208359",
-  "status": 405,
-  "error": "Method Not Allowed",
-  "message": "Request method 'GET' is not supported",
-  "path": "/api/auth/backup"
-}
-```
-
----
-
-## 5. Shell Command Testing Examples
-
-### Using `curl` (Linux / macOS / Git Bash)
-
-**Local Server:**
 ```bash
 curl -X POST http://localhost:8080/api/auth/backup \
   -H "Content-Type: application/json" \
-  -d '{"email": "kunalpatil192001@gmail.com", "passcode": "Kuanl@217"}'
+  -d '{"email": "kunalpatil192001@gmail.com", "passcode": "Kunal@217"}'
 ```
 
-**Production Server:**
-```bash
-curl -X POST https://team.ttsnashik.com/api/auth/backup \
-  -H "Content-Type: application/json" \
-  -d '{"email": "kunalpatil192001@gmail.com", "passcode": "Kuanl@217"}'
-```
+### 2. Using PowerShell (Windows)
 
-### Using PowerShell (Windows)
-
-**Local Server:**
 ```powershell
 $body = @{
     email = "kunalpatil192001@gmail.com"
-    passcode = "Kuanl@217"
+    passcode = "Kunal@217"
 } | ConvertTo-Json
 
 Invoke-RestMethod -Uri "http://localhost:8080/api/auth/backup" -Method Post -Body $body -ContentType "application/json"
 ```
 
-**Production Server:**
-```powershell
-$body = @{
-    email = "kunalpatil192001@gmail.com"
-    passcode = "Kuanl@217"
-} | ConvertTo-Json
+### 3. Using Windows Command Prompt (cmd.exe)
 
-Invoke-RestMethod -Uri "https://team.ttsnashik.com/api/auth/backup" -Method Post -Body $body -ContentType "application/json"
-```
-
-### Using Windows Command Prompt (cmd.exe)
-
-**Local Server:**
 ```cmd
-curl -X POST http://localhost:8080/api/auth/backup -H "Content-Type: application/json" -d "{\"email\":\"kunalpatil192001@gmail.com\",\"passcode\":\"Kuanl@217\"}"
-```
-
-**Production Server:**
-```cmd
-curl -X POST https://team.ttsnashik.com/api/auth/backup -H "Content-Type: application/json" -d "{\"email\":\"kunalpatil192001@gmail.com\",\"passcode\":\"Kuanl@217\"}"
+curl -X POST http://localhost:8080/api/auth/backup -H "Content-Type: application/json" -d "{\"email\":\"kunalpatil192001@gmail.com\",\"passcode\":\"Kunal@217\"}"
 ```
 
 ---
 
-## 6. Troubleshooting & Best Practices
+## 6. Troubleshooting & Maintenance
 
-1. **`mysqldump` Command Not Found**:
-   - The backup service executes `mysqldump` as a system subprocess. The host operating system MUST have the MySQL client package installed, and `mysqldump` must be present in the system's `PATH`.
-   - On Ubuntu/Debian production servers, install it via: `sudo apt-get install mysql-client`.
-   
-2. **Mail Attachment Size Limits**:
-   - Gmail and most mail providers limit email attachments to 25MB.
-   - If the database or `uploads/` directory becomes excessively large, the email delivery might fail due to SMTP size limits.
-   - It is recommended to regularly clean up large redundant files in `uploads/` or compress attachments heavily.
+1. **`mysqldump` Subprocess Missing**:
+   - Ensure `mysqldump` is installed on your operating system's PATH (`sudo apt-get install mysql-client` on Ubuntu/Debian).
 
-3. **Memory and Space Cleanup**:
-   - The backup process creates temporary files inside the system's temporary directory (e.g. `/tmp` or Windows AppData Temp).
-   - The code handles cleanup using a `finally` block that deletes all temp `.sql` and `.zip` files. If the server crashes during execution, residual temp files can be manually cleared.
+2. **Google Drive Authorization Issues**:
+   - If uploads fail with `404 Not Found` or access denied, verify that `TTS_SMS_Daily_Backups` (or your new project folder) is shared with `sms-backup-bot@global-email-monitor.iam.gserviceaccount.com` as **Editor**.
 
-4. **Nginx 504 Gateway Time-out & Asynchronous Execution**:
-   - The backup operation performs heavy blocking tasks (SQL dumping, zipping directories, and sending emails) that can easily take over 60 seconds to complete.
-   - Nginx's default proxy read timeout is 60 seconds (`proxy_read_timeout 60s;`). If executed synchronously, this causes a `504 Gateway Time-out`.
-   - **Fix**: The manual trigger endpoint `/api/auth/backup` runs asynchronously in a background thread pool (`emailTaskExecutor`). The client receives a `200 OK` status immediately, and the backup proceeds in the background, preventing timeouts.
+3. **Mail Attachment & Proxy Timeouts**:
+   - The backup process runs asynchronously in a background thread pool (`emailTaskExecutor`), preventing gateway timeouts on production Nginx servers.
 
-5. **SMTP Configuration & Firewall Blocks**:
-   - Ensure `MAIL_USERNAME` and `MAIL_PASSWORD` environment variables are properly set on the production environment. If the password is empty or invalid, background email transmission will fail with authentication errors.
-   - Ensure that outgoing traffic on port `587` (or the configured SMTP port) is allowed by cloud/network firewall rules (e.g., AWS Security Groups or local firewall). If blocked, the SMTP handshaking thread will hang and eventually throw socket timeout errors.
+4. **Temporary Storage Cleanup**:
+   - The application automatically cleans up temporary `.sql` and `.zip` files in the system temp directory inside a `finally` block upon backup completion.

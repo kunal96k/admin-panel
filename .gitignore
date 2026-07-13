@@ -37,3 +37,5 @@ uploads/
 logs/
 *.zip
 *.sql
+src/main/resources/credentials/*.json
+**/credentials/*.json
