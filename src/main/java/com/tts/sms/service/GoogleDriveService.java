@@ -33,8 +33,11 @@ public class GoogleDriveService {
     @Value("${app.backup.google-drive.credentials-path:credentials/global-email-monitor-e4ef0cd5ef08.json}")
     private String credentialsPath;
 
-    @Value("${app.backup.google-drive.folder-name:TTS_Daily_Backups}")
+    @Value("${app.backup.google-drive.folder-name:TTS_SMS_Daily_Backups}")
     private String targetFolderName;
+
+    @Value("${app.backup.google-drive.folder-id:}")
+    private String configuredFolderId;
 
     private static final String APPLICATION_NAME = "TechnoKraft SMS Backup Service";
     private static final String FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
@@ -69,22 +72,64 @@ public class GoogleDriveService {
      * Finds the ID of an existing target folder shared with or owned by the service account.
      */
     public String findFolderId(Drive service, String folderName) {
+        if (configuredFolderId != null && !configuredFolderId.trim().isEmpty()) {
+            log.info("Using configured Google Drive folder ID: {}", configuredFolderId.trim());
+            return configuredFolderId.trim();
+        }
+
+        // 1. Try querying shared folders explicitly
         try {
-            String query = "mimeType='" + FOLDER_MIME_TYPE + "' and name='" + folderName + "' and trashed=false";
+            String sharedQuery = "mimeType='" + FOLDER_MIME_TYPE + "' and sharedWithMe=true and trashed=false";
+            FileList sharedResult = service.files().list()
+                    .setQ(sharedQuery)
+                    .setSupportsAllDrives(true)
+                    .setIncludeItemsFromAllDrives(true)
+                    .setFields("files(id, name)")
+                    .execute();
+
+            List<File> sharedFiles = sharedResult.getFiles();
+            if (sharedFiles != null && !sharedFiles.isEmpty()) {
+                for (File file : sharedFiles) {
+                    log.info("Found shared Google Drive folder: '{}' (ID: {})", file.getName(), file.getId());
+                    if (file.getName().equalsIgnoreCase(folderName) ||
+                        file.getName().equalsIgnoreCase("TTS_Daily_Backups") ||
+                        file.getName().equalsIgnoreCase("TTS_SMS_Daily_Backups")) {
+                        log.info("Matched target shared Google Drive folder '{}' with ID: {}", file.getName(), file.getId());
+                        return file.getId();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to query shared Google Drive folders: {}", e.getMessage());
+        }
+
+        // 2. Fallback query across all accessible items
+        try {
+            String query = "mimeType='" + FOLDER_MIME_TYPE + "' and trashed=false";
             FileList result = service.files().list()
                     .setQ(query)
+                    .setSupportsAllDrives(true)
+                    .setIncludeItemsFromAllDrives(true)
                     .setFields("files(id, name)")
                     .execute();
 
             List<File> files = result.getFiles();
             if (files != null && !files.isEmpty()) {
-                String folderId = files.get(0).getId();
-                log.info("Found Google Drive folder '{}' with ID: {}", folderName, folderId);
-                return folderId;
+                for (File file : files) {
+                    log.info("Found accessible Google Drive folder: '{}' (ID: {})", file.getName(), file.getId());
+                    if (file.getName().equalsIgnoreCase(folderName) ||
+                        file.getName().equalsIgnoreCase("TTS_Daily_Backups") ||
+                        file.getName().equalsIgnoreCase("TTS_SMS_Daily_Backups")) {
+                        log.info("Matched target Google Drive folder '{}' with ID: {}", file.getName(), file.getId());
+                        return file.getId();
+                    }
+                }
             }
         } catch (Exception e) {
-            log.warn("Failed to query Google Drive folder ID for '{}': {}", folderName, e.getMessage());
+            log.warn("Failed to query all Google Drive folders: {}", e.getMessage());
         }
+
+        log.warn("No target Google Drive folder found matching '{}' or 'TTS_Daily_Backups'. Ensure the folder is shared with the Service Account email!", folderName);
         return null;
     }
 
@@ -118,6 +163,7 @@ public class GoogleDriveService {
 
             FileContent mediaContent = new FileContent(mimeType, localFile);
             File uploadedFile = service.files().create(fileMetadata, mediaContent)
+                    .setSupportsAllDrives(true)
                     .setFields("id, name, webViewLink, size")
                     .execute();
 

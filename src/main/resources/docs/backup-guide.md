@@ -153,11 +153,16 @@ curl -X POST http://localhost:8080/api/auth/backup -H "Content-Type: application
 
 ## 6. Troubleshooting & Maintenance
 
-1. **`mysqldump` Subprocess Missing**:
-   - Ensure `mysqldump` is installed on your operating system's PATH (`sudo apt-get install mysql-client` on Ubuntu/Debian).
+1. **`403 Forbidden - Service Accounts do not have storage quota`**:
+   - **Root Cause**: Service Accounts in Google Cloud have **0 bytes of internal storage quota**. They cannot store files in their own root directory. Files MUST be uploaded inside a Google Drive folder owned by a regular Google account that has been shared with the Service Account email (`sms-backup-bot@global-email-monitor.iam.gserviceaccount.com`) as **Editor**.
+   - **Fix 1 (Share Folder)**: In your personal Google Drive, ensure the target folder (`TTS_SMS_Daily_Backups` or `TTS_Daily_Backups`) is shared with `sms-backup-bot@global-email-monitor.iam.gserviceaccount.com` as **Editor**.
+   - **Fix 2 (Explicit Folder ID - Recommended)**: Pass the explicit Folder ID in `application.yaml` or environment variable `GOOGLE_DRIVE_FOLDER_ID`:
+     - Open the folder in Google Drive.
+     - Copy the ID from the browser URL: `https://drive.google.com/drive/folders/<YOUR_FOLDER_ID>`
+     - Set `GOOGLE_DRIVE_FOLDER_ID=<YOUR_FOLDER_ID>` in `/etc/crm.env` or `application.yaml`.
 
-2. **Google Drive Authorization Issues**:
-   - If uploads fail with `404 Not Found` or access denied, verify that `TTS_SMS_Daily_Backups` (or your new project folder) is shared with `sms-backup-bot@global-email-monitor.iam.gserviceaccount.com` as **Editor**.
+2. **`mysqldump` Subprocess Missing**:
+   - Ensure `mysqldump` is installed on your operating system's PATH (`sudo apt-get install mysql-client` on Ubuntu/Debian).
 
 3. **Mail Attachment & Proxy Timeouts**:
    - The backup process runs asynchronously in a background thread pool (`emailTaskExecutor`), preventing gateway timeouts on production Nginx servers.

@@ -15,6 +15,7 @@ app:
       enabled: ${GOOGLE_DRIVE_BACKUP_ENABLED:true}
       credentials-path: ${GOOGLE_DRIVE_CREDENTIALS_PATH:credentials/global-email-monitor-e4ef0cd5ef08.json}
       folder-name: ${GOOGLE_DRIVE_FOLDER_NAME:TTS_SMS_Daily_Backups}
+      folder-id: ${GOOGLE_DRIVE_FOLDER_ID:}
 
   base-url: ${APP_BASE_URL:https://team.ttsnashik.com}
 
