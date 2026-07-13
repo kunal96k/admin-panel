@@ -9,6 +9,7 @@ import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.UserCredentials;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,10 +34,19 @@ public class GoogleDriveService {
     @Value("${app.backup.google-drive.credentials-path:credentials/global-email-monitor-e4ef0cd5ef08.json}")
     private String credentialsPath;
 
+    @Value("${app.backup.google-drive.client-id:}")
+    private String clientId;
+
+    @Value("${app.backup.google-drive.client-secret:}")
+    private String clientSecret;
+
+    @Value("${app.backup.google-drive.refresh-token:}")
+    private String refreshToken;
+
     @Value("${app.backup.google-drive.folder-name:TTS_SMS_Daily_Backups}")
     private String targetFolderName;
 
-    @Value("${app.backup.google-drive.folder-id:}")
+    @Value("${app.backup.google-drive.folder-id:15Ltp1XqZ9qbw68v1PBeM8FSO3LmSaggW}")
     private String configuredFolderId;
 
     private static final String APPLICATION_NAME = "TechnoKraft SMS Backup Service";
@@ -44,28 +54,43 @@ public class GoogleDriveService {
 
     /**
      * Initializes and returns an authenticated Google Drive client instance.
+     * Supports OAuth2 User Credentials (User Quota) as primary, falling back to Service Account.
      */
     private Drive getDriveService() throws Exception {
-        Resource resource = new ClassPathResource(credentialsPath);
-        if (!resource.exists()) {
-            resource = new FileSystemResource(credentialsPath);
-        }
+        GoogleCredentials credentials;
 
-        if (!resource.exists()) {
-            throw new IllegalStateException("Google Drive Service Account Credentials file not found at: " + credentialsPath);
-        }
-
-        try (InputStream in = resource.getInputStream()) {
-            GoogleCredentials credentials = GoogleCredentials.fromStream(in)
-                    .createScoped(Collections.singletonList(DriveScopes.DRIVE_FILE));
-
-            return new Drive.Builder(
-                    GoogleNetHttpTransport.newTrustedTransport(),
-                    GsonFactory.getDefaultInstance(),
-                    new HttpCredentialsAdapter(credentials))
-                    .setApplicationName(APPLICATION_NAME)
+        if (clientId != null && !clientId.trim().isEmpty()
+                && clientSecret != null && !clientSecret.trim().isEmpty()
+                && refreshToken != null && !refreshToken.trim().isEmpty()) {
+            log.info("Authenticating with Google Drive API using OAuth2 User Credentials (User Account Storage Quota)...");
+            credentials = UserCredentials.newBuilder()
+                    .setClientId(clientId.trim())
+                    .setClientSecret(clientSecret.trim())
+                    .setRefreshToken(refreshToken.trim())
                     .build();
+        } else {
+            log.info("Authenticating with Google Drive API using Service Account Key...");
+            Resource resource = new ClassPathResource(credentialsPath);
+            if (!resource.exists()) {
+                resource = new FileSystemResource(credentialsPath);
+            }
+
+            if (!resource.exists()) {
+                throw new IllegalStateException("Google Drive Credentials file not found at: " + credentialsPath);
+            }
+
+            try (InputStream in = resource.getInputStream()) {
+                credentials = GoogleCredentials.fromStream(in)
+                        .createScoped(Collections.singletonList(DriveScopes.DRIVE_FILE));
+            }
         }
+
+        return new Drive.Builder(
+                GoogleNetHttpTransport.newTrustedTransport(),
+                GsonFactory.getDefaultInstance(),
+                new HttpCredentialsAdapter(credentials))
+                .setApplicationName(APPLICATION_NAME)
+                .build();
     }
 
     /**

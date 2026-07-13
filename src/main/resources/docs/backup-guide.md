@@ -25,22 +25,45 @@ The system executes daily automated backups that upload database SQL dumps and a
 
 ---
 
-## 2. Credentials Requirement & Reusability Guide
+## 2. Authentication Methods & Credentials Setup
 
-### ⚠️ Is the JSON Credentials File Required?
-> [!CAUTION]
-> **YES, IT IS STRICTLY MANDATORY.**
-> The file `src/main/resources/credentials/global-email-monitor-e4ef0cd5ef08.json` contains the Google Service Account private key required to authenticate with the Google Drive API.
-> **Without this file, Google Drive backup uploads will FAIL.**
+The backup service supports **two authentication methods**:
+
+### Method 1: OAuth2 User Refresh Token (Recommended for personal `@gmail.com` accounts)
+* Uses your personal Google account storage quota (15 GB free).
+* Bypasses Service Account 0-byte quota restrictions completely.
+
+#### Step-by-Step OAuth2 Setup (3 Minutes, $0 Cost):
+1. **Create OAuth Client ID**:
+   - Go to [Google Cloud Credentials](https://console.cloud.google.com/apis/credentials).
+   - Click **"+ CREATE CREDENTIALS"** → **"OAuth client ID"**.
+   - Select **Web application**.
+   - Add Authorized redirect URI: `https://developers.google.com/oauthplayground`
+   - Click **Create** and copy your **Client ID** and **Client Secret**.
+
+2. **Generate Refresh Token**:
+   - Go to [Google OAuth 2.0 Playground](https://developers.google.com/oauthplayground/).
+   - Click **OAuth 2.0 configuration** (⚙️ gear icon at top right).
+   - Check **"Use your own OAuth credentials"**.
+   - Enter your **OAuth Client ID** and **OAuth Client Secret**.
+   - In the left API list, expand **Drive API v3** → select `https://www.googleapis.com/auth/drive.file`.
+   - Click **Authorize APIs** and log in with your Google account (`mr.dreamchaser11@gmail.com`).
+   - Click **Exchange authorization code for tokens** and copy the generated **Refresh token**.
+
+3. **Configure Environment Variables (`/etc/crm.env`)**:
+   ```bash
+   GOOGLE_DRIVE_CLIENT_ID="<YOUR_CLIENT_ID>"
+   GOOGLE_DRIVE_CLIENT_SECRET="<YOUR_CLIENT_SECRET>"
+   GOOGLE_DRIVE_REFRESH_TOKEN="<YOUR_REFRESH_TOKEN>"
+   GOOGLE_DRIVE_FOLDER_ID="15Ltp1XqZ9qbw68v1PBeM8FSO3LmSaggW"
+   ```
 
 ---
 
-### Service Account & Project Details
-
+### Method 2: Service Account Credentials (Fallback)
 * **Service Account Email**: `sms-backup-bot@global-email-monitor.iam.gserviceaccount.com`
-* **Google Cloud Project ID**: `global-email-monitor`
-* **Local Project Credentials Path**: `src/main/resources/credentials/global-email-monitor-e4ef0cd5ef08.json`
-* **Target Google Drive Folder**: `TTS_SMS_Daily_Backups`
+* **Local Credentials File**: `src/main/resources/credentials/global-email-monitor-e4ef0cd5ef08.json`
+* Requires the destination Google Drive folder to be shared directly with the Service Account email as **Editor**.
 
 ---
 
@@ -48,9 +71,8 @@ The system executes daily automated backups that upload database SQL dumps and a
 
 To reuse this Google Drive backup setup in any other project:
 
-1. **Copy Credentials File**:
-   Copy `global-email-monitor-e4ef0cd5ef08.json` into the new project's resources directory:
-   `src/main/resources/credentials/global-email-monitor-e4ef0cd5ef08.json`
+1. **Copy Credentials File or Set OAuth2 Tokens**:
+   Set `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, and `GOOGLE_DRIVE_REFRESH_TOKEN` in environment variables.
 
 2. **Create & Share Google Drive Folder**:
    - Open [Google Drive](https://drive.google.com/).
@@ -65,8 +87,12 @@ To reuse this Google Drive backup setup in any other project:
        passcode: ${BACKUP_PASSCODE:Kunal@217}
        google-drive:
          enabled: ${GOOGLE_DRIVE_BACKUP_ENABLED:true}
+         client-id: ${GOOGLE_DRIVE_CLIENT_ID:}
+         client-secret: ${GOOGLE_DRIVE_CLIENT_SECRET:}
+         refresh-token: ${GOOGLE_DRIVE_REFRESH_TOKEN:}
          credentials-path: ${GOOGLE_DRIVE_CREDENTIALS_PATH:credentials/global-email-monitor-e4ef0cd5ef08.json}
          folder-name: ${GOOGLE_DRIVE_FOLDER_NAME:PROJECT_NAME_Daily_Backups}
+         folder-id: ${GOOGLE_DRIVE_FOLDER_ID:15Ltp1XqZ9qbw68v1PBeM8FSO3LmSaggW}
    ```
 
 4. **Isolate File Names**:
