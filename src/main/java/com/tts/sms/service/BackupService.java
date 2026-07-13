@@ -39,11 +39,14 @@ public class BackupService {
     @Value("${app.backup.email}")
     private String backupEmail;
 
-    @Value("${spring.mail.username}")
+    @Value("${app.backup.email-enabled:false}")
+    private boolean emailEnabled;
+
+    @Value("${spring.mail.username:}")
     private String fromEmail;
 
     /**
-     * Executes the full backup process (DB, uploads, logs), uploads to Google Drive, and emails status.
+     * Executes the full backup process (DB, uploads, logs), uploads to Google Drive, and optionally emails status.
      * Temporary files are automatically cleaned up in a finally block.
      */
     public void performBackupAndSendEmail() throws Exception {
@@ -93,8 +96,12 @@ public class BackupService {
                 driveUploadResults.put("logs", googleDriveService.uploadFile(logsZip, "application/zip"));
             }
 
-            // 5. Send Email Notification with Attachments & Google Drive Links
-            sendBackupEmail(sqlFile, uploadsZip, logsZip, driveUploadResults, timestamp);
+            // 5. Send Email Notification (Only if enabled)
+            if (emailEnabled) {
+                sendBackupEmail(sqlFile, uploadsZip, logsZip, driveUploadResults, timestamp);
+            } else {
+                log.info("Email notification is disabled (app.backup.email-enabled=false). Google Drive backup completed without sending email.");
+            }
 
         } finally {
             // 6. Clean up temporary files

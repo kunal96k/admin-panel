@@ -11,6 +11,7 @@ app:
   backup:
     email: ${BACKUP_EMAIL:kunalpatil192001@gmail.com}
     passcode: ${BACKUP_PASSCODE:Kunal@217}
+    email-enabled: ${BACKUP_EMAIL_ENABLED:false}
     google-drive:
       enabled: ${GOOGLE_DRIVE_BACKUP_ENABLED:true}
       client-id: ${GOOGLE_DRIVE_CLIENT_ID:}
