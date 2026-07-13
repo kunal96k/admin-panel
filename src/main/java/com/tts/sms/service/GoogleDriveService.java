@@ -93,10 +93,17 @@ public class GoogleDriveService {
                     log.info("Found shared Google Drive folder: '{}' (ID: {})", file.getName(), file.getId());
                     if (file.getName().equalsIgnoreCase(folderName) ||
                         file.getName().equalsIgnoreCase("TTS_Daily_Backups") ||
-                        file.getName().equalsIgnoreCase("TTS_SMS_Daily_Backups")) {
+                        file.getName().equalsIgnoreCase("TTS_SMS_Daily_Backups") ||
+                        file.getName().toLowerCase().contains("backup")) {
                         log.info("Matched target shared Google Drive folder '{}' with ID: {}", file.getName(), file.getId());
                         return file.getId();
                     }
+                }
+                // Fallback to the single shared folder if only 1 exists
+                if (sharedFiles.size() == 1) {
+                    File singleFolder = sharedFiles.get(0);
+                    log.info("Using single shared Google Drive folder '{}' with ID: {}", singleFolder.getName(), singleFolder.getId());
+                    return singleFolder.getId();
                 }
             }
         } catch (Exception e) {
@@ -158,7 +165,8 @@ public class GoogleDriveService {
             if (parentFolderId != null) {
                 fileMetadata.setParents(Collections.singletonList(parentFolderId));
             } else {
-                log.info("Target folder '{}' not found via query. Uploading to Drive root/shared scope.", targetFolderName);
+                throw new IllegalStateException("The target folder in Google Drive has not been shared with the Service Account. " +
+                        "Please open your 'TTS_Daily_Backups' folder in Google Drive, click Share, and add 'sms-backup-bot@global-email-monitor.iam.gserviceaccount.com' as Editor.");
             }
 
             FileContent mediaContent = new FileContent(mimeType, localFile);
