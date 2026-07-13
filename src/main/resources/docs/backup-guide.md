@@ -77,6 +77,7 @@ app:
   backup:
     email: ${BACKUP_EMAIL:kunalpatil192001@gmail.com}
     passcode: ${BACKUP_PASSCODE:Kunal@217}
+    email-enabled: ${BACKUP_EMAIL_ENABLED:false}
     google-drive:
       enabled: ${GOOGLE_DRIVE_BACKUP_ENABLED:true}
       client-id: ${GOOGLE_DRIVE_CLIENT_ID:}
@@ -95,6 +96,7 @@ app:
 | :--- | :--- | :--- | :--- |
 | `app.backup.email` | `BACKUP_EMAIL` | `kunalpatil192001@gmail.com` | Destination email recipient for status summary reports. |
 | `app.backup.passcode` | `BACKUP_PASSCODE` | `Kunal@217` | Passcode for authorized manual REST API triggers. |
+| `app.backup.email-enabled` | `BACKUP_EMAIL_ENABLED` | `false` | Toggles email notifications on (`true`) or off (`false`). Defaults to `false`. |
 | `app.backup.google-drive.enabled` | `GOOGLE_DRIVE_BACKUP_ENABLED` | `true` | Toggles Google Drive integration on or off. |
 | `app.backup.google-drive.client-id` | `GOOGLE_DRIVE_CLIENT_ID` | (configured) | OAuth2 Client ID for Google API authentication. |
 | `app.backup.google-drive.client-secret` | `GOOGLE_DRIVE_CLIENT_SECRET` | (configured) | OAuth2 Client Secret for Google API authentication. |
