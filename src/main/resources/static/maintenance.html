@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Maintenance - TechnoKraft</title>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --bg: #f8fafc;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary: #818cf8;
+                --secondary: #a78bfa;
+                --text-main: #f8fafc;
+                --text-muted: #94a3b8;
+                --bg: #0f172a;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 540px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+        }
+
+        /* Ambient background glow */
+        .glow {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0) 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* SVG Illustration Styling */
+        .illustration {
+            width: 180px;
+            height: 180px;
+            margin-bottom: 2.5rem;
+        }
+
+        .gear-spin {
+            transform-origin: 100px 100px;
+            animation: spin 20s linear infinite;
+        }
+
+        .gear-spin-reverse {
+            transform-origin: 65px 130px;
+            animation: spin-rev 15s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes spin-rev {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            font-size: 1.05rem;
+            line-height: 1.625;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        /* Card info block */
+        .info-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 2.5rem;
+            backdrop-filter: blur(8px);
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .info-card-icon {
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .info-card-text {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        /* Interactive Refresh Button */
+        .btn-refresh {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            border: none;
+            padding: 0.875rem 2rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35);
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn-refresh svg {
+            transition: transform 0.4s ease;
+        }
+
+        /* Auto check status indicator */
+        .auto-check {
+            margin-top: 1.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .pulse-dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.3); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="glow"></div>
+
+    <!-- Self-contained Premium SVG Illustration -->
+    <svg class="illustration" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Server Box -->
+        <rect x="40" y="70" width="120" height="75" rx="8" fill="rgba(102, 126, 234, 0.1)" stroke="var(--primary)" stroke-width="3" />
+        <!-- Server line partitions -->
+        <line x1="40" y1="95" x2="160" y2="95" stroke="var(--primary)" stroke-width="1.5" stroke-dasharray="4 4" />
+        <line x1="40" y1="120" x2="160" y2="120" stroke="var(--primary)" stroke-width="1.5" stroke-dasharray="4 4" />
+        <!-- Status LEDs -->
+        <circle cx="55" cy="82" r="3" fill="var(--primary)" />
+        <circle cx="67" cy="82" r="3" fill="var(--secondary)" />
+        <circle cx="55" cy="107" r="3" fill="var(--primary)" />
+        <circle cx="67" cy="107" r="3" fill="var(--secondary)" />
+        <circle cx="55" cy="132" r="3" fill="#cbd5e1" />
+        <circle cx="67" cy="132" r="3" fill="#cbd5e1" />
+
+        <!-- Gear 1 (Top Right) -->
+        <g class="gear-spin" fill="none" stroke="var(--primary)" stroke-width="3">
+            <circle cx="100" cy="100" r="16" />
+            <path d="M100,78 L100,84 M100,116 L100,122 M78,100 L84,100 M116,100 L122,100 M84,84 L89,89 M111,111 L116,116 M84,116 L89,111 M111,89 L116,84" stroke-linecap="round" />
+        </g>
+
+        <!-- Gear 2 (Lower Left) -->
+        <g class="gear-spin-reverse" fill="none" stroke="var(--secondary)" stroke-width="2.5">
+            <circle cx="65" cy="130" r="10" />
+            <path d="M65,116 L65,120 M65,140 L65,144 M51,130 L55,130 M75,130 L79,130 M55,120 L58,123 M72,137 L75,140 M55,140 L58,137 M72,123 L75,120" stroke-linecap="round" />
+        </g>
+    </svg>
+
+    <h1>System Under Maintenance</h1>
+    <p>TechnoKraft Admin Console is currently undergoing scheduled optimization to serve you better. We'll be back online shortly.</p>
+
+    <div class="info-card">
+        <div class="info-card-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+        <div class="info-card-text">
+            For critical updates, please contact the System Administrator or try refreshing the page.
+        </div>
+    </div>
+
+    <div>
+        <button onclick="window.location.reload();" class="btn-refresh">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5"></path>
+            </svg>
+            Check Status Now
+        </button>
+    </div>
+
+    <div class="auto-check">
+        <div class="pulse-dot"></div>
+        Auto-refreshing in 30 seconds
+    </div>
+</div>
+
+<script>
+    // Automatic refresh check every 30 seconds
+    setTimeout(function() {
+        window.location.reload();
+    }, 30000);
+</script>
+</body>
+</html>

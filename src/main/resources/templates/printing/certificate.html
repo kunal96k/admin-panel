@@ -28,154 +28,204 @@
     <main layout:fragment="content">
 
         <div class="container-fluid">
-            <!-- Page Header -->
-            <div class="page-header">
-                <h2><i class="bi bi-award me-2"></i>Student Certificate Management</h2>
-                <p class="mb-0 opacity-90">Issue and manage student certificates efficiently</p>
-            </div>
-            <!-- Statistics Cards -->
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="stats-card">
-                        <div class="stats-icon total">
-                            <i class="bi bi-people-fill"></i>
-                        </div>
-                        <div class="stats-number" id="totalCount">0</div>
-                        <div class="stats-label">Total Students</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="stats-card">
-                        <div class="stats-icon issued">
-                            <i class="bi bi-check-circle-fill"></i>
-                        </div>
-                        <div class="stats-number" id="issuedCount">0</div>
-                        <div class="stats-label">Certificates Issued</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="stats-card">
-                        <div class="stats-icon pending">
-                            <i class="bi bi-clock-fill"></i>
-                        </div>
-                        <div class="stats-number" id="pendingCount">0</div>
-                        <div class="stats-label">Not Issued</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row mb-4">
-                <!-- Generate Certificate Card -->
-                <div class="col-md-4">
-                    <div class="card border-success shadow-sm h-100">
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title text-success">
-                                <i class="bi bi-award-fill me-2"></i>Generate Certificate
-                            </h5>
-                            <p class="card-text text-muted small mb-3">
-                                Search and select specific students to generate certificates. Works for both new and old
-                                admissions.
-                            </p>
-                            <div class="mt-auto">
-                                <button id="btnAutoGenerate" class="btn btn-success w-100">
-                                    <i class="bi bi-stars me-2"></i>Generate Certificate
-                                </button>
+            <!-- Statistics Cards — collapsed by default -->
+            <div class="collapse" id="statsCardsPanel">
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="stats-card">
+                            <div class="stats-icon total">
+                                <i class="bi bi-people-fill"></i>
                             </div>
+                            <div class="stats-number" id="totalCount">0</div>
+                            <div class="stats-label">Total Students</div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Manual Generate Card -->
-                <div class="col-md-4">
-                    <div class="card border-warning shadow-sm h-100">
-                        <div class="card-body">
-                            <h5 class="card-title text-warning">
-                                <i class="bi bi-pencil-square me-2"></i>Manual Entry
-                            </h5>
-                            <p class="card-text text-muted small">
-                                Create certificate manually for backup cases or missing records
-                            </p>
-                            <div class="d-flex gap-2">
-                                <button id="btnManualGenerate" class="btn btn-warning flex-fill">
-                                    <i class="bi bi-plus-circle me-1"></i>Create
-                                </button>
-                                <button id="btnViewManualLogs" class="btn btn-outline-warning flex-fill">
-                                    <i class="bi bi-list-check me-1"></i>Logs
-                                </button>
+                    <div class="col-md-4">
+                        <div class="stats-card">
+                            <div class="stats-icon issued">
+                                <i class="bi bi-check-circle-fill"></i>
                             </div>
+                            <div class="stats-number" id="issuedCount">0</div>
+                            <div class="stats-label">Certificates Issued</div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Import/Export Card -->
-                <div class="col-md-4">
-                    <div class="card border-info shadow-sm h-100">
-                        <div class="card-body">
-                            <h5 class="card-title text-info">
-                                <i class="bi bi-file-earmark-arrow-up me-2"></i>Import/Export
-                            </h5>
-                            <p class="card-text text-muted small">
-                                Bulk import old admission certificates or export current data
-                            </p>
-                            <div class="d-flex gap-2 mb-2">
-                                <button id="btnImportCSV" class="btn btn-info flex-fill">
-                                    <i class="bi bi-upload me-1"></i>Import
-                                </button>
-                                <button id="btnExportCSV" class="btn btn-info flex-fill">
-                                    <i class="bi bi-download me-1"></i>Export
-                                </button>
+                    <div class="col-md-4">
+                        <div class="stats-card">
+                            <div class="stats-icon pending">
+                                <i class="bi bi-clock-fill"></i>
                             </div>
+                            <div class="stats-number" id="pendingCount">0</div>
+                            <div class="stats-label">Not Issued</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Filter Section -->
-            <div class="action-card">
-                <div class="row align-items-center">
-                    <div class="col-lg-3 mb-3 mb-lg-0">
-                        <label class="form-label mb-2">Filter by Course</label>
-                        <div class="position-relative">
-                            <input type="text" class="form-control mb-2" id="courseSearchInput"
-                                placeholder="Search courses...">
-
-                            <select class="form-select" id="courseFilter" size="5"
-                                style="max-height: 200px; overflow-y: auto;">
-                                <option value="">-- All Courses --</option>
-                                <option value="JAVA CORE AND ADVANCE">JAVA CORE AND ADVANCE</option>
-                                <option value="SPRING BOOT">SPRING BOOT</option>
-                                <option value="PYTHON">PYTHON</option>
-                                <option value="WEB DEVELOPMENT">WEB DEVELOPMENT</option>
-                                <option value="DATA SCIENCE">DATA SCIENCE</option>
-                            </select>
+            <!-- Operations Cards — collapsed by default -->
+            <div class="collapse" id="operationsCardsPanel">
+                <div class="row mb-4">
+                    <!-- Generate Certificate Card -->
+                    <div class="col-md-4">
+                        <div class="card border-success shadow-sm h-100">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title text-success">
+                                    <i class="bi bi-award-fill me-2"></i>Generate Certificate
+                                </h5>
+                                <p class="card-text text-muted small mb-3">
+                                    Search and select specific students to generate certificates. Works for both new and old
+                                    admissions.
+                                </p>
+                                <div class="mt-auto">
+                                    <button id="btnAutoGenerate" class="btn btn-success w-100">
+                                        <i class="bi bi-stars me-2"></i>Generate Certificate
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-lg-3 mb-3 mb-lg-0">
-                        <label class="form-label mb-2">Filter by Status</label>
-                        <select class="form-select" id="statusFilter">
-                            <option value="">-- All Status --</option>
-                            <option value="Issued">Issued</option>
-                            <option value="Not Issued">Not Issued</option>
-                        </select>
+
+                    <!-- Manual Generate Card -->
+                    <div class="col-md-4">
+                        <div class="card border-warning shadow-sm h-100">
+                            <div class="card-body">
+                                <h5 class="card-title text-warning">
+                                    <i class="bi bi-pencil-square me-2"></i>Manual Entry
+                                </h5>
+                                <p class="card-text text-muted small">
+                                    Create certificate manually for backup cases or missing records
+                                </p>
+                                <div class="d-flex gap-2">
+                                    <button id="btnManualGenerate" class="btn btn-warning flex-fill">
+                                        <i class="bi bi-plus-circle me-1"></i>Create
+                                    </button>
+                                    <button id="btnViewManualLogs" class="btn btn-outline-warning flex-fill">
+                                        <i class="bi bi-list-check me-1"></i>Logs
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-lg-6">
-                        <label class="form-label mb-2">Search</label>
-                        <div class="input-group mb-2">
-                            <span class="input-group-text bg-white">
-                                <i class="bi bi-search"></i>
+
+                    <!-- Import/Export Card -->
+                    <div class="col-md-4">
+                        <div class="card border-info shadow-sm h-100">
+                            <div class="card-body">
+                                <h5 class="card-title text-info">
+                                    <i class="bi bi-file-earmark-arrow-up me-2"></i>Import/Export
+                                </h5>
+                                <p class="card-text text-muted small">
+                                    Bulk import old admission certificates or export current data
+                                </p>
+                                <div class="d-flex gap-2 mb-2">
+                                    <button id="btnImportCSV" class="btn btn-info flex-fill">
+                                        <i class="bi bi-upload me-1"></i>Import
+                                    </button>
+                                    <button id="btnExportCSV" class="btn btn-info flex-fill">
+                                        <i class="bi bi-download me-1"></i>Export
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Bar: Search + Page Size + Toggle Buttons -->
+            <div class="action-card mb-3 cert-action-bar">
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <!-- Search input grows to fill available space -->
+                    <div class="flex-grow-1" style="min-width:180px; max-width:100%;">
+                        <div class="input-group cert-ig">
+                            <span class="input-group-text cert-ig-addon">
+                                <i class="bi bi-search text-muted"></i>
                             </span>
-                            <input type="text" class="form-control" id="searchInput"
+                            <input type="text" class="form-control cert-ctrl" id="searchInput"
                                 placeholder="Search by name, registration no., certificate no...">
-                            <select class="form-select" style="max-width: 150px;" id="pageSizeSelect">
-                                <option value="25" selected>25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
+                        </div>
+                    </div>
+                    <!-- Page Size -->
+                    <select class="form-select cert-ctrl" id="pageSizeSelect" style="width:72px; flex-shrink:0;">
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <!-- Toggle Buttons same height via cert-btn class -->
+                    <button class="btn btn-sm btn-outline-secondary cert-btn position-relative" id="btnToggleStats" type="button" aria-expanded="false" aria-controls="statsCardsPanel">
+                        <i class="bi bi-graph-up me-1"></i>Stats
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary cert-btn position-relative" id="btnToggleOps" type="button" aria-expanded="false" aria-controls="operationsCardsPanel">
+                        <i class="bi bi-gear-fill me-1"></i>Operations
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary cert-btn position-relative" id="btnToggleFilters" type="button" aria-expanded="false" aria-controls="advancedFiltersPanel">
+                        <i class="bi bi-funnel-fill me-1"></i>Filters
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary d-none" id="filterBadge">0</span>
+                    </button>
+                </div>
+            </div>
+
+
+            <!-- Collapsible Filters Panel -->
+            <div class="collapse mb-3" id="advancedFiltersPanel">
+                <div class="card card-body shadow-sm border" style="border-radius:12px; background:#f8fafc; padding:1rem;">
+                    <div class="row g-2 align-items-end">
+
+                        <!-- Course Filter (typeahead chips) -->
+                        <div class="col-12 col-sm-6 col-lg">
+                            <label class="form-label mb-1 fw-semibold small text-muted">Course</label>
+                            <!-- Hidden select kept for JS compatibility -->
+                            <select id="courseFilter" style="display:none;" aria-hidden="true">
+                                <option value=""></option>
+                            </select>
+                            <div class="course-typeahead" id="courseTypeahead">
+                                <div class="course-chips-input" id="courseChipsInput">
+                                    <div class="course-chips-wrap" id="courseChipsWrap">
+                                        <input type="text"
+                                               id="courseSearchInputFilter"
+                                               class="course-type-input"
+                                               placeholder="Search course..."
+                                               autocomplete="off"
+                                               spellcheck="false">
+                                    </div>
+                                </div>
+                                <ul class="course-dropdown" id="courseDropdownFilter" role="listbox"></ul>
+                            </div>
+                        </div>
+
+                        <!-- Status Filter -->
+                        <div class="col-12 col-sm-6 col-lg">
+                            <label class="form-label mb-1 fw-semibold small text-muted">Status</label>
+                            <select class="form-select form-select-sm" id="statusFilter" style="font-size:0.82rem;">
+                                <option value="">-- All Status --</option>
+                                <option value="Issued">Issued</option>
+                                <option value="Not Issued">Not Issued</option>
                             </select>
                         </div>
 
+                        <!-- From Date -->
+                        <div class="col-12 col-sm-6 col-lg">
+                            <label class="form-label mb-1 fw-semibold small text-muted">Issue Date From</label>
+                            <input type="date" class="form-control form-control-sm" id="certFromDate"
+                                   style="font-size:0.82rem;">
+                        </div>
+
+                        <!-- To Date -->
+                        <div class="col-12 col-sm-6 col-lg">
+                            <label class="form-label mb-1 fw-semibold small text-muted">Issue Date To</label>
+                            <input type="date" class="form-control form-control-sm" id="certToDate"
+                                   style="font-size:0.82rem;">
+                        </div>
+
+                        <!-- Clear Filters Button -->
+                        <div class="col-12 col-sm-6 col-lg-auto">
+                            <button class="btn btn-sm w-100" id="btnClearFilters"
+                                    style="white-space:nowrap; background:#fff1f2; color:#e11d48; border:1.5px solid #fca5a5; border-radius:8px; padding:5px 14px; transition:all .18s ease;">
+                                <i class="bi bi-x-circle me-1"></i>Clear Filters
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
+
 
             <!-- Certificate Table -->
             <div class="table-card">

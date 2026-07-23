@@ -45,73 +45,106 @@ public class BackupService {
     @Value("${spring.mail.username:}")
     private String fromEmail;
 
+    private static final String DOMAIN_PREFIX = "ttsnashik.com";
+
     /**
      * Executes the full backup process (DB, uploads, logs), uploads to Google Drive, and optionally emails status.
      * Temporary files are automatically cleaned up in a finally block.
      */
     public void performBackupAndSendEmail() throws Exception {
-        log.info("Starting backup process...");
+        log.info("========================================");
+        log.info("STARTING GOOGLE DRIVE BACKUP PROCESS ({})", DOMAIN_PREFIX);
+        log.info("========================================");
 
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         File tempDir = new File(System.getProperty("java.io.tmpdir"));
         
-        File sqlFile = new File(tempDir, "tts_sms_db_backup_" + timestamp + ".sql");
-        File uploadsZip = new File(tempDir, "tts_sms_uploads_backup_" + timestamp + ".zip");
-        File logsZip = new File(tempDir, "tts_sms_logs_backup_" + timestamp + ".zip");
+        File sqlDumpFile = new File(tempDir, DOMAIN_PREFIX + "_db_backup_" + timestamp + ".sql");
+        File errFile = new File(tempDir, DOMAIN_PREFIX + "_db_backup_err_" + timestamp + ".txt");
+        File dbZip = new File(tempDir, DOMAIN_PREFIX + "_db_backup_" + timestamp + ".zip");
+        File uploadsZip = new File(tempDir, DOMAIN_PREFIX + "_uploads_backup_" + timestamp + ".zip");
+        File logsZip = new File(tempDir, DOMAIN_PREFIX + "_logs_backup_" + timestamp + ".zip");
 
         Map<String, Map<String, String>> driveUploadResults = new HashMap<>();
 
         try {
             // 1. Generate MySQL Database Backup
-            generateDbBackup(sqlFile);
+            generateDbBackup(sqlDumpFile, errFile);
+            log.info("mysqldump completed successfully. Raw SQL size: {} bytes", sqlDumpFile.length());
 
-            // 2. Zip Uploads Folder
-            File uploadsDir = new File("uploads");
-            if (uploadsDir.exists() && uploadsDir.isDirectory()) {
-                log.info("Zipping uploads directory from: {}", uploadsDir.getAbsolutePath());
-                zipDirectory(uploadsDir, uploadsZip);
+            // 2. Compress SQL dump into ZIP archive
+            log.info("Creating Database ZIP → {}", dbZip.getAbsolutePath());
+            try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(dbZip))) {
+                String sqlEntryName = DOMAIN_PREFIX + "_db_backup_" + timestamp + ".sql";
+                zos.putNextEntry(new ZipEntry(sqlEntryName));
+                java.nio.file.Files.copy(sqlDumpFile.toPath(), zos);
+                zos.closeEntry();
+            }
+            log.info("Database ZIP created successfully. Zipped size: {} bytes", dbZip.length());
+
+            // 3. Zip Uploads Folder (if directory exists and contains files)
+            java.nio.file.Path uploadsPath = java.nio.file.Paths.get("uploads");
+            boolean uploadsZipped = false;
+            if (java.nio.file.Files.exists(uploadsPath) && java.nio.file.Files.isDirectory(uploadsPath) && hasFiles(uploadsPath)) {
+                log.info("Zipping uploads directory from: {}", uploadsPath.toAbsolutePath());
+                createDirectoryZip(uploadsZip, uploadsPath, "uploads");
                 log.info("Uploads directory zipped successfully to: {} (Size: {} bytes)", uploadsZip.getAbsolutePath(), uploadsZip.length());
+                uploadsZipped = uploadsZip.length() > 100;
             } else {
-                log.warn("Uploads directory not found at: {}", uploadsDir.getAbsolutePath());
+                log.warn("Uploads directory not found or empty at: {} — skipping uploads backup", uploadsPath.toAbsolutePath());
             }
 
-            // 3. Zip Logs Folder
-            File logsDir = new File("logs");
-            if (logsDir.exists() && logsDir.isDirectory()) {
-                log.info("Zipping logs directory from: {}", logsDir.getAbsolutePath());
-                zipDirectory(logsDir, logsZip);
+            // 4. Zip Logs Folder (if directory exists and contains files)
+            java.nio.file.Path logsPath = java.nio.file.Paths.get("logs");
+            boolean logsZipped = false;
+            if (java.nio.file.Files.exists(logsPath) && java.nio.file.Files.isDirectory(logsPath) && hasFiles(logsPath)) {
+                log.info("Zipping logs directory from: {}", logsPath.toAbsolutePath());
+                createDirectoryZip(logsZip, logsPath, "logs");
                 log.info("Logs directory zipped successfully to: {} (Size: {} bytes)", logsZip.getAbsolutePath(), logsZip.length());
+                logsZipped = logsZip.length() > 100;
             } else {
-                log.warn("Logs directory not found at: {}", logsDir.getAbsolutePath());
+                log.warn("Logs directory not found or empty at: {} — skipping logs backup", logsPath.toAbsolutePath());
             }
 
-            // 4. Upload Files to Google Drive
-            if (sqlFile.exists() && sqlFile.length() > 0) {
-                driveUploadResults.put("db", googleDriveService.uploadFile(sqlFile, "application/sql"));
+            // 5. Upload Backup Archives to Google Drive
+            log.info("Uploading backup files to Google Drive...");
+            if (dbZip.exists() && dbZip.length() > 0) {
+                driveUploadResults.put("db", googleDriveService.uploadFile(dbZip, "application/zip"));
             }
-            if (uploadsZip.exists() && uploadsZip.length() > 0) {
+            if (uploadsZipped && uploadsZip.exists() && uploadsZip.length() > 0) {
                 driveUploadResults.put("uploads", googleDriveService.uploadFile(uploadsZip, "application/zip"));
             }
-            if (logsZip.exists() && logsZip.length() > 0) {
+            if (logsZipped && logsZip.exists() && logsZip.length() > 0) {
                 driveUploadResults.put("logs", googleDriveService.uploadFile(logsZip, "application/zip"));
             }
+            log.info("Google Drive upload completed successfully.");
 
-            // 5. Send Email Notification (Only if enabled)
+            // 6. Send Email Notification (Only if explicitly enabled, without attachments)
             if (emailEnabled) {
-                sendBackupEmail(sqlFile, uploadsZip, logsZip, driveUploadResults, timestamp);
+                sendBackupEmail(driveUploadResults, timestamp);
             } else {
                 log.info("Email notification is disabled (app.backup.email-enabled=false). Google Drive backup completed without sending email.");
             }
 
+            log.info("========================================");
+            log.info("BACKUP COMPLETED SUCCESSFULLY ({})", DOMAIN_PREFIX);
+            log.info("========================================");
+
+        } catch (Exception e) {
+            log.error("Backup process failed: {}", e.getMessage(), e);
+            sendFailureEmail(e, timestamp);
+            throw e;
         } finally {
-            // 6. Clean up temporary files
-            cleanupTempFile(sqlFile);
+            // 7. Clean up temporary files
+            cleanupTempFile(sqlDumpFile);
+            cleanupTempFile(errFile);
+            cleanupTempFile(dbZip);
             cleanupTempFile(uploadsZip);
             cleanupTempFile(logsZip);
         }
     }
 
-    private void generateDbBackup(File outputFile) throws Exception {
+    private void generateDbBackup(File outputFile, File errorLog) throws Exception {
         Map<String, String> dbParams = parseJdbcUrl(dbUrl);
         String host = dbParams.get("host");
         String port = dbParams.get("port");
@@ -125,37 +158,39 @@ public class BackupService {
         command.add("-P" + port);
         command.add("-u" + dbUsername);
         if (dbPassword != null && !dbPassword.isEmpty()) {
-            command.add("-p" + dbPassword);
+            command.add("--password=" + dbPassword);
         }
+        command.add("--single-transaction");
+        command.add("--routines");
+        command.add("--triggers");
+        command.add("--no-tablespaces");
         command.add(database);
 
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectOutput(ProcessBuilder.Redirect.to(outputFile));
-        
-        File errorLog = File.createTempFile("mysqldump_err", ".log");
         pb.redirectError(ProcessBuilder.Redirect.to(errorLog));
 
-        try {
-            Process process = pb.start();
-            int exitCode = process.waitFor();
+        Process process = pb.start();
+        boolean finished = process.waitFor(90, java.util.concurrent.TimeUnit.SECONDS);
+        if (!finished) {
+            process.destroyForcibly();
+            throw new RuntimeException("The database backup process timed out (exceeded 90 seconds).");
+        }
 
-            if (exitCode != 0) {
-                StringBuilder errorContent = new StringBuilder();
+        int exitCode = process.exitValue();
+        if (exitCode != 0) {
+            StringBuilder errorContent = new StringBuilder();
+            if (errorLog.exists()) {
                 try (BufferedReader reader = new BufferedReader(new FileReader(errorLog))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         errorContent.append(line).append("\n");
                     }
                 }
-                String errMsg = errorContent.toString();
-                log.error("mysqldump process failed with exit code: {}. Errors: {}", exitCode, errMsg);
-                throw new RuntimeException("mysqldump failed with exit code " + exitCode + ". Error: " + errMsg);
             }
-            log.info("Database backup created successfully: {} (Size: {} bytes)", outputFile.getAbsolutePath(), outputFile.length());
-        } finally {
-            if (errorLog.exists()) {
-                errorLog.delete();
-            }
+            String errMsg = errorContent.toString().trim();
+            log.error("mysqldump process failed with exit code: {}. Errors: {}", exitCode, errMsg);
+            throw new RuntimeException("mysqldump failed with exit code " + exitCode + ". Details: " + errMsg);
         }
     }
 
@@ -194,84 +229,90 @@ public class BackupService {
         return params;
     }
 
-    private void zipDirectory(File sourceFolder, File zipFile) throws IOException {
-        try (FileOutputStream fos = new FileOutputStream(zipFile);
-             ZipOutputStream zos = new ZipOutputStream(fos)) {
-            zipFolderContents(sourceFolder, sourceFolder, zos);
+    private boolean hasFiles(java.nio.file.Path directory) {
+        try (var stream = java.nio.file.Files.walk(directory)) {
+            return stream.anyMatch(path -> !java.nio.file.Files.isDirectory(path));
+        } catch (IOException e) {
+            return false;
         }
     }
 
-    private void zipFolderContents(File rootFolder, File sourceFolder, ZipOutputStream zos) throws IOException {
-        File[] files = sourceFolder.listFiles();
-        if (files == null) return;
-        byte[] buffer = new byte[4096];
-        for (File file : files) {
-            if (file.isDirectory()) {
-                zipFolderContents(rootFolder, file, zos);
-            } else {
-                String relativePath = rootFolder.toURI().relativize(file.toURI()).getPath();
-                relativePath = relativePath.replace('\\', '/');
-                ZipEntry entry = new ZipEntry(relativePath);
-                zos.putNextEntry(entry);
-                try (FileInputStream fis = new FileInputStream(file)) {
-                    int length;
-                    while ((length = fis.read(buffer)) > 0) {
-                        zos.write(buffer, 0, length);
-                    }
-                }
-                zos.closeEntry();
-            }
+    private void createDirectoryZip(File zipFile, java.nio.file.Path directory, String prefix) throws IOException {
+        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
+            java.nio.file.Files.walk(directory)
+                    .filter(path -> !java.nio.file.Files.isDirectory(path))
+                    .forEach(path -> {
+                        String entryName = prefix + "/" + directory.relativize(path).toString().replace(File.separatorChar, '/');
+                        try {
+                            zos.putNextEntry(new ZipEntry(entryName));
+                            java.nio.file.Files.copy(path, zos);
+                            zos.closeEntry();
+                        } catch (IOException e) {
+                            log.warn("Could not add file to ZIP: {} — {}", path, e.getMessage());
+                        }
+                    });
         }
     }
 
-    private void sendBackupEmail(File sqlFile, File uploadsZip, File logsZip, Map<String, Map<String, String>> driveResults, String timestamp) throws Exception {
-        log.info("Sending backup email to: {}", backupEmail);
+    private void sendBackupEmail(Map<String, Map<String, String>> driveResults, String timestamp) throws Exception {
+        log.info("Sending backup success email notification to: {}", backupEmail);
 
         MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
 
         helper.setFrom(fromEmail);
         helper.setTo(backupEmail);
-        helper.setSubject("TechnoKraft Daily System Backup - " + timestamp);
+        helper.setSubject("TechnoKraft Daily System Backup Summary - " + timestamp);
 
         StringBuilder emailBody = new StringBuilder();
         emailBody.append("<h3>TechnoKraft CRM System Backup Summary</h3>");
-        emailBody.append("<p>An automated backup execution completed on <b>").append(timestamp).append("</b>.</p>");
+        emailBody.append("<p>An automated backup execution completed successfully on <b>").append(timestamp).append("</b>.</p>");
 
         emailBody.append("<h4>☁️ Google Drive Backup Status:</h4>");
         emailBody.append("<ul>");
-        appendDriveLinkInfo(emailBody, "Database SQL Backup", driveResults.get("db"));
-        appendDriveLinkInfo(emailBody, "Uploads Directory Zip", driveResults.get("uploads"));
-        appendDriveLinkInfo(emailBody, "Logs Directory Zip", driveResults.get("logs"));
+        appendDriveLinkInfo(emailBody, "Database ZIP Backup", driveResults.get("db"));
+        appendDriveLinkInfo(emailBody, "Uploads Directory ZIP", driveResults.get("uploads"));
+        appendDriveLinkInfo(emailBody, "Logs Directory ZIP", driveResults.get("logs"));
         emailBody.append("</ul>");
-
-        emailBody.append("<h4>📎 Local Email Attachments:</h4>");
-        emailBody.append("<ul>");
         
-        if (sqlFile.exists() && sqlFile.length() > 0) {
-            helper.addAttachment(sqlFile.getName(), new FileSystemResource(sqlFile));
-            emailBody.append("<li><b>Database SQL Backup:</b> ").append(sqlFile.getName()).append(" (").append(sqlFile.length()).append(" bytes)</li>");
-        } else {
-            emailBody.append("<li><span style='color:red;'>Database SQL Backup: Failed to generate</span></li>");
-        }
-
-        if (uploadsZip.exists() && uploadsZip.length() > 0) {
-            helper.addAttachment(uploadsZip.getName(), new FileSystemResource(uploadsZip));
-            emailBody.append("<li><b>Uploads Folder Zip:</b> ").append(uploadsZip.getName()).append(" (").append(uploadsZip.length()).append(" bytes)</li>");
-        }
-
-        if (logsZip.exists() && logsZip.length() > 0) {
-            helper.addAttachment(logsZip.getName(), new FileSystemResource(logsZip));
-            emailBody.append("<li><b>Logs Folder Zip:</b> ").append(logsZip.getName()).append(" (").append(logsZip.length()).append(" bytes)</li>");
-        }
-        
-        emailBody.append("</ul>");
+        emailBody.append("<p><i>Note: Backup files are stored exclusively on Google Drive. No local files were attached.</i></p>");
         emailBody.append("<p>Best Regards,<br/>System Automation Service</p>");
 
         helper.setText(emailBody.toString(), true);
 
         mailSender.send(message);
         log.info("Backup notification email sent successfully.");
+    }
+
+    private void sendFailureEmail(Throwable t, String timestamp) {
+        try {
+            log.info("Sending backup failure email to: {}", backupEmail);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            
+            helper.setFrom(fromEmail);
+            helper.setTo(backupEmail);
+            helper.setSubject("❌ BACKUP FAILED: " + DOMAIN_PREFIX + " - " + timestamp);
+            
+            StringBuilder emailBody = new StringBuilder();
+            emailBody.append("<h3>" + DOMAIN_PREFIX + " CRM System Backup Failed</h3>");
+            emailBody.append("<p>An automated backup execution failed on <b>").append(timestamp).append("</b>.</p>");
+            emailBody.append("<p><b>Error Details:</b></p>");
+            emailBody.append("<pre style='color:red;'>").append(t.toString()).append("</pre>");
+            
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            t.printStackTrace(pw);
+            emailBody.append("<p><b>Stack Trace:</b></p>");
+            emailBody.append("<pre style='font-size:11px; background-color:#f8f9fa; padding:10px;'>").append(sw.toString()).append("</pre>");
+            
+            emailBody.append("<p>Best Regards,<br/>System Automation Service</p>");
+            helper.setText(emailBody.toString(), true);
+            mailSender.send(message);
+            log.info("Backup failure email sent successfully.");
+        } catch (Exception e) {
+            log.error("Failed to send backup failure email: {}", e.getMessage(), e);
+        }
     }
 
     private void appendDriveLinkInfo(StringBuilder sb, String title, Map<String, String> result) {

@@ -21,6 +21,7 @@
     let totalElements = 0;
 
     let currentSearchTerm = '';
+    let currentSearchField = 'ALL';
     let currentStatusFilter = '';
     let currentCourseFilter = '';
     let currentFromDate = '';
@@ -213,6 +214,9 @@
         loadEnquiries();
         initializeCourseSelector();
         await loadCoursesForFilter();
+        initCourseTypeahead();    // initialize custom typeahead dropdown chips
+        initFilterToggle();       // initialize advanced collapsible filters toggle
+        updateFilterBadge();      // update initial filters badge state
     });
 
     function initializeCourseSelector() {
@@ -406,11 +410,9 @@ async function loadCoursesForSearch() {
         document.querySelectorAll('.action-menu-trigger').forEach(trigger => {
             trigger.addEventListener('click', function(e) {
                 e.stopPropagation();
-                const menu = this.nextElementSibling;
-                document.querySelectorAll('.action-menu').forEach(m => {
-                    if (m !== menu) m.classList.remove('show');
-                });
-                menu.classList.toggle('show');
+                if (typeof openActionMenuFixed === 'function') {
+                    openActionMenuFixed(this);
+                }
             });
         });
 
@@ -478,8 +480,9 @@ async function loadCoursesForSearch() {
             });
         }
 
-        // Search with debounce
-       document.getElementById('searchInput')?.addEventListener('input', debounce(triggerSearch, 500));
+        // Search with debounce and field selection
+        document.getElementById('searchInput')?.addEventListener('input', debounce(triggerSearch, 500));
+        document.getElementById('searchFieldSelect')?.addEventListener('change', triggerSearch);
 
        const pageSizeSelect = document.getElementById('pageSizeSelect');
        if (pageSizeSelect) {
@@ -491,18 +494,19 @@ async function loadCoursesForSearch() {
        }
 
         // Status Filter
-        document.getElementById('statusFilter')?.addEventListener('change', triggerSearch);
+        document.getElementById('statusFilter')?.addEventListener('change', () => { triggerSearch(); updateFilterBadge(); });
 
         // Course Filter
-        document.getElementById('courseFilter')?.addEventListener('change', triggerSearch);
-        document.getElementById('courseSearchInputFilter')?.addEventListener('input', filterCourseList);
+        document.getElementById('courseFilter')?.addEventListener('change', () => { triggerSearch(); updateFilterBadge(); });
 
         // Date Filters
-        document.getElementById('fromDateFilter')?.addEventListener('change', triggerSearch);
-        document.getElementById('toDateFilter')?.addEventListener('change', triggerSearch);
+        document.getElementById('fromDateFilter')?.addEventListener('change', () => { triggerSearch(); updateFilterBadge(); });
+        document.getElementById('toDateFilter')?.addEventListener('change', () => { triggerSearch(); updateFilterBadge(); });
+        document.getElementById('fromDateFilter')?.addEventListener('input', () => { triggerSearch(); updateFilterBadge(); });
+        document.getElementById('toDateFilter')?.addEventListener('input', () => { triggerSearch(); updateFilterBadge(); });
 
         // Clear Filters
-        document.getElementById('btnClearFilters')?.addEventListener('click', clearAllFilters);
+        document.getElementById('btnClearFilters')?.addEventListener('click', () => { clearAllFilters(); updateFilterBadge(); });
     }
 
     // Load Enquiries from API
@@ -529,13 +533,14 @@ async function loadCoursesForSearch() {
 
                 const searchDTO = {
                     searchTerm: (currentSearchTerm || '').trim() || null,
+                    searchField: (currentSearchField || 'ALL').trim(),
                     status: (currentStatusFilter || '').trim() || null,
                     course: (currentCourseFilter || '').trim() || null,
                     fromDate: (currentFromDate || '').trim() || null,
                     toDate: (currentToDate || '').trim() || null,
                     page: page,
                     size: size,
-                    sortBy: 'createdAt',
+                    sortBy: 'enquiryDate',
                     sortDirection: 'DESC'
                 };
 
@@ -578,12 +583,27 @@ async function loadCoursesForSearch() {
     // Search Enquiries with filters combined
     async function triggerSearch() {
         const searchTerm = document.getElementById('searchInput')?.value.trim() || '';
+        const searchField = document.getElementById('searchFieldSelect')?.value || 'ALL';
         const status = document.getElementById('statusFilter')?.value || '';
         const course = document.getElementById('courseFilter')?.value || '';
         const fromDate = document.getElementById('fromDateFilter')?.value || '';
         const toDate = document.getElementById('toDateFilter')?.value || '';
 
+        if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) {
+            Swal.fire({
+                title: 'Invalid Date Range',
+                text: 'From Date cannot be after To Date',
+                icon: 'warning',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+            return;
+        }
+
         currentSearchTerm = searchTerm;
+        currentSearchField = searchField;
         currentStatusFilter = status;
         currentCourseFilter = course;
         currentFromDate = fromDate;
@@ -593,24 +613,209 @@ async function loadCoursesForSearch() {
         await loadEnquiries(0, pageSize);
     }
 
+    /* ── Course Typeahead Chip Widget ── */
+    let selectedCourseChips = [];   // course names currently selected
+
+    function populateCourseFilter(courses) {
+        const select = document.getElementById('courseFilter');
+        if (!select) return;
+        select.innerHTML = '<option value=""></option>';
+        (courses || []).forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.courseName;
+            opt.textContent = c.courseName;
+            select.appendChild(opt);
+        });
+    }
+
+    function syncCourseFilterSelect() {
+        const select = document.getElementById('courseFilter');
+        if (!select) return;
+        const val = selectedCourseChips[0] || '';
+        select.value = val;
+        // fire change to trigger triggerSearch
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function renderCourseChips() {
+        const wrap = document.getElementById('courseChipsWrap');
+        const input = document.getElementById('courseSearchInputFilter');
+        if (!wrap || !input) return;
+        wrap.querySelectorAll('.course-chip').forEach(el => el.remove());
+        selectedCourseChips.forEach(name => {
+            const chip = document.createElement('span');
+            chip.className = 'course-chip';
+            chip.innerHTML = `<span class="course-chip-name" title="${name}">${name}</span>
+                <button type="button" class="course-chip-close" aria-label="Remove ${name}" data-course="${name}">
+                    <i class="bi bi-x"></i>
+                </button>`;
+            chip.querySelector('.course-chip-close').addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectedCourseChips = selectedCourseChips.filter(n => n !== name);
+                renderCourseChips();
+                syncCourseFilterSelect();
+                updateFilterBadge();
+            });
+            wrap.insertBefore(chip, input);
+        });
+    }
+
+    function buildCourseDropdown(term) {
+        const dd = document.getElementById('courseDropdownFilter');
+        if (!dd) return;
+        const filtered = (allCoursesForFilter || []).filter(c =>
+            String(c.courseName || '').toLowerCase().includes((term || '').toLowerCase().trim())
+        );
+        dd.innerHTML = '';
+        if (filtered.length === 0) {
+            dd.innerHTML = '<li class="dd-empty">No courses found</li>';
+        } else {
+            filtered.forEach(c => {
+                const isSelected = selectedCourseChips.includes(c.courseName);
+                const li = document.createElement('li');
+                li.setAttribute('role', 'option');
+                li.setAttribute('data-course', c.courseName);
+                if (isSelected) li.classList.add('already-selected');
+                li.innerHTML = `<i class="bi bi-mortarboard" style="font-size:0.78rem;color:#94a3b8;"></i>
+                    <span>${c.courseName}</span>
+                    ${isSelected ? '<i class="bi bi-check2 course-dd-check"></i>' : ''}`;
+                li.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    if (!isSelected) {
+                        selectedCourseChips = [c.courseName];
+                        renderCourseChips();
+                        syncCourseFilterSelect();
+                        closeCourseDropdown();
+                        document.getElementById('courseSearchInputFilter').value = '';
+                    }
+                });
+                dd.appendChild(li);
+            });
+        }
+    }
+
+    function openCourseDropdown(term) {
+        buildCourseDropdown(term);
+        document.getElementById('courseDropdownFilter')?.classList.add('open');
+    }
+    function closeCourseDropdown() {
+        document.getElementById('courseDropdownFilter')?.classList.remove('open');
+    }
+
+    function filterCourseList() {
+        const term = document.getElementById('courseSearchInputFilter')?.value || '';
+        openCourseDropdown(term);
+    }
+
+    function initCourseTypeahead() {
+        const input  = document.getElementById('courseSearchInputFilter');
+        const dd     = document.getElementById('courseDropdownFilter');
+        const widget = document.getElementById('courseChipsInput');
+        if (!input || !dd) return;
+
+        widget?.addEventListener('click', () => input.focus());
+        input.addEventListener('focus', () => openCourseDropdown(input.value));
+        input.addEventListener('input', () => openCourseDropdown(input.value));
+
+        input.addEventListener('keydown', (e) => {
+            const items = [...dd.querySelectorAll('li:not(.already-selected):not(.dd-empty)')];
+            const highlighted = dd.querySelector('li.highlighted');
+            let idx = items.indexOf(highlighted);
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (highlighted) highlighted.classList.remove('highlighted');
+                idx = (idx + 1) % items.length;
+                items[idx]?.classList.add('highlighted');
+                items[idx]?.scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (highlighted) highlighted.classList.remove('highlighted');
+                idx = (idx - 1 + items.length) % items.length;
+                items[idx]?.classList.add('highlighted');
+                items[idx]?.scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (highlighted) highlighted.dispatchEvent(new MouseEvent('mousedown'));
+            } else if (e.key === 'Escape') {
+                closeCourseDropdown();
+                input.blur();
+            } else if (e.key === 'Backspace' && input.value === '' && selectedCourseChips.length) {
+                selectedCourseChips.pop();
+                renderCourseChips();
+                syncCourseFilterSelect();
+                updateFilterBadge();
+            }
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            if (!document.getElementById('courseTypeahead')?.contains(e.target)) {
+                closeCourseDropdown();
+            }
+        });
+    }
+
+    // ── Filter Badge Counter ──
+    function updateFilterBadge() {
+        let count = 0;
+        if (document.getElementById('courseFilter')?.value) count++;
+        if (document.getElementById('statusFilter')?.value) count++;
+        if (document.getElementById('fromDateFilter')?.value) count++;
+        if (document.getElementById('toDateFilter')?.value) count++;
+
+        const badge = document.getElementById('filterBadge');
+        const btn   = document.getElementById('btnToggleFilters');
+        if (badge) {
+            badge.textContent = count;
+            badge.classList.toggle('d-none', count === 0);
+        }
+        if (btn) {
+            btn.classList.toggle('btn-outline-secondary', count === 0);
+            btn.classList.toggle('btn-primary',           count > 0);
+        }
+    }
+
+    // ── Filter Panel Toggle (Double-Click Animation Protected) ──
+    function initFilterToggle() {
+        const btn    = document.getElementById('btnToggleFilters');
+        const panel  = document.getElementById('advancedFiltersPanel');
+        if (!btn || !panel) return;
+
+        let isAnimating = false;
+        const bsCollapse = new bootstrap.Collapse(panel, { toggle: false });
+
+        panel.addEventListener('shown.bs.collapse',  () => { isAnimating = false; btn.setAttribute('aria-expanded','true');  btn.classList.add('filter-btn-open'); });
+        panel.addEventListener('hidden.bs.collapse', () => { isAnimating = false; btn.setAttribute('aria-expanded','false'); btn.classList.remove('filter-btn-open'); });
+        panel.addEventListener('show.bs.collapse',   () => { isAnimating = true; });
+        panel.addEventListener('hide.bs.collapse',   () => { isAnimating = true; });
+
+        btn.addEventListener('click', () => {
+            if (isAnimating) return;
+            bsCollapse.toggle();
+        });
+    }
+
     // Clear all filters
     function clearAllFilters() {
         if (document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
+        if (document.getElementById('searchFieldSelect')) document.getElementById('searchFieldSelect').value = 'ALL';
         if (document.getElementById('statusFilter')) document.getElementById('statusFilter').value = '';
         if (document.getElementById('courseFilter')) document.getElementById('courseFilter').value = '';
         if (document.getElementById('courseSearchInputFilter')) document.getElementById('courseSearchInputFilter').value = '';
         if (document.getElementById('fromDateFilter')) document.getElementById('fromDateFilter').value = '';
         if (document.getElementById('toDateFilter')) document.getElementById('toDateFilter').value = '';
 
+        // Reset typeahead chips
+        selectedCourseChips = [];
+        renderCourseChips();
+        closeCourseDropdown();
+
         currentSearchTerm = '';
+        currentSearchField = 'ALL';
         currentStatusFilter = '';
         currentCourseFilter = '';
         currentFromDate = '';
         currentToDate = '';
-
-        if (typeof filterCourseList === 'function') {
-            filterCourseList();
-        }
 
         currentPage = 0;
         loadEnquiries(0, pageSize);
@@ -627,34 +832,6 @@ async function loadCoursesForSearch() {
         } catch (error) {
             console.error('Error loading courses for filter:', error);
         }
-    }
-
-    // Populate Course Filter select options
-    function populateCourseFilter(courses) {
-        const select = document.getElementById('courseFilter');
-        if (!select) return;
-
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">-- All Courses --</option>';
-
-        (courses || []).forEach(course => {
-            const option = document.createElement('option');
-            option.value = course.courseName;
-            option.textContent = course.courseName;
-            select.appendChild(option);
-        });
-
-        if (currentValue) select.value = currentValue;
-    }
-
-    // Filter courses in select list based on text input
-    function filterCourseList() {
-        const input = document.getElementById('courseSearchInputFilter');
-        const searchTerm = (input?.value || '').toLowerCase().trim();
-        const filtered = (allCoursesForFilter || []).filter(c =>
-            String(c.courseName || '').toLowerCase().includes(searchTerm)
-        );
-        populateCourseFilter(filtered);
     }
 
     async function saveEnquiry() {
@@ -1003,50 +1180,50 @@ function updateEntriesInfo() {
                : '<span class="badge bg-secondary">N/A</span>';
 
            return `
-               <tr data-id="${enq.id}">
-                   <td><strong>${enquiryNumber}</strong></td>
-                   <td>${enq.name || `${enq.firstName || ''} ${enq.lastName || ''}`.trim() || 'N/A'}</td>
-                   <td>${enq.mobile || 'N/A'}</td>
-                   <td style="max-width: 250px; min-width: 180px;">
-                       <div style="display: flex; flex-direction: column; gap: 4px;">
-                           ${coursesHtml}
-                       </div>
-                   </td>
-                   <td>${enq.source || 'N/A'}</td>
-                   <td>${enq.date ? new Date(enq.date).toLocaleDateString('en-GB') : 'N/A'}</td>
-                   <td>${enq.assign || 'Unassigned'}</td>
-                   <td><span class="badge bg-success">${enq.status || 'New'}</span></td>
-                   <td>
-                       <!-- Actions menu -->
-                       <div class="action-dropdown">
-                            <button class="action-btn action-menu-trigger">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                           <div class="action-menu">
-                               <button class="action-menu-item" data-action="update" data-id="${enq.id}">
-                                   <i class="bi bi-pencil-square"></i><span>Update</span>
-                               </button>
-                               <button class="action-menu-item" data-action="followup" data-id="${enq.id}">
-                                   <i class="bi bi-telephone"></i><span>Follow Up</span>
-                               </button>
-                               <button class="action-menu-item" data-action="view" data-id="${enq.id}">
-                                   <i class="bi bi-eye"></i><span>View Details</span>
-                               </button>
-                               <button class="action-menu-item" data-action="changestatus" data-id="${enq.id}">
-                                   <i class="bi bi-pencil"></i><span>Change Enquiry Status</span>
-                               </button>
-                               <button class="action-menu-item" data-action="admission"
-                                         data-id="${enq.id}" data-mobile="${enq.mobile}">
-                                     <i class="bi bi-plus"></i><span>New Admission</span>
-                               </button>
-                               <button class="action-menu-item" data-action="remove" data-id="${enq.id}">
-                                   <i class="bi bi-trash"></i><span>Remove</span>
-                               </button>
-                           </div>
-                       </div>
-                   </td>
-               </tr>
-           `;
+                <tr data-id="${enq.id}">
+                    <td data-label="ENQ NO."><strong>${enquiryNumber}</strong></td>
+                    <td data-label="STUDENT NAME">${enq.name || `${enq.firstName || ''} ${enq.lastName || ''}`.trim() || 'N/A'}</td>
+                    <td data-label="MOBILE NO.">${enq.mobile || 'N/A'}</td>
+                    <td data-label="COURSE" style="max-width: 250px; min-width: 180px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            ${coursesHtml}
+                        </div>
+                    </td>
+                    <td data-label="SOURCE">${enq.source || 'N/A'}</td>
+                    <td data-label="DATE">${formatDateDDMMYYYY(enq.enquiryDate || enq.date)}</td>
+                    <td data-label="ASSIGNED TO">${enq.assign || 'Unassigned'}</td>
+                    <td data-label="STATUS"><span class="badge bg-success">${enq.status || 'New'}</span></td>
+                    <td data-label="ACTIONS">
+                        <!-- Actions menu -->
+                        <div class="action-dropdown">
+                             <button class="action-btn action-menu-trigger">
+                                 <i class="bi bi-three-dots-vertical"></i>
+                             </button>
+                            <div class="action-menu">
+                                <button class="action-menu-item" data-action="update" data-id="${enq.id}">
+                                    <i class="bi bi-pencil-square"></i><span>Update</span>
+                                </button>
+                                <button class="action-menu-item" data-action="followup" data-id="${enq.id}">
+                                    <i class="bi bi-telephone"></i><span>Follow Up</span>
+                                </button>
+                                <button class="action-menu-item" data-action="view" data-id="${enq.id}">
+                                    <i class="bi bi-eye"></i><span>View Details</span>
+                                </button>
+                                <button class="action-menu-item" data-action="changestatus" data-id="${enq.id}">
+                                    <i class="bi bi-pencil"></i><span>Change Enquiry Status</span>
+                                </button>
+                                <button class="action-menu-item" data-action="admission"
+                                          data-id="${enq.id}" data-mobile="${enq.mobile}">
+                                      <i class="bi bi-plus"></i><span>New Admission</span>
+                                </button>
+                                <button class="action-menu-item" data-action="remove" data-id="${enq.id}">
+                                    <i class="bi bi-trash"></i><span>Remove</span>
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
        }).join('');
 
        attachTableEventListeners(tbody);
@@ -1097,7 +1274,17 @@ function updateEntriesInfo() {
             // Helper to parse date to YYYY-MM-DD format for date input
             const toDateInputString = (dateVal) => {
                 if (!dateVal) return '';
+                if (Array.isArray(dateVal) && dateVal.length >= 3) {
+                    const [y, m, d] = dateVal;
+                    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                }
                 const str = String(dateVal).split('T')[0].trim();
+                if (str.includes(',')) {
+                    const parts = str.split(',').map(p => p.trim());
+                    if (parts.length >= 3) {
+                        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                    }
+                }
                 if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
                     return str;
                 }
@@ -1435,46 +1622,64 @@ function updateEntriesInfo() {
      * @param {string} dateStr - Date string in YYYY-MM-DD format
      * @returns {string} - Formatted date in DD/MM/YYYY format
      */
-    function formatDateDDMMYYYY(dateStr) {
-        // Handle null, undefined, or empty values FIRST
-        if (!dateStr) return 'N/A';
-
-        // Convert to string if needed (handles numbers, dates)
-        const str = String(dateStr);
-
-        // Handle 'N/A' or empty strings
-        if (str.trim() === '' || str === 'N/A') return str;
+    function formatDateDDMMYYYY(dateVal) {
+        if (!dateVal) return 'N/A';
 
         try {
-            // Handle ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
-            const datePart = str.split('T')[0];
-
-            // Check if already in DD/MM/YYYY format
-            if (datePart.includes('/')) {
-                const parts = datePart.split('/');
-                if (parts.length === 3 && parts[0].length <= 2) {
-                    return datePart; // Already in DD/MM/YYYY
+            // 1. Array format: [2026, 6, 29]
+            if (Array.isArray(dateVal)) {
+                if (dateVal.length >= 3) {
+                    const [y, m, d] = dateVal;
+                    return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
                 }
             }
 
-            // Parse YYYY-MM-DD format
-            const parts = datePart.split('-');
+            const str = String(dateVal).trim();
+            if (str === '' || str === 'N/A') return 'N/A';
 
-            if (parts.length === 3) {
-                const [year, month, day] = parts;
-
-                // Validate parts exist and are numbers
-                if (!year || !month || !day) return str;
-                if (isNaN(year) || isNaN(month) || isNaN(day)) return str;
-
-                return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+            // 2. Comma-separated format: "2026,6,29" or "2026, 06, 29"
+            if (str.includes(',')) {
+                const parts = str.split(',').map(p => p.trim());
+                if (parts.length >= 3) {
+                    const [y, m, d] = parts;
+                    if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+                        return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+                    }
+                }
             }
 
-            // Fallback: return original string
+            // 3. ISO or hyphen/slash string format
+            const datePart = str.split('T')[0];
+
+            if (datePart.includes('/')) {
+                const parts = datePart.split('/');
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) {
+                        // YYYY/MM/DD -> DD/MM/YYYY
+                        return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+                    }
+                    return datePart; // Already DD/MM/YYYY
+                }
+            }
+
+            if (datePart.includes('-')) {
+                const parts = datePart.split('-');
+                if (parts.length === 3) {
+                    const [p1, p2, p3] = parts;
+                    if (p1.length === 4) {
+                        // YYYY-MM-DD -> DD/MM/YYYY
+                        return `${p3.padStart(2, '0')}/${p2.padStart(2, '0')}/${p1}`;
+                    } else if (p3.length === 4) {
+                        // DD-MM-YYYY -> DD/MM/YYYY
+                        return `${p1.padStart(2, '0')}/${p2.padStart(2, '0')}/${p3}`;
+                    }
+                }
+            }
+
             return str;
         } catch (error) {
-            console.error('Date formatting error:', error, 'Input:', dateStr);
-            return String(dateStr); // Return as-is if error
+            console.error('Date formatting error:', error, 'Input:', dateVal);
+            return String(dateVal);
         }
     }
 
@@ -1989,11 +2194,9 @@ async function deleteFollowUp(followUpId, enquiryId) {
         tbody.querySelectorAll('.action-menu-trigger').forEach(trigger => {
             trigger.addEventListener('click', function(e) {
                 e.stopPropagation();
-                const menu = this.nextElementSibling;
-                document.querySelectorAll('.action-menu').forEach(m => {
-                    if (m !== menu) m.classList.remove('show');
-                });
-                menu.classList.toggle('show');
+                if (typeof openActionMenuFixed === 'function') {
+                    openActionMenuFixed(this);
+                }
             });
         });
 

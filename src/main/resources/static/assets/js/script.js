@@ -156,21 +156,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // SIDEBAR COLLAPSE (DESKTOP ONLY)
     // ========================================
 
-    // Add tooltips to menu items
-    function addTooltips() {
-        document.querySelectorAll('.menu-link').forEach(link => {
-            const text = link.querySelector('.menu-text');
-            if (text) {
-                link.setAttribute('data-tooltip', text.textContent.trim());
-            }
-        });
 
-        document.querySelectorAll('.submenu-link').forEach(link => {
-            link.setAttribute('data-tooltip', link.textContent.trim());
-        });
-    }
-
-    addTooltips();
 
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', function (e) {
@@ -202,11 +188,21 @@ document.addEventListener('DOMContentLoaded', function() {
        // ========================================
        // MOBILE SIDEBAR TOGGLE
        //========================================
-         function toggleSidebar() {
-             sidebar.classList.toggle('active');
-             sidebarOverlay.classList.toggle('active');
-             document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
-         }
+                 function toggleSidebar() {
+              const isActive = sidebar.classList.toggle('active');
+              sidebarOverlay.classList.toggle('active');
+              document.body.style.overflow = isActive ? 'hidden' : '';
+
+              // Toggle chevron icon direction on mobile
+              const hamburgerIcon = hamburger ? hamburger.querySelector('i') : null;
+              if (hamburgerIcon) {
+                  if (isActive) {
+                      hamburgerIcon.className = 'bi bi-chevron-left';
+                  } else {
+                      hamburgerIcon.className = 'bi bi-chevron-right';
+                  }
+              }
+          }
 
          if (hamburger) {
              hamburger.addEventListener('click', toggleSidebar);
@@ -218,9 +214,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
          // Restore collapsed state on page load (desktop only)
          if (window.innerWidth >= 992) {
-             const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-
-             if (isCollapsed) {
+             const collapsedState = localStorage.getItem('sidebarCollapsed');
+             if (collapsedState === 'false') {
+                 sidebar.classList.remove('collapsed');
+                 mainWrapper.classList.remove('collapsed');
+             } else if (collapsedState === null) {
+                 localStorage.setItem('sidebarCollapsed', 'true');
+                 sidebar.classList.add('collapsed');
+                 mainWrapper.classList.add('collapsed');
+             } else if (collapsedState === 'true') {
                  sidebar.classList.add('collapsed');
                  mainWrapper.classList.add('collapsed');
              }
@@ -1033,60 +1035,58 @@ document.addEventListener('DOMContentLoaded', function() {
                         <h6 class="text-primary fw-bold mb-3">
                             <i class="bi bi-person-lines-fill me-2"></i>Personal Information
                         </h6>
-                        <div class="table-responsive">
-                            <table class="table table-hover table-sm">
-                                <tbody>
-                                    <tr>
-                                        <td class="text-muted" style="width: 35%;">
-                                            <i class="bi bi-envelope me-2"></i>Email
-                                        </td>
-                                        <td class="fw-semibold">${employee.emailId}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">
-                                            <i class="bi bi-phone me-2"></i>Mobile
-                                        </td>
-                                        <td class="fw-semibold">${employee.mobileNumber}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">
-                                            <i class="bi bi-briefcase me-2"></i>Designation
-                                        </td>
-                                        <td class="fw-semibold">${employee.designation || 'N/A'}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">
-                                            <i class="bi bi-gender-ambiguous me-2"></i>Gender
-                                        </td>
-                                        <td class="fw-semibold">${formatGender(employee.gender)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">
-                                            <i class="bi bi-calendar me-2"></i>Date of Birth
-                                        </td>
-                                        <td class="fw-semibold">${formatDate(employee.dateOfBirth)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">
-                                            <i class="bi bi-geo-alt me-2"></i>Address
-                                        </td>
-                                        <td class="fw-semibold">${employee.address || 'N/A'}</td>
-                                    </tr>
-                                    ${employee.zoomLink ? `
-                                    <tr>
-                                        <td class="text-muted">
-                                            <i class="bi bi-camera-video me-2"></i>Zoom Link
-                                        </td>
-                                        <td>
-                                            <a href="${employee.zoomLink}" target="_blank" class="text-primary">
-                                                Join Meeting <i class="bi bi-box-arrow-up-right ms-1"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    ` : ''}
-                                </tbody>
-                            </table>
-                        </div>
+                        <table class="table table-hover table-sm" style="table-layout: fixed; width: 100%;">
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted" style="width: 35%;">
+                                        <i class="bi bi-envelope me-2"></i>Email
+                                    </td>
+                                    <td class="fw-semibold">${employee.emailId}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">
+                                        <i class="bi bi-phone me-2"></i>Mobile
+                                    </td>
+                                    <td class="fw-semibold">${employee.mobileNumber}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">
+                                        <i class="bi bi-briefcase me-2"></i>Designation
+                                    </td>
+                                    <td class="fw-semibold">${employee.designation || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">
+                                        <i class="bi bi-gender-ambiguous me-2"></i>Gender
+                                    </td>
+                                    <td class="fw-semibold">${formatGender(employee.gender)}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">
+                                        <i class="bi bi-calendar me-2"></i>Date of Birth
+                                    </td>
+                                    <td class="fw-semibold">${formatDate(employee.dateOfBirth)}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">
+                                        <i class="bi bi-geo-alt me-2"></i>Address
+                                    </td>
+                                    <td class="fw-semibold">${employee.address || 'N/A'}</td>
+                                </tr>
+                                ${employee.zoomLink ? `
+                                <tr>
+                                    <td class="text-muted">
+                                        <i class="bi bi-camera-video me-2"></i>Zoom Link
+                                    </td>
+                                    <td>
+                                        <a href="${employee.zoomLink}" target="_blank" class="text-primary">
+                                            Join Meeting <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                ` : ''}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -1645,4 +1645,132 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+})();
+
+/* Global Smart Position Listener with Body Teleportation for Action Dropdown Menus */
+window.closeAllActionMenus = function() {
+    document.querySelectorAll('.action-menu').forEach(m => {
+        m.classList.remove('show');
+        m.style.display = '';
+        m.style.position = '';
+        m.style.top = '';
+        m.style.left = '';
+        m.style.right = '';
+        m.style.bottom = '';
+        m.style.transform = '';
+        m.style.zIndex = '';
+        m.style.opacity = '';
+        m.style.visibility = '';
+        if (m._originalParent && m.parentElement !== m._originalParent) {
+            m._originalParent.appendChild(m);
+        }
+    });
+};
+
+window.openActionMenuFixed = function(triggerBtn) {
+    const dropdown = triggerBtn.closest('.action-dropdown');
+    let menu = triggerBtn._teleportedMenu || (dropdown ? dropdown.querySelector('.action-menu') : null);
+    if (!menu) return;
+
+    const isAlreadyOpen = menu.classList.contains('show');
+
+    // Close all open action menus and return teleported menus to original parent
+    closeAllActionMenus();
+
+    if (isAlreadyOpen) return;
+
+    // Store original parent
+    if (!menu._originalParent && dropdown) {
+        menu._originalParent = dropdown;
+    }
+    triggerBtn._teleportedMenu = menu;
+
+    // Teleport to document.body to escape parent z-index / stacking context traps
+    document.body.appendChild(menu);
+
+    // Measure dimensions
+    menu.style.display = 'block';
+    menu.style.visibility = 'hidden';
+    menu.style.position = 'fixed';
+    const menuWidth = menu.offsetWidth || 210;
+    const menuHeight = menu.offsetHeight || 260;
+
+    const rect = triggerBtn.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    let top, left;
+
+    // Vertical positioning: open above if space below is limited
+    if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+        top = Math.max(10, rect.top - menuHeight - 6);
+    } else {
+        top = Math.min(window.innerHeight - menuHeight - 10, rect.bottom + 6);
+    }
+
+    // Horizontal positioning: align right edge of menu with right edge of button
+    if (rect.right - menuWidth >= 10) {
+        left = rect.right - menuWidth;
+    } else {
+        left = Math.max(10, rect.left);
+    }
+
+    menu.style.position = 'fixed';
+    menu.style.top = `${top}px`;
+    menu.style.left = `${left}px`;
+    menu.style.right = 'auto';
+    menu.style.bottom = 'auto';
+    menu.style.zIndex = '999999999';
+    menu.style.opacity = '1';
+    menu.style.visibility = 'visible';
+    menu.style.transform = 'none';
+
+    menu.classList.add('show');
+};
+
+// Global click event delegation for action menu triggers and items
+document.addEventListener('click', function(e) {
+    const trigger = e.target.closest('.action-menu-trigger');
+    if (trigger) {
+        e.stopPropagation();
+        e.preventDefault();
+        openActionMenuFixed(trigger);
+        return;
+    }
+
+    const menuItem = e.target.closest('.action-menu-item');
+    if (menuItem) {
+        // Close immediately — do not wait, so modal can open cleanly on top
+        closeAllActionMenus();
+        return;
+    }
+
+    // If clicking outside an open action menu, close all action menus
+    if (!e.target.closest('.action-menu')) {
+        closeAllActionMenus();
+    }
+});
+
+// Close open action menus when scrolling
+window.addEventListener('scroll', function() {
+    closeAllActionMenus();
+}, { passive: true });
+
+// Close action menu immediately whenever any Bootstrap modal starts to open
+document.addEventListener('show.bs.modal', function() {
+    closeAllActionMenus();
+});
+
+// Also handle SweetAlert2 — close action menu when Swal fires
+(function patchSwal() {
+    if (typeof Swal !== 'undefined' && Swal.mixin) {
+        const origFire = Swal.fire.bind(Swal);
+        Swal.fire = function() {
+            closeAllActionMenus();
+            return origFire.apply(this, arguments);
+        };
+    } else {
+        // Swal not loaded yet — retry after DOM ready
+        document.addEventListener('DOMContentLoaded', patchSwal);
+    }
 })();

@@ -68,15 +68,15 @@ GOOGLE_DRIVE_BACKUP_ENABLED=true
 GOOGLE_DRIVE_CLIENT_ID="YOUR_GOOGLE_DRIVE_CLIENT_ID"
 GOOGLE_DRIVE_CLIENT_SECRET="YOUR_GOOGLE_DRIVE_CLIENT_SECRET"
 GOOGLE_DRIVE_REFRESH_TOKEN="YOUR_GOOGLE_DRIVE_REFRESH_TOKEN"
-GOOGLE_DRIVE_FOLDER_ID="15Ltp1XqZ9qbw68v1PBeM8FSO3LmSaggW"
+GOOGLE_DRIVE_FOLDER_ID="YOUR_GOOGLE_DRIVE_FOLDER_ID"
 ```
 
 In `application.yaml`:
 ```yaml
 app:
   backup:
-    email: ${BACKUP_EMAIL:kunalpatil192001@gmail.com}
-    passcode: ${BACKUP_PASSCODE:Kunal@217}
+    email: ${BACKUP_EMAIL:}
+    passcode: ${BACKUP_PASSCODE:}
     email-enabled: ${BACKUP_EMAIL_ENABLED:false}
     google-drive:
       enabled: ${GOOGLE_DRIVE_BACKUP_ENABLED:true}
@@ -84,8 +84,8 @@ app:
       client-secret: ${GOOGLE_DRIVE_CLIENT_SECRET:}
       refresh-token: ${GOOGLE_DRIVE_REFRESH_TOKEN:}
       credentials-path: ${GOOGLE_DRIVE_CREDENTIALS_PATH:credentials/global-email-monitor-e4ef0cd5ef08.json}
-      folder-name: ${GOOGLE_DRIVE_FOLDER_NAME:TTS_SMS_Daily_Backups}
-      folder-id: ${GOOGLE_DRIVE_FOLDER_ID:15Ltp1XqZ9qbw68v1PBeM8FSO3LmSaggW}
+      folder-name: ${GOOGLE_DRIVE_FOLDER_NAME:TTS_Daily_Backups}
+      folder-id: ${GOOGLE_DRIVE_FOLDER_ID:}
 ```
 
 ---
@@ -94,14 +94,14 @@ app:
 
 | Property | Environment Variable | Default Value | Description |
 | :--- | :--- | :--- | :--- |
-| `app.backup.email` | `BACKUP_EMAIL` | `kunalpatil192001@gmail.com` | Destination email recipient for status summary reports. |
-| `app.backup.passcode` | `BACKUP_PASSCODE` | `Kunal@217` | Passcode for authorized manual REST API triggers. |
+| `app.backup.email` | `BACKUP_EMAIL` | (None) | Destination email recipient for status summary reports. |
+| `app.backup.passcode` | `BACKUP_PASSCODE` | (None) | Passcode for authorized manual REST API triggers. |
 | `app.backup.email-enabled` | `BACKUP_EMAIL_ENABLED` | `false` | Toggles email notifications on (`true`) or off (`false`). Defaults to `false`. |
 | `app.backup.google-drive.enabled` | `GOOGLE_DRIVE_BACKUP_ENABLED` | `true` | Toggles Google Drive integration on or off. |
 | `app.backup.google-drive.client-id` | `GOOGLE_DRIVE_CLIENT_ID` | (configured) | OAuth2 Client ID for Google API authentication. |
 | `app.backup.google-drive.client-secret` | `GOOGLE_DRIVE_CLIENT_SECRET` | (configured) | OAuth2 Client Secret for Google API authentication. |
 | `app.backup.google-drive.refresh-token` | `GOOGLE_DRIVE_REFRESH_TOKEN` | (configured) | Long-lived OAuth2 Refresh Token for storage quota access. |
-| `app.backup.google-drive.folder-id` | `GOOGLE_DRIVE_FOLDER_ID` | `15Ltp1XqZ9qbw68v1PBeM8FSO3LmSaggW` | Target Google Drive folder ID. |
+| `app.backup.google-drive.folder-id` | `GOOGLE_DRIVE_FOLDER_ID` | (configured) | Target Google Drive folder ID. |
 
 ---
 
@@ -136,8 +136,8 @@ For instant backups on demand:
 ### Request Body Format
 ```json
 {
-  "email": "kunalpatil192001@gmail.com",
-  "passcode": "Kunal@217"
+  "email": "YOUR_BACKUP_EMAIL",
+  "passcode": "YOUR_BACKUP_PASSCODE"
 }
 ```
 
@@ -146,15 +146,15 @@ For instant backups on demand:
 ```bash
 curl -X POST https://team.ttsnashik.com/api/auth/backup \
   -H "Content-Type: application/json" \
-  -d '{"email": "kunalpatil192001@gmail.com", "passcode": "Kunal@217"}'
+  -d '{"email": "YOUR_BACKUP_EMAIL", "passcode": "YOUR_BACKUP_PASSCODE"}'
 ```
 
 ### 2. Using PowerShell (Windows)
 
 ```powershell
 $body = @{
-    email = "kunalpatil192001@gmail.com"
-    passcode = "Kunal@217"
+    email = "YOUR_BACKUP_EMAIL"
+    passcode = "YOUR_BACKUP_PASSCODE"
 } | ConvertTo-Json
 
 Invoke-RestMethod -Uri "https://team.ttsnashik.com/api/auth/backup" -Method Post -Body $body -ContentType "application/json"
@@ -163,7 +163,8 @@ Invoke-RestMethod -Uri "https://team.ttsnashik.com/api/auth/backup" -Method Post
 ### 3. Using Windows Command Prompt (cmd.exe)
 
 ```cmd
-curl -X POST https://team.ttsnashik.com/api/auth/backup -H "Content-Type: application/json" -d "{\"email\":\"kunalpatil192001@gmail.com\",\"passcode\":\"Kunal@217\"}"
+curl -X POST https://team.ttsnashik.com/api/auth/backup -H "Content-Type: application/json" -d "{\"email\":\"YOUR_BACKUP_EMAIL\",\"passcode\":\"YOUR_BACKUP_PASSCODE\"}"
+```"{\"email\":\"kunalpatil192001@gmail.com\",\"passcode\":\"Kunal@217\"}"
 ```
 
 ---

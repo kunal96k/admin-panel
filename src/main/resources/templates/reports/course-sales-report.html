@@ -76,59 +76,86 @@
         <div class="action-card mb-4">
             <form id="salesReportForm">
                 <div class="row g-3 align-items-end">
+                    <!-- Course Filter: Typeahead Search -->
+                    <div class="col-lg-4 col-md-4 col-sm-12">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-mortarboard me-1"></i>Course <span class="required">*</span>
+                        </label>
+                        <select id="courseFilter" style="display:none;" aria-hidden="true">
+                            <option value="">-- All Courses --</option>
+                        </select>
+                        <div class="course-typeahead" id="courseTypeahead">
+                            <div class="course-chips-input" id="courseChipsInput">
+                                <div class="course-chips-wrap" id="courseChipsWrap">
+                                    <input type="text" id="courseSearchInput" class="course-type-input"
+                                           placeholder="Search course..." autocomplete="off" spellcheck="false">
+                                </div>
+                            </div>
+                            <ul class="course-dropdown" id="courseDropdown" role="listbox"></ul>
+                        </div>
+                    </div>
+
                     <!-- Date Range -->
-                    <div class="col-lg-3 col-md-6">
-                        <label class="form-label">
+                    <div class="col-lg-3 col-md-4 col-sm-6">
+                        <label class="form-label fw-semibold">
                             <i class="bi bi-calendar-event me-1"></i>From Date <span class="required">*</span>
                         </label>
                         <input type="date" class="form-control" id="fromDate" required>
                         <div class="invalid-feedback">Please select from date</div>
                     </div>
-                    <div class="col-lg-3 col-md-6">
-                        <label class="form-label">
+                    <div class="col-lg-3 col-md-4 col-sm-6">
+                        <label class="form-label fw-semibold">
                             <i class="bi bi-calendar-check me-1"></i>To Date <span class="required">*</span>
                         </label>
                         <input type="date" class="form-control" id="toDate" required>
                         <div class="invalid-feedback">Please select to date</div>
                     </div>
 
-                    <!-- Course Filter -->
-                    <div class="col-lg-4 col-md-6">
-                        <label class="form-label">
-                            <i class="bi bi-mortarboard me-1"></i>Select Course <span class="required">*</span>
-                        </label>
-                        <div class="position-relative">
-                            <input type="text" class="form-control mb-2" id="courseSearchInput"
-                                   placeholder="Search courses...">
-                            <select class="form-select" id="courseFilter" size="4" required
-                                    style="max-height: 150px; overflow-y: auto;">
-                                <option value="" disabled selected>-- Select Course --</option>
-                            </select>
-                            <div class="invalid-feedback">Please select a course</div>
-                        </div>
-                    </div>
-
                     <!-- Action Buttons -->
-                    <div class="col-lg-2 col-md-6">
-                        <button type="submit" class="btn btn-primary w-100 mb-2" id="searchBtn">
-                            <i class="bi bi-search me-2"></i>Search
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary w-100" id="resetBtn">
-                            <i class="bi bi-arrow-clockwise me-2"></i>Reset
-                        </button>
+                    <div class="col-lg-2 col-md-12 d-flex gap-2 align-items-end">
+                        <button type="submit" class="btn btn-primary flex-fill" id="searchBtn">Search</button>
+                        <button type="button" class="btn btn-outline-secondary flex-fill" id="resetBtn">Reset</button>
                     </div>
                 </div>
             </form>
         </div>
 
-        <!-- Export Tools Section -->
-        <div class="action-card mb-4" id="exportSection" style="display: none;">
+        <!-- Export Tools Section (Desktop only) -->
+        <div class="action-card mb-4 d-none d-lg-block" id="exportSection" style="display: none !important;">
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <h5 class="mb-0"><i class="bi bi-download me-2"></i>Export Options</h5>
                 </div>
                 <div class="col-md-6 text-md-end mt-3 mt-md-0" id="exportTools">
                     <!-- DataTables buttons will be appended here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Export Trigger (shown only on < lg after search) -->
+        <div class="d-lg-none mb-3" id="mobileExportTrigger" style="display:none !important;">
+            <button type="button" class="btn btn-outline-primary w-100" id="mobileExportBtn"
+                    data-bs-toggle="modal" data-bs-target="#exportModal">
+                <i class="bi bi-download me-2"></i>Export Options
+            </button>
+        </div>
+
+        <!-- Export Modal (Mobile/Tablet) -->
+        <div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="border-radius:16px; overflow:hidden;">
+                    <div class="modal-header" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;">
+                        <h5 class="modal-title text-white fw-bold" id="exportModalLabel">
+                            <i class="bi bi-download me-2"></i>Export Options
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="text-muted small mb-3">Choose a format to export the report data:</p>
+                        <div class="d-grid gap-2" id="exportModalTools">
+                            <!-- DataTables buttons cloned here by JS -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

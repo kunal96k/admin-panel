@@ -1,19 +1,15 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 - Page Not Found</title>
+    <!-- Google Fonts & Bootstrap/Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @font-face {
-            font-family: 'Neuropol';
-            src: url('/assets/fonts/Neuropol.otf') format('opentype');
-            font-weight: 300;
-            font-style: normal;
-        }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
         body {
             background: linear-gradient(135deg, #090d16 0%, #111827 100%);
@@ -33,7 +29,7 @@
             position: absolute;
             width: 300px;
             height: 300px;
-            background: radial-gradient(circle, rgba(220, 38, 38, 0.15), transparent 70%);
+            background: radial-gradient(circle, rgba(239, 68, 68, 0.12), transparent 70%);
             top: 20%;
             left: 25%;
             pointer-events: none;
@@ -66,11 +62,10 @@
         }
 
         .brand-logo-txt {
-            font-family: 'Neuropol', sans-serif;
-            font-weight: 300;
-            font-size: 1.4rem;
+            font-weight: 700;
+            font-size: 1.5rem;
             color: #f3f4f6;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
             margin-bottom: 2rem;
             display: flex;
             flex-direction: column;
@@ -82,26 +77,25 @@
             color: #9ca3af;
             letter-spacing: 1px;
             margin-top: 4px;
+            font-weight: 400;
         }
 
         .error-code {
-            font-family: 'Neuropol', sans-serif;
-            font-weight: 300;
+            font-weight: 800;
             font-size: 7.5rem;
             line-height: 1;
             background: linear-gradient(135deg, #f87171 0%, #ef4444 50%, #b91c1c 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             filter: drop-shadow(0 4px 12px rgba(239, 68, 68, 0.2));
             animation: float 4s ease-in-out infinite;
         }
 
         .error-title {
-            font-family: 'Neuropol', sans-serif;
-            font-weight: 300;
-            font-size: 1.25rem;
-            letter-spacing: 2px;
+            font-weight: 700;
+            font-size: 1.35rem;
+            letter-spacing: 1.5px;
             color: #f9fafb;
             text-transform: uppercase;
             margin-bottom: 1rem;
@@ -112,7 +106,7 @@
             font-size: 0.95rem;
             margin-bottom: 2.5rem;
             line-height: 1.6;
-            font-weight: 300;
+            font-weight: 400;
         }
 
         .btn-action {
@@ -121,7 +115,7 @@
             color: white;
             padding: 0.85rem 2rem;
             font-size: 0.95rem;
-            font-weight: 500;
+            font-weight: 600;
             border-radius: 12px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: inline-flex;
@@ -193,33 +187,29 @@
         <div class="error-code">404</div>
         <div class="error-title">Page Not Found</div>
         <p class="error-msg">
-            The link you followed may be broken, or the page has been removed.<br>
-            Please check the address or return to the dashboard.
+            The page you are looking for does not exist, has been removed,<br>
+            or is temporarily unavailable.
         </p>
 
-        <a th:href="@{/dashboard}" class="btn-action">
+        <a href="/dashboard" class="btn-action">
             <i class="bi bi-arrow-left"></i> Return to Dashboard
         </a>
 
         <div>
             <span class="diagnostic-trigger" onclick="toggleDiagnostics()">Diagnostic Info</span>
             <div id="diagnostics" class="diagnostic-details" style="display: none;">
-                Request URI: <span th:text="${path != null ? path : '/unknown'}">/unknown</span><br>
-                Timestamp: <span th:text="${timestamp != null ? timestamp : 'N/A'}">N/A</span><br>
+                Request URI: <span id="path-val">/unknown</span><br>
                 Status Code: 404 Not Found<br>
-                Environment: production
+                Environment: Production (Static Fallback)
             </div>
         </div>
     </div>
 
     <script>
+        document.getElementById('path-val').textContent = window.location.pathname;
         function toggleDiagnostics() {
             var diag = document.getElementById('diagnostics');
-            if (diag.style.display === 'none') {
-                diag.style.display = 'block';
-            } else {
-                diag.style.display = 'none';
-            }
+            diag.style.display = diag.style.display === 'none' ? 'block' : 'none';
         }
     </script>
 </body>

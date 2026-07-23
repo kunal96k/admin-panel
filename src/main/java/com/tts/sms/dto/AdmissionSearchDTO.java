@@ -20,6 +20,8 @@ public class AdmissionSearchDTO {
 
     private String searchTerm;
 
+    private String searchField;
+
     private String status;
 
     private String studentCategory;

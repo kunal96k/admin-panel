@@ -1,5 +1,13 @@
 // fees-manager.js
 
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
 let feesData = [];
 let allCourses = [];
 let filteredCourses = [];
@@ -186,12 +194,14 @@ function populatePaymentModeDropdowns() {
     });
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
     initializeEventListeners();
     loadFeesFromBackend();
-    loadCoursesForFilter();
+    await loadCoursesForFilter();
+    initCourseTypeahead();   // initialize custom typeahead dropdown chips
+    initFilterToggle();      // initialize advanced collapsible filters toggle
     setDefaultDates();
+    updateFilterBadge();     // update initial filters badge state
 });
 
 function debugAPICall(endpoint, method = 'GET') {
@@ -203,7 +213,7 @@ function initializeEventListeners() {
     loadPaymentModes();
 
     // Search
-    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 500));
 
     // Entries per page
     document.getElementById('entriesPerPage').addEventListener('change', function () {
@@ -265,12 +275,11 @@ function initializeEventListeners() {
     document.getElementById('btnSaveRefundPrint').addEventListener('click', saveAndPrintRefund);
 
     // Status and Course filters
-    document.getElementById('statusFilter')?.addEventListener('change', applyFilters);
-    document.getElementById('courseFilter')?.addEventListener('change', applyFilters);
-    document.getElementById('courseSearchInput')?.addEventListener('input', filterCourseList);
-    document.getElementById('fromDateFilter')?.addEventListener('change', applyFilters);
-    document.getElementById('toDateFilter')?.addEventListener('change', applyFilters);
-    document.getElementById('btnClearFilters')?.addEventListener('click', clearFilters);
+    document.getElementById('courseFilter')?.addEventListener('change', () => { applyFilters(); updateFilterBadge(); });
+    document.getElementById('statusFilter')?.addEventListener('change', () => { applyFilters(); updateFilterBadge(); });
+    document.getElementById('fromDateFilter')?.addEventListener('change', () => { applyFilters(); updateFilterBadge(); });
+    document.getElementById('toDateFilter')?.addEventListener('change', () => { applyFilters(); updateFilterBadge(); });
+    document.getElementById('btnClearFilters')?.addEventListener('click', () => { clearFilters(); updateFilterBadge(); });
 }
 
 // ==================== FILTERS ====================
@@ -291,32 +300,186 @@ async function loadCoursesForFilter() {
     }
 }
 
+/* ── Course Typeahead Chip Widget ── */
+let selectedCourseChips = [];   // course names currently selected
+
 function populateCourseFilter() {
     const select = document.getElementById('courseFilter');
     if (!select) return;
-
-    select.innerHTML = '<option value="">-- All Courses --</option>';
-
-    filteredCourses.forEach(course => {
-        const option = document.createElement('option');
-        option.value = course.courseName;
-        option.textContent = course.courseName;
-        select.appendChild(option);
+    select.innerHTML = '<option value=""></option>';
+    (allCourses || []).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.courseName;
+        opt.textContent = c.courseName;
+        select.appendChild(opt);
     });
 }
 
-function filterCourseList() {
-    const searchTerm = document.getElementById('courseSearchInput').value.toLowerCase();
+function syncCourseFilterSelect() {
+    const select = document.getElementById('courseFilter');
+    if (!select) return;
+    const val = selectedCourseChips[0] || '';
+    select.value = val;
+    // fire change to trigger applyFilters
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+}
 
-    if (!searchTerm) {
-        filteredCourses = [...allCourses];
+function renderCourseChips() {
+    const wrap = document.getElementById('courseChipsWrap');
+    const input = document.getElementById('courseSearchInput');
+    if (!wrap || !input) return;
+    wrap.querySelectorAll('.course-chip').forEach(el => el.remove());
+    selectedCourseChips.forEach(name => {
+        const chip = document.createElement('span');
+        chip.className = 'course-chip';
+        chip.innerHTML = `<span class="course-chip-name" title="${name}">${name}</span>
+            <button type="button" class="course-chip-close" aria-label="Remove ${name}" data-course="${name}">
+                <i class="bi bi-x"></i>
+            </button>`;
+        chip.querySelector('.course-chip-close').addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedCourseChips = selectedCourseChips.filter(n => n !== name);
+            renderCourseChips();
+            syncCourseFilterSelect();
+            updateFilterBadge();
+        });
+        wrap.insertBefore(chip, input);
+    });
+}
+
+function buildCourseDropdown(term) {
+    const dd = document.getElementById('courseDropdown');
+    if (!dd) return;
+    const filtered = (allCourses || []).filter(c =>
+        String(c.courseName || '').toLowerCase().includes((term || '').toLowerCase().trim())
+    );
+    dd.innerHTML = '';
+    if (filtered.length === 0) {
+        dd.innerHTML = '<li class="dd-empty">No courses found</li>';
     } else {
-        filteredCourses = allCourses.filter(course =>
-            course.courseName.toLowerCase().includes(searchTerm)
-        );
+        filtered.forEach(c => {
+            const isSelected = selectedCourseChips.includes(c.courseName);
+            const li = document.createElement('li');
+            li.setAttribute('role', 'option');
+            li.setAttribute('data-course', c.courseName);
+            if (isSelected) li.classList.add('already-selected');
+            li.innerHTML = `<i class="bi bi-mortarboard" style="font-size:0.78rem;color:#94a3b8;"></i>
+                <span>${c.courseName}</span>
+                ${isSelected ? '<i class="bi bi-check2 course-dd-check"></i>' : ''}`;
+            li.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                if (!isSelected) {
+                    selectedCourseChips = [c.courseName];
+                    renderCourseChips();
+                    syncCourseFilterSelect();
+                    closeCourseDropdown();
+                    document.getElementById('courseSearchInput').value = '';
+                }
+            });
+            dd.appendChild(li);
+        });
     }
+}
 
-    populateCourseFilter();
+function openCourseDropdown(term) {
+    buildCourseDropdown(term);
+    document.getElementById('courseDropdown')?.classList.add('open');
+}
+function closeCourseDropdown() {
+    document.getElementById('courseDropdown')?.classList.remove('open');
+}
+
+function filterCourseList() {
+    const term = document.getElementById('courseSearchInput')?.value || '';
+    openCourseDropdown(term);
+}
+
+function initCourseTypeahead() {
+    const input  = document.getElementById('courseSearchInput');
+    const dd     = document.getElementById('courseDropdown');
+    const widget = document.getElementById('courseChipsInput');
+    if (!input || !dd) return;
+
+    widget?.addEventListener('click', () => input.focus());
+    input.addEventListener('focus', () => openCourseDropdown(input.value));
+    input.addEventListener('input', () => openCourseDropdown(input.value));
+
+    input.addEventListener('keydown', (e) => {
+        const items = [...dd.querySelectorAll('li:not(.already-selected):not(.dd-empty)')];
+        const highlighted = dd.querySelector('li.highlighted');
+        let idx = items.indexOf(highlighted);
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (highlighted) highlighted.classList.remove('highlighted');
+            idx = (idx + 1) % items.length;
+            items[idx]?.classList.add('highlighted');
+            items[idx]?.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (highlighted) highlighted.classList.remove('highlighted');
+            idx = (idx - 1 + items.length) % items.length;
+            items[idx]?.classList.add('highlighted');
+            items[idx]?.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlighted) highlighted.dispatchEvent(new MouseEvent('mousedown'));
+        } else if (e.key === 'Escape') {
+            closeCourseDropdown();
+            input.blur();
+        } else if (e.key === 'Backspace' && input.value === '' && selectedCourseChips.length) {
+            selectedCourseChips.pop();
+            renderCourseChips();
+            syncCourseFilterSelect();
+            updateFilterBadge();
+        }
+    });
+
+    document.addEventListener('mousedown', (e) => {
+        if (!document.getElementById('courseTypeahead')?.contains(e.target)) {
+            closeCourseDropdown();
+        }
+    });
+}
+
+// ── Filter Badge Counter ──
+function updateFilterBadge() {
+    let count = 0;
+    if (document.getElementById('courseFilter')?.value) count++;
+    if (document.getElementById('statusFilter')?.value) count++;
+    if (document.getElementById('fromDateFilter')?.value) count++;
+    if (document.getElementById('toDateFilter')?.value) count++;
+
+    const badge = document.getElementById('filterBadge');
+    const btn   = document.getElementById('btnToggleFilters');
+    if (badge) {
+        badge.textContent = count;
+        badge.classList.toggle('d-none', count === 0);
+    }
+    if (btn) {
+        btn.classList.toggle('btn-outline-secondary', count === 0);
+        btn.classList.toggle('btn-primary',           count > 0);
+    }
+}
+
+// ── Filter Panel Toggle (Double-Click Animation Protected) ──
+function initFilterToggle() {
+    const btn    = document.getElementById('btnToggleFilters');
+    const panel  = document.getElementById('advancedFiltersPanel');
+    if (!btn || !panel) return;
+
+    let isAnimating = false;
+    const bsCollapse = new bootstrap.Collapse(panel, { toggle: false });
+
+    panel.addEventListener('shown.bs.collapse',  () => { isAnimating = false; btn.setAttribute('aria-expanded','true');  btn.classList.add('filter-btn-open'); });
+    panel.addEventListener('hidden.bs.collapse', () => { isAnimating = false; btn.setAttribute('aria-expanded','false'); btn.classList.remove('filter-btn-open'); });
+    panel.addEventListener('show.bs.collapse',   () => { isAnimating = true; });
+    panel.addEventListener('hide.bs.collapse',   () => { isAnimating = true; });
+
+    btn.addEventListener('click', () => {
+        if (isAnimating) return;
+        bsCollapse.toggle();
+    });
 }
 
 function applyFilters() {
@@ -344,6 +507,11 @@ function clearFilters() {
     if (courseSearchInput) courseSearchInput.value = '';
     if (fromDateFilter) fromDateFilter.value = '';
     if (toDateFilter) toDateFilter.value = '';
+
+    // Reset typeahead chips
+    selectedCourseChips = [];
+    renderCourseChips();
+    closeCourseDropdown();
 
     feesFilters = {
         searchTerm: '',
@@ -824,17 +992,17 @@ async function openFeeInstallments(regNo) {
                     data-updated-by="${inst.updatedBy || '-'}" 
                     data-updated-time="${updatedTimeStr}"
                     style="cursor: pointer;">
-                    <td>${inst.dueDate}</td>
-                    <td>₹${parseFloat(inst.amount).toFixed(2)}</td>
-                    <td>${statusBadge}</td>
-                    <td class="small text-muted">${inst.notes || '-'}</td>
-                    <td>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-sm btn-outline-primary" onclick="editInstallment(${inst.id}, '${inst.dueDate}', ${inst.amount}, '${inst.status}', '${(inst.notes || '').replace(/'/g, "\\'")}')">
+                    <td data-label="DUE DATE">${inst.dueDate}</td>
+                    <td data-label="AMOUNT">₹${parseFloat(inst.amount).toFixed(2)}</td>
+                    <td data-label="STATUS">${statusBadge}</td>
+                    <td data-label="NOTES" class="small text-muted">${inst.notes || '-'}</td>
+                    <td data-label="ACTIONS">
+                        <div class="d-flex align-items-center justify-content-end gap-2">
+                            <button class="btn btn-sm btn-primary" onclick="editInstallment(${inst.id}, '${inst.dueDate}', ${inst.amount}, '${inst.status}', '${(inst.notes || '').replace(/'/g, "\\'")}')" title="Edit">
                                 <i class="bi bi-pencil"></i>
                             </button>
                             ${inst.status !== 'Refund' ? `
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteInstallment(${inst.id})">
+                            <button class="btn btn-sm btn-danger" onclick="deleteInstallment(${inst.id})" title="Delete">
                                 <i class="bi bi-trash"></i>
                             </button>
                             ` : ''}
@@ -1053,13 +1221,13 @@ async function loadRefundHistory(regNo) {
             } else {
                 tbody.innerHTML = refunds.map(ref => `
                     <tr>
-                        <td><strong>${ref.refundNumber}</strong></td>
-                        <td>${formatDate(ref.refundDate)}</td>
-                        <td class="text-danger"><strong>-₹${ref.refundAmount.toFixed(2)}</strong></td>
-                        <td><span class="badge bg-info">${ref.paymentMode}</span></td>
-                        <td class="small">${ref.notes || '-'}</td>
-                        <td class="small">${ref.issuedBy || ref.createdBy || 'SYSTEM'}</td>
-                        <td><span class="badge bg-danger">Refunded</span></td>
+                        <td data-label="REFUND NO."><strong>${ref.refundNumber}</strong></td>
+                        <td data-label="DATE">${formatDate(ref.refundDate)}</td>
+                        <td data-label="AMOUNT" class="text-danger"><strong>-₹${ref.refundAmount.toFixed(2)}</strong></td>
+                        <td data-label="MODE"><span class="badge bg-info">${ref.paymentMode}</span></td>
+                        <td data-label="NOTES" class="small">${ref.notes || '-'}</td>
+                        <td data-label="ISSUED BY" class="small">${ref.issuedBy || ref.createdBy || 'SYSTEM'}</td>
+                        <td data-label="STATUS"><span class="badge bg-danger">Refunded</span></td>
                     </tr>
                 `).join('');
             }
@@ -1138,44 +1306,44 @@ function renderTable() {
 
         return `
             <tr>
-                <td><strong>${item.regNo || 'N/A'}</strong></td>
-                <td>${item.studentName || 'N/A'}</td>
-                <td>${item.mobile || 'N/A'}</td>
-                <td>₹${(item.totalFees || 0).toLocaleString()}</td>
-                <td class="${actualDue > 0 ? 'text-danger' : 'text-success'}">
+                <td data-label="REG NO."><strong>${item.regNo || 'N/A'}</strong></td>
+                <td data-label="STUDENT NAME">${item.studentName || 'N/A'}</td>
+                <td data-label="MOBILE NO.">${item.mobile || 'N/A'}</td>
+                <td data-label="TOTAL FEES">₹${(item.totalFees || 0).toLocaleString()}</td>
+                <td data-label="DUE AMOUNT" class="${actualDue > 0 ? 'text-danger' : 'text-success'}">
                     <strong>₹${actualDue.toLocaleString()}</strong>
                     ${totalRefund > 0 ? `<br><small class="text-muted">(Refund: ₹${totalRefund.toLocaleString()})</small>` : ''}
                 </td>
-                <td>
+                <td data-label="PAID AMOUNT">
                     ₹${netPaid.toLocaleString()}
                     ${totalRefund > 0 ? `<br><small class="text-muted">(Gross: ₹${grossPaid.toLocaleString()})</small>` : ''}
                 </td>
-                <td>${dueDateDisplay}</td>
-                <td><span class="badge ${statusBadge}">${statusText}</span></td>
-                <td><span class="badge bg-primary">${item.course || 'N/A'}</span></td>
-                <td>
+                <td data-label="DUE DATE">${dueDateDisplay}</td>
+                <td data-label="STATUS"><span class="badge ${statusBadge}">${statusText}</span></td>
+                <td data-label="COURSE"><span class="badge bg-primary">${item.course || 'N/A'}</span></td>
+                <td data-label="ACTIONS">
                     <div class="action-dropdown">
-                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" onclick="toggleActionMenu(event)">
+                        <button class="action-btn action-menu-trigger" onclick="toggleActionMenu(event)">
                             <i class="bi bi-three-dots-vertical"></i>
                         </button>
                         <div class="action-menu">
-                            <button class="action-menu-item" onclick="openFeeReceipt('${item.regNo}')">
+                            <button class="action-menu-item" data-action="update" onclick="openFeeReceipt('${item.regNo}')">
                                 <i class="bi bi-receipt text-primary"></i>
                                 <span>New Fee Receipt</span>
                             </button>
-                            <button class="action-menu-item" onclick="viewReceipts('${item.regNo}')">
+                            <button class="action-menu-item" data-action="view" onclick="viewReceipts('${item.regNo}')">
                                 <i class="bi bi-receipt-cutoff text-info"></i>
                                 <span>View Receipts</span>
                             </button>
-                            <button class="action-menu-item" onclick="openFeeInstallments('${item.regNo}')">
+                            <button class="action-menu-item" data-action="installments" onclick="openFeeInstallments('${item.regNo}')">
                                 <i class="bi bi-cash-stack text-success"></i>
                                 <span>Fee Installments</span>
                             </button>
-                            <button class="action-menu-item" onclick="changeFeesStatus('${item.regNo}')">
+                            <button class="action-menu-item" data-action="changestatus" onclick="changeFeesStatus('${item.regNo}')">
                                 <i class="bi bi-arrow-repeat text-warning"></i>
                                 <span>Change Status</span>
                             </button>
-                            <button class="action-menu-item" onclick="feesRefund('${item.regNo}')">
+                            <button class="action-menu-item" data-action="delete" onclick="feesRefund('${item.regNo}')">
                                 <i class="bi bi-arrow-counterclockwise text-danger"></i>
                                 <span>Fees Refund</span>
                             </button>
@@ -1235,52 +1403,54 @@ async function viewReceipts(regNo) {
 
                 return `
                 <tr>
-                    <td><strong>${receipt.receiptNumber || 'N/A'}</strong></td>
-                    <td>${receipt.invoiceNumber || 'N/A'}</td>
-                    <td>₹${(receipt.amountReceived || 0).toLocaleString()}</td>
-                    <td>${receipt.receiptDate ? formatDate(receipt.receiptDate) : 'N/A'}</td>
-                    <td><span class="badge bg-info">${receipt.paymentMode || 'Cash'}</span></td>
-                    <td>${receipt.notes || '-'}</td>
-                    <td>${receiptTypeBadge}</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary me-1"
-                            onclick="viewReceiptPreview('${receipt.receiptNumber}', '${regNo}')"
-                            title="View">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-success me-1"
-                            onclick="downloadReceiptPDF('${receipt.receiptNumber}', '${regNo}')"
-                            title="Download PDF">
-                            <i class="bi bi-download"></i>
-                        </button>
-                        ${!isOldData ? `
-                        <button class="btn btn-sm btn-info me-1"
-                            onclick="emailReceipt('${receipt.receiptNumber}', '${student.studentName}', '${student.mobile}')"
-                            title="Email">
-                            <i class="bi bi-envelope"></i>
-                        </button>
-                        <button class="btn btn-sm btn-warning me-1"
-                            onclick="updateFeeReceipt(${receipt.id}, '${regNo}')"
-                            title="Edit">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger"
-                            onclick="deleteReceipt(${receipt.id})"
-                            title="Delete">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                        ` : (isSuperAdmin ? `
-                        <button class="btn btn-sm btn-info me-1"
-                            onclick="emailReceipt('${receipt.receiptNumber}', '${student.studentName}', '${student.mobile}')"
-                            title="Email">
-                            <i class="bi bi-envelope"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger"
-                            onclick="deleteOldCollection(${receipt.id}, '${regNo}')"
-                            title="Delete">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                         ` : '<span class="text-muted small">View Only</span>')}
+                    <td data-label="RECEIPT NO."><strong>${receipt.receiptNumber || 'N/A'}</strong></td>
+                    <td data-label="INVOICE NO.">${receipt.invoiceNumber || 'N/A'}</td>
+                    <td data-label="AMOUNT">₹${(receipt.amountReceived || 0).toLocaleString()}</td>
+                    <td data-label="DATE">${receipt.receiptDate ? formatDate(receipt.receiptDate) : 'N/A'}</td>
+                    <td data-label="MODE"><span class="badge bg-info">${receipt.paymentMode || 'Cash'}</span></td>
+                    <td data-label="NOTES">${receipt.notes || '-'}</td>
+                    <td data-label="TYPE">${receiptTypeBadge}</td>
+                    <td data-label="ACTIONS">
+                        <div class="d-flex align-items-center justify-content-end gap-2">
+                            <button class="btn btn-sm btn-primary"
+                                onclick="viewReceiptPreview('${receipt.receiptNumber}', '${regNo}')"
+                                title="View">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-success"
+                                onclick="downloadReceiptPDF('${receipt.receiptNumber}', '${regNo}')"
+                                title="Download PDF">
+                                <i class="bi bi-download"></i>
+                            </button>
+                            ${!isOldData ? `
+                            <button class="btn btn-sm btn-info"
+                                onclick="emailReceipt('${receipt.receiptNumber}', '${student.studentName}', '${student.mobile}')"
+                                title="Email">
+                                <i class="bi bi-envelope"></i>
+                            </button>
+                            <button class="btn btn-sm btn-warning"
+                                onclick="updateFeeReceipt(${receipt.id}, '${regNo}')"
+                                title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger"
+                                onclick="deleteFeeReceipt(${receipt.id}, '${regNo}')"
+                                title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            ` : (isSuperAdmin ? `
+                            <button class="btn btn-sm btn-info"
+                                onclick="emailReceipt('${receipt.receiptNumber}', '${student.studentName}', '${student.mobile}')"
+                                title="Email">
+                                <i class="bi bi-envelope"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger"
+                                onclick="deleteOldCollection(${receipt.id}, '${regNo}')"
+                                title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            ` : '<span class="text-muted small">View Only</span>')}
+                        </div>
                     </td>
                 </tr>
             `}).join('');
@@ -1304,14 +1474,10 @@ async function viewReceipts(regNo) {
 
 function toggleActionMenu(event) {
     event.stopPropagation();
-    const menu = event.target.closest('.action-dropdown').querySelector('.action-menu');
-
-    // Close all other menus
-    document.querySelectorAll('.action-menu').forEach(m => {
-        if (m !== menu) m.classList.remove('show');
-    });
-
-    menu.classList.toggle('show');
+    const trigger = event.target.closest('.action-menu-trigger, .dropdown-toggle');
+    if (trigger && typeof openActionMenuFixed === 'function') {
+        openActionMenuFixed(trigger);
+    }
 }
 
 // Close menus when clicking outside

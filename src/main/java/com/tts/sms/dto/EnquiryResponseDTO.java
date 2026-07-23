@@ -42,6 +42,7 @@ public class EnquiryResponseDTO {
     private String college;
     private String qualification;
     private String aadhaar;
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthDate;
     private String gender;
 
@@ -56,8 +57,11 @@ public class EnquiryResponseDTO {
     // Enquiry details
     private String source;
     private String referenceName;
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate date;  // enquiryDate - ALIAS FIELD
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate enquiryDate;
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate followupDate;
     private String assign;  // assignTo
     private String status;

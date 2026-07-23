@@ -12,6 +12,42 @@ body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* ── DataTables Export Buttons: reset dark container background ─── */
+.dt-buttons {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 6px;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.dt-buttons .dt-button,
+.dt-buttons .btn {
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+    padding: 0.3rem 0.8rem !important;
+    border-radius: 6px !important;
+    transition: all 0.18s !important;
+    line-height: 1.4 !important;
+}
+
+.dt-buttons .btn-outline-primary  { color: #3b82f6 !important; border: 1.5px solid #3b82f6 !important; }
+.dt-buttons .btn-outline-primary:hover  { background: #3b82f6 !important; color: #fff !important; }
+.dt-buttons .btn-outline-success  { color: #10b981 !important; border: 1.5px solid #10b981 !important; }
+.dt-buttons .btn-outline-success:hover  { background: #10b981 !important; color: #fff !important; }
+.dt-buttons .btn-outline-danger   { color: #ef4444 !important; border: 1.5px solid #ef4444 !important; }
+.dt-buttons .btn-outline-danger:hover   { background: #ef4444 !important; color: #fff !important; }
+.dt-buttons .btn-outline-info     { color: #06b6d4 !important; border: 1.5px solid #06b6d4 !important; }
+.dt-buttons .btn-outline-info:hover     { background: #06b6d4 !important; color: #fff !important; }
+.dt-buttons .btn-outline-secondary { color: #64748b !important; border: 1.5px solid #64748b !important; }
+.dt-buttons .btn-outline-secondary:hover { background: #64748b !important; color: #fff !important; }
+
 /* Page Header */
 .page-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -740,13 +776,13 @@ body {
 
         /* Action Card - Stack Filters Vertically */
         .action-card {
-            padding: 1rem;
+            padding: 0.875rem;
             margin-bottom: 1rem;
             border-radius: 0.75rem;
         }
 
         .action-card .row.g-3 {
-            gap: 0.75rem !important;
+            --bs-gutter-y: 0.5rem !important;
         }
 
         .action-card .col-lg-3,
@@ -789,16 +825,18 @@ body {
             padding: 0.5rem;
         }
 
-        /* Action Buttons - Full Width */
-        .action-card .col-lg-2 .btn {
-            width: 100%;
-            margin-bottom: 0.5rem;
-            padding: 0.625rem 1rem;
-            font-size: 0.875rem;
+        /* Action Buttons - Side by Side */
+        .action-card .col-lg-2 {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 0.5rem !important;
         }
 
-        .action-card .col-lg-2 .btn:last-child {
-            margin-bottom: 0;
+        .action-card .col-lg-2 .btn {
+            flex: 1;
+            padding: 0.625rem 0.75rem;
+            font-size: 0.875rem;
+            margin-bottom: 0 !important;
         }
 
         /* Export Tools Info */
@@ -845,13 +883,21 @@ body {
             white-space: nowrap;
         }
 
+        /* Total Amount Footer - Always Visible */
         .table tfoot td {
             padding: 0.75rem 0.5rem;
             font-size: 0.875rem;
+            white-space: nowrap;
+            background-color: #e0f2fe !important;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        /* Sticky total on mobile card layout */
+        #totalAmountRow {
             position: sticky;
             bottom: 0;
-            background-color: #e0f2fe;
-            z-index: 10;
+            z-index: 5;
         }
 
         /* DataTables Wrapper - Stack Controls */
@@ -1602,3 +1648,162 @@ body {
             }
         }
     }
+
+/* ==========================================================================
+   COURSE SALES REPORT - MOBILE CARDS LAYOUT (< 992px)
+   ========================================================================== */
+
+@media (max-width: 991.98px) {
+
+    .table-card,
+    .table-responsive {
+        overflow: visible !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    #salesReportTable,
+    .table-responsive .table:not(.no-mobile-cards) {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        table-layout: auto !important;
+        border: none !important;
+        background: transparent !important;
+        margin-bottom: 0 !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) thead {
+        display: none !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards),
+    .table-responsive .table:not(.no-mobile-cards) tbody,
+    .table-responsive .table:not(.no-mobile-cards) tr {
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody tr {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 16px !important;
+        margin-bottom: 14px !important;
+        padding: 14px 16px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+        position: relative !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody td,
+    .table-responsive .table:not(.no-mobile-cards) tbody tr > *,
+    .table-responsive .table:not(.no-mobile-cards) tbody tr:hover > *,
+    #salesReportTable tbody td,
+    #salesReportTable tbody tr > *,
+    #salesReportTable tbody tr:hover > * {
+        background-color: transparent !important;
+        background: transparent !important;
+        --bs-table-bg: transparent !important;
+        --bs-table-accent-bg: transparent !important;
+        --bs-table-striped-bg: transparent !important;
+        --bs-table-hover-bg: transparent !important;
+        --bs-table-bg-state: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody td {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        padding: 8px 0 !important;
+        border: none !important;
+        border-bottom: 1px dashed #f1f5f9 !important;
+        font-size: 0.85rem !important;
+        color: #334155 !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        word-break: break-word !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        vertical-align: middle !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody td:last-child {
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        margin-top: 4px !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody td:first-child {
+        padding-top: 0 !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 4px !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody td[data-label]::before {
+        content: attr(data-label) !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        font-size: 0.72rem !important;
+        letter-spacing: 0.04em !important;
+        color: #64748b !important;
+        margin-right: 12px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody td > div,
+    .table-responsive .table:not(.no-mobile-cards) tbody td > strong,
+    .table-responsive .table:not(.no-mobile-cards) tbody td > span {
+        text-align: right !important;
+    }
+
+    /* ── Total Amount Bar: always visible below cards ─────────────────── */
+    .table-responsive .table:not(.no-mobile-cards) tfoot {
+        display: block !important;
+        width: 100% !important;
+        margin-top: 4px !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tfoot tr {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        background: #dbeafe !important;
+        border-radius: 12px !important;
+        padding: 12px 16px !important;
+        box-shadow: 0 2px 8px rgba(59,130,246,0.10) !important;
+        border: 1.5px solid #bfdbfe !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tfoot td {
+        display: block !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        font-size: 0.9rem !important;
+        font-weight: 700 !important;
+        color: #1d4ed8 !important;
+        white-space: nowrap !important;
+        letter-spacing: 0.02em !important;
+        text-align: left !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tfoot td:first-child {
+        flex: 1;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tfoot td:last-child {
+        font-size: 1rem !important;
+        color: #1d4ed8 !important;
+    }
+}

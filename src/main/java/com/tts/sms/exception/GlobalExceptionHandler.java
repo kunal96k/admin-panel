@@ -9,8 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-@RestControllerAdvice
+@ControllerAdvice
 public class GlobalExceptionHandler {
 
     /**
@@ -61,30 +61,28 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<Map<String, String>> handleUnauthorized(UnauthorizedException ex) {
+    public Object handleUnauthorized(UnauthorizedException ex, WebRequest request) {
         log.warn("🚫 Unauthorized access attempt: {}", ex.getMessage());
-        Map<String, String> error = new HashMap<>();
-        error.put("error", "Access Denied");
-        error.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+        return handleResponse(
+                HttpStatus.FORBIDDEN,
+                "Access Denied",
+                ex.getMessage(),
+                request,
+                ex
+        );
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+    public Object handleResourceNotFoundException(
             ResourceNotFoundException ex, WebRequest request) {
         log.error("Resource not found: {}", ex.getMessage());
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now().toString());
-        response.put("status", HttpStatus.NOT_FOUND.value());
-        response.put("error", "Resource Not Found");
-        response.put("message", ex.getMessage());
-        response.put("path", extractPath(request));
-
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(response);
+        return handleResponse(
+                HttpStatus.NOT_FOUND,
+                "Resource Not Found",
+                ex.getMessage(),
+                request,
+                ex
+        );
     }
 
     @ExceptionHandler(DuplicateResourceException.class)
@@ -178,7 +176,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleNoResourceFound(
+    public Object handleNoResourceFound(
             NoResourceFoundException ex, WebRequest request) {
         String path = extractPath(request);
 
@@ -193,17 +191,13 @@ public class GlobalExceptionHandler {
 
         log.debug("Resource not found: {}", ex.getResourcePath());
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now().toString());
-        response.put("status", HttpStatus.NOT_FOUND.value());
-        response.put("error", "Not Found");
-        response.put("message", "The requested resource was not found");
-        response.put("path", path);
-
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(response);
+        return handleResponse(
+                HttpStatus.NOT_FOUND,
+                "Not Found",
+                "The requested resource was not found",
+                request,
+                ex
+        );
     }
 
     @ExceptionHandler(org.springframework.web.HttpMediaTypeNotAcceptableException.class)
@@ -289,7 +283,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGlobalException(
+    public Object handleGlobalException(
             Exception ex, WebRequest request) {
 
         // Check if it's a ClientAbortException wrapped in another exception
@@ -300,17 +294,51 @@ public class GlobalExceptionHandler {
 
         log.error("Unexpected error occurred", ex);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now().toString());
-        response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        response.put("error", "Internal Server Error");
-        response.put("message", "An unexpected error occurred. Please try again later.");
-        response.put("path", extractPath(request));
+        return handleResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "An unexpected error occurred. Please try again later.",
+                request,
+                ex
+        );
+    }
 
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(response);
+    private Object handleResponse(HttpStatus status, String error, String message, WebRequest request, Exception ex) {
+        String path = extractPath(request);
+        boolean isHtml = false;
+        String acceptHeader = request.getHeader("Accept");
+        if (acceptHeader != null && acceptHeader.contains("text/html") && !path.startsWith("/api/")) {
+            isHtml = true;
+        }
+
+        if (isHtml) {
+            org.springframework.web.servlet.ModelAndView modelAndView = new org.springframework.web.servlet.ModelAndView();
+            modelAndView.addObject("timestamp", LocalDateTime.now().toString());
+            modelAndView.addObject("status", status.value());
+            modelAndView.addObject("error", error);
+            modelAndView.addObject("message", message);
+            modelAndView.addObject("path", path);
+            
+            if (status == HttpStatus.NOT_FOUND) {
+                modelAndView.setViewName("error/404");
+            } else if (status == HttpStatus.FORBIDDEN) {
+                modelAndView.setViewName("error/403");
+            } else {
+                modelAndView.setViewName("error/500");
+            }
+            return modelAndView;
+        } else {
+            Map<String, Object> response = new HashMap<>();
+            response.put("timestamp", LocalDateTime.now().toString());
+            response.put("status", status.value());
+            response.put("error", error);
+            response.put("message", message);
+            response.put("path", path);
+            return ResponseEntity
+                    .status(status)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(response);
+        }
     }
 
     /**

@@ -81,7 +81,7 @@ public class BackupController {
             }, emailTaskExecutor);
             
             response.put("success", true);
-            response.put("message", "Backup process successfully started in the background. The backup files will be sent to: " + backupEmail);
+            response.put("message", "Backup process successfully started in the background. Backup files will be uploaded directly to Google Drive.");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Failed to initiate manual backup: {}", e.getMessage(), e);

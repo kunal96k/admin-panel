@@ -222,7 +222,7 @@
         }
 
         @media (max-width: 640px) {
-            main[layout\\:fragment="content"]{ padding:12px; margin:14px; }
+            .dashboard-content { padding: 12px; margin: 14px; }
             .stat-card{ padding:10px; min-width:140px; }
             .chart-controls{ flex-direction:column; align-items:stretch; gap:8px; }
             .period-select{ width:100%; min-width:unset; }
@@ -235,19 +235,27 @@
     </style>
 </head>
 <body>
-<main layout:fragment="content">
+<main layout:fragment="content" class="main-content dashboard-content">
     <!-- Quick Actions -->
     <div class="quick-actions" style="display:flex; gap:14px; margin-top:18px; flex-wrap:wrap;">
-        <a th:href="@{/accounts/fees-manager}" class="btn btn-primary shadow-sm" style="flex:1; min-width:120px; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:10px; font-weight: 500;">
+        <a th:href="@{/accounts/fees-manager}" 
+           th:if="${#lists.isEmpty(userMenuPermissions) or #lists.contains(userMenuPermissions, 4L)}"
+           class="btn btn-primary shadow-sm" style="flex:1; min-width:120px; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:10px; font-weight: 500;">
             <i class="bi bi-cash-coin" style="font-size:1.2rem;"></i> Fees Manager
         </a>
-        <a th:href="@{/students/admission}" class="btn btn-success shadow-sm" style="flex:1; min-width:120px; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:10px; font-weight: 500;">
+        <a th:href="@{/students/admission}" 
+           th:if="${#lists.isEmpty(userMenuPermissions) or #lists.contains(userMenuPermissions, 3L)}"
+           class="btn btn-success shadow-sm" style="flex:1; min-width:120px; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:10px; font-weight: 500;">
             <i class="bi bi-person-plus-fill" style="font-size:1.2rem;"></i> Admission
         </a>
-        <a th:href="@{/students/enquiry}" class="btn btn-warning shadow-sm" style="flex:1; min-width:120px; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:10px; font-weight: 500; color: #212529;">
+        <a th:href="@{/students/enquiry}" 
+           th:if="${#lists.isEmpty(userMenuPermissions) or #lists.contains(userMenuPermissions, 2L)}"
+           class="btn btn-warning shadow-sm" style="flex:1; min-width:120px; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:10px; font-weight: 500; color: #212529;">
             <i class="bi bi-file-earmark-text" style="font-size:1.2rem;"></i> Enquiry
         </a>
-        <a th:href="@{/printing/certificate}" class="btn btn-info shadow-sm" style="flex:1; min-width:120px; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:10px; font-weight: 500; color: #212529;">
+        <a th:href="@{/printing/certificate}" 
+           th:if="${#lists.isEmpty(userMenuPermissions) or #lists.contains(userMenuPermissions, 5L)}"
+           class="btn btn-info shadow-sm" style="flex:1; min-width:120px; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:10px; font-weight: 500; color: #212529;">
             <i class="bi bi-printer" style="font-size:1.2rem;"></i> Certificate
         </a>
     </div>

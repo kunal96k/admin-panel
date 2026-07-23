@@ -118,21 +118,52 @@
             </form>
         </div>
 
-        <!-- Import & Export Tools Section -->
-        <div class="action-card mb-4">
+        <!-- Import & Export Tools Section (desktop only, children hidden on mobile) -->
+        <div class="action-card mb-4 d-none d-lg-block" id="importExportCard">
             <div class="row align-items-center g-3">
-                <!-- Import Button (Always Visible) -->
-                <div class="col-12 col-md-6">
+                <!-- Import Button (Hidden - Not in use) -->
+                <div class="col-12 col-md-6 d-none">
                     <button type="button" class="btn btn-success" id="importCsvBtn">
                         <i class="bi bi-file-earmark-arrow-up me-2"></i>Import CSV Data
                     </button>
                     <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
                 </div>
 
-                <!-- Export Tools (Hidden Until Data Exists) -->
-                <div class="col-12 col-md-6" id="exportSection" style="display: none;">
-                    <div class="d-flex flex-wrap gap-2 justify-content-md-end" id="exportTools">
-                        <!-- Export buttons will be inserted here by DataTables -->
+                <!-- Export Tools Desktop (Hidden Until Data Exists) -->
+                <div class="col-12 d-none d-lg-block" id="exportSection" style="display: none !important;">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span class="fw-semibold text-secondary me-2"><i class="bi bi-download me-1"></i>Export:</span>
+                        <div id="exportTools">
+                            <!-- Export buttons will be inserted here by DataTables -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Export Trigger (shown only on < lg after search) -->
+        <div class="d-lg-none mb-3" id="mobileExportTrigger" style="display:none !important;">
+            <button type="button" class="btn btn-outline-primary w-100" id="mobileExportBtn"
+                    data-bs-toggle="modal" data-bs-target="#exportModal">
+                <i class="bi bi-download me-2"></i>Export Options
+            </button>
+        </div>
+
+        <!-- Export Modal (Mobile/Tablet) -->
+        <div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="border-radius:16px; overflow:hidden;">
+                    <div class="modal-header" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;">
+                        <h5 class="modal-title text-white fw-bold" id="exportModalLabel">
+                            <i class="bi bi-download me-2"></i>Export Options
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="text-muted small mb-3">Choose a format to export the report data:</p>
+                        <div class="d-grid gap-2" id="exportModalTools">
+                            <!-- DataTables buttons cloned here by JS -->
+                        </div>
                     </div>
                 </div>
             </div>

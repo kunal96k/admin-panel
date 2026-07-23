@@ -246,4 +246,10 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long>, Jpa
                         LocalDate dateFrom,
                         LocalDate dateTo,
                         String studentCategory);
+
+        /**
+         * Find active admissions within specified date range for attendance sync
+         */
+        @Query("SELECT a FROM Admission a WHERE a.isDeleted = false AND a.admissionDate BETWEEN :fromDate AND :toDate ORDER BY a.admissionDate ASC")
+        List<Admission> findByAdmissionDateBetweenAndIsDeletedFalse(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 }

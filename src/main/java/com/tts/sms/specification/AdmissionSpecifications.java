@@ -18,34 +18,112 @@ public class AdmissionSpecifications {
             predicates.add(cb.equal(root.get("isDeleted"), false));
 
             if (searchDTO != null) {
-                // 2. Search Term Token Parsing (Multi-word search logic)
+                // 2. Search Term Token Parsing with robust field selector support
                 if (searchDTO.getSearchTerm() != null && !searchDTO.getSearchTerm().trim().isEmpty()) {
-                    String[] tokens = searchDTO.getSearchTerm().trim().split("\\s+");
-                    if (tokens.length >= 3) {
-                        // First word -> firstName, Second word -> middleName, Third word -> lastName
-                        Predicate first = cb.like(cb.lower(root.get("firstName")), "%" + tokens[0].toLowerCase() + "%");
-                        Predicate middle = cb.like(cb.lower(root.get("middleName")), "%" + tokens[1].toLowerCase() + "%");
-                        Predicate last = cb.like(cb.lower(root.get("lastName")), "%" + tokens[2].toLowerCase() + "%");
-                        predicates.add(cb.and(first, middle, last));
-                    } else if (tokens.length == 2) {
-                        // First word -> firstName, Second word -> middleName OR lastName
-                        Predicate first = cb.like(cb.lower(root.get("firstName")), "%" + tokens[0].toLowerCase() + "%");
-                        Predicate middleOrLast = cb.or(
-                            cb.like(cb.lower(root.get("middleName")), "%" + tokens[1].toLowerCase() + "%"),
-                            cb.like(cb.lower(root.get("lastName")), "%" + tokens[1].toLowerCase() + "%")
+                    String term = searchDTO.getSearchTerm().trim();
+                    String cleanTerm = term.toLowerCase();
+                    String digits = cleanTerm.replaceAll("[^0-9]", "");
+                    String field = searchDTO.getSearchField() != null ? searchDTO.getSearchField().trim().toUpperCase() : "ALL";
+
+                    if ("NAME".equals(field)) {
+                        Predicate fullStringMatch = cb.or(
+                            cb.like(cb.lower(root.get("firstName")), "%" + cleanTerm + "%"),
+                            cb.like(cb.lower(root.get("middleName")), "%" + cleanTerm + "%"),
+                            cb.like(cb.lower(root.get("lastName")), "%" + cleanTerm + "%")
                         );
-                        predicates.add(cb.and(first, middleOrLast));
-                    } else {
-                        // Single word: Search any relevant columns
-                        String token = tokens[0].toLowerCase();
+
+                        String[] tokens = cleanTerm.split("\\s+");
+                        if (tokens.length > 1) {
+                            List<Predicate> tokenPreds = new ArrayList<>();
+                            for (String tok : tokens) {
+                                if (!tok.trim().isEmpty()) {
+                                    tokenPreds.add(cb.or(
+                                        cb.like(cb.lower(root.get("firstName")), "%" + tok + "%"),
+                                        cb.like(cb.lower(root.get("middleName")), "%" + tok + "%"),
+                                        cb.like(cb.lower(root.get("lastName")), "%" + tok + "%")
+                                    ));
+                                }
+                            }
+                            predicates.add(cb.or(fullStringMatch, cb.and(tokenPreds.toArray(new Predicate[0]))));
+                        } else {
+                            predicates.add(fullStringMatch);
+                        }
+                    } else if ("ADMISSION_NO".equals(field)) {
+                        List<Predicate> admPreds = new ArrayList<>();
+                        admPreds.add(cb.like(cb.lower(root.get("registrationNumber")), "%" + cleanTerm + "%"));
+                        admPreds.add(cb.like(cb.lower(root.get("rollNumber")), "%" + cleanTerm + "%"));
+
+                        if (!digits.isEmpty()) {
+                            try {
+                                Long num = Long.parseLong(digits);
+                                admPreds.add(cb.equal(root.get("id"), num));
+                            } catch (NumberFormatException ignored) {}
+                            if (!digits.equals(cleanTerm)) {
+                                admPreds.add(cb.like(cb.lower(root.get("registrationNumber")), "%" + digits + "%"));
+                                admPreds.add(cb.like(cb.lower(root.get("rollNumber")), "%" + digits + "%"));
+                            }
+                        }
+                        predicates.add(cb.or(admPreds.toArray(new Predicate[0])));
+                    } else if ("MOBILE".equals(field)) {
+                        List<Predicate> mobPreds = new ArrayList<>();
+                        mobPreds.add(cb.like(cb.lower(root.get("mobilePrimary")), "%" + cleanTerm + "%"));
+                        mobPreds.add(cb.like(cb.lower(root.get("mobileSecondary")), "%" + cleanTerm + "%"));
+                        if (!digits.isEmpty() && !digits.equals(cleanTerm)) {
+                            mobPreds.add(cb.like(cb.lower(root.get("mobilePrimary")), "%" + digits + "%"));
+                            mobPreds.add(cb.like(cb.lower(root.get("mobileSecondary")), "%" + digits + "%"));
+                        }
+                        predicates.add(cb.or(mobPreds.toArray(new Predicate[0])));
+                    } else if ("ASSIGN_TO".equals(field)) {
+                        Join<Admission, com.tts.sms.model.Enquiry> enquiryJoin = root.join("enquiry", JoinType.LEFT);
                         predicates.add(cb.or(
-                            cb.like(cb.lower(root.get("firstName")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("middleName")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("lastName")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("mobilePrimary")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("registrationNumber")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("emailPrimary")), "%" + token + "%")
+                            cb.like(cb.lower(root.get("createdBy")), "%" + cleanTerm + "%"),
+                            cb.like(cb.lower(enquiryJoin.get("assignTo")), "%" + cleanTerm + "%")
                         ));
+                    } else {
+                        // ALL fields (default)
+                        List<Predicate> allPreds = new ArrayList<>();
+
+                        allPreds.add(cb.like(cb.lower(root.get("firstName")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("middleName")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("lastName")), "%" + cleanTerm + "%"));
+
+                        String[] tokens = cleanTerm.split("\\s+");
+                        if (tokens.length > 1) {
+                            List<Predicate> tokenPreds = new ArrayList<>();
+                            for (String tok : tokens) {
+                                if (!tok.trim().isEmpty()) {
+                                    tokenPreds.add(cb.or(
+                                        cb.like(cb.lower(root.get("firstName")), "%" + tok + "%"),
+                                        cb.like(cb.lower(root.get("middleName")), "%" + tok + "%"),
+                                        cb.like(cb.lower(root.get("lastName")), "%" + tok + "%")
+                                    ));
+                                }
+                            }
+                            allPreds.add(cb.and(tokenPreds.toArray(new Predicate[0])));
+                        }
+
+                        allPreds.add(cb.like(cb.lower(root.get("mobilePrimary")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("mobileSecondary")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("registrationNumber")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("rollNumber")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("emailPrimary")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("createdBy")), "%" + cleanTerm + "%"));
+
+                        Join<Admission, com.tts.sms.model.Enquiry> enquiryJoin = root.join("enquiry", JoinType.LEFT);
+                        allPreds.add(cb.like(cb.lower(enquiryJoin.get("assignTo")), "%" + cleanTerm + "%"));
+
+                        if (!digits.isEmpty()) {
+                            try {
+                                Long num = Long.parseLong(digits);
+                                allPreds.add(cb.equal(root.get("id"), num));
+                            } catch (NumberFormatException ignored) {}
+                            if (!digits.equals(cleanTerm)) {
+                                allPreds.add(cb.like(cb.lower(root.get("mobilePrimary")), "%" + digits + "%"));
+                                allPreds.add(cb.like(cb.lower(root.get("registrationNumber")), "%" + digits + "%"));
+                            }
+                        }
+
+                        predicates.add(cb.or(allPreds.toArray(new Predicate[0])));
                     }
                 }
 

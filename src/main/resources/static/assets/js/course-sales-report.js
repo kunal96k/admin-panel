@@ -109,7 +109,7 @@ function populateCourseDropdown(courses) {
     const $courseFilter = $("#courseFilter");
     $courseFilter.empty();
 
-    $courseFilter.append('<option value="" disabled selected>-- Select Course --</option>');
+    $courseFilter.append('<option value="">-- All Courses --</option>');
 
     courses.forEach(function (course) {
         $courseFilter.append(
@@ -121,6 +121,7 @@ function populateCourseDropdown(courses) {
     });
 
     updateStatsCard('#totalCourses', courses.length);
+    initCourseTypeahead(courses);
 }
 
 // Setup Event Listeners
@@ -140,15 +141,6 @@ function setupEventListeners() {
     $('#courseFilter').on('change', function () {
         selectedCourseId = $(this).val();
         $(this).removeClass('is-invalid');
-    });
-
-    // Course Search
-    $('#courseSearchInput').on('input', function () {
-        const searchTerm = $(this).val().toLowerCase();
-        $('#courseFilter option').each(function () {
-            const text = $(this).text().toLowerCase();
-            $(this).toggle(text.includes(searchTerm) || $(this).val() === '');
-        });
     });
 
     // Table Search
@@ -181,7 +173,6 @@ function validateForm() {
 
     const fromDate = $('#fromDate').val();
     const toDate = $('#toDate').val();
-    const courseId = $('#courseFilter').val();
 
     // Validate From Date
     if (!fromDate) {
@@ -206,12 +197,13 @@ function validateForm() {
         isValid = false;
     }
 
-    // Validate Course
-    if (!courseId) {
-        $('#courseFilter').addClass('is-invalid');
+    // Validate Course using typeahead selectedCourseId
+    if (!selectedCourseId) {
+        $('#courseChipsInput').css({ 'border-color': '#dc3545', 'box-shadow': '0 0 0 3px rgba(220,53,69,.15)' });
+        showNotification('Please select a course before searching.', 'warning');
         isValid = false;
     } else {
-        $('#courseFilter').removeClass('is-invalid');
+        $('#courseChipsInput').css({ 'border-color': '', 'box-shadow': '' });
     }
 
     return isValid;
@@ -302,6 +294,13 @@ function initializeDataTable(startDate, toDate) {
         pageLength: config.pageLength,
         lengthMenu: [10, 25, 50, 100, 1000],
         searching: true, //  Enable DataTables search
+        createdRow: function (row, data, dataIndex) {
+            $(row).find('td:eq(0)').attr('data-label', 'REGISTRATION NO.');
+            $(row).find('td:eq(1)').attr('data-label', 'STUDENT NAME');
+            $(row).find('td:eq(2)').attr('data-label', 'MOBILE NO.');
+            $(row).find('td:eq(3)').attr('data-label', 'CREATED DATE');
+            $(row).find('td:eq(4)').attr('data-label', 'COURSE AMOUNT');
+        },
         language: {
             processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>',
             emptyTable: '<div class="empty-state"><i class="bi bi-inbox"></i><p>No records found</p></div>',
@@ -327,6 +326,12 @@ function initializeDataTable(startDate, toDate) {
                 className: 'btn btn-sm btn-outline-primary',
                 text: '<i class="bi bi-clipboard"></i> Copy',
                 exportOptions: { columns: [0, 1, 2, 3, 4] },
+                footer: true,
+                customize: function (win) {
+                    const totalAmt = $('#totalAmount').text() || '₹0.00';
+                    const txt = win.document.body.innerText || '';
+                    win.document.body.innerText = txt + '\n\nTOTAL AMOUNT:\t' + totalAmt;
+                },
                 action: exportAllData
             },
             {
@@ -336,6 +341,23 @@ function initializeDataTable(startDate, toDate) {
                 text: '<i class="bi bi-file-earmark-excel"></i> Excel',
                 title: 'Course Wise Sales Report',
                 filename: 'course_sales_report_' + new Date().getTime(),
+                exportOptions: { columns: [0, 1, 2, 3, 4] },
+                footer: true,
+                customize: function (xlsx) {
+                    const sheet = xlsx.xl.worksheets['sheet1.xml'];
+                    const totalAmt = $('#totalAmount').text() || '₹0.00';
+                    // Append a footer row with Total Amount
+                    const $sheetData = $('sheetData', sheet);
+                    const lastRowNum = $('row', $sheetData).length + 1;
+                    const footerRow = '<row r="' + lastRowNum + '">' +
+                        '<c r="A' + lastRowNum + '" t="inlineStr"><is><t></t></is></c>' +
+                        '<c r="B' + lastRowNum + '" t="inlineStr"><is><t></t></is></c>' +
+                        '<c r="C' + lastRowNum + '" t="inlineStr"><is><t></t></is></c>' +
+                        '<c r="D' + lastRowNum + '" t="inlineStr"><is><t>TOTAL AMOUNT:</t></is></c>' +
+                        '<c r="E' + lastRowNum + '" t="inlineStr"><is><t>' + totalAmt + '</t></is></c>' +
+                        '</row>';
+                    $sheetData.append(footerRow);
+                },
                 action: exportAllData
             },
             {
@@ -346,6 +368,24 @@ function initializeDataTable(startDate, toDate) {
                 title: 'Course Wise Sales Report',
                 filename: 'course_sales_report_' + new Date().getTime(),
                 orientation: 'landscape',
+                exportOptions: { columns: [0, 1, 2, 3, 4] },
+                footer: true,
+                customize: function (doc) {
+                    const totalAmt = $('#totalAmount').text() || '₹0.00';
+                    doc.content.push({
+                        table: {
+                            widths: ['*', '*', '*', '*', '*'],
+                            body: [[
+                                { text: '', border: [false, false, false, false] },
+                                { text: '', border: [false, false, false, false] },
+                                { text: '', border: [false, false, false, false] },
+                                { text: 'TOTAL AMOUNT:', bold: true, alignment: 'right', border: [false, true, false, false] },
+                                { text: totalAmt, bold: true, alignment: 'right', color: '#1d4ed8', border: [false, true, false, false] }
+                            ]]
+                        },
+                        margin: [0, 8, 0, 0]
+                    });
+                },
                 action: exportAllData
             },
             {
@@ -355,6 +395,12 @@ function initializeDataTable(startDate, toDate) {
                 text: '<i class="bi bi-filetype-csv"></i> CSV',
                 title: 'Course Wise Sales Report',
                 filename: 'course_sales_report_' + new Date().getTime(),
+                exportOptions: { columns: [0, 1, 2, 3, 4] },
+                footer: true,
+                customize: function (csv) {
+                    const totalAmt = $('#totalAmount').text() || '₹0.00';
+                    return csv + '\n,,,TOTAL AMOUNT:,' + totalAmt;
+                },
                 action: exportAllData
             }
         ],
@@ -445,9 +491,34 @@ function initializeDataTable(startDate, toDate) {
         }
     });
 
-    // Add export buttons to custom container
+    // Add export buttons to desktop container
     if ($('#exportTools').length) {
         dataTable.buttons().container().appendTo('#exportTools');
+    }
+
+    // Show desktop export section
+    const isDesktop = window.innerWidth >= 992;
+    if (isDesktop) {
+        $('#exportSection').show();
+    } else {
+        // Show mobile export trigger
+        $('#mobileExportTrigger').show();
+        // Clone DT buttons into modal
+        setTimeout(function () {
+            const $modalTools = $('#exportModalTools');
+            $modalTools.empty();
+            $('#exportTools .dt-buttons .dt-button, #exportTools .btn').each(function () {
+                const $clone = $(this).clone(true, true);
+                $clone.addClass('w-100').css({ 'margin': '0', 'text-align': 'left' });
+                $clone.on('click', function () {
+                    // trigger the original button click
+                    const idx = $clone.index();
+                    $('#exportTools .dt-buttons .dt-button, #exportTools .btn').eq(idx).trigger('click');
+                    setTimeout(() => $('#exportModal').modal('hide'), 200);
+                });
+                $modalTools.append($clone);
+            });
+        }, 300);
     }
 }
 
@@ -567,9 +638,13 @@ function resetForm() {
     $('#salesReportForm')[0].reset();
     setDefaultDates();
     selectedCourseId = null;
+    selectedCourseChips = [];
+    renderCourseChips();
     $('#courseFilter').val('');
     $('#courseSearchInput').val('');
     $('#tableSearch').val('');
+    // Clear course error border
+    $('#courseChipsInput').css({ 'border-color': '', 'box-shadow': '' });
 
     $('.is-invalid').removeClass('is-invalid');
 
@@ -592,6 +667,8 @@ function resetForm() {
     $('#avgFees').text('₹0.00');
     $('#totalAmount').text('₹0.00');
     $('#exportSection').hide();
+    $('#mobileExportTrigger').hide();
+    $('#exportModalTools').empty();
 
     showNotification('Form reset successfully', 'info');
 }
@@ -724,4 +801,91 @@ function fetchStatistics(courseId, fromDate, toDate) {
             console.error('Failed to fetch statistics');
         }
     });
+}
+
+// Course Typeahead Functions
+let selectedCourseChips = [];
+
+function initCourseTypeahead(courses) {
+    const input = document.getElementById('courseSearchInput');
+    const dd = document.getElementById('courseDropdown');
+    const widget = document.getElementById('courseChipsInput');
+    if (!input || !dd) return;
+
+    widget?.addEventListener('click', () => input.focus());
+    input.addEventListener('focus', () => openCourseDropdown(input.value, courses));
+    input.addEventListener('input', () => openCourseDropdown(input.value, courses));
+
+    document.addEventListener('mousedown', (e) => {
+        if (!document.getElementById('courseTypeahead')?.contains(e.target)) {
+            closeCourseDropdown();
+        }
+    });
+}
+
+function renderCourseChips() {
+    const wrap = document.getElementById('courseChipsWrap');
+    const input = document.getElementById('courseSearchInput');
+    if (!wrap || !input) return;
+
+    wrap.querySelectorAll('.course-chip').forEach(el => el.remove());
+    selectedCourseChips.forEach(cObj => {
+        const chip = document.createElement('span');
+        chip.className = 'course-chip';
+        chip.innerHTML = `<span class="course-chip-name" title="${cObj.name}">${cObj.name}</span>
+        <button type="button" class="course-chip-close" aria-label="Remove ${cObj.name}">
+            <i class="bi bi-x"></i>
+        </button>`;
+        chip.querySelector('.course-chip-close').addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedCourseChips = [];
+            selectedCourseId = null;
+            $('#courseFilter').val('');
+            renderCourseChips();
+        });
+        wrap.insertBefore(chip, input);
+    });
+}
+
+function openCourseDropdown(term, courses) {
+    const dd = document.getElementById('courseDropdown');
+    if (!dd) return;
+    const list = courses || coursesData || [];
+    const filtered = list.filter(c =>
+        String(c.CourseName || c.courseName || '').toLowerCase().includes((term || '').toLowerCase().trim())
+    );
+    dd.innerHTML = '';
+    if (filtered.length === 0) {
+        dd.innerHTML = '<li class="dd-empty">No courses found</li>';
+    } else {
+        filtered.forEach(c => {
+            const id = c.CourseId || c.courseId;
+            const name = c.CourseName || c.courseName;
+            const isSelected = selectedCourseChips.some(chip => chip.id == id);
+            const li = document.createElement('li');
+            li.setAttribute('role', 'option');
+            if (isSelected) li.classList.add('already-selected');
+            li.innerHTML = `<i class="bi bi-mortarboard" style="font-size:0.78rem;color:#94a3b8;"></i>
+            <span>${name}</span>
+            ${isSelected ? '<i class="bi bi-check2 course-dd-check"></i>' : ''}`;
+            li.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                selectedCourseChips = [{ id: id, name: name }];
+                selectedCourseId = id;
+                $('#courseFilter').val(id);
+                renderCourseChips();
+                // Clear error state
+                $('#courseChipsInput').css({ 'border-color': '', 'box-shadow': '' });
+                $('#courseError').hide();
+                closeCourseDropdown();
+                document.getElementById('courseSearchInput').value = '';
+            });
+            dd.appendChild(li);
+        });
+    }
+    dd.classList.add('open');
+}
+
+function closeCourseDropdown() {
+    document.getElementById('courseDropdown')?.classList.remove('open');
 }

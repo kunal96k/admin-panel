@@ -73,12 +73,16 @@
         /* Table Styling with proper spacing */
         #profileModal .table {
             margin-bottom: 0;
+            table-layout: fixed !important;
+            width: 100% !important;
         }
 
         #profileModal .table td {
             padding: 0.75rem 0.5rem;
             vertical-align: middle;
-            word-break: break-word;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            white-space: normal !important;
         }
 
         #profileModal .table td.text-muted {
@@ -530,7 +534,7 @@
         rel="stylesheet">
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Michroma&family=Orbitron:wght@400..900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap');
     </style>
 
     <!-- Custom CSS -->
@@ -540,7 +544,7 @@
 <body>
 
     <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar collapsed" id="sidebar">
         <div class="sidebar-header">
             <div class="logo-container">
                 <div class="logo">
@@ -556,9 +560,6 @@
                     <span class="app-subtitle">Training &amp; Solution</span>
                 </div>
             </div>
-            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
-                <i class="bi bi-chevron-left"></i>
-            </button>
         </div>
 
         <nav class="sidebar-menu">
@@ -659,29 +660,61 @@
                 </div>
             </div>
 
-            <!-- Logout -->
+        </nav>
+
+        <!-- Fixed Sidebar Footer with Logout -->
+        <div class="sidebar-footer">
             <div class="menu-item logout-item">
                 <a href="#" class="menu-link" id="sidebarLogout">
                     <i class="bi bi-box-arrow-right"></i>
                     <span class="menu-text">Logout</span>
                 </a>
             </div>
-        </nav>
+        </div>
     </aside>
+
+    <!-- Sidebar Toggle Button (floating outside sidebar) -->
+    <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle sidebar">
+        <i class="bi bi-chevron-left"></i>
+    </button>
 
     <!-- Sidebar Overlay (Mobile) -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Main Content Wrapper -->
-    <div class="main-wrapper" id="mainWrapper">
+    <div class="main-wrapper collapsed" id="mainWrapper">
 
         <!-- TOPBAR -->
         <header class="topbar is-fixed">
             <div class="topbar-left">
                 <button class="hamburger" id="hamburger" aria-label="Toggle sidebar">
-                    <i class="bi bi-list"></i>
+                    <i class="bi bi-chevron-right"></i>
                 </button>
                 <h1 class="page-title" id="pageTitle" th:text="${pageTitle}">Dashboard</h1>
+                
+                <!-- Quick Navigation Action Buttons -->
+                <div class="top-quick-actions d-none d-md-flex align-items-center ms-3 gap-2">
+                    <a th:href="@{/accounts/fees-manager}" 
+                       th:if="${#lists.isEmpty(userMenuPermissions) or #lists.contains(userMenuPermissions, 4L)}"
+                       class="btn-quick-nav btn-fees-mgr">
+                        <i class="bi bi-wallet2 me-1"></i> Fees Manager
+                    </a>
+                    <a th:href="@{/students/admission}" 
+                       th:if="${#lists.isEmpty(userMenuPermissions) or #lists.contains(userMenuPermissions, 3L)}"
+                       class="btn-quick-nav btn-admission">
+                        <i class="bi bi-person-plus-fill me-1"></i> Admission
+                    </a>
+                    <a th:href="@{/students/enquiry}" 
+                       th:if="${#lists.isEmpty(userMenuPermissions) or #lists.contains(userMenuPermissions, 2L)}"
+                       class="btn-quick-nav btn-enquiry">
+                        <i class="bi bi-file-earmark-text me-1"></i> Enquiry
+                    </a>
+                    <a th:href="@{/printing/certificate}" 
+                       th:if="${#lists.isEmpty(userMenuPermissions) or #lists.contains(userMenuPermissions, 5L)}"
+                       class="btn-quick-nav btn-certificate">
+                        <i class="bi bi-printer me-1"></i> Certificate
+                    </a>
+                </div>
             </div>
 
             <div class="topbar-right">
@@ -846,8 +879,8 @@
             <div class="footer-content">
                 <div class="footer-bottom">
                     <p>
-                        &copy; <span th:text="${#dates.year(#dates.createNow())}">2024</span>
-                        <a href="https://tts.net.in/" target="_blank">TechnoKraft Training &amp; Solution PVT LTD</a>.
+                        &copy; <span th:text="${#dates.year(#dates.createNow())}">2026</span>
+                        <a href="https://tts.net.in/" target="_blank">TechnoKraft Training &amp; Solution PVT LTD</a> <span class="ms-1 fw-bold">(v6.9)</span>.
                         All rights reserved. | Powered by <a href="https://www.technokraftservices.com/" target="_blank"
                             style="text-decoration: none; color: inherit; font-weight: 600;">TechnoKraft Services
                             LLP</a>.

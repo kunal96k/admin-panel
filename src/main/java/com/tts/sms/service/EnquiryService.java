@@ -39,7 +39,7 @@ public class EnquiryService {
     @Transactional(readOnly = true)
     public Page<EnquiryResponseDTO> getAllEnquiries(int page, int size) {
         log.debug("Fetching enquiries - page: {}, size: {}", page, size);
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "enquiryDate", "id"));
         Page<Enquiry> enquiries = enquiryRepository.findByIsDeletedFalse(pageable);
         log.info("Retrieved {} enquiries out of {} total",
                 enquiries.getNumberOfElements(), enquiries.getTotalElements());
@@ -50,7 +50,7 @@ public class EnquiryService {
     public Page<EnquiryResponseDTO> searchEnquiries(EnquirySearchDTO searchDTO) {
         log.debug("Searching enquiries with criteria: {}", searchDTO);
 
-        String sortColumn = "createdAt"; // Default
+        String sortColumn = "enquiryDate"; // Default to enquiryDate
 
         if ("createdAt".equals(searchDTO.getSortBy())) {
             sortColumn = "createdAt";
@@ -64,12 +64,11 @@ public class EnquiryService {
             sortColumn = "mobile";
         }
 
-        Sort sort = Sort.by(
-                "DESC".equalsIgnoreCase(searchDTO.getSortDirection())
-                        ? Sort.Direction.DESC
-                        : Sort.Direction.ASC,
-                sortColumn
-        );
+        Sort.Direction direction = "DESC".equalsIgnoreCase(searchDTO.getSortDirection())
+                ? Sort.Direction.DESC
+                : Sort.Direction.ASC;
+
+        Sort sort = Sort.by(direction, sortColumn).and(Sort.by(Sort.Direction.DESC, "id"));
 
         Pageable pageable = PageRequest.of(searchDTO.getPage(), searchDTO.getSize(), sort);
 

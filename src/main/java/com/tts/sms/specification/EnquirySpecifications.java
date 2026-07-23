@@ -18,34 +18,106 @@ public class EnquirySpecifications {
             predicates.add(cb.equal(root.get("isDeleted"), false));
 
             if (searchDTO != null) {
-                // 2. Search Term Token Parsing (Multi-word search logic)
+                // 2. Search Term Token Parsing with robust field selector support
                 if (searchDTO.getSearchTerm() != null && !searchDTO.getSearchTerm().trim().isEmpty()) {
-                    String[] tokens = searchDTO.getSearchTerm().trim().split("\\s+");
-                    if (tokens.length >= 3) {
-                        Predicate first = cb.like(cb.lower(root.get("firstName")), "%" + tokens[0].toLowerCase() + "%");
-                        Predicate middle = cb.like(cb.lower(root.get("middleName")), "%" + tokens[1].toLowerCase() + "%");
-                        Predicate last = cb.like(cb.lower(root.get("lastName")), "%" + tokens[2].toLowerCase() + "%");
-                        predicates.add(cb.and(first, middle, last));
-                    } else if (tokens.length == 2) {
-                        Predicate first = cb.like(cb.lower(root.get("firstName")), "%" + tokens[0].toLowerCase() + "%");
-                        Predicate middleOrLast = cb.or(
-                            cb.like(cb.lower(root.get("middleName")), "%" + tokens[1].toLowerCase() + "%"),
-                            cb.like(cb.lower(root.get("lastName")), "%" + tokens[1].toLowerCase() + "%")
+                    String term = searchDTO.getSearchTerm().trim();
+                    String cleanTerm = term.toLowerCase();
+                    String digits = cleanTerm.replaceAll("[^0-9]", "");
+                    String field = searchDTO.getSearchField() != null ? searchDTO.getSearchField().trim().toUpperCase() : "ALL";
+
+                    if ("NAME".equals(field)) {
+                        Predicate fullStringMatch = cb.or(
+                            cb.like(cb.lower(root.get("firstName")), "%" + cleanTerm + "%"),
+                            cb.like(cb.lower(root.get("middleName")), "%" + cleanTerm + "%"),
+                            cb.like(cb.lower(root.get("lastName")), "%" + cleanTerm + "%"),
+                            cb.like(cb.lower(root.get("fullName")), "%" + cleanTerm + "%")
                         );
-                        predicates.add(cb.and(first, middleOrLast));
+
+                        String[] tokens = cleanTerm.split("\\s+");
+                        if (tokens.length > 1) {
+                            List<Predicate> tokenPreds = new ArrayList<>();
+                            for (String tok : tokens) {
+                                if (!tok.trim().isEmpty()) {
+                                    tokenPreds.add(cb.or(
+                                        cb.like(cb.lower(root.get("firstName")), "%" + tok + "%"),
+                                        cb.like(cb.lower(root.get("middleName")), "%" + tok + "%"),
+                                        cb.like(cb.lower(root.get("lastName")), "%" + tok + "%"),
+                                        cb.like(cb.lower(root.get("fullName")), "%" + tok + "%")
+                                    ));
+                                }
+                            }
+                            predicates.add(cb.or(fullStringMatch, cb.and(tokenPreds.toArray(new Predicate[0]))));
+                        } else {
+                            predicates.add(fullStringMatch);
+                        }
+                    } else if ("ENQUIRY_NO".equals(field)) {
+                        List<Predicate> enqPreds = new ArrayList<>();
+                        enqPreds.add(cb.like(cb.lower(root.get("enquiryNo")), "%" + cleanTerm + "%"));
+
+                        if (!digits.isEmpty()) {
+                            try {
+                                Long num = Long.parseLong(digits);
+                                enqPreds.add(cb.equal(root.get("id"), num));
+                                String padded = String.format("%06d", num);
+                                enqPreds.add(cb.like(cb.lower(root.get("enquiryNo")), "%" + padded + "%"));
+                            } catch (NumberFormatException ignored) {}
+                        }
+                        predicates.add(cb.or(enqPreds.toArray(new Predicate[0])));
+                    } else if ("MOBILE".equals(field)) {
+                        List<Predicate> mobPreds = new ArrayList<>();
+                        mobPreds.add(cb.like(cb.lower(root.get("mobile")), "%" + cleanTerm + "%"));
+                        mobPreds.add(cb.like(cb.lower(root.get("secondaryMobile")), "%" + cleanTerm + "%"));
+                        if (!digits.isEmpty() && !digits.equals(cleanTerm)) {
+                            mobPreds.add(cb.like(cb.lower(root.get("mobile")), "%" + digits + "%"));
+                            mobPreds.add(cb.like(cb.lower(root.get("secondaryMobile")), "%" + digits + "%"));
+                        }
+                        predicates.add(cb.or(mobPreds.toArray(new Predicate[0])));
+                    } else if ("ASSIGN_TO".equals(field)) {
+                        predicates.add(cb.like(cb.lower(root.get("assignTo")), "%" + cleanTerm + "%"));
                     } else {
-                        String token = tokens[0].toLowerCase();
-                        predicates.add(cb.or(
-                            cb.like(cb.lower(root.get("firstName")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("middleName")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("lastName")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("fullName")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("mobile")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("secondaryMobile")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("email")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("secondaryEmail")), "%" + token + "%"),
-                            cb.like(cb.lower(root.get("enquiryNo")), "%" + token + "%")
-                        ));
+                        // ALL fields (default)
+                        List<Predicate> allPreds = new ArrayList<>();
+
+                        allPreds.add(cb.like(cb.lower(root.get("firstName")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("middleName")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("lastName")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("fullName")), "%" + cleanTerm + "%"));
+
+                        String[] tokens = cleanTerm.split("\\s+");
+                        if (tokens.length > 1) {
+                            List<Predicate> tokenPreds = new ArrayList<>();
+                            for (String tok : tokens) {
+                                if (!tok.trim().isEmpty()) {
+                                    tokenPreds.add(cb.or(
+                                        cb.like(cb.lower(root.get("firstName")), "%" + tok + "%"),
+                                        cb.like(cb.lower(root.get("middleName")), "%" + tok + "%"),
+                                        cb.like(cb.lower(root.get("lastName")), "%" + tok + "%"),
+                                        cb.like(cb.lower(root.get("fullName")), "%" + tok + "%")
+                                    ));
+                                }
+                            }
+                            allPreds.add(cb.and(tokenPreds.toArray(new Predicate[0])));
+                        }
+
+                        allPreds.add(cb.like(cb.lower(root.get("mobile")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("secondaryMobile")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("email")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("secondaryEmail")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("enquiryNo")), "%" + cleanTerm + "%"));
+                        allPreds.add(cb.like(cb.lower(root.get("assignTo")), "%" + cleanTerm + "%"));
+
+                        if (!digits.isEmpty()) {
+                            try {
+                                Long num = Long.parseLong(digits);
+                                allPreds.add(cb.equal(root.get("id"), num));
+                            } catch (NumberFormatException ignored) {}
+                            if (!digits.equals(cleanTerm)) {
+                                allPreds.add(cb.like(cb.lower(root.get("mobile")), "%" + digits + "%"));
+                                allPreds.add(cb.like(cb.lower(root.get("secondaryMobile")), "%" + digits + "%"));
+                            }
+                        }
+
+                        predicates.add(cb.or(allPreds.toArray(new Predicate[0])));
                     }
                 }
 
@@ -71,14 +143,18 @@ public class EnquirySpecifications {
                     predicates.add(cb.equal(root.get("assignTo"), searchDTO.getAssignTo()));
                 }
 
-                // 7. Date From
+                // 7. Date From & To Filters (enquiryDate with fallback to createdAt date)
+                Expression<java.time.LocalDate> effectiveDate = cb.coalesce(
+                        root.get("enquiryDate"),
+                        cb.function("DATE", java.time.LocalDate.class, root.get("createdAt"))
+                );
+
                 if (searchDTO.getFromDate() != null) {
-                    predicates.add(cb.greaterThanOrEqualTo(root.get("enquiryDate"), searchDTO.getFromDate()));
+                    predicates.add(cb.greaterThanOrEqualTo(effectiveDate, searchDTO.getFromDate()));
                 }
 
-                // 8. Date To
                 if (searchDTO.getToDate() != null) {
-                    predicates.add(cb.lessThanOrEqualTo(root.get("enquiryDate"), searchDTO.getToDate()));
+                    predicates.add(cb.lessThanOrEqualTo(effectiveDate, searchDTO.getToDate()));
                 }
             }
 

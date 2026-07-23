@@ -258,6 +258,14 @@
             pageLength: 25,
             lengthMenu: [10, 25, 50, 100, 1000],
             searching: false,
+            createdRow: function (row, data, dataIndex) {
+                $(row).find('td:eq(0)').attr('data-label', 'RECEIPT NO.');
+                $(row).find('td:eq(1)').attr('data-label', 'STUDENT NAME');
+                $(row).find('td:eq(2)').attr('data-label', 'MOBILE NO.');
+                $(row).find('td:eq(3)').attr('data-label', 'RECEIPT DATE');
+                $(row).find('td:eq(4)').attr('data-label', 'PAID FEES');
+                $(row).find('td:eq(5)').attr('data-label', 'PAYMENT MODE');
+            },
 
             ajax: function (dtParams, callback) {
                 const page = Math.floor((dtParams.start || 0) / (dtParams.length || 25));
@@ -288,7 +296,17 @@
                             ? response.totalElements
                             : 0;
 
-                        $('#exportSection').toggle(total > 0);
+                        // Show desktop or mobile export trigger based on screen
+                        if (total > 0) {
+                            if (window.innerWidth >= 992) {
+                                $('#exportSection').show();
+                            } else {
+                                $('#mobileExportTrigger').show();
+                            }
+                        } else {
+                            $('#exportSection').hide();
+                            $('#mobileExportTrigger').hide();
+                        }
 
                         callback({
                             draw: dtParams.draw,
@@ -366,40 +384,91 @@
                     extend: 'copy',
                     exportType: 'copy',
                     text: '<i class="bi bi-clipboard me-1"></i> Copy',
-                    className: 'btn btn-sm btn-export',
+                    className: 'btn btn-sm btn-outline-primary',
                     exportOptions: { columns: [0, 1, 2, 3, 4, 5] },
+                    footer: true,
+                    customize: function (win) {
+                        const totalAmt = $('#footerTotalAmount').text() || '₹0.00';
+                        const txt = win.document.body.innerText || '';
+                        win.document.body.innerText = txt + '\n\nTOTAL AMOUNT:\t' + totalAmt;
+                    },
                     action: exportAllData
                 },
                 {
                     extend: 'csv',
                     exportType: 'csv',
                     text: '<i class="bi bi-filetype-csv me-1"></i> CSV',
-                    className: 'btn btn-sm btn-export',
+                    className: 'btn btn-sm btn-outline-info',
+                    title: 'Fees Collection Report',
+                    filename: 'fees_collection_report_' + new Date().getTime(),
                     exportOptions: { columns: [0, 1, 2, 3, 4, 5] },
+                    footer: true,
+                    customize: function (csv) {
+                        const totalAmt = $('#footerTotalAmount').text() || '₹0.00';
+                        return csv + '\n,,,,TOTAL AMOUNT:,' + totalAmt;
+                    },
                     action: exportAllData
                 },
                 {
                     extend: 'excel',
                     exportType: 'excel',
                     text: '<i class="bi bi-file-earmark-excel me-1"></i> Excel',
-                    className: 'btn btn-sm btn-export',
+                    className: 'btn btn-sm btn-outline-success',
+                    title: 'Fees Collection Report',
+                    filename: 'fees_collection_report_' + new Date().getTime(),
                     exportOptions: { columns: [0, 1, 2, 3, 4, 5] },
+                    footer: true,
+                    customize: function (xlsx) {
+                        const sheet = xlsx.xl.worksheets['sheet1.xml'];
+                        const totalAmt = $('#footerTotalAmount').text() || '₹0.00';
+                        const $sheetData = $('sheetData', sheet);
+                        const lastRowNum = $('row', $sheetData).length + 1;
+                        const footerRow = '<row r="' + lastRowNum + '">' +
+                            '<c r="A' + lastRowNum + '" t="inlineStr"><is><t></t></is></c>' +
+                            '<c r="B' + lastRowNum + '" t="inlineStr"><is><t></t></is></c>' +
+                            '<c r="C' + lastRowNum + '" t="inlineStr"><is><t></t></is></c>' +
+                            '<c r="D' + lastRowNum + '" t="inlineStr"><is><t></t></is></c>' +
+                            '<c r="E' + lastRowNum + '" t="inlineStr"><is><t>TOTAL AMOUNT:</t></is></c>' +
+                            '<c r="F' + lastRowNum + '" t="inlineStr"><is><t>' + totalAmt + '</t></is></c>' +
+                            '</row>';
+                        $sheetData.append(footerRow);
+                    },
                     action: exportAllData
                 },
                 {
                     extend: 'pdf',
                     exportType: 'pdf',
                     text: '<i class="bi bi-file-earmark-pdf me-1"></i> PDF',
-                    className: 'btn btn-sm btn-export',
+                    className: 'btn btn-sm btn-outline-danger',
+                    title: 'Fees Collection Report',
+                    filename: 'fees_collection_report_' + new Date().getTime(),
                     orientation: 'landscape',
                     exportOptions: { columns: [0, 1, 2, 3, 4, 5] },
+                    footer: true,
+                    customize: function (doc) {
+                        const totalAmt = $('#footerTotalAmount').text() || '₹0.00';
+                        doc.content.push({
+                            table: {
+                                widths: ['*', '*', '*', '*', '*', '*'],
+                                body: [[
+                                    { text: '', border: [false, false, false, false] },
+                                    { text: '', border: [false, false, false, false] },
+                                    { text: '', border: [false, false, false, false] },
+                                    { text: '', border: [false, false, false, false] },
+                                    { text: 'TOTAL AMOUNT:', bold: true, alignment: 'right', border: [false, true, false, false] },
+                                    { text: totalAmt, bold: true, alignment: 'right', color: '#1d4ed8', border: [false, true, false, false] }
+                                ]]
+                            },
+                            margin: [0, 8, 0, 0]
+                        });
+                    },
                     action: exportAllData
                 },
                 {
                     extend: 'print',
                     exportType: 'print',
                     text: '<i class="bi bi-printer me-1"></i> Print',
-                    className: 'btn btn-sm btn-export',
+                    className: 'btn btn-sm btn-outline-secondary',
                     exportOptions: { columns: [0, 1, 2, 3, 4, 5] },
                     action: exportAllData
                 }
@@ -423,8 +492,31 @@
             }
         });
 
-        // Add export buttons to custom container
+        // Add export buttons to desktop container
         dataTable.buttons().container().appendTo('#exportTools');
+
+        // Show desktop or mobile export section
+        const isDesktop = window.innerWidth >= 992;
+        if (isDesktop) {
+            // export section shown via #exportSection toggle in ajax callback
+        } else {
+            // Mobile: show trigger button (visibility controlled by ajax callback)
+            // Clone DT buttons into modal after a brief delay
+            setTimeout(function () {
+                const $modalTools = $('#exportModalTools');
+                $modalTools.empty();
+                $('#exportTools .dt-buttons .dt-button, #exportTools .btn').each(function () {
+                    const $clone = $(this).clone(true, true);
+                    $clone.addClass('w-100').css({ 'margin': '0' });
+                    $clone.on('click', function () {
+                        const idx = $(this).index();
+                        $('#exportTools .dt-buttons .dt-button, #exportTools .btn').eq(idx).trigger('click');
+                        setTimeout(() => $('#exportModal').modal('hide'), 200);
+                    });
+                    $modalTools.append($clone);
+                });
+            }, 300);
+        }
     }
 
     // Update statistics
@@ -454,6 +546,8 @@
         `);
 
         $('#exportSection').slideUp();
+        $('#mobileExportTrigger').hide();
+        $('#exportModalTools').empty();
         $('#feesCollectionTable tfoot').hide();
 
         $('#totalReceipts').text('0');

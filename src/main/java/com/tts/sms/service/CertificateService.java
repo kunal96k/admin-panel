@@ -11,12 +11,14 @@ import com.tts.sms.repository.FeeInstallmentRepository;
 import com.tts.sms.model.Admission;
 import com.tts.sms.model.Fees;
 import com.tts.sms.model.FeeInstallment;
+import com.tts.sms.specification.CertificateSpecifications;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -91,46 +93,33 @@ public class CertificateService {
     }
 
     /**
-     * Get certificates with pagination and filters
+     * Get certificates with pagination and filters (backward-compatible wrapper).
      */
     @Transactional(readOnly = true)
     public Page<CertificateDTO> getCertificates(
             String course, String status, String search, int page, int size) {
+        return getCertificatesFiltered(search, course, status, null, null, null, page, size);
+    }
+
+    /**
+     * Get certificates using JPA Specifications — supports multi-token name search,
+     * mobile number (via Admission join), issue date range, course, and status.
+     */
+    @Transactional(readOnly = true)
+    public Page<CertificateDTO> getCertificatesFiltered(
+            String search,
+            String course,
+            String status,
+            String mobileNo,
+            LocalDate fromDate,
+            LocalDate toDate,
+            int page,
+            int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Certificate> certificatePage;
-
-        boolean hasCourse = course != null && !course.isEmpty();
-        boolean hasStatus = status != null && !status.isEmpty();
-        boolean hasSearch = search != null && !search.trim().isEmpty();
-
-        if (hasSearch) {
-            if (hasCourse && hasStatus) {
-                certificatePage = certificateRepository.searchCertificatesByCourseAndStatus(
-                        search.trim(), course, status, pageable);
-            } else if (hasCourse) {
-                certificatePage = certificateRepository.searchCertificatesByCourse(
-                        search.trim(), course, pageable);
-            } else if (hasStatus) {
-                certificatePage = certificateRepository.searchCertificatesByStatus(
-                        search.trim(), status, pageable);
-            } else {
-                certificatePage = certificateRepository.searchCertificates(search.trim(), pageable);
-            }
-        } else {
-            if (hasCourse && hasStatus) {
-                certificatePage = certificateRepository.findByCourseNameAndStatusAndIsActiveTrue(
-                        course, status, pageable);
-            } else if (hasCourse) {
-                certificatePage = certificateRepository.findByCourseNameAndIsActiveTrue(course, pageable);
-            } else if (hasStatus) {
-                certificatePage = certificateRepository.findByStatusAndIsActiveTrue(status, pageable);
-            } else {
-                certificatePage = certificateRepository.findByIsActiveTrue(pageable);
-            }
-        }
-
-        return certificatePage.map(this::convertToDTO);
+        Specification<Certificate> spec = CertificateSpecifications.build(
+                search, course, status, mobileNo, fromDate, toDate);
+        return certificateRepository.findAll(spec, pageable).map(this::convertToDTO);
     }
 
     /**
@@ -244,34 +233,31 @@ public class CertificateService {
      * Get filtered statistics
      */
     @Transactional(readOnly = true)
-    public Map<String, Long> getFilteredStatistics(String course, String status, String search) {
-        List<Certificate> filtered = getFilteredCertificates(course, status, search);
+    public Map<String, Long> getFilteredStatistics(
+            String course, String status, String search, LocalDate fromDate, LocalDate toDate) {
+
+        // Build Specification matching current filters
+        Specification<Certificate> totalSpec = CertificateSpecifications.build(
+                search, course, status, null, fromDate, toDate);
+
+        // Issued Count Specification
+        Specification<Certificate> issuedSpec = CertificateSpecifications.build(
+                search, course, "Issued", null, fromDate, toDate);
+
+        // Pending (Not Issued) Count Specification
+        Specification<Certificate> pendingSpec = CertificateSpecifications.build(
+                search, course, "Not Issued", null, fromDate, toDate);
+
+        long total = certificateRepository.count(totalSpec);
+        long issued = certificateRepository.count(issuedSpec);
+        long pending = certificateRepository.count(pendingSpec);
 
         Map<String, Long> stats = new HashMap<>();
-        stats.put("total", (long) filtered.size());
-        stats.put("issued", filtered.stream().filter(c -> "Issued".equals(c.getStatus())).count());
-        stats.put("pending", filtered.stream().filter(c -> !"Issued".equals(c.getStatus())).count());
+        stats.put("total", total);
+        stats.put("issued", issued);
+        stats.put("pending", pending);
 
         return stats;
-    }
-
-    private List<Certificate> getFilteredCertificates(String course, String status, String search) {
-        List<Certificate> all = certificateRepository.findByIsActiveTrue();
-
-        return all.stream()
-                .filter(c -> course == null || course.isEmpty() || c.getCourseName().equals(course))
-                .filter(c -> status == null || status.isEmpty() || c.getStatus().equals(status))
-                .filter(c -> search == null || search.trim().isEmpty() ||
-                        matchesSearch(c, search.trim().toLowerCase()))
-                .collect(Collectors.toList());
-    }
-
-    private boolean matchesSearch(Certificate c, String search) {
-        return (c.getRegistrationNo() != null && c.getRegistrationNo().toLowerCase().contains(search)) ||
-                (c.getCertificateNo() != null && c.getCertificateNo().toLowerCase().contains(search)) ||
-                (c.getStudentName() != null && c.getStudentName().toLowerCase().contains(search)) ||
-                (c.getCourseName() != null && c.getCourseName().toLowerCase().contains(search)) ||
-                (c.getBatch() != null && c.getBatch().toLowerCase().contains(search));
     }
 
     /**

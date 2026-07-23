@@ -146,3 +146,65 @@ tail -f /var/www/tts-sms/logs/sms-application.log
      * Missing or incorrect environment variables (e.g., database connection credentials).
      * Port already in use.
      * Java runtime version mismatch.
+
+---
+
+## 8. Step 6: Deploying Custom Error and Maintenance Pages
+
+To ensure a smooth user experience, Nginx should handle standard HTTP errors (like 404 Not Found) and backend connection failures (like 502 Bad Gateway / 503 Maintenance) directly without hitting the Spring Boot application server.
+
+### 1. Upload Static Pages to the Server
+Upload your custom static HTML files (e.g., `maintenance.html`, `404.html`) to the web directory on the server:
+
+```bash
+# Upload maintenance page to /var/www/tts-sms/static/
+scp -i "mumbai-key.pem" src/main/resources/static/maintenance.html ec2-user@ec2-13-206-199-164.ap-south-1.compute.amazonaws.com:/var/www/tts-sms/static/maintenance.html
+```
+
+### 2. Configure Nginx Server Blocks
+Connect to the server and update your Nginx configuration (typically in `/etc/nginx/conf.d/` or `/etc/nginx/sites-available/default`):
+
+```nginx
+server {
+    listen 80;
+    server_name ec2-13-206-199-164.ap-south-1.compute.amazonaws.com;
+
+    # Specify local root where Nginx holds static files
+    root /var/www/tts-sms/static;
+
+    # Map error status codes to their respective static pages
+    error_page 404 /404.html;
+    error_page 502 503 504 /maintenance.html;
+
+    # Direct proxy location to the Spring Boot App
+    location / {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # CRITICAL: Intercept proxy errors so Nginx handles them directly
+        proxy_intercept_errors on;
+    }
+
+    # Ensure static error pages are served directly by Nginx (no proxy loop)
+    location = /404.html {
+        internal;
+    }
+
+    location = /maintenance.html {
+        internal;
+    }
+}
+```
+
+### 3. Verify and Reload Nginx
+After modifying the server block configuration, verify syntax and reload the Nginx daemon:
+```bash
+# Check syntax config
+sudo nginx -t
+
+# Reload configuration gracefully
+sudo systemctl reload nginx
+```

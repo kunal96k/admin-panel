@@ -19,6 +19,7 @@ import java.time.LocalDate;
 public class EnquirySearchDTO {
 
     private String searchTerm;
+    private String searchField;
     private String status;
     private String source;
     private String course;

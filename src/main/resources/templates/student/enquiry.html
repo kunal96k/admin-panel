@@ -159,86 +159,120 @@
 
         <!-- Action Bar -->
         <div class="action-card">
-            <!-- Row 1: Actions & Search -->
-            <div class="row g-3 align-items-center mb-3">
-                <!-- Buttons -->
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-primary btn-action flex-fill" id="btnAddEnquiry">
-                            <i class="bi bi-plus-circle me-2"></i>New
+            <!-- Responsive Action Bar -->
+            <div class="row g-2 align-items-center">
+                <!-- Action Buttons: full-width flex row on xs, auto on sm+ -->
+                <div class="col-12 col-sm-auto">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-sm btn-primary btn-action flex-fill flex-sm-grow-0" id="btnAddEnquiry">
+                            <i class="bi bi-plus-circle me-1"></i>New
                         </button>
-                        <button class="btn btn-sm btn-success btn-action flex-fill" id="btnImportCSV">
-                            <i class="bi bi-upload me-2"></i>Import
+                        <button class="btn btn-sm btn-success btn-action flex-fill flex-sm-grow-0" id="btnImportCSV">
+                            <i class="bi bi-upload me-1"></i>Import
                         </button>
-                        <button class="btn btn-sm btn-info btn-action flex-fill" id="btnExportCSV">
-                            <i class="bi bi-download me-2"></i>Export
+                        <button class="btn btn-sm btn-info btn-action flex-fill flex-sm-grow-0" id="btnExportCSV">
+                            <i class="bi bi-download me-1"></i>Export
                         </button>
                     </div>
                 </div>
 
-                <!-- Text Search & Page Size -->
-                <div class="col-12 col-md-6 col-lg-8">
+                <!-- Search: full-width on xs, fills remaining space on sm+ -->
+                <div class="col">
                     <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="searchFieldSelect" style="max-width:120px;">
+                            <option value="ALL" selected>All Fields</option>
+                            <option value="NAME">Name</option>
+                            <option value="ENQUIRY_NO">Reg. No.</option>
+                            <option value="MOBILE">Mobile</option>
+                            <option value="ASSIGN_TO">Counselor</option>
+                        </select>
                         <div class="input-group input-group-sm flex-grow-1">
                             <span class="input-group-text bg-white">
                                 <i class="bi bi-search"></i>
                             </span>
-                            <input type="text" class="form-control" id="searchInput" placeholder="Search by name, mobile, course...">
+                            <input type="text" class="form-control" id="searchInput" placeholder="Search enquiries...">
                         </div>
-                        <select class="form-select form-select-sm" id="pageSizeSelect" style="max-width: 85px;">
-                            <option value="25" selected>25</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
                     </div>
+                </div>
+
+                <!-- Page Size + Filter Toggle: right-aligned on xs, auto on sm+ -->
+                <div class="col-12 col-sm-auto d-flex gap-2 align-items-center justify-content-end">
+                    <select class="form-select form-select-sm" id="pageSizeSelect" style="max-width:75px;">
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <button class="btn btn-outline-secondary btn-action position-relative" id="btnToggleFilters"
+                            type="button"
+                            aria-expanded="false"
+                            aria-controls="advancedFiltersPanel"
+                            style="white-space:nowrap;"
+                            title="Toggle Filters">
+                        <i class="bi bi-funnel-fill me-1"></i>Filters
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary d-none" id="filterBadge">0</span>
+                    </button>
                 </div>
             </div>
 
             <!-- Row 2: Advanced Filters -->
-            <div class="row g-3 align-items-end pt-2 border-top">
-                <!-- Course Filter with Search -->
-                <div class="col-12 col-sm-6 col-md-3 col-lg-3">
-                    <label class="form-label mb-1 fw-bold small text-muted">Course Filter</label>
-                    <div class="position-relative">
-                        <input type="text" class="form-control form-control-sm mb-1" id="courseSearchInputFilter"
-                               placeholder="Search courses..." style="font-size: 0.85rem;">
-                        <select class="form-select form-select-sm" id="courseFilter"
-                                style="font-size: 0.85rem;">
+            <div class="collapse mt-2" id="advancedFiltersPanel">
+                <div class="row g-2 align-items-end pt-2 border-top">
+                    <!-- Course Filter: full width on mobile, equal-width on tablet/desktop -->
+                    <div class="col-12 col-sm-3 col-md">
+                        <label class="form-label mb-1 fw-semibold small text-muted">Course</label>
+                        <!-- Hidden select kept for JS compatibility -->
+                        <select id="courseFilter" style="display:none;" aria-hidden="true">
                             <option value="">-- All Courses --</option>
                         </select>
+                        <!-- Typeahead Widget -->
+                        <div class="course-typeahead" id="courseTypeahead">
+                            <div class="course-chips-input" id="courseChipsInput">
+                                <div class="course-chips-wrap" id="courseChipsWrap">
+                                    <!-- chips rendered here by JS -->
+                                    <input type="text"
+                                           id="courseSearchInputFilter"
+                                           class="course-type-input"
+                                           placeholder="Search course..."
+                                           autocomplete="off"
+                                           spellcheck="false">
+                                </div>
+                            </div>
+                            <ul class="course-dropdown" id="courseDropdownFilter" role="listbox"></ul>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Status Filter -->
-                <div class="col-12 col-sm-6 col-md-2 col-lg-2">
-                    <label class="form-label mb-1 fw-bold small text-muted">Status Filter</label>
-                    <select class="form-select form-select-sm" id="statusFilter" style="font-size: 0.85rem; height: 31px;">
-                        <option value="">-- All Status --</option>
-                        <option value="New">New</option>
-                        <option value="In Process">In Process</option>
-                        <option value="Closed">Closed</option>
-                        <option value="Lost">Lost</option>
-                        <option value="Admitted">Admitted</option>
-                    </select>
-                </div>
+                    <!-- Status Filter: full width on mobile, equal-width on tablet/desktop -->
+                    <div class="col-12 col-sm-3 col-md">
+                        <label class="form-label mb-1 fw-semibold small text-muted">Status</label>
+                        <select class="form-select form-select-sm" id="statusFilter" style="font-size:0.82rem;">
+                            <option value="">-- All Status --</option>
+                            <option value="New">New</option>
+                            <option value="In Process">In Process</option>
+                            <option value="Closed">Closed</option>
+                            <option value="Lost">Lost</option>
+                            <option value="Admitted">Admitted</option>
+                        </select>
+                    </div>
 
-                <!-- From Date -->
-                <div class="col-12 col-sm-6 col-md-2 col-lg-2">
-                    <label class="form-label mb-1 fw-bold small text-muted">From Date</label>
-                    <input type="date" class="form-control form-control-sm" id="fromDateFilter" style="font-size: 0.85rem; height: 31px;">
-                </div>
+                    <!-- From Date: full width on mobile, equal-width on tablet/desktop -->
+                    <div class="col-12 col-sm-3 col-md">
+                        <label class="form-label mb-1 fw-semibold small text-muted">From Date</label>
+                        <input type="date" class="form-control form-control-sm" id="fromDateFilter" style="font-size:0.82rem;">
+                    </div>
 
-                <!-- To Date -->
-                <div class="col-12 col-sm-6 col-md-2 col-lg-2">
-                    <label class="form-label mb-1 fw-bold small text-muted">To Date</label>
-                    <input type="date" class="form-control form-control-sm" id="toDateFilter" style="font-size: 0.85rem; height: 31px;">
-                </div>
+                    <!-- To Date: full width on mobile, equal-width on tablet/desktop -->
+                    <div class="col-12 col-sm-3 col-md">
+                        <label class="form-label mb-1 fw-semibold small text-muted">To Date</label>
+                        <input type="date" class="form-control form-control-sm" id="toDateFilter" style="font-size:0.82rem;">
+                    </div>
 
-                <!-- Reset Button -->
-                <div class="col-12 col-sm-6 col-md-3 col-lg-3">
-                    <button class="btn btn-outline-secondary btn-sm w-100" id="btnClearFilters" style="height: 31px;">
-                        <i class="bi bi-x-circle me-1"></i>Clear Filters
-                    </button>
+                    <!-- Clear Filters: full-width on mobile/tablet, auto on desktop -->
+                    <div class="col-12 col-sm-12 col-md-auto d-flex align-items-end">
+                        <button class="btn btn-sm btn-clear-filters w-100 w-md-auto" id="btnClearFilters"
+                                style="white-space:nowrap; background:#fff1f2; color:#e11d48; border:1.5px solid #fca5a5; border-radius:8px; padding:5px 14px; transition:all .18s ease;">
+                            <i class="bi bi-x-circle me-1"></i>Clear Filters
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -993,7 +1027,6 @@
             window.reinitBootstrapDropdowns();
         }
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 </main>
 
 </body>

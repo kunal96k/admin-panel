@@ -14,11 +14,15 @@ let csrfToken = null;
 let csrfHeader = null;
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initializeEventListeners();
     updateStats();
     loadCourses().then(() => {
-       initializeCourseSearch();
+        initCourseTypeahead();
+        initFilterToggle();
+        initStatsToggle();
+        initOpsToggle();
+        updateFilterBadge();
     });
     loadCertificates();
     updateStatsForCurrentView();
@@ -50,15 +54,19 @@ async function updateStatsForCurrentView() {
     const course = document.getElementById('courseFilter')?.value || '';
     const status = document.getElementById('statusFilter')?.value || '';
     const search = document.getElementById('searchInput')?.value || '';
+    const fromDate = document.getElementById('certFromDate')?.value || '';
+    const toDate   = document.getElementById('certToDate')?.value || '';
 
     try {
         const params = new URLSearchParams({
-            ...(course && { course }),
-            ...(status && { status }),
-            ...(search && { search })
+            ...(course   && { course }),
+            ...(status   && { status }),
+            ...(search   && { search }),
+            ...(fromDate && { fromDate }),
+            ...(toDate   && { toDate })
         });
 
-         // Refresh CSRF token before request
+        // Refresh CSRF token before request
         initializeCsrfToken();
 
         const response = await fetch(`/api/certificates/stats-filtered?${params}`, {
@@ -97,24 +105,46 @@ function initializeEventListeners() {
         currentPage = 0;
         loadCertificates();
         updateStatsForCurrentView();
+        updateFilterBadge();
     });
 
     document.getElementById('statusFilter')?.addEventListener('change', () => {
         currentPage = 0;
         loadCertificates();
         updateStatsForCurrentView();
+        updateFilterBadge();
     });
 
-    document.getElementById('pageSizeSelect')?.addEventListener('change', function() {
+    // Date filter listeners (trigger on change and input with console logs)
+    const onDateFilterChange = () => {
+        const fromVal = document.getElementById('certFromDate')?.value || '';
+        const toVal = document.getElementById('certToDate')?.value || '';
+        console.log(`[Date Filter] certFromDate: "${fromVal}", certToDate: "${toVal}"`);
+        currentPage = 0;
+        loadCertificates();
+        updateStatsForCurrentView();
+        updateFilterBadge();
+    };
+
+    document.getElementById('certFromDate')?.addEventListener('change', onDateFilterChange);
+    document.getElementById('certFromDate')?.addEventListener('input', onDateFilterChange);
+    document.getElementById('certToDate')?.addEventListener('change', onDateFilterChange);
+    document.getElementById('certToDate')?.addEventListener('input', onDateFilterChange);
+
+    document.getElementById('pageSizeSelect')?.addEventListener('change', function () {
         pageSize = parseInt(this.value);
         currentPage = 0;
         loadCertificates();
         updateStatsForCurrentView();
     });
 
+    document.getElementById('btnClearFilters')?.addEventListener('click', () => {
+        clearAllFilters();
+    });
+
     // Search with debounce
     let searchTimeout;
-    document.getElementById('searchInput')?.addEventListener('input', function() {
+    document.getElementById('searchInput')?.addEventListener('input', function () {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             currentPage = 0;
@@ -163,7 +193,7 @@ function initializeEventListeners() {
     }
 
     if (csvCertFileInput) {
-        csvCertFileInput.addEventListener('change', function(e) {
+        csvCertFileInput.addEventListener('change', function (e) {
             handleCertCSVFile(e.target.files[0]);
         });
     }
@@ -202,28 +232,239 @@ function initializeEventListeners() {
     }
 }
 
-function initializeCourseSearch() {
-    const searchInput = document.getElementById('courseSearchInput');
-    const courseFilter = document.getElementById('courseFilter');
+/* ── Course Typeahead Chip Widget ── */
+let selectedCourseChips = [];
 
-    if (!searchInput || !courseFilter) return;
+function syncCourseFilterSelect() {
+    const select = document.getElementById('courseFilter');
+    if (!select) return;
+    const val = selectedCourseChips[0] || '';
+    select.value = val;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+}
 
-    // Store original options
-    const allOptions = Array.from(courseFilter.options);
-
-    searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase().trim();
-
-        // Clear current options except "All Courses"
-        courseFilter.innerHTML = '<option value="">-- All Courses --</option>';
-
-        // Filter and add matching options
-        allOptions.slice(1).forEach(option => {
-            if (option.text.toLowerCase().includes(searchTerm)) {
-                courseFilter.appendChild(option.cloneNode(true));
-            }
+function renderCourseChips() {
+    const wrap = document.getElementById('courseChipsWrap');
+    const input = document.getElementById('courseSearchInputFilter');
+    if (!wrap || !input) return;
+    wrap.querySelectorAll('.course-chip').forEach(el => el.remove());
+    selectedCourseChips.forEach(name => {
+        const chip = document.createElement('span');
+        chip.className = 'course-chip';
+        chip.innerHTML = `<span class="course-chip-name" title="${name}">${name}</span>
+            <button type="button" class="course-chip-close" aria-label="Remove ${name}" data-course="${name}">
+                <i class="bi bi-x"></i>
+            </button>`;
+        chip.querySelector('.course-chip-close').addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedCourseChips = selectedCourseChips.filter(n => n !== name);
+            renderCourseChips();
+            syncCourseFilterSelect();
+            updateFilterBadge();
         });
+        wrap.insertBefore(chip, input);
     });
+}
+
+function buildCourseDropdown(term) {
+    const dd = document.getElementById('courseDropdownFilter');
+    if (!dd) return;
+    const filtered = (allCourses || []).filter(c =>
+        String(c.courseName || '').toLowerCase().includes((term || '').toLowerCase().trim())
+    );
+    dd.innerHTML = '';
+    if (filtered.length === 0) {
+        dd.innerHTML = '<li class="dd-empty">No courses found</li>';
+    } else {
+        filtered.forEach(c => {
+            const isSelected = selectedCourseChips.includes(c.courseName);
+            const li = document.createElement('li');
+            li.setAttribute('role', 'option');
+            li.setAttribute('data-course', c.courseName);
+            if (isSelected) li.classList.add('already-selected');
+            li.innerHTML = `<i class="bi bi-mortarboard" style="font-size:0.78rem;color:#94a3b8;"></i>
+                <span>${c.courseName}</span>
+                ${isSelected ? '<i class="bi bi-check2 course-dd-check"></i>' : ''}`;
+            li.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                if (!isSelected) {
+                    selectedCourseChips = [c.courseName];
+                    renderCourseChips();
+                    syncCourseFilterSelect();
+                    closeCourseDropdown();
+                    document.getElementById('courseSearchInputFilter').value = '';
+                }
+            });
+            dd.appendChild(li);
+        });
+    }
+}
+
+function openCourseDropdown(term) {
+    buildCourseDropdown(term);
+    document.getElementById('courseDropdownFilter')?.classList.add('open');
+}
+
+function closeCourseDropdown() {
+    document.getElementById('courseDropdownFilter')?.classList.remove('open');
+}
+
+function filterCourseList() {
+    const term = document.getElementById('courseSearchInputFilter')?.value || '';
+    openCourseDropdown(term);
+}
+
+function initCourseTypeahead() {
+    const input  = document.getElementById('courseSearchInputFilter');
+    const dd     = document.getElementById('courseDropdownFilter');
+    const widget = document.getElementById('courseChipsInput');
+    if (!input || !dd) return;
+
+    widget?.addEventListener('click', () => input.focus());
+    input.addEventListener('focus', () => openCourseDropdown(input.value));
+    input.addEventListener('input', () => openCourseDropdown(input.value));
+
+    input.addEventListener('keydown', (e) => {
+        const items = [...dd.querySelectorAll('li:not(.already-selected):not(.dd-empty)')];
+        const highlighted = dd.querySelector('li.highlighted');
+        let idx = items.indexOf(highlighted);
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (highlighted) highlighted.classList.remove('highlighted');
+            idx = (idx + 1) % items.length;
+            items[idx]?.classList.add('highlighted');
+            items[idx]?.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (highlighted) highlighted.classList.remove('highlighted');
+            idx = (idx - 1 + items.length) % items.length;
+            items[idx]?.classList.add('highlighted');
+            items[idx]?.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlighted) highlighted.dispatchEvent(new MouseEvent('mousedown'));
+        } else if (e.key === 'Escape') {
+            closeCourseDropdown();
+            input.blur();
+        } else if (e.key === 'Backspace' && input.value === '' && selectedCourseChips.length) {
+            selectedCourseChips.pop();
+            renderCourseChips();
+            syncCourseFilterSelect();
+            updateFilterBadge();
+        }
+    });
+
+    document.addEventListener('mousedown', (e) => {
+        if (!document.getElementById('courseTypeahead')?.contains(e.target)) {
+            closeCourseDropdown();
+        }
+    });
+}
+
+// ── Filter Badge Counter ──
+function updateFilterBadge() {
+    let count = 0;
+    if (document.getElementById('statusFilter')?.value)       count++;
+    if (document.getElementById('certFromDate')?.value)       count++;
+    if (document.getElementById('certToDate')?.value)         count++;
+    if (selectedCourseChips && selectedCourseChips.length > 0) count++;
+
+    const badge = document.getElementById('filterBadge');
+    const btn   = document.getElementById('btnToggleFilters');
+    if (badge) {
+        badge.textContent = count;
+        badge.classList.toggle('d-none', count === 0);
+    }
+    if (btn) {
+        btn.classList.toggle('btn-outline-secondary', count === 0);
+        btn.classList.toggle('btn-primary',           count > 0);
+    }
+}
+
+// ── Filter Panel Toggle ──
+function initFilterToggle() {
+    const btn    = document.getElementById('btnToggleFilters');
+    const panel  = document.getElementById('advancedFiltersPanel');
+    if (!btn || !panel) return;
+
+    let isAnimating = false;
+    const bsCollapse = new bootstrap.Collapse(panel, { toggle: false });
+
+    panel.addEventListener('shown.bs.collapse',  () => { isAnimating = false; btn.setAttribute('aria-expanded','true');  btn.classList.add('filter-btn-open'); });
+    panel.addEventListener('hidden.bs.collapse', () => { isAnimating = false; btn.setAttribute('aria-expanded','false'); btn.classList.remove('filter-btn-open'); });
+    panel.addEventListener('show.bs.collapse',   () => { isAnimating = true; });
+    panel.addEventListener('hide.bs.collapse',   () => { isAnimating = true; });
+
+    btn.addEventListener('click', () => {
+        if (isAnimating) return;
+        bsCollapse.toggle();
+    });
+}
+
+// ── Stats Collapse Panel Toggle ──
+function initStatsToggle() {
+    const btn    = document.getElementById('btnToggleStats');
+    const panel  = document.getElementById('statsCardsPanel');
+    if (!btn || !panel) return;
+
+    let isAnimating = false;
+    const bsCollapse = new bootstrap.Collapse(panel, { toggle: false });
+    
+    // Add open class initially since it starts shown
+    btn.classList.add('filter-btn-open');
+
+    panel.addEventListener('shown.bs.collapse',  () => { isAnimating = false; btn.setAttribute('aria-expanded','true');  btn.classList.add('filter-btn-open'); });
+    panel.addEventListener('hidden.bs.collapse', () => { isAnimating = false; btn.setAttribute('aria-expanded','false'); btn.classList.remove('filter-btn-open'); });
+    panel.addEventListener('show.bs.collapse',   () => { isAnimating = true; });
+    panel.addEventListener('hide.bs.collapse',   () => { isAnimating = true; });
+
+    btn.addEventListener('click', () => {
+        if (isAnimating) return;
+        bsCollapse.toggle();
+    });
+}
+
+// ── Operations Collapse Panel Toggle ──
+function initOpsToggle() {
+    const btn    = document.getElementById('btnToggleOps');
+    const panel  = document.getElementById('operationsCardsPanel');
+    if (!btn || !panel) return;
+
+    let isAnimating = false;
+    const bsCollapse = new bootstrap.Collapse(panel, { toggle: false });
+    
+    // Add open class initially since it starts shown
+    btn.classList.add('filter-btn-open');
+
+    panel.addEventListener('shown.bs.collapse',  () => { isAnimating = false; btn.setAttribute('aria-expanded','true');  btn.classList.add('filter-btn-open'); });
+    panel.addEventListener('hidden.bs.collapse', () => { isAnimating = false; btn.setAttribute('aria-expanded','false'); btn.classList.remove('filter-btn-open'); });
+    panel.addEventListener('show.bs.collapse',   () => { isAnimating = true; });
+    panel.addEventListener('hide.bs.collapse',   () => { isAnimating = true; });
+
+    btn.addEventListener('click', () => {
+        if (isAnimating) return;
+        bsCollapse.toggle();
+    });
+}
+
+function clearAllFilters() {
+    if (document.getElementById('searchInput'))          document.getElementById('searchInput').value = '';
+    if (document.getElementById('courseFilter'))         document.getElementById('courseFilter').value = '';
+    if (document.getElementById('statusFilter'))         document.getElementById('statusFilter').value = '';
+    if (document.getElementById('courseSearchInputFilter')) document.getElementById('courseSearchInputFilter').value = '';
+    if (document.getElementById('certFromDate'))         document.getElementById('certFromDate').value = '';
+    if (document.getElementById('certToDate'))           document.getElementById('certToDate').value = '';
+
+    // Reset typeahead chips
+    selectedCourseChips = [];
+    renderCourseChips();
+    closeCourseDropdown();
+
+    currentPage = 0;
+    loadCertificates();
+    updateStatsForCurrentView();
+    updateFilterBadge();
 }
 
 // Load courses from backend
@@ -245,7 +486,7 @@ async function loadCourses() {
 
         const courseFilter = document.getElementById('courseFilter');
         if (courseFilter) {
-            courseFilter.innerHTML = '<option value="">-- All Courses --</option>';
+            courseFilter.innerHTML = '<option value=""></option>';
             allCourses.forEach(course => {
                 const option = document.createElement('option');
                 option.value = course.courseName;
@@ -267,19 +508,23 @@ async function loadCertificates() {
     tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4">Loading...</td></tr>';
 
     try {
-        const course = document.getElementById('courseFilter')?.value || '';
-        const status = document.getElementById('statusFilter')?.value || '';
-        const search = document.getElementById('searchInput')?.value || '';
+        const course   = document.getElementById('courseFilter')?.value || '';
+        const status   = document.getElementById('statusFilter')?.value || '';
+        const search   = document.getElementById('searchInput')?.value || '';
+        const fromDate = document.getElementById('certFromDate')?.value || '';
+        const toDate   = document.getElementById('certToDate')?.value || '';
 
         const params = new URLSearchParams({
             page: currentPage,
             size: pageSize,
-            ...(course && { course }),
-            ...(status && { status }),
-            ...(search && { search })
+            ...(course   && { course }),
+            ...(status   && { status }),
+            ...(search   && { search }),
+            ...(fromDate && { fromDate }),
+            ...(toDate   && { toDate })
         });
 
-         // Refresh CSRF token before request
+        // Refresh CSRF token before request
         initializeCsrfToken();
 
         const response = await fetch(`/api/certificates?${params}`, {
@@ -302,45 +547,49 @@ async function loadCertificates() {
                     </td>
                 </tr>
             `;
+            // FIX: reset totals so renderPagination clears stale page numbers
+            totalPages = 0;
+            totalElements = 0;
             updatePaginationInfo(0, 0);
+            renderPagination();
             return;
         }
 
         tbody.innerHTML = certificates.map(cert => `
             <tr>
-                <td><strong>${cert.registrationNo}</strong></td>
-                <td>${cert.certificateNo || '<span class="text-muted">Not Issued</span>'}</td>
-                <td>${cert.studentName}</td>
-                <td><span class="badge bg-primary">${cert.courseName}</span></td>
-                <td>${cert.batch || '-'}</td>
-                <td>${cert.grade || '<span class="text-muted">-</span>'}</td>
-                <td>${cert.issueDate ? new Date(cert.issueDate).toLocaleDateString() : '<span class="text-muted">-</span>'}</td>
-                <td>
+                <td data-label="REG NO."><strong>${cert.registrationNo}</strong></td>
+                <td data-label="CERTIFICATE NO.">${cert.certificateNo || '<span class="text-muted">Not Issued</span>'}</td>
+                <td data-label="STUDENT NAME">${cert.studentName}</td>
+                <td data-label="COURSE"><span class="badge bg-primary">${cert.courseName}</span></td>
+                <td data-label="BATCH">${cert.batch || '-'}</td>
+                <td data-label="GRADE">${cert.grade || '<span class="text-muted">-</span>'}</td>
+                <td data-label="ISSUE DATE">${cert.issueDate ? new Date(cert.issueDate).toLocaleDateString() : '<span class="text-muted">-</span>'}</td>
+                <td data-label="STATUS">
                     <span class="badge ${cert.status === 'Issued' ? 'bg-success' : 'bg-warning'}">
                         ${cert.status}
                     </span>
                 </td>
-                <td>
+                <td data-label="ACTIONS">
                         <div class="action-dropdown">
-                            <button class="btn btn-light action-menu-trigger" style="padding: 0.25rem 0.5rem;">
+                            <button class="action-btn action-menu-trigger">
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <div class="action-menu">
-                                <button class="action-menu-item" onclick="issueCertificate(${cert.id})">
+                                <button class="action-menu-item" data-action="update" onclick="issueCertificate(${cert.id})">
                                     <i class="bi bi-pencil-square"></i><span>${cert.status === 'Issued' ? 'Edit Certificate' : 'Issue Certificate'}</span>
                                 </button>
                                 ${cert.status === 'Issued' ? `
-                                <button class="action-menu-item" onclick="viewCertificate(${cert.id})">
+                                <button class="action-menu-item" data-action="view" onclick="viewCertificate(${cert.id})">
                                     <i class="bi bi-eye"></i><span>View Certificate</span>
                                 </button>
-                                <button class="action-menu-item" onclick="promptAndSendEmail(${cert.id}, '${cert.studentEmail || ''}')">
+                                <button class="action-menu-item" data-action="changestatus" onclick="promptAndSendEmail(${cert.id}, '${cert.studentEmail || ''}')">
                                     <i class="bi bi-envelope"></i><span>Send Email</span>
                                 </button>
-                                <button class="action-menu-item" onclick="printCertificate(${cert.id})">
+                                <button class="action-menu-item" data-action="print" onclick="printCertificate(${cert.id})">
                                     <i class="bi bi-printer"></i><span>Print Certificate</span>
                                 </button>
                                 ` : ''}
-                                <button class="action-menu-item text-danger" onclick="deleteCertificate(${cert.id})">
+                                <button class="action-menu-item" data-action="delete" onclick="deleteCertificate(${cert.id})">
                                     <i class="bi bi-trash"></i><span>Delete</span>
                                 </button>
                             </div>
@@ -351,13 +600,11 @@ async function loadCertificates() {
 
         // Attach menu triggers
         document.querySelectorAll('.action-menu-trigger').forEach(trigger => {
-            trigger.addEventListener('click', function(e) {
+            trigger.addEventListener('click', function (e) {
                 e.stopPropagation();
-                const menu = this.nextElementSibling;
-                document.querySelectorAll('.action-menu').forEach(m => {
-                    if (m !== menu) m.classList.remove('show');
-                });
-                menu.classList.toggle('show');
+                if (typeof openActionMenuFixed === 'function') {
+                    openActionMenuFixed(this);
+                }
             });
         });
 
@@ -428,15 +675,15 @@ async function issueCertificate(id) {
         selectedCertificateId = id;
 
         document.getElementById('studentName').value = certificate.studentName || '';
-        
+
         // Set course in searchable dropdown
         document.getElementById('courseName').value = certificate.courseName || '';
         const courseSearchEl = document.getElementById('courseSearchInput_cert');
         if (courseSearchEl) courseSearchEl.value = certificate.courseName || '';
-        
+
         // Show course preview with logo
         showCoursePreview(certificate.courseName, certificate.courseImagePath);
-        
+
         document.getElementById('batchName').value = certificate.batch || '';
         document.getElementById('grade').value = certificate.grade || '';
         document.getElementById('certificateNo').value = certificate.certificateNo || 'AUTO-GENERATED';
@@ -537,17 +784,17 @@ function printCertificate(id) {
                 });
                 return;
             }
-            
+
             //  Open in new window with print-optimized settings
             const printWindow = window.open(
-                `/certificates/print/${id}`, 
+                `/certificates/print/${id}`,
                 'CertificatePrint',
                 'width=1400,height=900,menubar=no,toolbar=no,location=no,status=no'
             );
-            
+
             //  Auto-trigger print when loaded
             if (printWindow) {
-                printWindow.onload = function() {
+                printWindow.onload = function () {
                     setTimeout(() => {
                         printWindow.print();
                     }, 500);
@@ -836,7 +1083,7 @@ async function sendCertificateEmail(certificateId, email, additionalMessage) {
             `
         });
 
-         // Refresh CSRF token before request
+        // Refresh CSRF token before request
         initializeCsrfToken();
 
         // Send to backend
@@ -1021,15 +1268,15 @@ async function importCertificatesCSV() {
 
         const result = await response.json();
 
-       Swal.fire({
-           title: 'Success!',
-           html: `
+        Swal.fire({
+            title: 'Success!',
+            html: `
                <p>Successfully imported: <strong>${result.success ?? 0}</strong></p>
                <p>Skipped (duplicates): <strong>${result.skipped ?? 0}</strong></p>
            `,
-           icon: 'success',
-           confirmButtonColor: '#667eea'
-       });
+            icon: 'success',
+            confirmButtonColor: '#667eea'
+        });
 
         const modalEl = document.getElementById('importCertificateModal');
         const modalInstance = bootstrap.Modal.getInstance(modalEl);
@@ -1448,28 +1695,28 @@ async function loadManualLogsPage(page) {
 
     const tableRows = logs.map(log => {
 
-            let formattedDate = 'N/A';
+        let formattedDate = 'N/A';
 
-            if (log.createdAt) {
-                try {
-                    const dateStr = log.createdAt.replace('T', ' ').split('.')[0];
-                    const createdDate = new Date(dateStr);
+        if (log.createdAt) {
+            try {
+                const dateStr = log.createdAt.replace('T', ' ').split('.')[0];
+                const createdDate = new Date(dateStr);
 
-                    if (!isNaN(createdDate.getTime())) {
-                        formattedDate = createdDate.toLocaleString('en-IN', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true,
-                            timeZone: 'Asia/Kolkata'
-                        });
-                    }
-                } catch (e) {
-                    console.error('Date parsing error:', e, log.createdAt);
+                if (!isNaN(createdDate.getTime())) {
+                    formattedDate = createdDate.toLocaleString('en-IN', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true,
+                        timeZone: 'Asia/Kolkata'
+                    });
                 }
+            } catch (e) {
+                console.error('Date parsing error:', e, log.createdAt);
             }
+        }
 
         return `
             <tr>
@@ -1496,44 +1743,65 @@ async function loadManualLogsPage(page) {
     const endEntry = (pageData.number * pageData.size) + logs.length;
 
     const modalHtml = `
-        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-            <table class="table table-sm table-hover">
-                <thead class="table-light sticky-top">
-                    <tr>
-                        <th>Reg No</th>
-                        <th>Student Name</th>
-                        <th>Course</th>
-                        <th>Created By</th>
-                        <th>Reason</th>
-                        <th>Created At</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${tableRows}
-                </tbody>
-            </table>
-        </div>
-        <div class="d-flex justify-content-between align-items-center mt-3">
-            <div class="text-muted">
-                Showing <strong>${startEntry}</strong> to <strong>${endEntry}</strong>
-                of <strong>${pageData.totalElements}</strong> entries
+        <div class="manual-logs-table-wrap">
+            <div class="table-responsive d-none d-md-block" style="max-height:480px; overflow-y:auto;">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>Reg No</th>
+                            <th>Student Name</th>
+                            <th>Course</th>
+                            <th>Created By</th>
+                            <th>Reason</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
             </div>
-            <div>
+            <div class="d-md-none manual-logs-cards" style="max-height:70vh; overflow-y:auto;">
+                ${logs.map(log => {
+                    let fd = 'N/A';
+                    if (log.createdAt) {
+                        try {
+                            const d = new Date(log.createdAt.replace('T',' ').split('.')[0]);
+                            if (!isNaN(d)) fd = d.toLocaleString('en-IN',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'Asia/Kolkata'});
+                        } catch(e){}
+                    }
+                    return `
+                    <div class="manual-log-card">
+                        <div class="mlc-header">
+                            <span class="mlc-regno">${log.registrationNo || '-'}</span>
+                            <span class="badge bg-primary ms-2">${log.courseName || '-'}</span>
+                        </div>
+                        <div class="mlc-name">${log.studentName || '-'}</div>
+                        <div class="mlc-row"><i class="bi bi-person-fill text-primary me-1"></i><strong>${log.createdByEmployeeName || 'Unknown'}</strong></div>
+                        <div class="mlc-row text-muted small">${log.reason || '-'}</div>
+                        <div class="mlc-date"><i class="bi bi-calendar-check me-1"></i>${fd}</div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>
+        <div class="manual-logs-pagination">
+            <div class="mlp-info text-muted small">
+                Showing <strong>${startEntry}</strong>&ndash;<strong>${endEntry}</strong> of <strong>${pageData.totalElements}</strong>
+            </div>
+            <div class="mlp-controls">
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="manualLogsPrev" ${manualLogsPage <= 0 ? 'disabled' : ''}>
-                    Previous
+                    <i class="bi bi-chevron-left"></i> Prev
                 </button>
-                <span class="mx-2 text-muted">Page <strong>${manualLogsPage + 1}</strong> / <strong>${manualLogsTotalPages}</strong></span>
+                <span class="mlp-page">Page <strong>${manualLogsPage + 1}</strong> / <strong>${manualLogsTotalPages}</strong></span>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="manualLogsNext" ${manualLogsPage >= manualLogsTotalPages - 1 ? 'disabled' : ''}>
-                    Next
+                    Next <i class="bi bi-chevron-right"></i>
                 </button>
             </div>
         </div>
     `;
 
     Swal.fire({
-        title: '<i class="bi bi-clipboard-data me-2"></i>Manual Certificate Generation Logs',
+        title: '<i class="bi bi-clipboard-data me-2"></i>Manual Certificate Logs',
         html: modalHtml,
-        width: '950px',
+        width: 'min(95vw, 950px)',
         confirmButtonText: 'Close',
         confirmButtonColor: '#667eea',
         customClass: {
@@ -1677,38 +1945,78 @@ async function saveCertificate() {
 
 const customStyles = `
 <style>
+/* ===== Manual Logs Popup ===== */
+.manual-logs-popup {
+    border-radius: 14px !important;
+    padding: 0 !important;
+}
+.manual-logs-popup .swal2-title {
+    font-size: clamp(1rem, 3vw, 1.25rem);
+    padding-top: 1rem;
+}
+.manual-logs-popup .swal2-html-container {
+    padding: 0.5rem 1rem 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+}
+
+/* Desktop table */
 .manual-logs-popup .table thead th {
     background-color: #f8f9fa;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     text-transform: uppercase;
     color: #495057;
     border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
 }
-
-.manual-logs-popup .table tbody tr:hover {
-    background-color: #f8f9fa;
-}
-
+.manual-logs-popup .table tbody tr:hover { background-color: #f0f4ff; }
 .manual-logs-popup .table td {
     vertical-align: middle;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
 }
-
 .manual-logs-popup .badge {
-    font-size: 0.85rem;
-    padding: 0.35em 0.65em;
+    font-size: 0.82rem;
+    padding: 0.3em 0.6em;
 }
-
 .table thead.sticky-top {
     position: sticky;
     top: 0;
     z-index: 10;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
-#modalStudentTableBody tr {
-    cursor: pointer;
+
+/* Mobile cards */
+.manual-logs-cards { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.25rem 0; }
+.manual-log-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    text-align: left;
 }
+.mlc-header { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.3rem; }
+.mlc-regno { font-weight: 700; font-size: 0.92rem; color: #1e293b; }
+.mlc-name { font-size: 0.95rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem; }
+.mlc-row { font-size: 0.85rem; margin-bottom: 0.15rem; color: #475569; }
+.mlc-date { font-size: 0.82rem; color: #16a34a; margin-top: 0.3rem; }
+
+/* Pagination */
+.manual-logs-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0 0.25rem;
+    border-top: 1px solid #e2e8f0;
+}
+.mlp-controls { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.mlp-page { font-size: 0.88rem; color: #64748b; white-space: nowrap; }
+
+/* Shared */
+#modalStudentTableBody tr { cursor: pointer; }
 </style>
 `;
 
@@ -1732,13 +2040,13 @@ function openStudentSelectModal() {
     modalCurrentPage = 0;
     selectedStudents.clear();
     updateSelectedCount();
-    
+
     const searchInput = document.getElementById('modalStudentSearch');
     if (searchInput) searchInput.value = '';
-    
+
     const checkAll = document.getElementById('checkAllInModal');
     if (checkAll) checkAll.checked = false;
-    
+
     // Reset table to initial state
     const tbody = document.getElementById('modalStudentTableBody');
     if (tbody) {
@@ -1752,10 +2060,10 @@ function openStudentSelectModal() {
         `;
     }
     updateModalPagination(0, 0, false);
-    
+
     const modal = new bootstrap.Modal(document.getElementById('studentSelectModal'));
     modal.show();
-    
+
     // Focus search input after modal is shown
     document.getElementById('studentSelectModal')?.addEventListener('shown.bs.modal', function handler() {
         document.getElementById('modalStudentSearch')?.focus();
@@ -1764,7 +2072,7 @@ function openStudentSelectModal() {
 }
 
 // Dynamic search with debounce (400ms)
-document.getElementById('modalStudentSearch')?.addEventListener('input', function() {
+document.getElementById('modalStudentSearch')?.addEventListener('input', function () {
     clearTimeout(modalSearchTimeout);
     modalSearchTimeout = setTimeout(() => {
         modalCurrentPage = 0;
@@ -1773,14 +2081,14 @@ document.getElementById('modalStudentSearch')?.addEventListener('input', functio
 });
 
 // Pagination listeners
-document.getElementById('modalPrev')?.addEventListener('click', function() {
+document.getElementById('modalPrev')?.addEventListener('click', function () {
     if (!this.classList.contains('disabled')) {
         modalCurrentPage--;
         loadStudentsInModal();
     }
 });
 
-document.getElementById('modalNext')?.addEventListener('click', function() {
+document.getElementById('modalNext')?.addEventListener('click', function () {
     if (!this.classList.contains('disabled')) {
         modalCurrentPage++;
         loadStudentsInModal();
@@ -1788,7 +2096,7 @@ document.getElementById('modalNext')?.addEventListener('click', function() {
 });
 
 // Select all on current page
-document.getElementById('checkAllInModal')?.addEventListener('change', function() {
+document.getElementById('checkAllInModal')?.addEventListener('change', function () {
     const checkboxes = document.querySelectorAll('.student-checkbox');
     checkboxes.forEach(cb => {
         cb.checked = this.checked;
@@ -1815,15 +2123,15 @@ document.getElementById('btnClearSelection')?.addEventListener('click', () => {
 document.getElementById('btnGenerateForSelected')?.addEventListener('click', generateCertificatesForSelected);
 
 // Row selection click handler
-document.getElementById('modalStudentTableBody')?.addEventListener('click', function(e) {
+document.getElementById('modalStudentTableBody')?.addEventListener('click', function (e) {
     const tr = e.target.closest('tr');
     if (!tr) return;
-    
+
     // Skip if clicking directly on checkbox to avoid double-toggling
     if (e.target.classList.contains('student-checkbox') || e.target.closest('.student-checkbox')) {
         return;
     }
-    
+
     const checkbox = tr.querySelector('.student-checkbox');
     if (checkbox) {
         checkbox.checked = !checkbox.checked;
@@ -1839,9 +2147,9 @@ document.getElementById('modalStudentTableBody')?.addEventListener('click', func
 async function loadStudentsInModal() {
     const tbody = document.getElementById('modalStudentTableBody');
     const searchTerm = document.getElementById('modalStudentSearch')?.value?.trim() || '';
-    
+
     if (!tbody) return;
-    
+
     // Show spinner
     tbody.innerHTML = `
         <tr>
@@ -1851,7 +2159,7 @@ async function loadStudentsInModal() {
             </td>
         </tr>
     `;
-    
+
     try {
         const searchDTO = {
             searchTerm: searchTerm,
@@ -1860,7 +2168,7 @@ async function loadStudentsInModal() {
             sortBy: "admissionDate",
             sortDirection: "DESC"
         };
-        
+
         initializeCsrfToken();
         const response = await fetch('/api/admissions/search', {
             method: 'POST',
@@ -1870,12 +2178,12 @@ async function loadStudentsInModal() {
             },
             body: JSON.stringify(searchDTO)
         });
-        
+
         if (!response.ok) throw new Error('Search failed');
-        
+
         const data = await response.json();
         const students = data.content || [];
-        
+
         if (students.length === 0) {
             tbody.innerHTML = `
                 <tr>
@@ -1888,7 +2196,7 @@ async function loadStudentsInModal() {
             updateModalPagination(0, 0, false);
             return;
         }
-        
+
         // Render table rows using AdmissionResponseDTO fields
         tbody.innerHTML = students.map((student) => {
             const isSelected = selectedStudents.has(student.registrationNumber);
@@ -1896,7 +2204,7 @@ async function loadStudentsInModal() {
             const mobile = student.mobilePrimary || '-';
             const courses = student.coursesList || (student.courses ? student.courses.split(',') : []);
             const feesStatus = student.feesStatus || 'Pending';
-            
+
             let statusBadgeClass = 'bg-warning';
             if (feesStatus === 'Clear') statusBadgeClass = 'bg-success';
             else if (feesStatus === 'Partial') statusBadgeClass = 'bg-info';
@@ -1927,14 +2235,14 @@ async function loadStudentsInModal() {
                 </tr>
             `;
         }).join('');
-        
+
         updateModalPagination(students.length, data.totalElements, !data.last);
-        
+
         // Sync checkAll checkbox
         const allChecked = students.length > 0 && students.every(s => selectedStudents.has(s.registrationNumber));
         const checkAll = document.getElementById('checkAllInModal');
         if (checkAll) checkAll.checked = allChecked;
-        
+
     } catch (error) {
         console.error('Error loading students in modal:', error);
         tbody.innerHTML = `
@@ -1949,7 +2257,7 @@ async function loadStudentsInModal() {
 }
 
 // Called from inline onchange handler
-window.toggleStudentSelection = function(regNo, checkbox) {
+window.toggleStudentSelection = function (regNo, checkbox) {
     if (checkbox.checked) {
         selectedStudents.add(regNo);
         checkbox.closest('tr')?.classList.add('table-success');
@@ -1966,10 +2274,10 @@ function updateSelectedCount() {
     const count = selectedStudents.size;
     const el = document.getElementById('selectedStudentCount');
     if (el) el.textContent = count;
-    
+
     const clearBtn = document.getElementById('btnClearSelection');
     if (clearBtn) clearBtn.style.display = count > 0 ? 'inline-block' : 'none';
-    
+
     // Enable/disable generate button
     const genBtn = document.getElementById('btnGenerateForSelected');
     if (genBtn) genBtn.disabled = count === 0;
@@ -1978,17 +2286,17 @@ function updateSelectedCount() {
 function updateModalPagination(currentPageCount, totalCount, hasNext) {
     const start = totalCount > 0 ? (modalCurrentPage * modalPageSize + 1) : 0;
     const end = Math.min(start + currentPageCount - 1, totalCount);
-    
+
     const infoEl = document.getElementById('modalPageInfo');
     if (infoEl) {
         infoEl.textContent = totalCount > 0
             ? `Showing ${start} to ${end} of ${totalCount} students`
             : 'No students to show';
     }
-    
+
     const prevBtn = document.getElementById('modalPrev');
     const nextBtn = document.getElementById('modalNext');
-    
+
     if (prevBtn) prevBtn.classList.toggle('disabled', modalCurrentPage === 0);
     if (nextBtn) nextBtn.classList.toggle('disabled', !hasNext);
 }
@@ -2003,7 +2311,7 @@ async function generateCertificatesForSelected() {
         });
         return;
     }
-    
+
     const result = await Swal.fire({
         title: 'Generate Certificates?',
         html: `
@@ -2021,9 +2329,9 @@ async function generateCertificatesForSelected() {
         cancelButtonColor: '#6c757d',
         width: '500px'
     });
-    
+
     if (!result.isConfirmed) return;
-    
+
     try {
         Swal.fire({
             title: 'Processing...',
@@ -2031,7 +2339,7 @@ async function generateCertificatesForSelected() {
             allowOutsideClick: false,
             didOpen: () => Swal.showLoading()
         });
-        
+
         initializeCsrfToken();
         const response = await fetch('/api/certificates/bulk-generate', {
             method: 'POST',
@@ -2041,10 +2349,10 @@ async function generateCertificatesForSelected() {
             },
             body: JSON.stringify({ registrationNumbers: Array.from(selectedStudents) })
         });
-        
+
         const data = await response.json();
         Swal.close();
-        
+
         if (data.success) {
             Swal.fire({
                 icon: 'success',
@@ -2056,7 +2364,7 @@ async function generateCertificatesForSelected() {
                 const modalEl = document.getElementById('studentSelectModal');
                 const modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) modal.hide();
-                
+
                 loadCertificates();
                 updateStats();
                 updateStatsForCurrentView();
@@ -2069,7 +2377,7 @@ async function generateCertificatesForSelected() {
                 confirmButtonColor: '#667eea'
             });
         }
-        
+
     } catch (error) {
         Swal.close();
         console.error('Bulk generation error:', error);
@@ -2094,7 +2402,7 @@ let courseSearchDebounce = null;
  */
 async function fetchAllCourses() {
     if (allCoursesCache) return allCoursesCache;
-    
+
     try {
         const response = await fetch('/api/courses?page=0&size=1000');
         const data = await response.json();
@@ -2116,17 +2424,17 @@ function showCoursePreview(courseName, imagePath) {
     const previewDiv = document.getElementById('selectedCoursePreview');
     const imgEl = document.getElementById('selectedCourseImage');
     const badgeEl = document.getElementById('selectedCourseBadge');
-    
+
     if (!previewDiv || !badgeEl) return;
-    
+
     if (!courseName) {
         previewDiv.style.cssText = 'display: none !important';
         return;
     }
-    
+
     badgeEl.textContent = courseName;
     previewDiv.style.cssText = 'display: flex !important';
-    
+
     if (imgEl) {
         if (imagePath) {
             imgEl.src = '/uploads/courses/' + imagePath;
@@ -2144,36 +2452,36 @@ function showCoursePreview(courseName, imagePath) {
 function renderCourseDropdown(courses, filterText) {
     const dropdownList = document.getElementById('courseDropdownList');
     if (!dropdownList) return;
-    
+
     const filtered = filterText
         ? courses.filter(c => c.name.toLowerCase().includes(filterText.toLowerCase()))
         : courses;
-    
+
     if (filtered.length === 0) {
         dropdownList.innerHTML = '<div class="list-group-item text-muted small py-2">No courses found</div>';
         dropdownList.style.display = 'block';
         return;
     }
-    
+
     dropdownList.innerHTML = filtered.map(c => `
         <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2"
                 data-course-name="${c.name}" data-course-image="${c.imagePath || ''}">
             ${c.imagePath
-                ? `<img src="/uploads/courses/${c.imagePath}" alt="" style="width: 24px; height: 24px; object-fit: contain; border-radius: 3px;" onerror="this.style.display='none'">`
-                : '<i class="bi bi-book text-muted" style="width: 24px; text-align: center;"></i>'
-            }
+            ? `<img src="/uploads/courses/${c.imagePath}" alt="" style="width: 24px; height: 24px; object-fit: contain; border-radius: 3px;" onerror="this.style.display='none'">`
+            : '<i class="bi bi-book text-muted" style="width: 24px; text-align: center;"></i>'
+        }
             <span style="font-size: 0.88rem;">${c.name}</span>
         </button>
     `).join('');
-    
+
     dropdownList.style.display = 'block';
-    
+
     // Bind click events
     dropdownList.querySelectorAll('.list-group-item-action').forEach(item => {
         item.addEventListener('click', () => {
             const name = item.getAttribute('data-course-name');
             const image = item.getAttribute('data-course-image');
-            
+
             document.getElementById('courseName').value = name;
             document.getElementById('courseSearchInput_cert').value = name;
             showCoursePreview(name, image || null);
@@ -2186,27 +2494,27 @@ function renderCourseDropdown(courses, filterText) {
 document.addEventListener('DOMContentLoaded', () => {
     const courseSearchInput = document.getElementById('courseSearchInput_cert');
     const dropdownList = document.getElementById('courseDropdownList');
-    
+
     if (!courseSearchInput) return;
-    
+
     // On focus — show dropdown
     courseSearchInput.addEventListener('focus', async () => {
         const courses = await fetchAllCourses();
         renderCourseDropdown(courses, courseSearchInput.value);
     });
-    
+
     // On input — filter dropdown with debounce
     courseSearchInput.addEventListener('input', () => {
         clearTimeout(courseSearchDebounce);
         courseSearchDebounce = setTimeout(async () => {
             const courses = await fetchAllCourses();
             renderCourseDropdown(courses, courseSearchInput.value);
-            
+
             // Update hidden value as user types (for manual entry if needed)
             document.getElementById('courseName').value = courseSearchInput.value;
         }, 200);
     });
-    
+
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
         if (dropdownList && !e.target.closest('#courseDropdownContainer')) {
@@ -2214,4 +2522,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-
+

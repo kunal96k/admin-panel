@@ -5,6 +5,7 @@ import com.tts.sms.service.CertificateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -71,18 +73,23 @@ public class CertificateRestController {
     }
 
     /**
-     * Get all certificates with pagination and filters
+     * Get all certificates with pagination and filters (including Specification-based filters)
      */
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllCertificates(
             @RequestParam(required = false) String course,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String mobileNo,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "25") int size) {
         try {
-            Page<CertificateDTO> certificatePage = certificateService.getCertificates(
-                    course, status, search, page, size);
+            log.info("GET /api/certificates - course: {}, status: {}, search: {}, mobileNo: {}, fromDate: {}, toDate: {}, page: {}, size: {}",
+                    course, status, search, mobileNo, fromDate, toDate, page, size);
+            Page<CertificateDTO> certificatePage = certificateService.getCertificatesFiltered(
+                    search, course, status, mobileNo, fromDate, toDate, page, size);
 
             Map<String, Object> response = new HashMap<>();
             response.put("certificates", certificatePage.getContent());
@@ -234,9 +241,11 @@ public class CertificateRestController {
     public ResponseEntity<Map<String, Long>> getFilteredStatistics(
             @RequestParam(required = false) String course,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String search) {
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
         try {
-            Map<String, Long> stats = certificateService.getFilteredStatistics(course, status, search);
+            Map<String, Long> stats = certificateService.getFilteredStatistics(course, status, search, fromDate, toDate);
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             log.error("Error fetching filtered statistics", e);

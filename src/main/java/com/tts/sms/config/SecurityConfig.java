@@ -1,6 +1,8 @@
 package com.tts.sms.config;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -86,9 +88,10 @@ public class SecurityConfig {
                  * --------------------
                  */
                 .csrf(csrf -> csrf
-                        // Allow public auth endpoints (login, captcha)
+                        // Allow public auth and attendance sync endpoints
                         .ignoringRequestMatchers(
                                 "/api/auth/**", // captcha, forgot-password etc.
+                                "/api/attendance-sync/**",
                                 "/error")
                         .csrfTokenRepository(csrfRepo)
                         .csrfTokenRequestHandler(csrfHandler))
@@ -101,6 +104,7 @@ public class SecurityConfig {
                                 "/login",
                                 "/access-denied",
                                 "/api/auth/**",
+                                "/api/attendance-sync/**",
                                 "/assets/**",
                                 "/css/**",
                                 "/js/**",
@@ -217,15 +221,25 @@ public class SecurityConfig {
             configuration.addAllowedOriginPattern("*");
         } else {
             String[] origins = allowedOrigins.split(",");
+            List<String> originList = new ArrayList<>();
             for (String origin : origins) {
-                log.info("CORS: Allowing origin -> {}", origin.trim());
+                String trimmed = origin.trim();
+                if (!trimmed.isEmpty()) {
+                    log.info("CORS: Allowing origin -> {}", trimmed);
+                    originList.add(trimmed);
+                }
             }
-            configuration.setAllowedOrigins(Arrays.asList(origins));
+            if (originList.contains("*")) {
+                log.info("⚠️  CORS: Allowed origins includes wildcard (*)");
+                configuration.addAllowedOriginPattern("*");
+            } else {
+                configuration.setAllowedOriginPatterns(originList);
+            }
         }
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(
-                Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin", "X-CSRF-TOKEN"));
+                Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin", "X-CSRF-TOKEN", "X-API-KEY"));
         configuration.setExposedHeaders(Arrays.asList("X-CSRF-TOKEN", "Content-Disposition"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

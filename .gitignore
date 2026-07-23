@@ -33,9 +33,13 @@ build/
 .vscode/
 
 ### Backup, logs and uploads ###
+upload/
 uploads/
 logs/
 *.zip
 *.sql
+credentials/
 src/main/resources/credentials/*.json
 **/credentials/*.json
+**/backup-guide.md
+src/main/resources/application-prod.yaml

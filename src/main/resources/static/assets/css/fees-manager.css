@@ -808,61 +808,7 @@ body {
            position: relative;
        }
 
-       .action-menu {
-           position: fixed !important;
-           bottom: 50px !important;
-           right: 2% !important;
-           background: white;
-           border: 1px solid #e2e8f0;
-           border-radius: 8px;
-           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-           min-width: 220px;
-           opacity: 0;
-           visibility: hidden;
-           transform: translateY(-10px);
-           transition: all 0.2s ease;
-           z-index: 999999999 !important;
-           margin-top: 5px;
-       }
 
-       .action-menu.show {
-           opacity: 1;
-           visibility: visible;
-           transform: translateY(0);
-       }
-
-       .action-menu-item {
-           display: flex;
-           align-items: center;
-           gap: 12px;
-           padding: 12px 16px;
-           border: none;
-           background: none;
-           width: 100%;
-           text-align: left;
-           cursor: pointer;
-           transition: background-color 0.2s;
-           color: #334155;
-           font-size: 0.875rem;
-       }
-
-       .action-menu-item:hover {
-           background-color: #f1f5f9;
-       }
-
-       .action-menu-item:first-child:hover {
-           border-radius: 8px 8px 0 0;
-       }
-
-       .action-menu-item:last-child:hover {
-           border-radius: 0 0 8px 8px;
-       }
-
-       .action-menu-item i {
-           width: 20px;
-           font-size: 1rem;
-           text-align: center;
-       }
 
         /* Fix action menu trigger button */
         .action-menu-trigger {
@@ -1110,3 +1056,303 @@ body {
                        display: block;
                    }
                }
+
+/* ==========================================================================
+   FEES MANAGER MODULE - ACTION DROPDOWN & MENU BUTTON STYLING
+   ========================================================================== */
+
+.action-dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible !important;
+}
+
+.action-menu-trigger {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    padding: 6px 10px;
+    border-radius: 8px;
+    color: #475569;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    outline: none !important;
+    box-shadow: none;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-menu-trigger:hover,
+.action-menu-trigger:focus,
+.action-menu-trigger:focus-visible,
+.action-menu-trigger:active,
+.action-menu-trigger.active {
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+.action-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    min-width: 200px;
+    max-height: 80vh;
+    overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 1050;
+    padding: 6px;
+}
+
+.action-menu.show {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Smart Dropup Positioning */
+.action-dropdown.dropup .action-menu {
+    top: auto !important;
+    bottom: 100% !important;
+    margin-top: 0 !important;
+    margin-bottom: 6px !important;
+    transform: translateY(8px) !important;
+}
+
+.action-dropdown.dropup .action-menu.show {
+    transform: translateY(0) !important;
+}
+
+.action-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #334155;
+    transition: all 0.2s ease;
+}
+
+.action-menu-item[data-action="update"] i { color: #2563eb !important; }
+.action-menu-item[data-action="update"]:hover { background-color: #eff6ff !important; color: #1d4ed8 !important; }
+
+.action-menu-item[data-action="view"] i { color: #7c3aed !important; }
+.action-menu-item[data-action="view"]:hover { background-color: #f5f3ff !important; color: #6d28d9 !important; }
+
+.action-menu-item[data-action="installments"] i { color: #059669 !important; }
+.action-menu-item[data-action="installments"]:hover { background-color: #ecfdf5 !important; color: #047857 !important; }
+
+.action-menu-item[data-action="changestatus"] i { color: #4f46e5 !important; }
+.action-menu-item[data-action="changestatus"]:hover { background-color: #eef2ff !important; color: #4338ca !important; }
+
+.action-menu-item[data-action="delete"] i { color: #dc2626 !important; }
+.action-menu-item[data-action="delete"]:hover { background-color: #fef2f2 !important; color: #b91c1c !important; }
+
+#feesTable tbody td:last-child {
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+/* ==========================================================================
+   FEES MANAGER MODULE - MOBILE CARDS LAYOUT (< 992px)
+   ========================================================================== */
+
+@media (max-width: 991.98px) {
+
+    .table-card,
+    .table-responsive {
+        overflow: visible !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    #feesTable,
+    .table-responsive .table:not(.no-mobile-cards) {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        table-layout: auto !important;
+        border: none !important;
+        background: transparent !important;
+        margin-bottom: 0 !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) thead {
+        display: none !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards),
+    .table-responsive .table:not(.no-mobile-cards) tbody,
+    .table-responsive .table:not(.no-mobile-cards) tr {
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody tr {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 16px !important;
+        margin-bottom: 14px !important;
+        padding: 14px 16px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+        position: relative !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody td,
+    .table-responsive .table:not(.no-mobile-cards) tbody tr > *,
+    .table-responsive .table:not(.no-mobile-cards) tbody tr:hover > *,
+    #feesTable tbody td,
+    #feesTable tbody tr > *,
+    #feesTable tbody tr:hover > * {
+        background-color: transparent !important;
+        background: transparent !important;
+        --bs-table-bg: transparent !important;
+        --bs-table-accent-bg: transparent !important;
+        --bs-table-striped-bg: transparent !important;
+        --bs-table-hover-bg: transparent !important;
+        --bs-table-bg-state: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody td {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        padding: 8px 0 !important;
+        border: none !important;
+        border-bottom: 1px dashed #f1f5f9 !important;
+        font-size: 0.85rem !important;
+        color: #334155 !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        word-break: break-word !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        vertical-align: middle !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody td:last-child {
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        margin-top: 4px !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody td:first-child {
+        padding-top: 0 !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 4px !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody td[data-label]::before {
+        content: attr(data-label) !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        font-size: 0.72rem !important;
+        letter-spacing: 0.04em !important;
+        color: #64748b !important;
+        margin-right: 12px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody td > div,
+    .table-responsive .table:not(.no-mobile-cards) tbody td > strong,
+    .table-responsive .table:not(.no-mobile-cards) tbody td > span {
+        text-align: right !important;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem auto !important;
+        max-width: calc(100vw - 1rem) !important;
+    }
+
+    .modal-content {
+        border-radius: 20px !important;
+        overflow: hidden !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+        background: #f8fafc !important;
+    }
+
+    .modal-header {
+        padding: 1rem 1.25rem !important;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+        color: #ffffff !important;
+    }
+
+    .modal-header .modal-title {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+
+    .modal-header .btn-close {
+        filter: brightness(0) invert(1) !important;
+    }
+
+    .modal-body {
+        padding: 1rem !important;
+        max-height: calc(100vh - 140px) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .action-menu {
+        border-radius: 18px !important;
+        padding: 8px 6px 10px 6px !important;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22) !important;
+        border: 1px solid #cbd5e1 !important;
+        min-width: 220px !important;
+    }
+
+    .action-menu::before {
+        content: '' !important;
+        display: block !important;
+        width: 36px !important;
+        height: 4px !important;
+        background: #cbd5e1 !important;
+        border-radius: 2px !important;
+        margin: 4px auto 8px auto !important;
+    }
+
+    .action-card {
+        border-radius: 16px !important;
+        padding: 1rem !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04) !important;
+    }
+}
