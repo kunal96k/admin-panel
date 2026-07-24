@@ -41,21 +41,25 @@ public class FeeCollectionController {
      */
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Page<FeeCollectionDTO>> searchFeeCollections(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String paymentMode,
             @RequestParam(required = false) String dataSource,
+            @RequestParam(required = false) String searchType,
+            @RequestParam(required = false) String searchQuery,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "25") int size) {
 
-        log.info("GET /api/fee-collections - fromDate: {}, toDate: {}, paymentMode: {}, dataSource: {}",
-                fromDate, toDate, paymentMode, dataSource);
+        log.info("GET /api/fee-collections - fromDate: {}, toDate: {}, paymentMode: {}, dataSource: {}, searchType: {}, searchQuery: {}",
+                fromDate, toDate, paymentMode, dataSource, searchType, searchQuery);
 
         FeeCollectionSearchDTO searchDTO = FeeCollectionSearchDTO.builder()
                 .fromDate(fromDate)
                 .toDate(toDate)
                 .paymentMode(paymentMode)
                 .dataSource(dataSource)
+                .searchType(searchType)
+                .searchQuery(searchQuery)
                 .page(page)
                 .size(size)
                 .build();
@@ -69,16 +73,18 @@ public class FeeCollectionController {
      */
     @GetMapping(value = "/statistics", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<FeeCollectionStatsDTO> getStatistics(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String paymentMode,
-            @RequestParam(required = false) String dataSource) {
+            @RequestParam(required = false) String dataSource,
+            @RequestParam(required = false) String searchType,
+            @RequestParam(required = false) String searchQuery) {
 
-        log.info("GET /api/fee-collections/statistics - fromDate: {}, toDate: {}",
-                fromDate, toDate);
+        log.info("GET /api/fee-collections/statistics - fromDate: {}, toDate: {}, paymentMode: {}, dataSource: {}, searchType: {}, searchQuery: {}",
+                fromDate, toDate, paymentMode, dataSource, searchType, searchQuery);
 
         FeeCollectionStatsDTO stats = feeCollectionService.getStatistics(
-                fromDate, toDate, dataSource, paymentMode
+                fromDate, toDate, dataSource, paymentMode, searchType, searchQuery
         );
         return ResponseEntity.ok(stats);
     }

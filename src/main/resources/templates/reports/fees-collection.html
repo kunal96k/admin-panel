@@ -56,25 +56,25 @@
         <!-- Filter Section -->
         <div class="action-card mb-4">
             <form id="feesCollectionForm">
-                <div class="row g-3 align-items-end">
+                <div class="row g-3 align-items-end mb-3">
                     <!-- Date Range -->
-                    <div class="col-lg-3 col-md-6">
+                    <div class="col-md-3">
                         <label class="form-label">
-                            <i class="bi bi-calendar-event me-1"></i>From Date <span class="required">*</span>
+                            <i class="bi bi-calendar-event me-1"></i>From Date
                         </label>
-                        <input type="date" class="form-control" id="fromDate" required>
+                        <input type="date" class="form-control" id="fromDate">
                         <div class="invalid-feedback">Please select from date</div>
                     </div>
-                    <div class="col-lg-3 col-md-6">
+                    <div class="col-md-3">
                         <label class="form-label">
-                            <i class="bi bi-calendar-check me-1"></i>To Date <span class="required">*</span>
+                            <i class="bi bi-calendar-check me-1"></i>To Date
                         </label>
-                        <input type="date" class="form-control" id="toDate" required>
+                        <input type="date" class="form-control" id="toDate">
                         <div class="invalid-feedback">Please select to date</div>
                     </div>
 
                     <!-- Data Source Filter -->
-                    <div class="col-lg-2 col-md-6">
+                    <div class="col-md-3">
                         <label class="form-label">
                             <i class="bi bi-database me-1"></i>Data Source
                         </label>
@@ -86,7 +86,7 @@
                     </div>
 
                     <!-- Payment Mode Filter -->
-                    <div class="col-lg-2 col-md-6">
+                    <div class="col-md-3">
                         <label class="form-label">
                             <i class="bi bi-funnel me-1"></i>Payment Mode
                         </label>
@@ -98,15 +98,40 @@
                             <option value="Card">Card</option>
                         </select>
                     </div>
+                </div>
+
+                <div class="row g-3 align-items-end">
+                    <!-- Search Type Selector -->
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            <i class="bi bi-person-badge me-1"></i>Search By
+                        </label>
+                        <select class="form-select" id="searchType">
+                            <option value="">All Fields</option>
+                            <option value="studentName">Student Name</option>
+                            <option value="mobileNo">Mobile No.</option>
+                            <option value="receiptNo">Receipt No.</option>
+                        </select>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="bi bi-search me-1"></i>Search Query
+                        </label>
+                        <input type="text" class="form-control" id="searchQuery" placeholder="Type search term...">
+                    </div>
 
                     <!-- Action Buttons -->
-                    <div class="col-lg-2 col-md-6">
-                        <button type="submit" class="btn btn-primary w-100 mb-2" id="searchBtn">
-                            <i class="bi bi-search me-2"></i>Search
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary w-100" id="resetBtn">
-                            <i class="bi bi-arrow-clockwise me-2"></i>Reset
-                        </button>
+                    <div class="col-md-3">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1" id="searchBtn">
+                                <i class="bi bi-search me-2"></i>Search
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="resetBtn" title="Reset Filters">
+                                <i class="bi bi-arrow-clockwise"></i> Reset
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -199,6 +224,18 @@
                     </tr>
                     </tfoot>
                 </table>
+            </div>
+            <!-- Pagination Controls (Same UI design as Admission) -->
+            <div class="d-flex justify-content-between align-items-center mt-3 px-3 pb-3">
+                <div class="text-muted">
+                    Showing <span id="entriesStart">0</span> to <span id="entriesEnd">0</span>
+                    of <span id="totalEntries">0</span> entries
+                </div>
+                <nav>
+                    <ul class="pagination mb-0" id="paginationControls">
+                        <!-- Pagination buttons will be inserted here -->
+                    </ul>
+                </nav>
             </div>
         </div>
     </div>

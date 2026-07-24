@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -24,6 +25,8 @@ import com.tts.sms.model.Fees;
 import com.tts.sms.repository.AdmissionRepository;
 import com.tts.sms.repository.CourseRepository;
 import com.tts.sms.repository.FeesRepository;
+import com.tts.sms.repository.FeeReceiptRepository;
+import com.tts.sms.repository.FeeCollectionRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +39,8 @@ public class SalesReportService {
     private final AdmissionRepository admissionRepository;
     private final CourseRepository courseRepository;
     private final FeesRepository feesRepository;
+    private final FeeReceiptRepository feeReceiptRepository;
+    private final FeeCollectionRepository feeCollectionRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
 
@@ -104,11 +109,9 @@ public class SalesReportService {
     }
 
     private Double getFeesForAdmission(Admission a) {
-        Double fee = getTotalFeesFromFeesTable(a.getRegistrationNumber());
-        if (fee == null || fee == 0.0) {
-            fee = a.getTotalReceivableFees() != null ? a.getTotalReceivableFees() : 0.0;
-        }
-        return fee;
+        if (a == null || a.getRegistrationNumber() == null) return 0.0;
+        Double paid = getTotalPaidFromFeesTable(a.getRegistrationNumber());
+        return paid != null ? paid : 0.0;
     }
 
     private void sortAdmissions(List<Admission> admissions, Map<String, Double> feesMap, DataTablesRequest request) {
@@ -130,12 +133,32 @@ public class SalesReportService {
     }
 
     /**
-     * Get total fees from Fees table by registration number
+     * Get total paid fees from Fees, FeeReceipt, or FeeCollection tables by registration number
      */
-    private Double getTotalFeesFromFeesTable(String registrationNumber) {
-        return feesRepository.findByRegistrationNumberAndIsDeletedFalse(registrationNumber)
-                .map(Fees::getTotalFees)
-                .orElse(0.0);
+    private Double getTotalPaidFromFeesTable(String registrationNumber) {
+        if (registrationNumber == null || registrationNumber.trim().isEmpty()) {
+            return 0.0;
+        }
+
+        // 1. Check Fees table totalPaid
+        Optional<Fees> feesOpt = feesRepository.findByRegistrationNumberAndIsDeletedFalse(registrationNumber);
+        if (feesOpt.isPresent() && feesOpt.get().getTotalPaid() != null && feesOpt.get().getTotalPaid() > 0) {
+            return feesOpt.get().getTotalPaid();
+        }
+
+        // 2. Fallback: sum of fee_receipts
+        Double receiptSum = feeReceiptRepository.sumAmountReceivedByRegistrationNumber(registrationNumber);
+        if (receiptSum != null && receiptSum > 0) {
+            return receiptSum;
+        }
+
+        // 3. Fallback: sum of fee_collections
+        Double collectionSum = feeCollectionRepository.sumPaidFeesByRegistrationNumber(registrationNumber);
+        if (collectionSum != null && collectionSum > 0) {
+            return collectionSum;
+        }
+
+        return 0.0;
     }
 
     /**
@@ -277,23 +300,13 @@ public class SalesReportService {
         double totalAmount = 0.0;
 
         for (Admission admission : admissions) {
-            // ✅ Get total fees from Fees table
-            Double feesFromTable = getTotalFeesFromFeesTable(admission.getRegistrationNumber());
-
-            // Fallback to admission's totalReceivableFees if Fees table is empty
-            if (feesFromTable == null || feesFromTable == 0.0) {
-                feesFromTable = admission.getTotalReceivableFees() != null
-                        ? admission.getTotalReceivableFees()
-                        : 0.0;
+            Double paidAmount = getTotalPaidFromFeesTable(admission.getRegistrationNumber());
+            if (paidAmount != null) {
+                totalAmount += paidAmount;
             }
-
-            totalAmount += feesFromTable;
-
-            log.debug("🔹 RegNo: {} - Fees: ₹{}",
-                    admission.getRegistrationNumber(), feesFromTable);
         }
 
-        log.info("✅ Calculated total amount: ₹{} for {} admissions", totalAmount, admissions.size());
+        log.info("✅ Calculated total paid amount: ₹{} for {} admissions", totalAmount, admissions.size());
         return totalAmount;
     }
 

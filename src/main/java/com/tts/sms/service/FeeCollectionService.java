@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,13 +27,21 @@ import com.tts.sms.dto.FeeCollectionSearchDTO;
 import com.tts.sms.dto.FeeCollectionStatsDTO;
 import com.tts.sms.model.Admission;
 import com.tts.sms.model.FeeCollection;
+import com.tts.sms.model.CombinedFeeCollection;
 import com.tts.sms.model.FeeReceipt;
 import com.tts.sms.model.Fees;
 import com.tts.sms.repository.AdmissionRepository;
 import com.tts.sms.repository.FeeCollectionRepository;
+import com.tts.sms.repository.CombinedFeeCollectionRepository;
 import com.tts.sms.repository.FeeReceiptRepository;
 import com.tts.sms.repository.FeesRepository;
+import com.tts.sms.specification.CombinedFeeCollectionSpecifications;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,10 +51,12 @@ import lombok.extern.slf4j.Slf4j;
 public class FeeCollectionService {
 
     private final FeeCollectionRepository feeCollectionRepository;
+    private final CombinedFeeCollectionRepository combinedFeeCollectionRepository;
     private final AdmissionRepository admissionRepository;
     private final FeeReceiptRepository feeReceiptRepository;
     private final FeesRepository feesRepository;
     private final FeesManagerService feesManagerService;
+    private final EntityManager entityManager;
 
     private static final DateTimeFormatter[] DATE_FORMATTERS = {
             DateTimeFormatter.ofPattern("dd/MM/yyyy"),
@@ -63,43 +74,63 @@ public class FeeCollectionService {
     public Page<FeeCollectionDTO> searchFeeCollections(FeeCollectionSearchDTO searchDTO) {
         log.debug("Searching fee collections: {}", searchDTO);
 
-        String dataSource = searchDTO.getDataSource();
-        if (dataSource != null && dataSource.trim().isEmpty()) {
-            dataSource = null;
-        }
-
-        String paymentMode = searchDTO.getPaymentMode();
-        if (paymentMode != null && paymentMode.trim().isEmpty()) {
-            paymentMode = null;
-        }
+        Specification<CombinedFeeCollection> spec = CombinedFeeCollectionSpecifications.getSearchSpecification(
+                searchDTO.getFromDate(),
+                searchDTO.getToDate(),
+                searchDTO.getDataSource(),
+                searchDTO.getPaymentMode(),
+                searchDTO.getSearchType(),
+                searchDTO.getSearchQuery()
+        );
 
         final int page = Math.max(searchDTO.getPage(), 0);
         final int size = Math.max(searchDTO.getSize(), 1);
-        final int offset = page * size;
 
-        long total = feeCollectionRepository.countCombinedFeeCollections(
-                searchDTO.getFromDate(),
-                searchDTO.getToDate(),
-                dataSource,
-                paymentMode
-        );
-
-        List<FeeCollectionRepository.CombinedFeeRow> rows = feeCollectionRepository.findCombinedFeeCollections(
-                searchDTO.getFromDate(),
-                searchDTO.getToDate(),
-                dataSource,
-                paymentMode,
+        // Sort by receiptDate DESC, createdAt DESC
+        Pageable pageable = PageRequest.of(
+                page,
                 size,
-                offset
+                Sort.by(Sort.Direction.DESC, "receiptDate", "createdAt")
         );
 
-        List<FeeCollectionDTO> pageContent = new ArrayList<>();
-        for (FeeCollectionRepository.CombinedFeeRow r : rows) {
-            pageContent.add(FeeCollectionDTO.builder()
-                    .id(r.getId())
+        Page<CombinedFeeCollection> results = combinedFeeCollectionRepository.findAll(spec, pageable);
+
+        return results.map(r -> {
+            String mob = r.getMobileNo();
+            String studentName = r.getStudentName();
+
+            if ((mob == null || mob.trim().isEmpty() || "N/A".equalsIgnoreCase(mob))
+                    && r.getRegistrationNumber() != null) {
+                try {
+                    var admission = admissionRepository
+                            .findByRegistrationNumberAndIsDeletedFalse(r.getRegistrationNumber());
+                    if (admission != null) {
+                        if (admission.getMobilePrimary() != null && !admission.getMobilePrimary().isEmpty()) {
+                            mob = admission.getMobilePrimary();
+                        } else if (admission.getMobileSecondary() != null) {
+                            mob = admission.getMobileSecondary();
+                        }
+                        if (studentName == null || studentName.trim().isEmpty() || "N/A".equalsIgnoreCase(studentName)) {
+                            String fullName = String.join(" ",
+                                    admission.getFirstName() != null ? admission.getFirstName() : "",
+                                    admission.getMiddleName() != null ? admission.getMiddleName() : "",
+                                    admission.getLastName() != null ? admission.getLastName() : ""
+                            ).trim();
+                            if (!fullName.isEmpty()) {
+                                studentName = fullName;
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not fetch admission fallback details for regNo: {}", r.getRegistrationNumber());
+                }
+            }
+
+            return FeeCollectionDTO.builder()
+                    .id(r.getOriginalId()) // Return original table ID for action buttons to work
                     .receiptNo(r.getReceiptNo())
-                    .studentName(r.getStudentName())
-                    .mobileNo(r.getMobileNo())
+                    .studentName(studentName)
+                    .mobileNo(mob)
                     .receiptDate(r.getReceiptDate())
                     .receiptDateOriginal(r.getReceiptDateOriginal())
                     .paidFees(r.getPaidFees())
@@ -107,14 +138,8 @@ public class FeeCollectionService {
                     .dataSource(r.getDataSource())
                     .registrationNumber(r.getRegistrationNumber())
                     .createdAt(r.getCreatedAt())
-                    .build());
-        }
-
-        return new PageImpl<>(
-                pageContent,
-                PageRequest.of(page, size),
-                total
-        );
+                    .build();
+        });
     }
 
     /**
@@ -122,58 +147,53 @@ public class FeeCollectionService {
      */
     @Transactional(readOnly = true)
     public FeeCollectionStatsDTO getStatistics(LocalDate fromDate, LocalDate toDate,
-                                               String dataSource, String paymentMode) {
+                                               String dataSource, String paymentMode,
+                                               String searchType, String searchQuery) {
         log.debug("Getting statistics for period: {} to {}", fromDate, toDate);
 
-        // : Handle empty string as null
-        if (dataSource != null && dataSource.trim().isEmpty()) {
-            dataSource = null;
+        Specification<CombinedFeeCollection> baseSpec = CombinedFeeCollectionSpecifications.getSearchSpecification(
+                fromDate, toDate, dataSource, paymentMode, searchType, searchQuery
+        );
+
+        long totalReceipts = combinedFeeCollectionRepository.count(baseSpec);
+
+        // Sum total amount using CriteriaBuilder
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Double> sumQuery = cb.createQuery(Double.class);
+        Root<CombinedFeeCollection> root = sumQuery.from(CombinedFeeCollection.class);
+        sumQuery.select(cb.sum(root.get("paidFees")));
+        if (baseSpec != null) {
+            Predicate predicate = baseSpec.toPredicate(root, sumQuery, cb);
+            if (predicate != null) {
+                sumQuery.where(predicate);
+            }
         }
-        if (paymentMode != null && paymentMode.trim().isEmpty()) {
-            paymentMode = null;
-        }
-
-        // Determine what to count based on dataSource filter
-        boolean countOldData = (dataSource == null || dataSource.equals("IMPORTED_OLD_DATA"));
-        boolean countNewData = (dataSource == null || dataSource.equals("NEW_ENTRY"));
-
-        // Stats from fee_collections (old data)
-        Long oldReceipts = 0L;
-        Double oldAmount = 0.0;
-
-        if (countOldData) {
-            log.debug("🔍 Counting fee_collections...");
-            oldReceipts = feeCollectionRepository.countByFilters(
-                    fromDate, toDate, "IMPORTED_OLD_DATA", paymentMode
-            );
-            oldAmount = feeCollectionRepository.getTotalAmountByFilters(
-                    fromDate, toDate, "IMPORTED_OLD_DATA", paymentMode
-            );
-            log.debug("✅ Old data: {} records, ₹{}", oldReceipts, oldAmount);
+        Double totalAmount = entityManager.createQuery(sumQuery).getSingleResult();
+        if (totalAmount == null) {
+            totalAmount = 0.0;
         }
 
-        // Stats from fee_receipts (new entries)
-        Long newReceipts = 0L;
-        Double newAmount = 0.0;
+        // Count old data
+        Specification<CombinedFeeCollection> oldSpec = (root1, query, cb1) -> {
+            Predicate p = baseSpec.toPredicate(root1, query, cb1);
+            Predicate sourceP = cb1.equal(root1.get("dataSource"), "IMPORTED_OLD_DATA");
+            return p != null ? cb1.and(p, sourceP) : sourceP;
+        };
+        long oldDataCount = combinedFeeCollectionRepository.count(oldSpec);
 
-        if (countNewData) {
-            log.debug("🔍 Counting fee_receipts...");
-            newReceipts = feeReceiptRepository.countByDateRangeAndPaymentMode(
-                    fromDate, toDate, paymentMode
-            );
-            newAmount = feeReceiptRepository.getTotalReceivedByDateRangeAndPaymentMode(
-                    fromDate, toDate, paymentMode
-            );
-            log.debug("✅ New data: {} records, ₹{}", newReceipts, newAmount);
-        }
+        // Count new data
+        Specification<CombinedFeeCollection> newSpec = (root2, query, cb2) -> {
+            Predicate p = baseSpec.toPredicate(root2, query, cb2);
+            Predicate sourceP = cb2.equal(root2.get("dataSource"), "NEW_ENTRY");
+            return p != null ? cb2.and(p, sourceP) : sourceP;
+        };
+        long newDataCount = combinedFeeCollectionRepository.count(newSpec);
 
         FeeCollectionStatsDTO stats = FeeCollectionStatsDTO.builder()
-                .totalReceipts((oldReceipts != null ? oldReceipts : 0L) +
-                        (newReceipts != null ? newReceipts : 0L))
-                .totalAmount((oldAmount != null ? oldAmount : 0.0) +
-                        (newAmount != null ? newAmount : 0.0))
-                .oldDataCount(oldReceipts != null ? oldReceipts : 0L)
-                .newDataCount(newReceipts != null ? newReceipts : 0L)
+                .totalReceipts(totalReceipts)
+                .totalAmount(totalAmount)
+                .oldDataCount(oldDataCount)
+                .newDataCount(newDataCount)
                 .build();
 
         log.info("📊 Statistics: Total={}, Amount=₹{}, Old={}, New={}",

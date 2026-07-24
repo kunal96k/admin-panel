@@ -16,6 +16,8 @@ public class FeeCollectionSearchDTO {
     private LocalDate toDate;
     private String paymentMode;
     private String dataSource; // IMPORTED_OLD_DATA or NEW_ENTRY
+    private String searchType;
+    private String searchQuery;
     @Builder.Default
     private int page = 0;
     @Builder.Default

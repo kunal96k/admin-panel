@@ -29,6 +29,9 @@ public interface FeeReceiptRepository extends JpaRepository<FeeReceipt, Long> {
             @Param("paymentMode") String paymentMode
     );
 
+    @Query("SELECT COALESCE(SUM(r.amountReceived), 0.0) FROM FeeReceipt r WHERE r.isDeleted = false AND r.registrationNumber = :regNo")
+    Double sumAmountReceivedByRegistrationNumber(@Param("regNo") String regNo);
+
     /**
      * Count receipts by date range and payment mode
      */

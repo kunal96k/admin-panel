@@ -100,17 +100,7 @@
         const fromDate = $('#fromDate').val();
         const toDate = $('#toDate').val();
 
-        if (!fromDate || !toDate) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Validation Error',
-                text: 'Please select both from and to dates',
-                confirmButtonColor: '#667eea'
-            });
-            return false;
-        }
-
-        if (new Date(fromDate) > new Date(toDate)) {
+        if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Invalid Date Range',
@@ -131,6 +121,8 @@
         const toDate = $('#toDate').val();
         const paymentMode = $('#paymentModeFilter').val();
         const dataSource = $('#dataSourceFilter').val();
+        const searchType = $('#searchType').val();
+        const searchQuery = $('#searchQuery').val();
 
         if (dataTable) {
             dataTable.destroy();
@@ -141,7 +133,9 @@
             fromDate,
             toDate,
             paymentMode: paymentMode || null,
-            dataSource: dataSource || null
+            dataSource: dataSource || null,
+            searchType: searchType || null,
+            searchQuery: searchQuery || null
         });
 
         fetchStatistics();
@@ -153,6 +147,8 @@
         const toDate = $('#toDate').val();
         const paymentMode = $('#paymentModeFilter').val();
         const dataSource = $('#dataSourceFilter').val();
+        const searchType = $('#searchType').val();
+        const searchQuery = $('#searchQuery').val();
 
         $.ajax({
             url: `${API_BASE_URL}/statistics`,
@@ -161,7 +157,9 @@
                 fromDate: fromDate,
                 toDate: toDate,
                 paymentMode: paymentMode || null,
-                dataSource: dataSource || null
+                dataSource: dataSource || null,
+                searchType: searchType || null,
+                searchQuery: searchQuery || null
             },
             beforeSend: function (xhr) {
                 if (csrfToken && csrfHeader) {
@@ -279,6 +277,8 @@
                         toDate: filters.toDate,
                         paymentMode: filters.paymentMode,
                         dataSource: filters.dataSource,
+                        searchType: filters.searchType,
+                        searchQuery: filters.searchQuery,
                         page: page,
                         size: size
                     },
@@ -481,14 +481,19 @@
                 }, 0);
                 $('#footerTotalAmount').html('₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2 }));
             },
+            dom: 'Brt',
             drawCallback: function () {
                 const api = this.api();
+                const pageInfo = api.page.info();
                 const rowCount = api.rows({ page: 'current' }).data().length;
                 if (rowCount > 0) {
                     $('#feesCollectionTable tfoot').show();
                 } else {
                     $('#feesCollectionTable tfoot').hide();
                 }
+
+                updatePaginationInfo(pageInfo);
+                renderPaginationControls(pageInfo);
             }
         });
 
@@ -531,6 +536,8 @@
         setDefaultDates();
         $('#paymentModeFilter').val('');
         $('#dataSourceFilter').val('');
+        $('#searchType').val('');
+        $('#searchQuery').val('');
 
         if (dataTable) {
             dataTable.destroy();
@@ -653,6 +660,109 @@
                     confirmButtonColor: '#667eea'
                 });
                 $('#csvFileInput').val('');
+            }
+        });
+    }
+
+    // Update pagination info text (Same as Admission page)
+    function updatePaginationInfo(pageInfo) {
+        if (!pageInfo || pageInfo.recordsTotal === 0) {
+            $('#entriesStart').text(0);
+            $('#entriesEnd').text(0);
+            $('#totalEntries').text(0);
+            return;
+        }
+        const start = pageInfo.start + 1;
+        const end = Math.min(pageInfo.start + pageInfo.length, pageInfo.recordsTotal);
+
+        $('#entriesStart').text(start);
+        $('#entriesEnd').text(end);
+        $('#totalEntries').text(pageInfo.recordsTotal);
+    }
+
+    // Render pagination controls (Same UI design as Admission page)
+    function renderPaginationControls(pageInfo) {
+        const $paginationControls = $('#paginationControls');
+
+        if (!pageInfo || pageInfo.pages <= 1) {
+            $paginationControls.html('');
+            return;
+        }
+
+        const currentPage = pageInfo.page;
+        const totalPages = pageInfo.pages;
+        let html = '';
+
+        // Previous button
+        html += `
+          <li class="page-item ${currentPage === 0 ? 'disabled' : ''}">
+              <a class="page-link" href="#" data-page="${currentPage - 1}">
+                  <i class="bi bi-chevron-left"></i>
+              </a>
+          </li>
+      `;
+
+        // Page numbers
+        const maxVisiblePages = 5;
+        let startPage = Math.max(0, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage < maxVisiblePages - 1) {
+            startPage = Math.max(0, endPage - maxVisiblePages + 1);
+        }
+
+        // First page
+        if (startPage > 0) {
+            html += `
+              <li class="page-item">
+                  <a class="page-link" href="#" data-page="0">1</a>
+              </li>
+          `;
+            if (startPage > 1) {
+                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+
+        // Page numbers
+        for (let i = startPage; i <= endPage; i++) {
+            html += `
+              <li class="page-item ${i === currentPage ? 'active' : ''}">
+                  <a class="page-link" href="#" data-page="${i}">${i + 1}</a>
+              </li>
+          `;
+        }
+
+        // Last page
+        if (endPage < totalPages - 1) {
+            if (endPage < totalPages - 2) {
+                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+            html += `
+              <li class="page-item">
+                  <a class="page-link" href="#" data-page="${totalPages - 1}">${totalPages}</a>
+              </li>
+          `;
+        }
+
+        // Next button
+        html += `
+          <li class="page-item ${currentPage === totalPages - 1 ? 'disabled' : ''}">
+              <a class="page-link" href="#" data-page="${currentPage + 1}">
+                  <i class="bi bi-chevron-right"></i>
+              </a>
+          </li>
+      `;
+
+        $paginationControls.html(html);
+
+        // Attach click handlers
+        $paginationControls.find('a.page-link').off('click').on('click', function (e) {
+            e.preventDefault();
+            const page = parseInt($(this).attr('data-page'));
+            if (!isNaN(page) && page !== currentPage && page >= 0 && page < totalPages) {
+                if (dataTable) {
+                    dataTable.page(page).draw('page');
+                }
             }
         });
     }

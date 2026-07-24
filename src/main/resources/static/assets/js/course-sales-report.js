@@ -299,7 +299,7 @@ function initializeDataTable(startDate, toDate) {
             $(row).find('td:eq(1)').attr('data-label', 'STUDENT NAME');
             $(row).find('td:eq(2)').attr('data-label', 'MOBILE NO.');
             $(row).find('td:eq(3)').attr('data-label', 'CREATED DATE');
-            $(row).find('td:eq(4)').attr('data-label', 'COURSE AMOUNT');
+            $(row).find('td:eq(4)').attr('data-label', 'TOTAL PAID');
         },
         language: {
             processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>',
@@ -330,7 +330,7 @@ function initializeDataTable(startDate, toDate) {
                 customize: function (win) {
                     const totalAmt = $('#totalAmount').text() || '₹0.00';
                     const txt = win.document.body.innerText || '';
-                    win.document.body.innerText = txt + '\n\nTOTAL AMOUNT:\t' + totalAmt;
+                    win.document.body.innerText = txt + '\n\nTOTAL PAID:\t' + totalAmt;
                 },
                 action: exportAllData
             },
@@ -346,14 +346,14 @@ function initializeDataTable(startDate, toDate) {
                 customize: function (xlsx) {
                     const sheet = xlsx.xl.worksheets['sheet1.xml'];
                     const totalAmt = $('#totalAmount').text() || '₹0.00';
-                    // Append a footer row with Total Amount
+                    // Append a footer row with Total Paid
                     const $sheetData = $('sheetData', sheet);
                     const lastRowNum = $('row', $sheetData).length + 1;
                     const footerRow = '<row r="' + lastRowNum + '">' +
                         '<c r="A' + lastRowNum + '" t="inlineStr"><is><t></t></is></c>' +
                         '<c r="B' + lastRowNum + '" t="inlineStr"><is><t></t></is></c>' +
                         '<c r="C' + lastRowNum + '" t="inlineStr"><is><t></t></is></c>' +
-                        '<c r="D' + lastRowNum + '" t="inlineStr"><is><t>TOTAL AMOUNT:</t></is></c>' +
+                        '<c r="D' + lastRowNum + '" t="inlineStr"><is><t>TOTAL PAID:</t></is></c>' +
                         '<c r="E' + lastRowNum + '" t="inlineStr"><is><t>' + totalAmt + '</t></is></c>' +
                         '</row>';
                     $sheetData.append(footerRow);
@@ -379,7 +379,7 @@ function initializeDataTable(startDate, toDate) {
                                 { text: '', border: [false, false, false, false] },
                                 { text: '', border: [false, false, false, false] },
                                 { text: '', border: [false, false, false, false] },
-                                { text: 'TOTAL AMOUNT:', bold: true, alignment: 'right', border: [false, true, false, false] },
+                                { text: 'TOTAL PAID:', bold: true, alignment: 'right', border: [false, true, false, false] },
                                 { text: totalAmt, bold: true, alignment: 'right', color: '#1d4ed8', border: [false, true, false, false] }
                             ]]
                         },

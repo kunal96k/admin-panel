@@ -45,10 +45,11 @@ public class BackupService {
     @Value("${spring.mail.username:}")
     private String fromEmail;
 
-    private static final String DOMAIN_PREFIX = "ttsnashik.com";
+    private static final String DOMAIN_PREFIX = "team.ttsnashik.com";
 
     /**
-     * Executes the full backup process (DB, uploads, logs), uploads to Google Drive, and optionally emails status.
+     * Executes the full backup process (DB, uploads, logs), uploads to Google
+     * Drive, and optionally emails status.
      * Temporary files are automatically cleaned up in a finally block.
      */
     public void performBackupAndSendEmail() throws Exception {
@@ -58,7 +59,7 @@ public class BackupService {
 
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         File tempDir = new File(System.getProperty("java.io.tmpdir"));
-        
+
         File sqlDumpFile = new File(tempDir, DOMAIN_PREFIX + "_db_backup_" + timestamp + ".sql");
         File errFile = new File(tempDir, DOMAIN_PREFIX + "_db_backup_err_" + timestamp + ".txt");
         File dbZip = new File(tempDir, DOMAIN_PREFIX + "_db_backup_" + timestamp + ".zip");
@@ -85,22 +86,27 @@ public class BackupService {
             // 3. Zip Uploads Folder (if directory exists and contains files)
             java.nio.file.Path uploadsPath = java.nio.file.Paths.get("uploads");
             boolean uploadsZipped = false;
-            if (java.nio.file.Files.exists(uploadsPath) && java.nio.file.Files.isDirectory(uploadsPath) && hasFiles(uploadsPath)) {
+            if (java.nio.file.Files.exists(uploadsPath) && java.nio.file.Files.isDirectory(uploadsPath)
+                    && hasFiles(uploadsPath)) {
                 log.info("Zipping uploads directory from: {}", uploadsPath.toAbsolutePath());
                 createDirectoryZip(uploadsZip, uploadsPath, "uploads");
-                log.info("Uploads directory zipped successfully to: {} (Size: {} bytes)", uploadsZip.getAbsolutePath(), uploadsZip.length());
+                log.info("Uploads directory zipped successfully to: {} (Size: {} bytes)", uploadsZip.getAbsolutePath(),
+                        uploadsZip.length());
                 uploadsZipped = uploadsZip.length() > 100;
             } else {
-                log.warn("Uploads directory not found or empty at: {} — skipping uploads backup", uploadsPath.toAbsolutePath());
+                log.warn("Uploads directory not found or empty at: {} — skipping uploads backup",
+                        uploadsPath.toAbsolutePath());
             }
 
             // 4. Zip Logs Folder (if directory exists and contains files)
             java.nio.file.Path logsPath = java.nio.file.Paths.get("logs");
             boolean logsZipped = false;
-            if (java.nio.file.Files.exists(logsPath) && java.nio.file.Files.isDirectory(logsPath) && hasFiles(logsPath)) {
+            if (java.nio.file.Files.exists(logsPath) && java.nio.file.Files.isDirectory(logsPath)
+                    && hasFiles(logsPath)) {
                 log.info("Zipping logs directory from: {}", logsPath.toAbsolutePath());
                 createDirectoryZip(logsZip, logsPath, "logs");
-                log.info("Logs directory zipped successfully to: {} (Size: {} bytes)", logsZip.getAbsolutePath(), logsZip.length());
+                log.info("Logs directory zipped successfully to: {} (Size: {} bytes)", logsZip.getAbsolutePath(),
+                        logsZip.length());
                 logsZipped = logsZip.length() > 100;
             } else {
                 log.warn("Logs directory not found or empty at: {} — skipping logs backup", logsPath.toAbsolutePath());
@@ -123,7 +129,8 @@ public class BackupService {
             if (emailEnabled) {
                 sendBackupEmail(driveUploadResults, timestamp);
             } else {
-                log.info("Email notification is disabled (app.backup.email-enabled=false). Google Drive backup completed without sending email.");
+                log.info(
+                        "Email notification is disabled (app.backup.email-enabled=false). Google Drive backup completed without sending email.");
             }
 
             log.info("========================================");
@@ -242,7 +249,8 @@ public class BackupService {
             java.nio.file.Files.walk(directory)
                     .filter(path -> !java.nio.file.Files.isDirectory(path))
                     .forEach(path -> {
-                        String entryName = prefix + "/" + directory.relativize(path).toString().replace(File.separatorChar, '/');
+                        String entryName = prefix + "/"
+                                + directory.relativize(path).toString().replace(File.separatorChar, '/');
                         try {
                             zos.putNextEntry(new ZipEntry(entryName));
                             java.nio.file.Files.copy(path, zos);
@@ -266,7 +274,8 @@ public class BackupService {
 
         StringBuilder emailBody = new StringBuilder();
         emailBody.append("<h3>TechnoKraft CRM System Backup Summary</h3>");
-        emailBody.append("<p>An automated backup execution completed successfully on <b>").append(timestamp).append("</b>.</p>");
+        emailBody.append("<p>An automated backup execution completed successfully on <b>").append(timestamp)
+                .append("</b>.</p>");
 
         emailBody.append("<h4>☁️ Google Drive Backup Status:</h4>");
         emailBody.append("<ul>");
@@ -274,8 +283,9 @@ public class BackupService {
         appendDriveLinkInfo(emailBody, "Uploads Directory ZIP", driveResults.get("uploads"));
         appendDriveLinkInfo(emailBody, "Logs Directory ZIP", driveResults.get("logs"));
         emailBody.append("</ul>");
-        
-        emailBody.append("<p><i>Note: Backup files are stored exclusively on Google Drive. No local files were attached.</i></p>");
+
+        emailBody.append(
+                "<p><i>Note: Backup files are stored exclusively on Google Drive. No local files were attached.</i></p>");
         emailBody.append("<p>Best Regards,<br/>System Automation Service</p>");
 
         helper.setText(emailBody.toString(), true);
@@ -289,23 +299,24 @@ public class BackupService {
             log.info("Sending backup failure email to: {}", backupEmail);
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
-            
+
             helper.setFrom(fromEmail);
             helper.setTo(backupEmail);
             helper.setSubject("❌ BACKUP FAILED: " + DOMAIN_PREFIX + " - " + timestamp);
-            
+
             StringBuilder emailBody = new StringBuilder();
             emailBody.append("<h3>" + DOMAIN_PREFIX + " CRM System Backup Failed</h3>");
             emailBody.append("<p>An automated backup execution failed on <b>").append(timestamp).append("</b>.</p>");
             emailBody.append("<p><b>Error Details:</b></p>");
             emailBody.append("<pre style='color:red;'>").append(t.toString()).append("</pre>");
-            
+
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
             t.printStackTrace(pw);
             emailBody.append("<p><b>Stack Trace:</b></p>");
-            emailBody.append("<pre style='font-size:11px; background-color:#f8f9fa; padding:10px;'>").append(sw.toString()).append("</pre>");
-            
+            emailBody.append("<pre style='font-size:11px; background-color:#f8f9fa; padding:10px;'>")
+                    .append(sw.toString()).append("</pre>");
+
             emailBody.append("<p>Best Regards,<br/>System Automation Service</p>");
             helper.setText(emailBody.toString(), true);
             mailSender.send(message);
@@ -318,11 +329,12 @@ public class BackupService {
     private void appendDriveLinkInfo(StringBuilder sb, String title, Map<String, String> result) {
         if (result != null && "SUCCESS".equalsIgnoreCase(result.get("status"))) {
             sb.append("<li><b>").append(title).append(":</b> Uploaded to Drive - ")
-              .append("<a href='").append(result.get("webViewLink")).append("' target='_blank'>View on Google Drive</a>")
-              .append("</li>");
+                    .append("<a href='").append(result.get("webViewLink"))
+                    .append("' target='_blank'>View on Google Drive</a>")
+                    .append("</li>");
         } else if (result != null) {
             sb.append("<li><b>").append(title).append(":</b> <span style='color:red;'>Drive Upload Failed (")
-              .append(result.get("error")).append(")</span></li>");
+                    .append(result.get("error")).append(")</span></li>");
         }
     }
 

@@ -59,6 +59,9 @@ public interface FeeCollectionRepository extends JpaRepository<FeeCollection, Lo
             Pageable pageable
     );
 
+    @Query("SELECT COALESCE(SUM(fc.paidFees), 0.0) FROM FeeCollection fc WHERE fc.isDeleted = false AND fc.registrationNumber = :regNo")
+    Double sumPaidFeesByRegistrationNumber(@Param("regNo") String regNo);
+
     /**
      * Get total amount by date range
      */
@@ -169,14 +172,28 @@ public interface FeeCollectionRepository extends JpaRepository<FeeCollection, Lo
             @Param("mobile") String mobile
     );
 
-    /**
-     * Find fee collections by mobile number only
-     * Most reliable for matching old student records
-     */
     @Query("SELECT fc FROM FeeCollection fc WHERE fc.isDeleted = false " +
             "AND fc.mobileNo = :mobile " +
             "ORDER BY fc.receiptDate DESC")
     List<FeeCollection> findByMobileNoAndIsDeletedFalse(@Param("mobile") String mobile);
+
+    @Query("SELECT fc FROM FeeCollection fc WHERE fc.isDeleted = false " +
+            "AND fc.mobileNo IN :mobiles " +
+            "ORDER BY fc.receiptDate DESC")
+    List<FeeCollection> findByMobileNoInAndIsDeletedFalse(@Param("mobiles") List<String> mobiles);
+
+    @Query("SELECT fc FROM FeeCollection fc WHERE fc.isDeleted = false " +
+            "AND (fc.registrationNumber = :regNo OR fc.mobileNo IN :mobiles) " +
+            "ORDER BY fc.receiptDate DESC")
+    List<FeeCollection> findByRegistrationNumberOrMobileNoInAndIsDeletedFalse(
+            @Param("regNo") String regNo,
+            @Param("mobiles") List<String> mobiles
+    );
+
+    @Query("SELECT fc FROM FeeCollection fc WHERE fc.isDeleted = false " +
+            "AND fc.registrationNumber = :regNo " +
+            "ORDER BY fc.receiptDate DESC")
+    List<FeeCollection> findByRegistrationNumberAndIsDeletedFalse(@Param("regNo") String regNo);
 
     interface CombinedFeeRow {
         Long getId();

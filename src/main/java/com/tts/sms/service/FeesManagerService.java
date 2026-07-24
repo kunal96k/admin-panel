@@ -214,11 +214,15 @@ public class FeesManagerService {
             }
 
             // Determine status dynamically:
-            // Only mark Overdue when the nextDueDate came from an actual installment record,
-            // not from the stale fees.getDueDate() fallback field
+            // Do not override if status is explicitly set to Overdue, Clear, Refund or Cancelled.
+            // Otherwise, set to Overdue if the computed next due date (or fallback due date) is in the past.
             String finalStatus = fees.getStatus() != null ? fees.getStatus() : "Pending";
-            if (!"Refund".equalsIgnoreCase(finalStatus) && !"Cancelled".equalsIgnoreCase(finalStatus)) {
-                if (nextDueDateFromInstallment && computedNextDueDate != null && computedNextDueDate.isBefore(LocalDate.now())) {
+            if (!"Refund".equalsIgnoreCase(finalStatus) && 
+                !"Cancelled".equalsIgnoreCase(finalStatus) && 
+                !"Overdue".equalsIgnoreCase(finalStatus) && 
+                !"Clear".equalsIgnoreCase(finalStatus)) {
+                
+                if (computedNextDueDate != null && computedNextDueDate.isBefore(LocalDate.now())) {
                     finalStatus = "Overdue";
                 } else {
                     finalStatus = "Pending";
@@ -635,20 +639,23 @@ public class FeesManagerService {
             Double totalPaidFromOldRecords = 0.0;
             if (isOldStudent) {
                 try {
-                    String mobile = null;
+                    List<String> mobiles = new ArrayList<>();
                     Optional<Fees> feesOpt = feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
-                    if (feesOpt.isPresent()) {
-                        mobile = feesOpt.get().getMobile();
+                    if (feesOpt.isPresent() && feesOpt.get().getMobile() != null && !feesOpt.get().getMobile().trim().isEmpty() && !"N/A".equalsIgnoreCase(feesOpt.get().getMobile())) {
+                        mobiles.add(feesOpt.get().getMobile().trim());
                     }
-                    if (mobile == null || mobile.trim().isEmpty() || "N/A".equalsIgnoreCase(mobile)) {
-                        Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
-                        if (admission != null) {
-                            mobile = admission.getMobilePrimary();
+                    Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+                    if (admission != null) {
+                        if (admission.getMobilePrimary() != null && !admission.getMobilePrimary().trim().isEmpty() && !"N/A".equalsIgnoreCase(admission.getMobilePrimary())) {
+                            mobiles.add(admission.getMobilePrimary().trim());
+                        }
+                        if (admission.getMobileSecondary() != null && !admission.getMobileSecondary().trim().isEmpty() && !"N/A".equalsIgnoreCase(admission.getMobileSecondary())) {
+                            mobiles.add(admission.getMobileSecondary().trim());
                         }
                     }
-                    if (mobile != null && !mobile.trim().isEmpty() && !"N/A".equalsIgnoreCase(mobile)) {
+                    if (!mobiles.isEmpty()) {
                         List<FeeCollection> oldCollections = feeCollectionRepository
-                                .findByMobileNoAndIsDeletedFalse(mobile);
+                                .findByMobileNoInAndIsDeletedFalse(mobiles);
                         totalPaidFromOldRecords = oldCollections.stream()
                                 .mapToDouble(fc -> fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
                                 .sum();
@@ -973,10 +980,22 @@ public class FeesManagerService {
 
         if (isOldStudent) {
             try {
-                String mobile = fees.getMobile();
-                if (mobile != null && !mobile.trim().isEmpty() && !"N/A".equals(mobile)) {
+                List<String> mobiles = new ArrayList<>();
+                if (fees.getMobile() != null && !fees.getMobile().trim().isEmpty() && !"N/A".equalsIgnoreCase(fees.getMobile())) {
+                    mobiles.add(fees.getMobile().trim());
+                }
+                Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(registrationNumber);
+                if (admission != null) {
+                    if (admission.getMobilePrimary() != null && !admission.getMobilePrimary().trim().isEmpty() && !"N/A".equalsIgnoreCase(admission.getMobilePrimary())) {
+                        mobiles.add(admission.getMobilePrimary().trim());
+                    }
+                    if (admission.getMobileSecondary() != null && !admission.getMobileSecondary().trim().isEmpty() && !"N/A".equalsIgnoreCase(admission.getMobileSecondary())) {
+                        mobiles.add(admission.getMobileSecondary().trim());
+                    }
+                }
+                if (!mobiles.isEmpty()) {
                     List<FeeCollection> oldCollections = feeCollectionRepository
-                            .findByMobileNoAndIsDeletedFalse(mobile);
+                            .findByMobileNoInAndIsDeletedFalse(mobiles);
 
                     totalPaidFromOldRecords = oldCollections.stream()
                             .mapToDouble(fc -> fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
@@ -1099,9 +1118,6 @@ public class FeesManagerService {
         List<FeeReceiptResponseDTO> allReceipts = new ArrayList<>();
 
         try {
-            // Check if this is an OLD imported student (non-REG numbers)
-            boolean isOldStudent = (regNo != null && !regNo.trim().toUpperCase().startsWith("REG"));
-
             // ALWAYS fetch NEW receipts from fee_receipts table FIRST
             log.info("🔍 Fetching NEW receipts from fee_receipts table for: {}", regNo);
 
@@ -1116,68 +1132,86 @@ public class FeesManagerService {
                         .collect(Collectors.toList()));
             }
 
-            // THEN fetch OLD receipts from fee_collections table if present
-            if (isOldStudent) {
-                log.info("🔍 Checking fee_collections table for old receipts: {}", regNo);
+            // THEN fetch OLD receipts from fee_collections table
+            log.info("🔍 Checking fee_collections table for old receipts: {}", regNo);
 
-                try {
-                    // Get mobile from FEES table (most reliable for old students)
-                    Optional<Fees> feesOpt = feesRepository
-                            .findByRegistrationNumberAndIsDeletedFalse(regNo);
+            try {
+                List<String> mobiles = new ArrayList<>();
 
-                    if (feesOpt.isPresent()) {
-                        Fees fees = feesOpt.get();
-                        String mobile = fees.getMobile();
-                        String studentName = fees.getStudentName();
+                // Get mobile from FEES table
+                Optional<Fees> feesOpt = feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
 
-                        log.info(" Found fees record - Name: '{}', Mobile: '{}'", studentName, mobile);
+                String studentName = feesOpt.isPresent() ? feesOpt.get().getStudentName() : null;
 
-                        if (mobile != null && !mobile.trim().isEmpty() && !"N/A".equals(mobile)) {
-                            log.debug("🔍 Searching fee_collections with Mobile: '{}'", mobile);
-
-                            // Search by mobile number
-                            List<FeeCollection> oldCollections = feeCollectionRepository
-                                    .findByMobileNoAndIsDeletedFalse(mobile);
-
-                            log.info(" Found {} OLD records in fee_collections", oldCollections.size());
-
-                            if (!oldCollections.isEmpty()) {
-                                // Convert to receipt DTOs
-                                List<FeeReceiptResponseDTO> oldReceipts = oldCollections.stream()
-                                        .map(fc -> FeeReceiptResponseDTO.builder()
-                                                .id(fc.getId())
-                                                .receiptNumber(fc.getReceiptNo() != null ? fc.getReceiptNo()
-                                                        : "OLD-" + fc.getId())
-                                                .invoiceNumber("INV-OLD-" + fc.getId())
-                                                .registrationNumber(regNo)
-                                                .studentName(studentName)
-                                                .mobile(mobile)
-                                                .amountReceived(fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
-                                                .receiptDate(fc.getReceiptDate())
-                                                .paymentMode(fc.getPaymentMode() != null ? fc.getPaymentMode() : "Cash")
-                                                .notes(fc.getNotes())
-                                                .receiptType("Old Imported")
-                                                .status("Completed")
-                                                .dataSource("IMPORTED_OLD_DATA")
-                                                .build())
-                                        .collect(Collectors.toList());
-
-                                allReceipts.addAll(oldReceipts);
-                            } else {
-                                log.warn(" No fee_collections records found for mobile: {}", mobile);
-                            }
-                        } else {
-                            log.warn(" Mobile number is null/empty/N/A for regNo: {}", regNo);
-                        }
-                    } else {
-                        log.warn(" No fees record found for regNo: {}", regNo);
-                    }
-
-                } catch (Exception e) {
-                    log.error("❌ Error fetching from fee_collections for {}: {}", regNo, e.getMessage(), e);
+                if (feesOpt.isPresent() && feesOpt.get().getMobile() != null
+                        && !feesOpt.get().getMobile().trim().isEmpty()
+                        && !"N/A".equalsIgnoreCase(feesOpt.get().getMobile())) {
+                    mobiles.add(feesOpt.get().getMobile().trim());
                 }
-            } else {
-                log.info(" Skipping fee_collections search for new student (starts with REG): {}", regNo);
+
+                Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+                if (admission != null) {
+                    if (studentName == null || studentName.trim().isEmpty()) {
+                        studentName = admission.getFullName();
+                    }
+                    if (admission.getMobilePrimary() != null && !admission.getMobilePrimary().trim().isEmpty()
+                            && !"N/A".equalsIgnoreCase(admission.getMobilePrimary())) {
+                        mobiles.add(admission.getMobilePrimary().trim());
+                    }
+                    if (admission.getMobileSecondary() != null && !admission.getMobileSecondary().trim().isEmpty()
+                            && !"N/A".equalsIgnoreCase(admission.getMobileSecondary())) {
+                        mobiles.add(admission.getMobileSecondary().trim());
+                    }
+                }
+
+                // Add 10-digit variations of mobile numbers
+                List<String> searchMobiles = new ArrayList<>();
+                for (String m : mobiles) {
+                    if (!searchMobiles.contains(m)) searchMobiles.add(m);
+                    String digits = m.replaceAll("\\D+", "");
+                    if (digits.length() == 10 && !searchMobiles.contains(digits)) {
+                        searchMobiles.add(digits);
+                    }
+                }
+
+                log.debug("🔍 Searching fee_collections with regNo: {} and Mobiles: {}", regNo, searchMobiles);
+
+                List<FeeCollection> oldCollections;
+                if (!searchMobiles.isEmpty()) {
+                    oldCollections = feeCollectionRepository
+                            .findByRegistrationNumberOrMobileNoInAndIsDeletedFalse(regNo, searchMobiles);
+                } else {
+                    oldCollections = feeCollectionRepository
+                            .findByRegistrationNumberAndIsDeletedFalse(regNo);
+                }
+
+                log.info(" Found {} OLD records in fee_collections for regNo: {}", oldCollections.size(), regNo);
+
+                if (!oldCollections.isEmpty()) {
+                    String finalStudentName = studentName != null ? studentName : "N/A";
+                    List<FeeReceiptResponseDTO> oldReceipts = oldCollections.stream()
+                            .map(fc -> FeeReceiptResponseDTO.builder()
+                                    .id(fc.getId())
+                                    .receiptNumber(fc.getReceiptNo() != null ? fc.getReceiptNo() : "OLD-" + fc.getId())
+                                    .invoiceNumber("INV-OLD-" + fc.getId())
+                                    .registrationNumber(regNo)
+                                    .studentName(fc.getStudentName() != null ? fc.getStudentName() : finalStudentName)
+                                    .mobile(fc.getMobileNo() != null ? fc.getMobileNo() : (searchMobiles.isEmpty() ? "N/A" : searchMobiles.get(0)))
+                                    .amountReceived(fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
+                                    .receiptDate(fc.getReceiptDate())
+                                    .paymentMode(fc.getPaymentMode() != null ? fc.getPaymentMode() : "Cash")
+                                    .notes(fc.getNotes())
+                                    .receiptType("Old Imported")
+                                    .status("Completed")
+                                    .dataSource("IMPORTED_OLD_DATA")
+                                    .build())
+                            .collect(Collectors.toList());
+
+                    allReceipts.addAll(oldReceipts);
+                }
+
+            } catch (Exception e) {
+                log.error("❌ Error fetching from fee_collections for {}: {}", regNo, e.getMessage(), e);
             }
 
             // Sort all receipts by date (newest first)
@@ -1189,8 +1223,7 @@ public class FeesManagerService {
                 return b.getReceiptDate().compareTo(a.getReceiptDate());
             });
 
-            log.info("📊 Total receipts returned: {} (RegNo: {}, Type: {})",
-                    allReceipts.size(), regNo, isOldStudent ? "OLD+NEW" : "NEW");
+            log.info("📊 Total receipts returned: {} for RegNo: {}", allReceipts.size(), regNo);
 
             return allReceipts;
 
@@ -1285,49 +1318,10 @@ public class FeesManagerService {
     @Transactional(readOnly = true)
     public List<FeeReceiptResponseDTO> getReceiptsFromFeeCollections(String regNo) {
         log.debug("🔍 Fetching receipts from fee_collections for regNo: {}", regNo);
-        if (regNo != null && regNo.trim().toUpperCase().startsWith("REG")) {
-            log.info(" Skipping fee_collections search for new student (REG*): {}", regNo);
+        if (regNo == null || regNo.trim().isEmpty()) {
             return new ArrayList<>();
         }
-
-        try {
-            Admission admission = admissionRepository
-                    .findByRegistrationNumberAndIsDeletedFalse(regNo);
-
-            if (admission == null) {
-                log.warn(" No admission found for regNo: {}", regNo);
-                return new ArrayList<>();
-            }
-
-            String studentName = admission.getFullName();
-            String mobile = admission.getMobilePrimary();
-
-            List<FeeCollection> feeCollections = feeCollectionRepository
-                    .findByStudentNameAndMobileAndIsDeletedFalse(studentName, mobile);
-
-            log.info(" Found {} records in fee_collections", feeCollections.size());
-
-            return feeCollections.stream()
-                    .map(fc -> FeeReceiptResponseDTO.builder()
-                            .id(fc.getId())
-                            .receiptNumber(fc.getReceiptNo() != null ? fc.getReceiptNo() : "N/A")
-                            .invoiceNumber("INV-OLD-" + fc.getId())
-                            .registrationNumber(regNo)
-                            .studentName(studentName)
-                            .mobile(mobile)
-                            .amountReceived(fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
-                            .receiptDate(fc.getReceiptDate())
-                            .paymentMode(fc.getPaymentMode() != null ? fc.getPaymentMode() : "Cash")
-                            .notes(fc.getNotes())
-                            .receiptType("Old Imported")
-                            .status("Completed")
-                            .build())
-                    .collect(Collectors.toList());
-
-        } catch (Exception e) {
-            log.error(" Error fetching from fee_collections: {}", e.getMessage());
-            return new ArrayList<>();
-        }
+        return getReceiptsByRegNo(regNo);
     }
 
     /**
@@ -1461,20 +1455,23 @@ public class FeesManagerService {
             Double totalPaidFromOldRecords = 0.0;
             if (isOldStudent) {
                 try {
-                    String mobile = null;
+                    List<String> mobiles = new ArrayList<>();
                     Optional<Fees> feesOpt = feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
-                    if (feesOpt.isPresent()) {
-                        mobile = feesOpt.get().getMobile();
+                    if (feesOpt.isPresent() && feesOpt.get().getMobile() != null && !feesOpt.get().getMobile().trim().isEmpty() && !"N/A".equalsIgnoreCase(feesOpt.get().getMobile())) {
+                        mobiles.add(feesOpt.get().getMobile().trim());
                     }
-                    if (mobile == null || mobile.trim().isEmpty() || "N/A".equalsIgnoreCase(mobile)) {
-                        Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
-                        if (admission != null) {
-                            mobile = admission.getMobilePrimary();
+                    Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+                    if (admission != null) {
+                        if (admission.getMobilePrimary() != null && !admission.getMobilePrimary().trim().isEmpty() && !"N/A".equalsIgnoreCase(admission.getMobilePrimary())) {
+                            mobiles.add(admission.getMobilePrimary().trim());
+                        }
+                        if (admission.getMobileSecondary() != null && !admission.getMobileSecondary().trim().isEmpty() && !"N/A".equalsIgnoreCase(admission.getMobileSecondary())) {
+                            mobiles.add(admission.getMobileSecondary().trim());
                         }
                     }
-                    if (mobile != null && !mobile.trim().isEmpty() && !"N/A".equalsIgnoreCase(mobile)) {
+                    if (!mobiles.isEmpty()) {
                         List<FeeCollection> oldCollections = feeCollectionRepository
-                                .findByMobileNoAndIsDeletedFalse(mobile);
+                                .findByMobileNoInAndIsDeletedFalse(mobiles);
                         totalPaidFromOldRecords = oldCollections.stream()
                                 .mapToDouble(fc -> fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
                                 .sum();

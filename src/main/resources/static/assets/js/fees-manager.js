@@ -1634,8 +1634,8 @@ function generateReceiptHTML(data) {
                             </tr>
                             ${data.pendingFees > 0.01 ? `
                             <tr>
-                                <td><strong>Current Pending Fees:</strong></td>
-                                <td class="text-end"><strong style="color: #16a34a;">₹${(data.pendingFees || 0).toLocaleString()}</strong></td>
+                                <td><strong style="color: #dc2626;">Current Pending Fees:</strong></td>
+                                <td class="text-end"><strong style="color: #dc2626; font-weight: bold;">₹${(data.pendingFees || 0).toLocaleString()}</strong></td>
                             </tr>
                             ` : `
                             <tr style="background-color: #f0fdf4;">
@@ -1645,8 +1645,8 @@ function generateReceiptHTML(data) {
                             `}
                             ${data.pendingFees > 0.01 && data.nextDueDate ? `
                             <tr>
-                                <td><strong>Next Due Date:</strong></td>
-                                <td class="text-end">${formatDate(data.nextDueDate)}</td>
+                                <td><strong style="color: #dc2626;">Next Due Date:</strong></td>
+                                <td class="text-end"><strong style="color: #dc2626; font-weight: bold;">${formatDate(data.nextDueDate)}</strong></td>
                             </tr>
                             ` : ''}
                         </tbody>
@@ -3617,14 +3617,28 @@ async function generateInvoicePDF(receiptData) {
                 : (receiptData.pendingFees > 0.01 ? 'N/A' : 'Paid in Full');
 
             doc.rect(margin, y, labelWidth, rowHeight);
-            doc.setFont('helvetica', 'bold');
+            if (receiptData.pendingFees > 0.01) {
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(220, 38, 38); // Red color
+            } else {
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 0, 0);
+            }
             doc.text('Due Date:', margin + 2, y + 6);
 
             doc.rect(margin + labelWidth, y, fullWidth - labelWidth, rowHeight);
-            doc.setFont('helvetica', 'normal');
+            if (receiptData.pendingFees > 0.01) {
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(220, 38, 38); // Red color
+            } else {
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(0, 0, 0);
+            }
             doc.text(dueDateValue, margin + labelWidth + 2, y + 6);
 
             y += rowHeight;
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
 
             // =====  Due Fees Row - Show "Rs. 0.00 (Paid in Full)" when fees are zero =====
             const dueFeesValue = receiptData.pendingFees > 0.01
@@ -3632,14 +3646,28 @@ async function generateInvoicePDF(receiptData) {
                 : 'Rs. 0.00 (Paid in Full)';
 
             doc.rect(margin, y, labelWidth, rowHeight);
-            doc.setFont('helvetica', 'bold');
+            if (receiptData.pendingFees > 0.01) {
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(220, 38, 38); // Red color
+            } else {
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 0, 0);
+            }
             doc.text('Due Fees:', margin + 2, y + 6);
 
             doc.rect(margin + labelWidth, y, fullWidth - labelWidth, rowHeight);
-            doc.setFont('helvetica', 'normal');
+            if (receiptData.pendingFees > 0.01) {
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(220, 38, 38); // Red color
+            } else {
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(0, 0, 0);
+            }
             doc.text(dueFeesValue, margin + labelWidth + 2, y + 6);
 
             y += rowHeight;
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
 
             // ===== Total Fees Row =====
             doc.rect(margin, y, labelWidth, rowHeight);

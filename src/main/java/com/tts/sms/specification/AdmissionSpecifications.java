@@ -73,6 +73,13 @@ public class AdmissionSpecifications {
                             mobPreds.add(cb.like(cb.lower(root.get("mobileSecondary")), "%" + digits + "%"));
                         }
                         predicates.add(cb.or(mobPreds.toArray(new Predicate[0])));
+                    } else if ("MOBILE_SEC".equals(field) || "SECONDARY_MOBILE".equals(field)) {
+                        List<Predicate> secMobPreds = new ArrayList<>();
+                        secMobPreds.add(cb.like(cb.lower(root.get("mobileSecondary")), "%" + cleanTerm + "%"));
+                        if (!digits.isEmpty() && !digits.equals(cleanTerm)) {
+                            secMobPreds.add(cb.like(cb.lower(root.get("mobileSecondary")), "%" + digits + "%"));
+                        }
+                        predicates.add(cb.or(secMobPreds.toArray(new Predicate[0])));
                     } else if ("ASSIGN_TO".equals(field)) {
                         Join<Admission, com.tts.sms.model.Enquiry> enquiryJoin = root.join("enquiry", JoinType.LEFT);
                         predicates.add(cb.or(
