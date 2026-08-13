@@ -11,12 +11,12 @@ The system executes daily automated backups that upload database SQL dumps and a
 ### Key System Components
 1. **`GoogleDriveService`**: Handles authentication via OAuth2 User Credentials (consuming personal Google Drive storage quota) or Service Accounts, uploading backup files to Google Drive.
 2. **`BackupService`**: Core orchestrator responsible for executing `mysqldump`, zipping user upload files (`uploads/`) and system logs (`logs/`), uploading files prefixed with `tts_sms_` to Google Drive, sending summary emails, and clearing temporary storage.
-3. **`BackupScheduler`**: Automated runner configured to trigger daily at **2:00 AM IST**.
+3. **`BackupScheduler`**: Automated runner configured to trigger daily at **8:00 PM IST**.
 4. **`BackupController`**: Secure REST API endpoint (`POST /api/auth/backup`) allowing authorized administrators to trigger backups on-demand.
 
 ### System Workflow
 ```
-[Daily Backup Scheduler (02:00 AM IST)] ─────┐
+[Daily Backup Scheduler (08:00 PM IST)] ─────┐
                                               ├─> [BackupService] ─> Generates tts_sms_db_backup_*.sql & zips uploads/logs
 [Manual Trigger Endpoint (POST /backup)] ─────┘        │
                                                        ├─> [GoogleDriveService] ─> Uploads to Google Drive Folder 'TTS_Daily_Backups'
@@ -109,19 +109,19 @@ app:
 
 Configured in `BackupScheduler.java` using Spring's `@Scheduled` annotation:
 
-- **Cron Expression**: `0 0 2 * * ?`
-- **Execution Time**: **Every night at 02:00 AM IST** (`Asia/Kolkata`).
+- **Cron Expression**: `0 0 20 * * ?`
+- **Execution Time**: **Every day at 08:00 PM IST** (`Asia/Kolkata`).
 - **Cost**: **100% Free** (Uses standard Google Drive quota and free API calls).
 
 ### Testing the Scheduler Locally
-To test scheduled execution without waiting until 2:00 AM:
+To test scheduled execution without waiting until 8:00 PM:
 1. Open `BackupScheduler.java`.
 2. Temporarily set the cron expression to run every 10 seconds:
    ```java
    @Scheduled(cron = "*/10 * * * * ?", zone = "Asia/Kolkata")
    ```
 3. Boot up the Spring Boot application locally and observe the console logs for Google Drive upload confirmations.
-4. **Remember to revert** the cron back to `0 0 2 * * ?` prior to pushing updates to production.
+4. **Remember to revert** the cron back to `0 0 20 * * ?` prior to pushing updates to production.
 
 ---
 
@@ -136,8 +136,8 @@ For instant backups on demand:
 ### Request Body Format
 ```json
 {
-  "email": "YOUR_BACKUP_EMAIL",
-  "passcode": "YOUR_BACKUP_PASSCODE"
+  "email": "kunalpatil192001@gmail.com",
+  "passcode": "Kunal@217"
 }
 ```
 
@@ -146,15 +146,15 @@ For instant backups on demand:
 ```bash
 curl -X POST https://team.ttsnashik.com/api/auth/backup \
   -H "Content-Type: application/json" \
-  -d '{"email": "YOUR_BACKUP_EMAIL", "passcode": "YOUR_BACKUP_PASSCODE"}'
+  -d '{"email": "kunalpatil192001@gmail.com", "passcode": "Kunal@217"}'
 ```
 
 ### 2. Using PowerShell (Windows)
 
 ```powershell
 $body = @{
-    email = "YOUR_BACKUP_EMAIL"
-    passcode = "YOUR_BACKUP_PASSCODE"
+    email    = "kunalpatil192001@gmail.com"
+    passcode = "Kunal@217"
 } | ConvertTo-Json
 
 Invoke-RestMethod -Uri "https://team.ttsnashik.com/api/auth/backup" -Method Post -Body $body -ContentType "application/json"
@@ -163,8 +163,7 @@ Invoke-RestMethod -Uri "https://team.ttsnashik.com/api/auth/backup" -Method Post
 ### 3. Using Windows Command Prompt (cmd.exe)
 
 ```cmd
-curl -X POST https://team.ttsnashik.com/api/auth/backup -H "Content-Type: application/json" -d "{\"email\":\"YOUR_BACKUP_EMAIL\",\"passcode\":\"YOUR_BACKUP_PASSCODE\"}"
-```"{\"email\":\"kunalpatil192001@gmail.com\",\"passcode\":\"Kunal@217\"}"
+curl -X POST https://team.ttsnashik.com/api/auth/backup -H "Content-Type: application/json" -d "{\"email\":\"kunalpatil192001@gmail.com\",\"passcode\":\"Kunal@217\"}"
 ```
 
 ---

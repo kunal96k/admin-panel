@@ -1132,86 +1132,89 @@ public class FeesManagerService {
                         .collect(Collectors.toList()));
             }
 
-            // THEN fetch OLD receipts from fee_collections table
-            log.info("🔍 Checking fee_collections table for old receipts: {}", regNo);
+            // THEN fetch OLD receipts from fee_collections table ONLY for OLD students (NOT starting with REG)
+            boolean isOldStudent = (regNo != null && !regNo.trim().toUpperCase().startsWith("REG"));
+            if (isOldStudent) {
+                log.info("🔍 Checking fee_collections table for old receipts: {}", regNo);
 
-            try {
-                List<String> mobiles = new ArrayList<>();
+                try {
+                    List<String> mobiles = new ArrayList<>();
 
-                // Get mobile from FEES table
-                Optional<Fees> feesOpt = feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+                    // Get mobile from FEES table
+                    Optional<Fees> feesOpt = feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
 
-                String studentName = feesOpt.isPresent() ? feesOpt.get().getStudentName() : null;
+                    String studentName = feesOpt.isPresent() ? feesOpt.get().getStudentName() : null;
 
-                if (feesOpt.isPresent() && feesOpt.get().getMobile() != null
-                        && !feesOpt.get().getMobile().trim().isEmpty()
-                        && !"N/A".equalsIgnoreCase(feesOpt.get().getMobile())) {
-                    mobiles.add(feesOpt.get().getMobile().trim());
-                }
-
-                Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
-                if (admission != null) {
-                    if (studentName == null || studentName.trim().isEmpty()) {
-                        studentName = admission.getFullName();
+                    if (feesOpt.isPresent() && feesOpt.get().getMobile() != null
+                            && !feesOpt.get().getMobile().trim().isEmpty()
+                            && !"N/A".equalsIgnoreCase(feesOpt.get().getMobile())) {
+                        mobiles.add(feesOpt.get().getMobile().trim());
                     }
-                    if (admission.getMobilePrimary() != null && !admission.getMobilePrimary().trim().isEmpty()
-                            && !"N/A".equalsIgnoreCase(admission.getMobilePrimary())) {
-                        mobiles.add(admission.getMobilePrimary().trim());
+
+                    Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+                    if (admission != null) {
+                        if (studentName == null || studentName.trim().isEmpty()) {
+                            studentName = admission.getFullName();
+                        }
+                        if (admission.getMobilePrimary() != null && !admission.getMobilePrimary().trim().isEmpty()
+                                && !"N/A".equalsIgnoreCase(admission.getMobilePrimary())) {
+                            mobiles.add(admission.getMobilePrimary().trim());
+                        }
+                        if (admission.getMobileSecondary() != null && !admission.getMobileSecondary().trim().isEmpty()
+                                && !"N/A".equalsIgnoreCase(admission.getMobileSecondary())) {
+                            mobiles.add(admission.getMobileSecondary().trim());
+                        }
                     }
-                    if (admission.getMobileSecondary() != null && !admission.getMobileSecondary().trim().isEmpty()
-                            && !"N/A".equalsIgnoreCase(admission.getMobileSecondary())) {
-                        mobiles.add(admission.getMobileSecondary().trim());
+
+                    // Add 10-digit variations of mobile numbers
+                    List<String> searchMobiles = new ArrayList<>();
+                    for (String m : mobiles) {
+                        if (!searchMobiles.contains(m)) searchMobiles.add(m);
+                        String digits = m.replaceAll("\\D+", "");
+                        if (digits.length() == 10 && !searchMobiles.contains(digits)) {
+                            searchMobiles.add(digits);
+                        }
                     }
-                }
 
-                // Add 10-digit variations of mobile numbers
-                List<String> searchMobiles = new ArrayList<>();
-                for (String m : mobiles) {
-                    if (!searchMobiles.contains(m)) searchMobiles.add(m);
-                    String digits = m.replaceAll("\\D+", "");
-                    if (digits.length() == 10 && !searchMobiles.contains(digits)) {
-                        searchMobiles.add(digits);
+                    log.debug("🔍 Searching fee_collections with regNo: {} and Mobiles: {}", regNo, searchMobiles);
+
+                    List<FeeCollection> oldCollections;
+                    if (!searchMobiles.isEmpty()) {
+                        oldCollections = feeCollectionRepository
+                                .findByRegistrationNumberOrMobileNoInAndIsDeletedFalse(regNo, searchMobiles);
+                    } else {
+                        oldCollections = feeCollectionRepository
+                                .findByRegistrationNumberAndIsDeletedFalse(regNo);
                     }
+
+                    log.info(" Found {} OLD records in fee_collections for regNo: {}", oldCollections.size(), regNo);
+
+                    if (!oldCollections.isEmpty()) {
+                        String finalStudentName = studentName != null ? studentName : "N/A";
+                        List<FeeReceiptResponseDTO> oldReceipts = oldCollections.stream()
+                                .map(fc -> FeeReceiptResponseDTO.builder()
+                                        .id(fc.getId())
+                                        .receiptNumber(fc.getReceiptNo() != null ? fc.getReceiptNo() : "OLD-" + fc.getId())
+                                        .invoiceNumber("INV-OLD-" + fc.getId())
+                                        .registrationNumber(regNo)
+                                        .studentName(fc.getStudentName() != null ? fc.getStudentName() : finalStudentName)
+                                        .mobile(fc.getMobileNo() != null ? fc.getMobileNo() : (searchMobiles.isEmpty() ? "N/A" : searchMobiles.get(0)))
+                                        .amountReceived(fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
+                                        .receiptDate(fc.getReceiptDate())
+                                        .paymentMode(fc.getPaymentMode() != null ? fc.getPaymentMode() : "Cash")
+                                        .notes(fc.getNotes())
+                                        .receiptType("Old Imported")
+                                        .status("Completed")
+                                        .dataSource("IMPORTED_OLD_DATA")
+                                        .build())
+                                .collect(Collectors.toList());
+
+                        allReceipts.addAll(oldReceipts);
+                    }
+
+                } catch (Exception e) {
+                    log.error("❌ Error fetching from fee_collections for {}: {}", regNo, e.getMessage(), e);
                 }
-
-                log.debug("🔍 Searching fee_collections with regNo: {} and Mobiles: {}", regNo, searchMobiles);
-
-                List<FeeCollection> oldCollections;
-                if (!searchMobiles.isEmpty()) {
-                    oldCollections = feeCollectionRepository
-                            .findByRegistrationNumberOrMobileNoInAndIsDeletedFalse(regNo, searchMobiles);
-                } else {
-                    oldCollections = feeCollectionRepository
-                            .findByRegistrationNumberAndIsDeletedFalse(regNo);
-                }
-
-                log.info(" Found {} OLD records in fee_collections for regNo: {}", oldCollections.size(), regNo);
-
-                if (!oldCollections.isEmpty()) {
-                    String finalStudentName = studentName != null ? studentName : "N/A";
-                    List<FeeReceiptResponseDTO> oldReceipts = oldCollections.stream()
-                            .map(fc -> FeeReceiptResponseDTO.builder()
-                                    .id(fc.getId())
-                                    .receiptNumber(fc.getReceiptNo() != null ? fc.getReceiptNo() : "OLD-" + fc.getId())
-                                    .invoiceNumber("INV-OLD-" + fc.getId())
-                                    .registrationNumber(regNo)
-                                    .studentName(fc.getStudentName() != null ? fc.getStudentName() : finalStudentName)
-                                    .mobile(fc.getMobileNo() != null ? fc.getMobileNo() : (searchMobiles.isEmpty() ? "N/A" : searchMobiles.get(0)))
-                                    .amountReceived(fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
-                                    .receiptDate(fc.getReceiptDate())
-                                    .paymentMode(fc.getPaymentMode() != null ? fc.getPaymentMode() : "Cash")
-                                    .notes(fc.getNotes())
-                                    .receiptType("Old Imported")
-                                    .status("Completed")
-                                    .dataSource("IMPORTED_OLD_DATA")
-                                    .build())
-                            .collect(Collectors.toList());
-
-                    allReceipts.addAll(oldReceipts);
-                }
-
-            } catch (Exception e) {
-                log.error("❌ Error fetching from fee_collections for {}: {}", regNo, e.getMessage(), e);
             }
 
             // Sort all receipts by date (newest first)
@@ -1318,7 +1321,7 @@ public class FeesManagerService {
     @Transactional(readOnly = true)
     public List<FeeReceiptResponseDTO> getReceiptsFromFeeCollections(String regNo) {
         log.debug("🔍 Fetching receipts from fee_collections for regNo: {}", regNo);
-        if (regNo == null || regNo.trim().isEmpty()) {
+        if (regNo == null || regNo.trim().isEmpty() || regNo.trim().toUpperCase().startsWith("REG")) {
             return new ArrayList<>();
         }
         return getReceiptsByRegNo(regNo);

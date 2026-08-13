@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Scheduler to automatically trigger daily database and file backup to Google Drive & Email
- * Runs every day at 02:00 AM IST
+ * Runs every day at 08:00 PM IST
  */
 @Component
 @RequiredArgsConstructor
@@ -18,9 +18,9 @@ public class BackupScheduler {
     private final BackupService backupService;
 
     /**
-     * Automatically triggers the daily backup every night at 2:00 AM IST
+     * Automatically triggers the daily backup every day at 8:00 PM IST
      */
-    @Scheduled(cron = "0 0 2 * * ?", zone = "Asia/Kolkata")
+    @Scheduled(cron = "${app.backup.cron:0 0 20 * * ?}", zone = "Asia/Kolkata")
     public void scheduleDailyBackup() {
         log.info("⏰ Scheduled daily backup execution started...");
         try {

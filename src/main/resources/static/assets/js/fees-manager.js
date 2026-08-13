@@ -1828,14 +1828,15 @@ async function printReceiptWithData(receiptNo, regNo) {
             throw new Error('Receipt not found');
         }
 
-        // Generate receipt HTML - use receipt's own snapshot data (historical)
+        // Generate receipt HTML - use currentPendingFees (live from fees.fees_due) for accurate display
         // Only merge contact info from live student data (mobile, course)
         const student = feesData.find(s => s.regNo === regNo);
         const receiptHTML = generateReceiptHTML({
             ...receipt,
             mobile: student?.mobile || receipt.mobile || 'N/A',
             course: student?.course || receipt.course || 'N/A',
-            pendingFees: receipt.pendingFees != null ? receipt.pendingFees : 0,
+            // BUG FIX: Use currentPendingFees (live fees.fees_due) not pendingFees (stale snapshot stored at payment time)
+            pendingFees: receipt.currentPendingFees != null ? receipt.currentPendingFees : (receipt.pendingFees != null ? receipt.pendingFees : 0),
             nextDueDate: receipt.nextDueDate || null
         });
         printReceiptContent(receiptHTML);
@@ -2743,15 +2744,15 @@ async function emailReceipt(receiptNo, studentName, mobile) {
                 // Get CURRENT fees data from feesData array
                 const student = feesData.find(s => s.regNo === actualRegNo);
 
-                // Use receipt's own historical snapshot data
+                // Use currentPendingFees (live from fees.fees_due) for accurate display
                 // Only merge contact info (mobile, course, email) from live data
                 const receiptData = {
                     ...receipt,
                     mobile: student?.mobile || mobile || 'N/A',
                     course: student?.course || receipt.course || 'N/A',
                     email: email,
-                    // pendingFees: use receipt's own stored snapshot
-                    pendingFees: receipt.pendingFees != null ? receipt.pendingFees : 0,
+                    // BUG FIX: Use currentPendingFees (live fees.fees_due) not pendingFees (stale snapshot stored at payment time)
+                    pendingFees: receipt.currentPendingFees != null ? receipt.currentPendingFees : (receipt.pendingFees != null ? receipt.pendingFees : 0),
                     // nextDueDate: ONLY use receipt's own stored value
                     nextDueDate: receipt.nextDueDate || null
                 };
@@ -3272,7 +3273,7 @@ async function downloadReceiptPDF(receiptNo, regNo) {
             throw new Error(`Receipt ${receiptNo} not found in response`);
         }
 
-        // Use receipt's own historical snapshot for amounts/dates
+        // Use currentPendingFees (live from fees.fees_due) for accurate display
         // Only merge contact info from live student and admission data
         const student = feesData.find(s => s.regNo === regNo);
 
@@ -3294,8 +3295,8 @@ async function downloadReceiptPDF(receiptNo, regNo) {
             mobile: student?.mobile || receipt.mobile || 'N/A',
             course: student?.course || receipt.course || 'N/A',
             email: email,
-            // pendingFees: use receipt's own stored snapshot
-            pendingFees: receipt.pendingFees != null ? receipt.pendingFees : 0,
+            // BUG FIX: Use currentPendingFees (live fees.fees_due) not pendingFees (stale snapshot stored at payment time)
+            pendingFees: receipt.currentPendingFees != null ? receipt.currentPendingFees : (receipt.pendingFees != null ? receipt.pendingFees : 0),
             // nextDueDate: ONLY use receipt's own stored value
             nextDueDate: receipt.nextDueDate || null
         };
@@ -3358,7 +3359,7 @@ async function viewReceiptPreview(receiptNo, regNo) {
             throw new Error(`Receipt ${receiptNo} not found in response`);
         }
 
-        // Use receipt's own historical snapshot for amounts/dates
+        // Use currentPendingFees (live from fees.fees_due) for accurate display
         // Only merge contact info from live student data
         const student = feesData.find(s => s.regNo === regNo);
 
@@ -3368,7 +3369,8 @@ async function viewReceiptPreview(receiptNo, regNo) {
             ...receipt,
             mobile: student?.mobile || receipt.mobile || 'N/A',
             course: student?.course || receipt.course || 'N/A',
-            pendingFees: receipt.pendingFees != null ? receipt.pendingFees : 0,
+            // BUG FIX: Use currentPendingFees (live fees.fees_due) not pendingFees (stale snapshot stored at payment time)
+            pendingFees: receipt.currentPendingFees != null ? receipt.currentPendingFees : (receipt.pendingFees != null ? receipt.pendingFees : 0),
             nextDueDate: receipt.nextDueDate || null
         });
 

@@ -9,6 +9,7 @@ app:
     username: ${SUPERADMIN_USERNAME:admin}
     password: ${SUPERADMIN_PASSWORD:admin@123}
   backup:
+    cron: ${BACKUP_CRON:0 0 20 * * ?}
     email: ${BACKUP_EMAIL:}
     passcode: ${BACKUP_PASSCODE:}
     email-enabled: ${BACKUP_EMAIL_ENABLED:false}

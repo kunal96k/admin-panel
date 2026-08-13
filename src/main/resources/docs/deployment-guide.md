@@ -7,9 +7,9 @@ This guide provides step-by-step instructions to compile, package, upload, deplo
 ## 1. Deployment Overview
 
 * **Local Environment:** Windows/macOS/Linux with Maven & Java 21.
-* **Target Server Host:** `ec2-13-206-199-164.ap-south-1.compute.amazonaws.com`
+* **Target Server Host:** `3.110.90.204`
 * **Target Server User:** `ec2-user`
-* **Private Key File:** `mumbai-key.pem`
+* **Private Key File:** `mumbai-yogesh.pem`
 * **Target Systemd Service:** `crm.service`
 * **Packaging Format:** `war` (specified in [pom.xml](file:///c:/Users/TechnoKraft/Desktop/backup/project_tts_backup/tts-sms/sms/pom.xml))
 
@@ -48,17 +48,17 @@ This compiles the code and generates the deployable artifact in the `target/` di
 
 ## 3. Step 2: Upload the Package to the AWS EC2 Server
 
-Use Secure Copy Protocol (`scp`) to upload the built `.war` file to the remote server. Ensure that your terminal is in the folder containing `mumbai-key.pem` (or specify the correct absolute path to the key).
+Use Secure Copy Protocol (`scp`) to upload the built `.war` file to the remote server. Ensure that your terminal is in the folder containing `mumbai-yogesh.pem` (or specify the correct absolute path to the key).
 
 > [!IMPORTANT]
 > If you are on Linux or macOS, ensure your private key file has the correct permissions:
-> `chmod 400 mumbai-key.pem`
+> `chmod 400 mumbai-yogesh.pem`
 
 ### Upload Command
 Run the following command in your local terminal:
 
 ```bash
-scp -i "mumbai-key.pem" target/sms-0.0.1-SNAPSHOT.war ec2-user@ec2-13-206-199-164.ap-south-1.compute.amazonaws.com:/opt/apps/crm/crm_updated.war
+scp -i "mumbai-yogesh.pem" target/sms-0.0.1-SNAPSHOT.war ec2-user@3.110.90.204:/opt/apps/crm/crm_updated.war
 ```
 
 > [!NOTE]
@@ -72,7 +72,7 @@ scp -i "mumbai-key.pem" target/sms-0.0.1-SNAPSHOT.war ec2-user@ec2-13-206-199-16
 Connect to your AWS EC2 instance using the secure shell command:
 
 ```bash
-ssh -i "mumbai-key.pem" ec2-user@ec2-13-206-199-164.ap-south-1.compute.amazonaws.com
+ssh -i "mumbai-yogesh.pem" ec2-user@3.110.90.204
 ```
 
 ---
@@ -131,8 +131,8 @@ tail -f /var/www/tts-sms/logs/sms-application.log
 ## 7. Troubleshooting Deployment Issues
 
 1. **Permission Denied (publickey) on SSH/SCP:**
-   * Double-check that your terminal directory contains the `mumbai-key.pem` file.
-   * If on Linux/macOS, verify permissions using `ls -l mumbai-key.pem` (must be read-only for owner).
+   * Double-check that your terminal directory contains the `mumbai-yogesh.pem` file.
+   * If on Linux/macOS, verify permissions using `ls -l mumbai-yogesh.pem` (must be read-only for owner).
 
 2. **Application Port Conflict:**
    * If the service fails to start, verify if another process is using the application port (typically `8080` or `8081`):
@@ -158,7 +158,7 @@ Upload your custom static HTML files (e.g., `maintenance.html`, `404.html`) to t
 
 ```bash
 # Upload maintenance page to /var/www/tts-sms/static/
-scp -i "mumbai-key.pem" src/main/resources/static/maintenance.html ec2-user@ec2-13-206-199-164.ap-south-1.compute.amazonaws.com:/var/www/tts-sms/static/maintenance.html
+scp -i "mumbai-yogesh.pem" src/main/resources/static/maintenance.html ec2-user@3.110.90.204:/var/www/tts-sms/static/maintenance.html
 ```
 
 ### 2. Configure Nginx Server Blocks
@@ -167,7 +167,7 @@ Connect to the server and update your Nginx configuration (typically in `/etc/ng
 ```nginx
 server {
     listen 80;
-    server_name ec2-13-206-199-164.ap-south-1.compute.amazonaws.com;
+    server_name 3.110.90.204;
 
     # Specify local root where Nginx holds static files
     root /var/www/tts-sms/static;
