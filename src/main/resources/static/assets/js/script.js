@@ -1774,3 +1774,23 @@ document.addEventListener('show.bs.modal', function() {
         document.addEventListener('DOMContentLoaded', patchSwal);
     }
 })();
+
+// ====================================================================
+// Globally disable mouse wheel increment/decrement on all number inputs
+// ====================================================================
+document.addEventListener('wheel', function(e) {
+    if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'number') {
+        e.target.blur();
+    }
+}, { passive: true });
+
+document.addEventListener('focus', function(e) {
+    if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'number') {
+        if (!e.target._wheelDisabled) {
+            e.target._wheelDisabled = true;
+            e.target.addEventListener('wheel', function(wheelEvent) {
+                wheelEvent.preventDefault();
+            }, { passive: false });
+        }
+    }
+}, true);

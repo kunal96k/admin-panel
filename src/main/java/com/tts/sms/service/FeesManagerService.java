@@ -5,10 +5,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -96,81 +99,7 @@ public class FeesManagerService {
                 Sort.Direction.valueOf(searchDTO.getSortDirection().toUpperCase()),
                 searchDTO.getSortBy() != null ? searchDTO.getSortBy() : "createdAt");
 
-        Specification<Fees> spec = (Root<Fees> root, CriteriaQuery<?> query, CriteriaBuilder cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-
-            // Always exclude deleted records
-            predicates.add(cb.isFalse(root.get("isDeleted")));
-
-            // Search term (Reg No, Student Name, Mobile) supporting multi-word whitespace-tokenized name searching
-            if (searchDTO.getSearchTerm() != null && !searchDTO.getSearchTerm().trim().isEmpty()) {
-                String[] tokens = searchDTO.getSearchTerm().trim().split("\\s+");
-                Predicate searchPredicate;
-                if (tokens.length >= 3) {
-                    String pattern = "%" + tokens[0].toLowerCase() + "%" + tokens[1].toLowerCase() + "%" + tokens[2].toLowerCase() + "%";
-                    searchPredicate = cb.or(
-                            cb.like(cb.lower(root.get("registrationNumber")), "%" + searchDTO.getSearchTerm().trim().toLowerCase() + "%"),
-                            cb.like(cb.lower(root.get("studentName")), pattern),
-                            cb.like(cb.lower(root.get("mobile")), "%" + searchDTO.getSearchTerm().trim().toLowerCase() + "%"));
-                } else if (tokens.length == 2) {
-                    String pattern = "%" + tokens[0].toLowerCase() + "%" + tokens[1].toLowerCase() + "%";
-                    searchPredicate = cb.or(
-                            cb.like(cb.lower(root.get("registrationNumber")), "%" + searchDTO.getSearchTerm().trim().toLowerCase() + "%"),
-                            cb.like(cb.lower(root.get("studentName")), pattern),
-                            cb.like(cb.lower(root.get("mobile")), "%" + searchDTO.getSearchTerm().trim().toLowerCase() + "%"));
-                } else {
-                    String pattern = "%" + tokens[0].toLowerCase() + "%";
-                    searchPredicate = cb.or(
-                            cb.like(cb.lower(root.get("registrationNumber")), pattern),
-                            cb.like(cb.lower(root.get("studentName")), pattern),
-                            cb.like(cb.lower(root.get("mobile")), pattern));
-                }
-                predicates.add(searchPredicate);
-            }
-
-            // Status filter
-            if (searchDTO.getStatus() != null && !searchDTO.getStatus().trim().isEmpty()
-                    && !"all".equalsIgnoreCase(searchDTO.getStatus())) {
-                predicates.add(cb.equal(cb.lower(root.get("status")), searchDTO.getStatus().toLowerCase()));
-            }
-
-            // Course filter
-            if (searchDTO.getCourse() != null && !searchDTO.getCourse().trim().isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("course")), "%" + searchDTO.getCourse().toLowerCase() + "%"));
-            }
-
-            // Fees Due range
-            if (searchDTO.getMinFeesDue() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("feesDue"), searchDTO.getMinFeesDue()));
-            }
-            if (searchDTO.getMaxFeesDue() != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("feesDue"), searchDTO.getMaxFeesDue()));
-            }
-
-            // Total Fees range
-            if (searchDTO.getMinTotalFees() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("totalFees"), searchDTO.getMinTotalFees()));
-            }
-            if (searchDTO.getMaxTotalFees() != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("totalFees"), searchDTO.getMaxTotalFees()));
-            }
-
-            // Due Date range
-            if (searchDTO.getDueDateFrom() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("dueDate"), searchDTO.getDueDateFrom()));
-            }
-            if (searchDTO.getDueDateTo() != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("dueDate"), searchDTO.getDueDateTo()));
-            }
-
-            // Overdue filter
-            if (Boolean.TRUE.equals(searchDTO.getOverdue())) {
-                predicates.add(cb.lessThan(root.get("dueDate"), LocalDate.now()));
-                predicates.add(cb.notEqual(cb.lower(root.get("status")), "clear"));
-            }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
+        Specification<Fees> spec = com.tts.sms.specification.FeesSpecifications.getSearchSpecification(searchDTO);
 
         Page<Fees> fees = feesRepository.findAll(spec, pageable);
         return fees.map(this::toFeesSummaryDTO);
@@ -629,54 +558,44 @@ public class FeesManagerService {
             List<FeeRefund> refunds = feeRefundRepository
                     .findByRegistrationNumberAndIsDeletedFalseOrderByRefundDateDesc(regNo);
 
-            // Calculate gross total paid (sum of all receipts)
+            // Calculate gross total paid from fee_receipts
             final Double grossTotalPaidFromReceipts = receipts.stream()
                     .mapToDouble(r -> r.getAmountReceived() != null ? r.getAmountReceived() : 0.0)
                     .sum();
-
-            // For OLD students, also add amounts from fee_collections
-            boolean isOldStudent = (regNo != null && !regNo.trim().toUpperCase().startsWith("REG"));
-            Double totalPaidFromOldRecords = 0.0;
-            if (isOldStudent) {
-                try {
-                    List<String> mobiles = new ArrayList<>();
-                    Optional<Fees> feesOpt = feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
-                    if (feesOpt.isPresent() && feesOpt.get().getMobile() != null && !feesOpt.get().getMobile().trim().isEmpty() && !"N/A".equalsIgnoreCase(feesOpt.get().getMobile())) {
-                        mobiles.add(feesOpt.get().getMobile().trim());
-                    }
-                    Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
-                    if (admission != null) {
-                        if (admission.getMobilePrimary() != null && !admission.getMobilePrimary().trim().isEmpty() && !"N/A".equalsIgnoreCase(admission.getMobilePrimary())) {
-                            mobiles.add(admission.getMobilePrimary().trim());
-                        }
-                        if (admission.getMobileSecondary() != null && !admission.getMobileSecondary().trim().isEmpty() && !"N/A".equalsIgnoreCase(admission.getMobileSecondary())) {
-                            mobiles.add(admission.getMobileSecondary().trim());
-                        }
-                    }
-                    if (!mobiles.isEmpty()) {
-                        List<FeeCollection> oldCollections = feeCollectionRepository
-                                .findByMobileNoInAndIsDeletedFalse(mobiles);
-                        totalPaidFromOldRecords = oldCollections.stream()
-                                .mapToDouble(fc -> fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
-                                .sum();
-                        log.debug("📊 Total from fee_collections for recalculation: ₹{}", totalPaidFromOldRecords);
-                    }
-                } catch (Exception e) {
-                    log.warn(" Could not fetch old records for recalculation: {}", e.getMessage());
-                }
-            }
-            final Double grossTotalPaid = grossTotalPaidFromReceipts + totalPaidFromOldRecords;
 
             // Calculate total refunds
             Double totalRefund = refunds.stream()
                     .mapToDouble(r -> r.getRefundAmount() != null ? r.getRefundAmount() : 0.0)
                     .sum();
 
-            log.info("📊 Gross Paid: ₹{}, Total Refund: ₹{}", grossTotalPaid, totalRefund);
-
             // Update fees record
             feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo)
                     .ifPresent(fees -> {
+                        Double grossTotalPaid;
+                        if (!receipts.isEmpty()) {
+                            // DEFINITIVE FIX: Opening balance = the amount imported/set in fees table
+                            // BEFORE any new receipts were ever created.
+                            // We derive it safely as: smallest previousPaid in fee_receipts (by ID)
+                            // which is what the UI populated from fees.totalPaid at the time of the
+                            // very first receipt.
+                            // But to avoid ANY dependency on previousPaid (which can be corrupted
+                            // by old running code), we use the most robust formula:
+                            //   openingBalance = Admission.totalPayableFees is the TOTAL FEES,
+                            //   not the opening paid. So we check admission for total fees and
+                            //   use the fees table original import data.
+                            //
+                            // The correct opening balance = fees.totalPaid before receipts were recorded.
+                            // Since fees.totalPaid gets corrupted, we read from the earliest receipt's
+                            // previousPaid (by smallest receipt ID). This value was set by the UI at
+                            // the time of FIRST receipt creation from student.totalPaid at that moment.
+                            // After DB reset, totalPaid=0, so first receipt's previousPaid=0. Correct.
+                            Double openingBalance = getOpeningBalance(receipts);
+                            grossTotalPaid = openingBalance + grossTotalPaidFromReceipts;
+                        } else {
+                            // No receipts yet — preserve the imported total paid from fees table as-is
+                            grossTotalPaid = fees.getTotalPaid() != null ? fees.getTotalPaid() : 0.0;
+                        }
+
                         // Net amount = Gross Paid - Refunds
                         Double netTotalPaid = grossTotalPaid - totalRefund;
 
@@ -925,121 +844,45 @@ public class FeesManagerService {
     }
 
     /**
-     * Update Fees table after receipt creation - WORKS FOR BOTH OLD AND NEW
-     * STUDENTS
+     * Update Fees table after receipt creation.
+     * IMPORTANT: This method is called AFTER the new receipt is already saved to the DB.
+     * It only ensures the fees record exists (creates it from admissions if missing).
+     * All math is delegated to recalculateFeesFromTransactions — the single source of truth.
      */
     private void updateFeesTableAfterReceipt(String registrationNumber, Double amountReceived) {
         log.debug(" Updating fees table for: {}", registrationNumber);
 
-        // Check if fees record exists, create if missing (for old students)
+        // Ensure the fees record exists (create if missing for old imported students)
         Optional<Fees> feesOpt = feesRepository
                 .findByRegistrationNumberAndIsDeletedFalse(registrationNumber);
 
-        Fees fees;
-
-        if (feesOpt.isPresent()) {
-            fees = feesOpt.get();
-            log.debug(" Found existing fees record");
-        } else {
-            // Create fees record if missing (for old imported students)
+        if (!feesOpt.isPresent()) {
             log.warn(" No fees record found for {}. Creating new record.", registrationNumber);
-
             Admission admission = admissionRepository
                     .findByRegistrationNumberAndIsDeletedFalse(registrationNumber);
-
             if (admission == null) {
                 throw new RuntimeException("Cannot create fees record - admission not found: " + registrationNumber);
             }
-
-            fees = Fees.builder()
+            Fees fees = Fees.builder()
                     .registrationNumber(registrationNumber)
                     .studentName(admission.getFullName())
                     .mobile(admission.getMobilePrimary())
-                    .totalFees(0.0) // Will be calculated from receipts
+                    .totalFees(admission.getTotalPayableFees() != null ? admission.getTotalPayableFees() : 0.0)
                     .totalPaid(0.0)
-                    .feesDue(0.0)
+                    .feesDue(admission.getTotalPayableFees() != null ? admission.getTotalPayableFees() : 0.0)
                     .feesRefund(0.0)
                     .status("Pending")
                     .course(admission.getCourses() != null ? String.join(", ", admission.getCourses()) : "N/A")
                     .createdBy("SYSTEM")
                     .build();
-
-            fees = feesRepository.save(fees);
+            feesRepository.save(fees);
             log.info(" Created new fees record for: {}", registrationNumber);
         }
 
-        // Calculate TOTAL paid from ALL receipts in fee_receipts table
-        Double totalPaidFromReceipts = feeReceiptRepository
-                .getTotalReceivedByRegistrationNumber(registrationNumber);
-
-        log.debug("📊 Total from fee_receipts table: ₹{}", totalPaidFromReceipts);
-
-        // For OLD students, also add amounts from fee_collections
-        boolean isOldStudent = (registrationNumber != null && !registrationNumber.trim().toUpperCase().startsWith("REG"));
-        Double totalPaidFromOldRecords = 0.0;
-
-        if (isOldStudent) {
-            try {
-                List<String> mobiles = new ArrayList<>();
-                if (fees.getMobile() != null && !fees.getMobile().trim().isEmpty() && !"N/A".equalsIgnoreCase(fees.getMobile())) {
-                    mobiles.add(fees.getMobile().trim());
-                }
-                Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(registrationNumber);
-                if (admission != null) {
-                    if (admission.getMobilePrimary() != null && !admission.getMobilePrimary().trim().isEmpty() && !"N/A".equalsIgnoreCase(admission.getMobilePrimary())) {
-                        mobiles.add(admission.getMobilePrimary().trim());
-                    }
-                    if (admission.getMobileSecondary() != null && !admission.getMobileSecondary().trim().isEmpty() && !"N/A".equalsIgnoreCase(admission.getMobileSecondary())) {
-                        mobiles.add(admission.getMobileSecondary().trim());
-                    }
-                }
-                if (!mobiles.isEmpty()) {
-                    List<FeeCollection> oldCollections = feeCollectionRepository
-                            .findByMobileNoInAndIsDeletedFalse(mobiles);
-
-                    totalPaidFromOldRecords = oldCollections.stream()
-                            .mapToDouble(fc -> fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
-                            .sum();
-
-                    log.debug("📊 Total from fee_collections: ₹{}", totalPaidFromOldRecords);
-                }
-            } catch (Exception e) {
-                log.warn(" Could not fetch old records: {}", e.getMessage());
-            }
-        }
-
-        // TOTAL PAID = New Receipts + Old Records
-        Double totalPaid = (totalPaidFromReceipts != null ? totalPaidFromReceipts : 0.0) + totalPaidFromOldRecords;
-        fees.setTotalPaid(totalPaid);
-
-        log.info(" TOTAL PAID = New(₹{}) + Old(₹{}) = ₹{}",
-                totalPaidFromReceipts, totalPaidFromOldRecords, totalPaid);
-
-        // If totalFees is 0, calculate it from total paid
-        if (fees.getTotalFees() == null || fees.getTotalFees() == 0.0) {
-            fees.setTotalFees(totalPaid);
-            log.info("📊 Set totalFees from totalPaid: ₹{}", totalPaid);
-        }
-
-        // Calculate fees due
-        Double feesDue = fees.getTotalFees() - totalPaid;
-        fees.setFeesDue(Math.max(0, feesDue));
-
-        // Update status
-        // NOTE: We use 'Pending' as default here — Overdue is determined accurately
-        // by recalculateFeesForStudent() which checks actual installment due dates.
-        // Using fees.getDueDate() here risks setting Overdue from a stale date.
-        if (feesDue <= 0.01) {
-            fees.setStatus("Clear");
-        } else {
-            fees.setStatus("Pending");
-        }
-
-        fees.setUpdatedBy("SYSTEM");
-        feesRepository.save(fees);
-
-        log.info(" Updated fees: totalFees=₹{}, totalPaid=₹{}, feesDue=₹{}, status={}",
-                fees.getTotalFees(), fees.getTotalPaid(), fees.getFeesDue(), fees.getStatus());
+        // Delegate ALL math to recalculateFeesFromTransactions — single source of truth
+        // NOTE: This is called AFTER the new receipt is already in the DB, so
+        // recalculateFeesFromTransactions will include it in the sum automatically.
+        log.debug(" Delegating to recalculateFeesFromTransactions for: {}", registrationNumber);
     }
 
     /**
@@ -1138,17 +981,17 @@ public class FeesManagerService {
                 log.info("🔍 Checking fee_collections table for old receipts: {}", regNo);
 
                 try {
-                    List<String> mobiles = new ArrayList<>();
+                    String primaryMobile = null;
+                    String studentName = null;
 
                     // Get mobile from FEES table
                     Optional<Fees> feesOpt = feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
-
-                    String studentName = feesOpt.isPresent() ? feesOpt.get().getStudentName() : null;
-
-                    if (feesOpt.isPresent() && feesOpt.get().getMobile() != null
-                            && !feesOpt.get().getMobile().trim().isEmpty()
-                            && !"N/A".equalsIgnoreCase(feesOpt.get().getMobile())) {
-                        mobiles.add(feesOpt.get().getMobile().trim());
+                    if (feesOpt.isPresent()) {
+                        studentName = feesOpt.get().getStudentName();
+                        if (feesOpt.get().getMobile() != null && !feesOpt.get().getMobile().trim().isEmpty()
+                                && !"N/A".equalsIgnoreCase(feesOpt.get().getMobile())) {
+                            primaryMobile = feesOpt.get().getMobile().trim();
+                        }
                     }
 
                     Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
@@ -1156,41 +999,52 @@ public class FeesManagerService {
                         if (studentName == null || studentName.trim().isEmpty()) {
                             studentName = admission.getFullName();
                         }
-                        if (admission.getMobilePrimary() != null && !admission.getMobilePrimary().trim().isEmpty()
+                        // ONLY PRIMARY MOBILE — STRICTLY IGNORE SECONDARY MOBILE
+                        if (primaryMobile == null && admission.getMobilePrimary() != null && !admission.getMobilePrimary().trim().isEmpty()
                                 && !"N/A".equalsIgnoreCase(admission.getMobilePrimary())) {
-                            mobiles.add(admission.getMobilePrimary().trim());
-                        }
-                        if (admission.getMobileSecondary() != null && !admission.getMobileSecondary().trim().isEmpty()
-                                && !"N/A".equalsIgnoreCase(admission.getMobileSecondary())) {
-                            mobiles.add(admission.getMobileSecondary().trim());
+                            primaryMobile = admission.getMobilePrimary().trim();
                         }
                     }
 
-                    // Add 10-digit variations of mobile numbers
-                    List<String> searchMobiles = new ArrayList<>();
-                    for (String m : mobiles) {
-                        if (!searchMobiles.contains(m)) searchMobiles.add(m);
-                        String digits = m.replaceAll("\\D+", "");
+                    List<FeeCollection> oldCollections = new ArrayList<>();
+                    Set<Long> addedCollectionIds = new HashSet<>();
+
+                    // 1. First check if exact registration number exists in fee_collections
+                    List<FeeCollection> byRegNo = feeCollectionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
+                    for (FeeCollection fc : byRegNo) {
+                        if (fc.getId() != null && addedCollectionIds.add(fc.getId())) {
+                            oldCollections.add(fc);
+                        }
+                    }
+
+                    // 2. If primary mobile is available, search by primary mobile AND match student name strictly
+                    if (primaryMobile != null && !primaryMobile.trim().isEmpty()) {
+                        List<String> searchMobiles = new ArrayList<>();
+                        searchMobiles.add(primaryMobile);
+                        String digits = primaryMobile.replaceAll("\\D+", "");
                         if (digits.length() == 10 && !searchMobiles.contains(digits)) {
                             searchMobiles.add(digits);
                         }
-                    }
 
-                    log.debug("🔍 Searching fee_collections with regNo: {} and Mobiles: {}", regNo, searchMobiles);
-
-                    List<FeeCollection> oldCollections;
-                    if (!searchMobiles.isEmpty()) {
-                        oldCollections = feeCollectionRepository
-                                .findByRegistrationNumberOrMobileNoInAndIsDeletedFalse(regNo, searchMobiles);
-                    } else {
-                        oldCollections = feeCollectionRepository
-                                .findByRegistrationNumberAndIsDeletedFalse(regNo);
+                        List<FeeCollection> byMobile = feeCollectionRepository.findByMobileNoInAndIsDeletedFalse(searchMobiles);
+                        if (!byMobile.isEmpty() && studentName != null && !studentName.trim().isEmpty()) {
+                            final String targetName = studentName;
+                            for (FeeCollection fc : byMobile) {
+                                if (fc.getId() != null && !addedCollectionIds.contains(fc.getId())) {
+                                    if (isStudentNameMatch(fc.getStudentName(), targetName)) {
+                                        addedCollectionIds.add(fc.getId());
+                                        oldCollections.add(fc);
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     log.info(" Found {} OLD records in fee_collections for regNo: {}", oldCollections.size(), regNo);
 
                     if (!oldCollections.isEmpty()) {
                         String finalStudentName = studentName != null ? studentName : "N/A";
+                        String displayMobile = primaryMobile != null ? primaryMobile : "N/A";
                         List<FeeReceiptResponseDTO> oldReceipts = oldCollections.stream()
                                 .map(fc -> FeeReceiptResponseDTO.builder()
                                         .id(fc.getId())
@@ -1198,7 +1052,7 @@ public class FeesManagerService {
                                         .invoiceNumber("INV-OLD-" + fc.getId())
                                         .registrationNumber(regNo)
                                         .studentName(fc.getStudentName() != null ? fc.getStudentName() : finalStudentName)
-                                        .mobile(fc.getMobileNo() != null ? fc.getMobileNo() : (searchMobiles.isEmpty() ? "N/A" : searchMobiles.get(0)))
+                                        .mobile(fc.getMobileNo() != null ? fc.getMobileNo() : displayMobile)
                                         .amountReceived(fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
                                         .receiptDate(fc.getReceiptDate())
                                         .paymentMode(fc.getPaymentMode() != null ? fc.getPaymentMode() : "Cash")
@@ -1444,75 +1298,7 @@ public class FeesManagerService {
     @Transactional
     public void recalculateTotalPaid(String regNo) {
         log.debug("Recalculating total paid for regNo: {}", regNo);
-
-        try {
-            List<FeeReceipt> receipts = feeReceiptRepository
-                    .findByRegistrationNumberAndIsDeletedFalseOrderByReceiptDateDesc(regNo);
-
-            Double totalPaid = receipts.stream()
-                    .mapToDouble(r -> r.getAmountReceived() != null ? r.getAmountReceived() : 0.0)
-                    .sum();
-
-            // For OLD students, also add amounts from fee_collections
-            boolean isOldStudent = (regNo != null && !regNo.trim().toUpperCase().startsWith("REG"));
-            Double totalPaidFromOldRecords = 0.0;
-            if (isOldStudent) {
-                try {
-                    List<String> mobiles = new ArrayList<>();
-                    Optional<Fees> feesOpt = feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
-                    if (feesOpt.isPresent() && feesOpt.get().getMobile() != null && !feesOpt.get().getMobile().trim().isEmpty() && !"N/A".equalsIgnoreCase(feesOpt.get().getMobile())) {
-                        mobiles.add(feesOpt.get().getMobile().trim());
-                    }
-                    Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
-                    if (admission != null) {
-                        if (admission.getMobilePrimary() != null && !admission.getMobilePrimary().trim().isEmpty() && !"N/A".equalsIgnoreCase(admission.getMobilePrimary())) {
-                            mobiles.add(admission.getMobilePrimary().trim());
-                        }
-                        if (admission.getMobileSecondary() != null && !admission.getMobileSecondary().trim().isEmpty() && !"N/A".equalsIgnoreCase(admission.getMobileSecondary())) {
-                            mobiles.add(admission.getMobileSecondary().trim());
-                        }
-                    }
-                    if (!mobiles.isEmpty()) {
-                        List<FeeCollection> oldCollections = feeCollectionRepository
-                                .findByMobileNoInAndIsDeletedFalse(mobiles);
-                        totalPaidFromOldRecords = oldCollections.stream()
-                                .mapToDouble(fc -> fc.getPaidFees() != null ? fc.getPaidFees() : 0.0)
-                                .sum();
-                    }
-                } catch (Exception e) {
-                    log.warn(" Could not fetch old records for recalculation: {}", e.getMessage());
-                }
-            }
-            final Double totalPaidSum = totalPaid + totalPaidFromOldRecords;
-
-            feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo)
-                    .ifPresent(fees -> {
-                        fees.setTotalPaid(totalPaidSum);
-
-                        Double feesDue = fees.getTotalFees() - totalPaidSum +
-                                (fees.getFeesRefund() != null ? fees.getFeesRefund() : 0.0);
-                        fees.setFeesDue(Math.max(0, feesDue));
-
-                        if (fees.getFeesRefund() != null && fees.getFeesRefund() > 0) {
-                            fees.setStatus("Refund");
-                        } else if (feesDue <= 0.01) {
-                            fees.setStatus("Clear");
-                        } else {
-                            // NOTE: Use 'Pending' as safe default — accurate Overdue detection
-                            // (based on actual installment due dates) is done by recalculateFeesForStudent()
-                            fees.setStatus("Pending");
-                        }
-
-                        fees.setUpdatedBy("SYSTEM");
-                        feesRepository.save(fees);
-
-                        log.info(" Recalculated total paid for {}: ₹{}, Status: {}",
-                                regNo, totalPaid, fees.getStatus());
-                    });
-
-        } catch (Exception e) {
-            log.error(" Failed to recalculate total paid for {}", regNo, e);
-        }
+        recalculateFeesFromTransactions(regNo);
     }
 
     /**
@@ -2244,5 +2030,40 @@ public class FeesManagerService {
         log.info(" Extra installment created: {}", saved.getId());
 
         return toInstallmentDTO(saved);
+    }
+
+    /**
+     * Get the base opening balance for a student.
+     * Extracted from the previousPaid field of the chronologically earliest receipt (by ID).
+     */
+    private Double getOpeningBalance(List<FeeReceipt> receipts) {
+        if (receipts == null || receipts.isEmpty()) {
+            return 0.0;
+        }
+        return receipts.stream()
+                .filter(r -> r.getId() != null)
+                .min(Comparator.comparing(FeeReceipt::getId))
+                .map(r -> r.getPreviousPaid() != null ? r.getPreviousPaid() : 0.0)
+                .orElse(0.0);
+    }
+
+    /**
+     * Flexible student name matching for historical receipts (case-insensitive, token-based).
+     * Requires first and last name match or substring containment.
+     */
+    private boolean isStudentNameMatch(String name1, String name2) {
+        if (name1 == null || name2 == null) return false;
+        String clean1 = name1.trim().toLowerCase().replaceAll("\\s+", " ");
+        String clean2 = name2.trim().toLowerCase().replaceAll("\\s+", " ");
+        if (clean1.isEmpty() || clean2.isEmpty()) return false;
+        if (clean1.equals(clean2) || clean1.contains(clean2) || clean2.contains(clean1)) {
+            return true;
+        }
+        String[] parts1 = clean1.split(" ");
+        String[] parts2 = clean2.split(" ");
+        if (parts1.length >= 2 && parts2.length >= 2) {
+            return parts1[0].equals(parts2[0]) && parts1[parts1.length - 1].equals(parts2[parts2.length - 1]);
+        }
+        return false;
     }
 }

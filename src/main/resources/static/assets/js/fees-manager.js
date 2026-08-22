@@ -18,6 +18,7 @@ let totalPages = 0;
 let totalElements = 0;
 let feesFilters = {
     searchTerm: '',
+    searchField: 'ALL',
     status: '',
     course: '',
     fromDate: '',
@@ -214,6 +215,7 @@ function initializeEventListeners() {
 
     // Search
     document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 500));
+    document.getElementById('searchFieldSelect')?.addEventListener('change', applyFilters);
 
     // Entries per page
     document.getElementById('entriesPerPage').addEventListener('change', function () {
@@ -486,6 +488,7 @@ function applyFilters() {
     feesFilters.status = document.getElementById('statusFilter')?.value || '';
     feesFilters.course = document.getElementById('courseFilter')?.value || '';
     feesFilters.searchTerm = document.getElementById('searchInput')?.value || '';
+    feesFilters.searchField = document.getElementById('searchFieldSelect')?.value || 'ALL';
     feesFilters.fromDate = document.getElementById('fromDateFilter')?.value || '';
     feesFilters.toDate = document.getElementById('toDateFilter')?.value || '';
 
@@ -497,6 +500,7 @@ function clearFilters() {
     const statusFilter = document.getElementById('statusFilter');
     const courseFilter = document.getElementById('courseFilter');
     const searchInput = document.getElementById('searchInput');
+    const searchFieldSelect = document.getElementById('searchFieldSelect');
     const courseSearchInput = document.getElementById('courseSearchInput');
     const fromDateFilter = document.getElementById('fromDateFilter');
     const toDateFilter = document.getElementById('toDateFilter');
@@ -504,6 +508,7 @@ function clearFilters() {
     if (statusFilter) statusFilter.value = '';
     if (courseFilter) courseFilter.value = '';
     if (searchInput) searchInput.value = '';
+    if (searchFieldSelect) searchFieldSelect.value = 'ALL';
     if (courseSearchInput) courseSearchInput.value = '';
     if (fromDateFilter) fromDateFilter.value = '';
     if (toDateFilter) toDateFilter.value = '';
@@ -515,6 +520,7 @@ function clearFilters() {
 
     feesFilters = {
         searchTerm: '',
+        searchField: 'ALL',
         status: '',
         course: '',
         fromDate: '',
@@ -728,6 +734,9 @@ async function loadFeesFromBackend() {
 
         if (feesFilters.searchTerm && feesFilters.searchTerm.trim() !== '') {
             params.set('searchTerm', feesFilters.searchTerm.trim());
+        }
+        if (feesFilters.searchField && feesFilters.searchField.trim() !== '') {
+            params.set('searchField', feesFilters.searchField.trim());
         }
         if (feesFilters.status && feesFilters.status.trim() !== '' && feesFilters.status.trim().toLowerCase() !== 'all') {
             params.set('status', feesFilters.status.trim());
@@ -1255,10 +1264,12 @@ function renderTable() {
 
     // Backend already returns a single page; do not paginate again on the client.
     tbody.innerHTML = filteredData.map(item => {
+        const totalFees = item.totalFees || 0;
         const netPaid = item.totalPaid || 0;
         const totalRefund = item.feesRefund || 0;
         const grossPaid = netPaid + totalRefund;
         const actualDue = item.feesDue || 0;
+        const extraPaid = netPaid > totalFees ? (netPaid - totalFees) : (actualDue < 0 ? Math.abs(actualDue) : 0);
 
         //  CHANGE: Determine due date display
         let dueDateDisplay = '-'; // Default for clear fees
@@ -1309,13 +1320,15 @@ function renderTable() {
                 <td data-label="REG NO."><strong>${item.regNo || 'N/A'}</strong></td>
                 <td data-label="STUDENT NAME">${item.studentName || 'N/A'}</td>
                 <td data-label="MOBILE NO.">${item.mobile || 'N/A'}</td>
-                <td data-label="TOTAL FEES">₹${(item.totalFees || 0).toLocaleString()}</td>
+                <td data-label="TOTAL FEES">₹${totalFees.toLocaleString()}</td>
                 <td data-label="DUE AMOUNT" class="${actualDue > 0 ? 'text-danger' : 'text-success'}">
-                    <strong>₹${actualDue.toLocaleString()}</strong>
+                    <strong>${actualDue < 0 ? `-₹${Math.abs(actualDue).toLocaleString()}` : `₹${actualDue.toLocaleString()}`}</strong>
+                    ${extraPaid > 0 ? `<br><small class="text-success fw-bold">(Extra Paid: +₹${extraPaid.toLocaleString()})</small>` : ''}
                     ${totalRefund > 0 ? `<br><small class="text-muted">(Refund: ₹${totalRefund.toLocaleString()})</small>` : ''}
                 </td>
-                <td data-label="PAID AMOUNT">
-                    ₹${netPaid.toLocaleString()}
+                <td data-label="PAID AMOUNT" class="${extraPaid > 0 ? 'text-success' : ''}">
+                    <strong>₹${netPaid.toLocaleString()}</strong>
+                    ${extraPaid > 0 ? `<br><small class="text-success fw-bold">(+₹${extraPaid.toLocaleString()} Extra)</small>` : ''}
                     ${totalRefund > 0 ? `<br><small class="text-muted">(Gross: ₹${grossPaid.toLocaleString()})</small>` : ''}
                 </td>
                 <td data-label="DUE DATE">${dueDateDisplay}</td>
@@ -1946,7 +1959,9 @@ async function saveReceipt() {
         Swal.close();
 
         if (response.ok) {
-            await updateFeesTotalPaid(regNo);
+            // NOTE: Backend recalculateFeesFromTransactions already updated fees correctly.
+            // updateFeesTotalPaid() has been REMOVED — it was incorrectly summing
+            // old fee_collections (view-only historical data) and overwriting the correct backend value.
 
             showSuccess(`Fee receipt ${isUpdate ? 'updated' : 'saved'} successfully`);
 
@@ -3033,6 +3048,115 @@ async function updateFeeReceipt(receiptId, regNo) {
         showError('Failed to load receipt for update');
     }
 }
+
+async function deleteFeeReceipt(receiptId, regNo) {
+    const result = await Swal.fire({
+        title: 'Delete Receipt?',
+        text: 'Are you sure you want to delete this receipt? This will revert the payment and recalculate the fees ledger.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="bi bi-trash me-2"></i>Yes, Delete',
+        cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        showLoading('Deleting receipt...');
+
+        const response = await fetch(`${API_BASE}/receipts/${receiptId}`, {
+            method: 'DELETE',
+            headers: getCsrfHeaders()
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.message || 'Failed to delete receipt');
+        }
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Deleted!',
+            text: 'Receipt deleted and fees recalculated successfully.',
+            timer: 1500,
+            showConfirmButton: false
+        });
+
+        // Refresh view receipts modal and main fees table
+        if (typeof viewReceipts === 'function') {
+            await viewReceipts(regNo);
+        }
+        if (typeof loadFeesData === 'function') {
+            await loadFeesData();
+        }
+    } catch (error) {
+        console.error('Error deleting receipt:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Delete Failed',
+            text: error.message || 'Could not delete receipt',
+            confirmButtonColor: '#ef4444'
+        });
+    }
+}
+
+async function deleteOldCollection(collectionId, regNo) {
+    const result = await Swal.fire({
+        title: 'Delete Old Record?',
+        text: 'Are you sure you want to delete this historical collection record?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="bi bi-trash me-2"></i>Yes, Delete',
+        cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        showLoading('Deleting record...');
+
+        const response = await fetch(`/api/fee-collections/${collectionId}`, {
+            method: 'DELETE',
+            headers: getCsrfHeaders()
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.message || 'Failed to delete record');
+        }
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Deleted!',
+            text: 'Old collection record deleted successfully.',
+            timer: 1500,
+            showConfirmButton: false
+        });
+
+        // Refresh view receipts modal and main fees table
+        if (typeof viewReceipts === 'function') {
+            await viewReceipts(regNo);
+        }
+        if (typeof loadFeesData === 'function') {
+            await loadFeesData();
+        }
+    } catch (error) {
+        console.error('Error deleting old collection:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Delete Failed',
+            text: error.message || 'Could not delete record',
+            confirmButtonColor: '#ef4444'
+        });
+    }
+}
+
+window.deleteFeeReceipt = deleteFeeReceipt;
+window.deleteOldCollection = deleteOldCollection;
 
 async function loadInstallmentsForReceipt(regNo, selectedInstallmentId = null) {
     try {

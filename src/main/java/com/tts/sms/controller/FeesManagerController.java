@@ -213,6 +213,7 @@ public class FeesManagerController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "25") int size,
             @RequestParam(required = false) String searchTerm,
+            @RequestParam(required = false) String searchField,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String course,
             @RequestParam(required = false) Double minFeesDue,
@@ -225,13 +226,14 @@ public class FeesManagerController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "DESC") String sortDirection) {
 
-        log.info("GET /api/fees-manager - page: {}, size: {}, searchTerm: {}, status: {}, course: {}, minDue: {}, overdue: {}",
-                page, size, searchTerm, status, course, minFeesDue, overdue);
+        log.info("GET /api/fees-manager - page: {}, size: {}, searchTerm: {}, searchField: {}, status: {}, course: {}, minDue: {}, overdue: {}",
+                page, size, searchTerm, searchField, status, course, minFeesDue, overdue);
 
         FeesSearchDTO searchDTO = FeesSearchDTO.builder()
                 .page(page)
                 .size(size)
                 .searchTerm(searchTerm)
+                .searchField(searchField)
                 .status(status)
                 .course(course)
                 .minFeesDue(minFeesDue)

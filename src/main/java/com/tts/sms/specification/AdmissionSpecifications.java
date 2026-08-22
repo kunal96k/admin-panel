@@ -64,6 +64,13 @@ public class AdmissionSpecifications {
                             }
                         }
                         predicates.add(cb.or(admPreds.toArray(new Predicate[0])));
+                    } else if ("MOBILE_PRI".equals(field) || "PRIMARY_MOBILE".equals(field)) {
+                        List<Predicate> priMobPreds = new ArrayList<>();
+                        priMobPreds.add(cb.like(cb.lower(root.get("mobilePrimary")), "%" + cleanTerm + "%"));
+                        if (!digits.isEmpty() && !digits.equals(cleanTerm)) {
+                            priMobPreds.add(cb.like(cb.lower(root.get("mobilePrimary")), "%" + digits + "%"));
+                        }
+                        predicates.add(cb.or(priMobPreds.toArray(new Predicate[0])));
                     } else if ("MOBILE".equals(field)) {
                         List<Predicate> mobPreds = new ArrayList<>();
                         mobPreds.add(cb.like(cb.lower(root.get("mobilePrimary")), "%" + cleanTerm + "%"));

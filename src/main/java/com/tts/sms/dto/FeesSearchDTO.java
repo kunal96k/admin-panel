@@ -31,6 +31,8 @@ public class FeesSearchDTO {
 
     private String searchTerm;
 
+    private String searchField;
+
     private String status; // Pending, Clear
 
     private String course;
