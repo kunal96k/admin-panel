@@ -251,6 +251,48 @@ public class FeesManagerController {
         return ResponseEntity.ok(fees);
     }
 
+    /**
+     * Get all fees for export (unpaginated) filtered by criteria
+     */
+    @GetMapping(value = "/export", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<FeesSummaryDTO>> getAllFeesForExport(
+            @RequestParam(required = false) String searchTerm,
+            @RequestParam(required = false) String searchField,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String course,
+            @RequestParam(required = false) Double minFeesDue,
+            @RequestParam(required = false) Double maxFeesDue,
+            @RequestParam(required = false) Double minTotalFees,
+            @RequestParam(required = false) Double maxTotalFees,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateTo,
+            @RequestParam(required = false) Boolean overdue,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection) {
+
+        log.info("GET /api/fees-manager/export - searchTerm: {}, searchField: {}, status: {}, course: {}",
+                searchTerm, searchField, status, course);
+
+        FeesSearchDTO searchDTO = FeesSearchDTO.builder()
+                .searchTerm(searchTerm)
+                .searchField(searchField)
+                .status(status)
+                .course(course)
+                .minFeesDue(minFeesDue)
+                .maxFeesDue(maxFeesDue)
+                .minTotalFees(minTotalFees)
+                .maxTotalFees(maxTotalFees)
+                .dueDateFrom(dueDateFrom)
+                .dueDateTo(dueDateTo)
+                .overdue(overdue)
+                .sortBy(sortBy)
+                .sortDirection(sortDirection)
+                .build();
+
+        List<FeesSummaryDTO> fees = feesManagerService.getAllFeesForExport(searchDTO);
+        return ResponseEntity.ok(fees);
+    }
+
     // ==================== FEE RECEIPTS ====================
 
     /**

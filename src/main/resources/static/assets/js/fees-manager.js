@@ -236,7 +236,8 @@ function initializeEventListeners() {
 
 
 
-    // Export dropdown actions are exposed on window.* (see bottom of file)
+    // Export dropdown toggle initialization
+    initExportDropdown();
 
     // Import Button
     document.getElementById('importBtn').addEventListener('click', importFeesCSV);
@@ -1487,7 +1488,7 @@ async function viewReceipts(regNo) {
 
 function toggleActionMenu(event) {
     event.stopPropagation();
-    const trigger = event.target.closest('.action-menu-trigger, .dropdown-toggle');
+    const trigger = event.target.closest('.action-menu-trigger');
     if (trigger && typeof openActionMenuFixed === 'function') {
         openActionMenuFixed(trigger);
     }
@@ -2337,44 +2338,6 @@ function handleImport() {
         confirmButtonColor: '#667eea'
     });
     bootstrap.Modal.getInstance(document.getElementById('importModal')).hide();
-}
-
-function exportToCSV() {
-    const headers = ['Reg No.', 'Student Name', 'Mobile No.', 'Total Fees', 'Fees Due', 'Total Paid', 'Due Date', 'Fees Refund', 'Status', 'Course'];
-
-    let csv = headers.join(',') + '\n';
-
-    feesData.forEach(row => {
-        csv += [
-            row.regNo,
-            row.studentName,
-            row.mobile,
-            row.totalFees,
-            row.feesDue,
-            row.totalPaid,
-            row.dueDate,
-            row.feesRefund,
-            row.status,
-            row.course
-        ].join(',') + '\n';
-    });
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'fees_data_' + new Date().toISOString().split('T')[0] + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-    Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Data exported successfully',
-        confirmButtonColor: '#667eea'
-    });
 }
 
 function printReceipt(receiptNo) {
@@ -3910,64 +3873,51 @@ async function fetchAllFeesForExport() {
     try {
         showLoading('Fetching export data...');
 
-        const baseParams = new URLSearchParams({
+        const params = new URLSearchParams({
             sortBy: 'createdAt',
             sortDirection: 'DESC'
         });
 
         if (feesFilters.searchTerm && feesFilters.searchTerm.trim() !== '') {
-            baseParams.set('searchTerm', feesFilters.searchTerm.trim());
+            params.set('searchTerm', feesFilters.searchTerm.trim());
+        }
+        if (feesFilters.searchField && feesFilters.searchField.trim() !== '') {
+            params.set('searchField', feesFilters.searchField.trim());
         }
         if (feesFilters.status && feesFilters.status.trim() !== '' && feesFilters.status.trim().toLowerCase() !== 'all') {
-            baseParams.set('status', feesFilters.status.trim());
+            params.set('status', feesFilters.status.trim());
         }
         if (feesFilters.course && feesFilters.course.trim() !== '') {
-            baseParams.set('course', feesFilters.course.trim());
+            params.set('course', feesFilters.course.trim());
         }
         if (feesFilters.fromDate && feesFilters.fromDate.trim() !== '') {
-            baseParams.set('dueDateFrom', feesFilters.fromDate.trim());
+            params.set('dueDateFrom', feesFilters.fromDate.trim());
         }
         if (feesFilters.toDate && feesFilters.toDate.trim() !== '') {
-            baseParams.set('dueDateTo', feesFilters.toDate.trim());
+            params.set('dueDateTo', feesFilters.toDate.trim());
         }
 
-        const pageSize = 500;
-        let page = 0;
-        let allRows = [];
-        let totalPagesLocal = 1;
+        const queryString = params.toString();
+        const url = `/api/fees-manager/export${queryString ? '?' + queryString : ''}`;
 
-        while (page < totalPagesLocal) {
-            const params = new URLSearchParams(baseParams.toString());
-            params.set('page', String(page));
-            params.set('size', String(pageSize));
+        const response = await fetch(url, {
+            headers: getCsrfHeaders()
+        });
 
-            const response = await fetch(`/api/fees-manager?${params.toString()}`, {
-                headers: getCsrfHeaders()
-            });
-            if (!response.ok) {
-                throw new Error(`Failed to fetch export data (status ${response.status})`);
-            }
-
-            const data = await response.json();
-            const rows = data && Array.isArray(data.content) ? data.content : [];
-            allRows = allRows.concat(rows);
-
-            totalPagesLocal = typeof data.totalPages === 'number' ? data.totalPages : 0;
-            if (!totalPagesLocal) {
-                break;
-            }
-
-            page += 1;
+        if (!response.ok) {
+            throw new Error(`Failed to fetch export data (status ${response.status})`);
         }
+
+        const feesList = await response.json();
 
         Swal.close();
 
-        if (!allRows.length) {
+        if (!feesList || feesList.length === 0) {
             showError('No data available to export');
             return null;
         }
 
-        return allRows;
+        return feesList;
     } catch (error) {
         Swal.close();
         console.error('Export error:', error);
@@ -4010,16 +3960,16 @@ function buildFeesExportTable(rows) {
         <tbody>
             ${rows.map(r => `
                 <tr>
-                    <td>${r.registrationNumber ?? ''}</td>
-                    <td>${r.studentName ?? ''}</td>
-                    <td>${r.mobile ?? ''}</td>
-                    <td>${r.totalFees ?? ''}</td>
-                    <td>${r.totalPaid ?? ''}</td>
-                    <td>${r.feesDue ?? ''}</td>
-                    <td>${r.dueDate ?? ''}</td>
-                    <td>${r.feesRefund ?? ''}</td>
-                    <td>${r.status ?? ''}</td>
-                    <td>${r.course ?? ''}</td>
+                    <td>${r.registrationNumber || '-'}</td>
+                    <td>${r.studentName || '-'}</td>
+                    <td>${r.mobile || '-'}</td>
+                    <td>${r.totalFees != null ? r.totalFees : 0}</td>
+                    <td>${r.totalPaid != null ? r.totalPaid : 0}</td>
+                    <td>${r.feesDue != null ? r.feesDue : 0}</td>
+                    <td>${r.nextDueDate || r.dueDate || '-'}</td>
+                    <td>${r.feesRefund != null ? r.feesRefund : 0}</td>
+                    <td>${r.status || 'Pending'}</td>
+                    <td>${r.course || '-'}</td>
                 </tr>
             `).join('')}
         </tbody>
@@ -4035,6 +3985,7 @@ function initFeesExportDataTable(table) {
         try {
             feesExportDataTable.destroy();
         } catch (e) {
+            console.log('Cleaning up old export table');
         }
         feesExportDataTable = null;
     }
@@ -4057,10 +4008,45 @@ function initFeesExportDataTable(table) {
             {
                 extend: 'pdfHtml5',
                 text: 'PDF',
-                title: 'Fees Manager Export',
+                title: 'TechnoKraft Training & Solutions - Fees Manager Report',
                 filename: `Fees_Manager_${new Date().toISOString().split('T')[0]}`,
                 orientation: 'landscape',
-                pageSize: 'A3'
+                pageSize: 'A3',
+                customize: function (doc) {
+                    doc.content.splice(0, 0, {
+                        text: 'TechnoKraft Training & Solutions',
+                        style: 'header',
+                        alignment: 'center',
+                        fontSize: 18,
+                        bold: true,
+                        margin: [0, 0, 0, 10]
+                    });
+
+                    doc.content.splice(1, 0, {
+                        text: 'Fees Manager Report',
+                        style: 'subheader',
+                        alignment: 'center',
+                        fontSize: 14,
+                        margin: [0, 0, 0, 5]
+                    });
+
+                    doc.content.splice(2, 0, {
+                        text: `Generated on: ${new Date().toLocaleString()}`,
+                        alignment: 'right',
+                        fontSize: 10,
+                        margin: [0, 0, 0, 15]
+                    });
+
+                    doc.styles.tableHeader = {
+                        bold: true,
+                        fontSize: 11,
+                        color: 'white',
+                        fillColor: '#4f46e5',
+                        alignment: 'center'
+                    };
+
+                    doc.defaultStyle.fontSize = 9;
+                }
             },
             'copy',
             'print'
@@ -4076,81 +4062,80 @@ function initFeesExportDataTable(table) {
 }
 
 window.exportFeesToCSV = async function () {
-    const rows = await fetchAllFeesForExport();
-    if (!rows) return;
-    const table = buildFeesExportTable(rows);
-    const dt = initFeesExportDataTable(table);
-    dt.button('.buttons-csv').trigger();
+    try {
+        const rows = await fetchAllFeesForExport();
+        if (!rows) return;
+        const table = buildFeesExportTable(rows);
+        const dt = initFeesExportDataTable(table);
+        dt.button('.buttons-csv').trigger();
+        showSuccess('CSV exported successfully!');
+    } catch (error) {
+        console.error('CSV export error:', error);
+        showError('Failed to export CSV');
+    }
 };
 
 window.exportFeesToExcel = async function () {
-    const rows = await fetchAllFeesForExport();
-    if (!rows) return;
-    const table = buildFeesExportTable(rows);
-    const dt = initFeesExportDataTable(table);
-    dt.button('.buttons-excel').trigger();
+    try {
+        const rows = await fetchAllFeesForExport();
+        if (!rows) return;
+        const table = buildFeesExportTable(rows);
+        const dt = initFeesExportDataTable(table);
+        dt.button('.buttons-excel').trigger();
+        showSuccess('Excel exported successfully!');
+    } catch (error) {
+        console.error('Excel export error:', error);
+        showError('Failed to export Excel');
+    }
 };
 
 window.exportFeesToPDF = async function () {
-    const rows = await fetchAllFeesForExport();
-    if (!rows) return;
-    const table = buildFeesExportTable(rows);
-    const dt = initFeesExportDataTable(table);
-    dt.button('.buttons-pdf').trigger();
+    try {
+        const rows = await fetchAllFeesForExport();
+        if (!rows) return;
+        const table = buildFeesExportTable(rows);
+        const dt = initFeesExportDataTable(table);
+        dt.button('.buttons-pdf').trigger();
+        showSuccess('PDF exported successfully!');
+    } catch (error) {
+        console.error('PDF export error:', error);
+        showError('Failed to export PDF');
+    }
 };
 
 window.copyFeesTableData = async function () {
-    const rows = await fetchAllFeesForExport();
-    if (!rows) return;
-    const table = buildFeesExportTable(rows);
-    const dt = initFeesExportDataTable(table);
-    dt.button('.buttons-copy').trigger();
+    try {
+        const rows = await fetchAllFeesForExport();
+        if (!rows) return;
+        const table = buildFeesExportTable(rows);
+        const dt = initFeesExportDataTable(table);
+        dt.button('.buttons-copy').trigger();
+        showSuccess('Data copied to clipboard!');
+    } catch (error) {
+        console.error('Copy error:', error);
+        showError('Failed to copy data');
+    }
 };
 
 window.printFeesTable = async function () {
-    const rows = await fetchAllFeesForExport();
-    if (!rows) return;
-    const table = buildFeesExportTable(rows);
-    const dt = initFeesExportDataTable(table);
-    dt.button('.buttons-print').trigger();
+    try {
+        const rows = await fetchAllFeesForExport();
+        if (!rows) return;
+        const table = buildFeesExportTable(rows);
+        const dt = initFeesExportDataTable(table);
+        dt.button('.buttons-print').trigger();
+    } catch (error) {
+        console.error('Print error:', error);
+        showError('Failed to print');
+    }
 };
 
-// Manual dropdown toggle fallback for Export button
-document.addEventListener('DOMContentLoaded', function() {
-    const exportBtn = document.getElementById('btnExportFees');
-    const exportMenu = document.querySelector('#btnExportFees + .dropdown-menu');
-
-    if (exportBtn && exportMenu) {
-        exportBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Close other dropdowns
-            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                if (menu !== exportMenu) {
-                    menu.classList.remove('show');
-                }
-            });
-
-            // Toggle this dropdown
-            exportMenu.classList.toggle('show');
-        });
-
-        // Close when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target)) {
-                exportMenu.classList.remove('show');
-            }
-        });
-
-        // Prevent menu from closing when clicking inside
-        exportMenu.addEventListener('click', function(e) {
-            if (e.target.tagName === 'A') {
-                exportMenu.classList.remove('show');
-            }
-        });
-    }
-});
+// Aliases matching standard naming
+window.exportToCSV = window.exportFeesToCSV;
+window.exportToExcel = window.exportFeesToExcel;
+window.exportToPDF = window.exportFeesToPDF;
+window.copyTableData = window.copyFeesTableData;
+window.printTable = window.printFeesTable;
 
 function formatDateTime(dateTimeString) {
     if (!dateTimeString) return 'N/A';
@@ -4166,4 +4151,63 @@ function formatDateTime(dateTimeString) {
         second: '2-digit',
         hour12: true
     });
+}
+
+window.toggleExportFeesDropdown = function (event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const menu = document.getElementById('exportFeesDropdownMenu') || document.querySelector('#btnExportFees + .dropdown-menu');
+    const btn = document.getElementById('btnExportFees');
+    if (!menu) return;
+
+    const isShown = menu.classList.contains('show');
+
+    // Close all other open dropdowns first
+    document.querySelectorAll('.dropdown-menu.show').forEach(m => {
+        if (m !== menu) m.classList.remove('show');
+    });
+
+    if (!isShown) {
+        menu.classList.add('show');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+    } else {
+        menu.classList.remove('show');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+};
+
+function initExportDropdown() {
+    const exportBtn = document.getElementById('btnExportFees');
+    const exportMenu = document.getElementById('exportFeesDropdownMenu') || document.querySelector('#btnExportFees + .dropdown-menu');
+
+    if (exportBtn && exportMenu) {
+        exportBtn.onclick = function (e) {
+            window.toggleExportFeesDropdown(e);
+        };
+
+        // Close when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target)) {
+                exportMenu.classList.remove('show');
+                exportBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Close menu when an option is clicked
+        exportMenu.addEventListener('click', function (e) {
+            if (e.target.closest('.dropdown-item')) {
+                exportMenu.classList.remove('show');
+                exportBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+}
+
+// Initialise immediately if DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initExportDropdown);
+} else {
+    initExportDropdown();
 }

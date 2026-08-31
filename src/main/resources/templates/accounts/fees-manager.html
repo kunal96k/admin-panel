@@ -24,7 +24,7 @@
     <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" th:href="@{/assets/css/fees-manager.css}" href="/assets/css/fees-manager.css">
+    <link rel="stylesheet" th:href="@{/assets/css/fees-manager.css(v='1.0.6')}" href="/assets/css/fees-manager.css?v=1.0.6">
 </head>
 <body>
 
@@ -50,38 +50,38 @@
                         <button class="btn btn-success btn-action flex-fill flex-sm-grow-0" id="btnImportCSV">
                             <i class="bi bi-upload me-1"></i>Import
                         </button>
-                        <div class="btn-group flex-fill flex-sm-grow-0">
+                        <div class="btn-group flex-fill flex-sm-grow-0 position-relative">
                             <button class="btn btn-info btn-action dropdown-toggle w-100"
                                     type="button"
                                     id="btnExportFees"
-                                    data-bs-toggle="dropdown"
-                                    aria-expanded="false">
+                                    aria-expanded="false"
+                                    onclick="window.toggleExportFeesDropdown(event)">
                                 <i class="bi bi-download me-1"></i>Export
                             </button>
-                            <ul class="dropdown-menu" aria-labelledby="btnExportFees">
+                            <ul class="dropdown-menu" id="exportFeesDropdownMenu" aria-labelledby="btnExportFees">
                                 <li>
-                                    <a class="dropdown-item" href="#" onclick="window.exportFeesToCSV(); return false;">
+                                    <a class="dropdown-item" href="javascript:void(0)" onclick="window.exportFeesToCSV();">
                                         <i class="bi bi-filetype-csv me-2"></i>Export as CSV
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#" onclick="window.exportFeesToExcel(); return false;">
+                                    <a class="dropdown-item" href="javascript:void(0)" onclick="window.exportFeesToExcel();">
                                         <i class="bi bi-file-earmark-excel me-2"></i>Export as Excel
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#" onclick="window.exportFeesToPDF(); return false;">
+                                    <a class="dropdown-item" href="javascript:void(0)" onclick="window.exportFeesToPDF();">
                                         <i class="bi bi-filetype-pdf me-2"></i>Export as PDF
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <a class="dropdown-item" href="#" onclick="window.copyFeesTableData(); return false;">
+                                    <a class="dropdown-item" href="javascript:void(0)" onclick="window.copyFeesTableData();">
                                         <i class="bi bi-clipboard me-2"></i>Copy to Clipboard
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#" onclick="window.printFeesTable(); return false;">
+                                    <a class="dropdown-item" href="javascript:void(0)" onclick="window.printFeesTable();">
                                         <i class="bi bi-printer me-2"></i>Print
                                     </a>
                                 </li>
@@ -853,8 +853,8 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
@@ -864,7 +864,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
-    <script th:src="@{/assets/js/fees-manager.js(v='1.0.3')}" defer></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.all.min.js"></script>
+    <script th:src="@{/assets/js/fees-manager.js(v='1.0.6')}" src="/assets/js/fees-manager.js?v=1.0.6" defer></script>
     <script layout:fragment="page-scripts" th:if="${requiresBootstrapInit}">
         if (typeof window.reinitBootstrapDropdowns === 'function') {
             window.reinitBootstrapDropdowns();

@@ -105,6 +105,29 @@ public class FeesManagerService {
         return fees.map(this::toFeesSummaryDTO);
     }
 
+    @Transactional(readOnly = true)
+    public List<FeesSummaryDTO> getAllFeesForExport(FeesSearchDTO searchDTO) {
+        log.info("Fetching all fees for export with criteria: {}", searchDTO);
+
+        Sort.Direction direction = Sort.Direction.DESC;
+        if (searchDTO != null && searchDTO.getSortDirection() != null && !searchDTO.getSortDirection().trim().isEmpty()) {
+            try {
+                direction = Sort.Direction.valueOf(searchDTO.getSortDirection().trim().toUpperCase());
+            } catch (Exception e) {
+                direction = Sort.Direction.DESC;
+            }
+        }
+
+        String sortBy = (searchDTO != null && searchDTO.getSortBy() != null && !searchDTO.getSortBy().trim().isEmpty())
+                ? searchDTO.getSortBy().trim()
+                : "createdAt";
+
+        Specification<Fees> spec = com.tts.sms.specification.FeesSpecifications.getSearchSpecification(searchDTO != null ? searchDTO : FeesSearchDTO.builder().build());
+        List<Fees> fees = feesRepository.findAll(spec, Sort.by(direction, sortBy));
+
+        return fees.stream().map(this::toFeesSummaryDTO).collect(Collectors.toList());
+    }
+
     private FeesSummaryDTO toFeesSummaryDTO(Fees fees) {
         // Compute next due date from pending installments
         LocalDate computedNextDueDate = null;
