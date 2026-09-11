@@ -289,4 +289,54 @@ public class EmailTemplateService {
             log.error(" Failed to send birthday wishes to: {}", toEmail, e);
         }
     }
+
+    /**
+     * Send fee due reminder email (5 days in advance)
+     */
+    @Async("emailTaskExecutor")
+    public void sendFeeDueReminderEmail(
+            String toEmail,
+            String studentName,
+            String registrationNumber,
+            String courseName,
+            Integer installmentNumber,
+            Double dueAmount,
+            LocalDate dueDate,
+            Double totalPendingFees) {
+
+        log.info(" [ASYNC] Sending fee due reminder email to: {} for regNo: {}", toEmail, registrationNumber);
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            Context context = new Context();
+            context.setVariable("studentName", studentName != null ? studentName : "Student");
+            context.setVariable("regNo", registrationNumber);
+            context.setVariable("courseName", courseName != null ? courseName : "");
+            context.setVariable("installmentText", installmentNumber != null ? "Installment #" + installmentNumber : "Upcoming Installment");
+            context.setVariable("dueAmount", dueAmount != null ? String.format("₹%,.2f", dueAmount) : "₹0.00");
+            context.setVariable("dueDate", dueDate != null ?
+                    dueDate.format(java.time.format.DateTimeFormatter.ofPattern("MMMM dd, yyyy")) : "Upcoming");
+            context.setVariable("totalDue", totalPendingFees != null && totalPendingFees > 0 ?
+                    String.format("₹%,.2f", totalPendingFees) : null);
+            context.setVariable("year", java.time.Year.now().getValue());
+
+            String htmlContent = templateEngine.process("email/fee-due-reminder", context);
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Fee Due Reminder - Installment Due in 5 Days - TechnoKraft");
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+
+            log.info(" Fee due reminder email sent successfully to: {} ({})", toEmail, registrationNumber);
+
+        } catch (MessagingException e) {
+            log.error(" Failed to send fee due reminder email to: {} - {}", toEmail, e.getMessage(), e);
+        } catch (Exception e) {
+            log.error(" Unexpected error sending fee due reminder email to: {} - {}", toEmail, e.getMessage(), e);
+        }
+    }
 }

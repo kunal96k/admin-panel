@@ -212,6 +212,18 @@ public class Admission {
     @Column(name = "category_updated_at")
     private LocalDateTime categoryUpdatedAt;
 
+    /**
+     * Flag to enable/disable automated fee due reminder emails for this student
+     */
+    @Column(name = "fee_reminder_email_enabled")
+    @Builder.Default
+    private Boolean feeReminderEmailEnabled = true;
+
+    @Transient
+    public boolean isFeeReminderEmailEnabled() {
+        return feeReminderEmailEnabled == null || feeReminderEmailEnabled;
+    }
+
     @Transient
     public String getFullName() {
         StringBuilder name = new StringBuilder();
@@ -258,6 +270,9 @@ public class Admission {
         }
         if (status == null) {
             status = "Active";
+        }
+        if (feeReminderEmailEnabled == null) {
+            feeReminderEmailEnabled = true;
         }
         if (courses == null) {
             courses = new ArrayList<>();

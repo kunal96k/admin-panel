@@ -790,10 +790,15 @@
             const categoryBadge = getCategoryBadge(category);
 
             // Format student name with category badge
+            const isReminderEnabled = adm.feeReminderEmailEnabled !== false;
+            const reminderBadge = !isReminderEnabled
+                ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 0.65rem;" title="Fee reminder emails disabled for this student"><i class="bi bi-bell-slash me-1"></i>Reminder Off</span>'
+                : '';
+
             const studentNameWithBadge = `
             <div>
                 <strong>${adm.studentName || `${adm.firstName || ''} ${adm.lastName || ''}`.trim()}</strong>
-                <div class="mt-1">${categoryBadge}</div>
+                <div class="mt-1">${categoryBadge}${reminderBadge}</div>
             </div>
         `;
 
@@ -821,6 +826,10 @@
                             </button>
                             <button class="action-menu-item" data-action="installments" data-id="${adm.id}">
                                 <i class="bi bi-cash-stack"></i><span>Fee Installments</span>
+                            </button>
+                            <button class="action-menu-item" data-action="toggle-fee-reminder" data-id="${adm.id}" data-name="${(adm.studentName || `${adm.firstName || ''} ${adm.lastName || ''}`).replace(/"/g, '&quot;').trim()}" data-enabled="${isReminderEnabled}">
+                                <i class="bi ${isReminderEnabled ? 'bi-bell-slash text-danger' : 'bi-bell text-success'}"></i>
+                                <span>${isReminderEnabled ? 'Disable Fee Reminder' : 'Enable Fee Reminder'}</span>
                             </button>
                             <button class="action-menu-item" data-action="transfer" data-id="${adm.id}">
                                 <i class="bi bi-arrow-left-right"></i><span>Transfer Admission</span>
@@ -954,6 +963,93 @@
     window.changeStudentStatus = changeStudentStatus;
 
     /**
+     * 🔔 TOGGLE STUDENT FEE REMINDER EMAIL
+     */
+    async function toggleStudentFeeReminder(admissionId, btnElement) {
+        try {
+            let isCurrentlyEnabled = true;
+            let studentName = 'Student';
+
+            if (btnElement) {
+                isCurrentlyEnabled = btnElement.getAttribute('data-enabled') === 'true';
+                studentName = btnElement.getAttribute('data-name') || 'Student';
+            }
+
+            const targetState = !isCurrentlyEnabled;
+
+            const confirmResult = await Swal.fire({
+                title: targetState ? 'Enable Fee Reminder Emails?' : 'Disable Fee Reminder Emails?',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-2"><strong>Student:</strong> ${studentName}</p>
+                        <p class="text-muted small mb-0">
+                            ${targetState
+                                ? 'Are you sure you want to <strong>enable</strong> automated fee due reminder emails for this student? (Emails are sent 5 days before due date).'
+                                : 'Are you sure you want to <strong>disable</strong> automated fee due reminder emails for this student? No reminder emails will be sent to this student.'}
+                        </p>
+                    </div>
+                `,
+                icon: targetState ? 'question' : 'warning',
+                showCancelButton: true,
+                confirmButtonText: targetState ? '<i class="bi bi-bell me-1"></i>Yes, Enable' : '<i class="bi bi-bell-slash me-1"></i>Yes, Disable',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: targetState ? '#10b981' : '#ef4444'
+            });
+
+            if (!confirmResult.isConfirmed) return;
+
+            showLoading(targetState ? 'Enabling fee reminder...' : 'Disabling fee reminder...');
+
+            const csrfToken = typeof getCsrfToken === 'function' ? getCsrfToken() : null;
+            const headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            };
+            if (csrfToken && typeof getCsrfHeader === 'function') {
+                headers[getCsrfHeader()] = csrfToken;
+            }
+
+            const response = await fetch(`/api/admissions/${admissionId}/fee-reminder-toggle`, {
+                method: 'PUT',
+                headers: headers,
+                body: JSON.stringify({ enabled: targetState })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.message || 'Failed to update fee reminder setting');
+            }
+
+            const updatedAdm = await response.json();
+            Swal.close();
+
+            await Swal.fire({
+                icon: 'success',
+                title: targetState ? 'Reminders Enabled' : 'Reminders Disabled',
+                text: `Fee reminder emails for ${studentName} have been ${targetState ? 'enabled' : 'disabled'} successfully.`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+            // Reload table
+            if (typeof loadAdmissions === 'function') {
+                loadAdmissions(currentPage, pageSize);
+            }
+        } catch (error) {
+            Swal.close();
+            console.error('Error toggling student fee reminder:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error?.message || 'Could not update fee reminder setting'
+            });
+        }
+    }
+
+    // Make globally available
+    window.toggleStudentFeeReminder = toggleStudentFeeReminder;
+
+    /**
      * Attach Table Event Listeners
      */
     function attachTableEventListeners(tbody) {
@@ -978,7 +1074,7 @@
                 this.closest('.action-menu').classList.remove('show');
 
                 // Handle action
-                handleAction(action, id);
+                handleAction(action, id, this);
             });
         });
 
@@ -990,7 +1086,7 @@
         });
     }
 
-    function handleAction(action, id) {
+    function handleAction(action, id, btnElement) {
         switch (action) {
             case 'update':
                 loadAdmissionForEdit(id);
@@ -1003,6 +1099,9 @@
                 break;
             case 'installments':
                 openFeeInstallments(id);
+                break;
+            case 'toggle-fee-reminder':
+                toggleStudentFeeReminder(id, btnElement);
                 break;
             case 'transfer':
                 openTransferModal(id);
@@ -1346,6 +1445,10 @@
         setValue('admMobileSecondary', data.secondaryMobile || data.mobileSecondary);
         setValue('admEmailPrimary', data.email || data.emailPrimary);
         setValue('admEmailSecondary', data.emailSecondary);
+        const reminderToggle = document.getElementById('admFeeReminderEmailEnabled');
+        if (reminderToggle) {
+            reminderToggle.checked = data.feeReminderEmailEnabled !== false;
+        }
         setValue('admCurrentAddress', data.currentAddress);
         setValue('admPermanentAddress', data.permanentAddress);
         setValue('admPinCodeCurrent', data.pinCurrent || data.pinCodeCurrent);
@@ -2237,6 +2340,7 @@
             mobileSecondary: getValue('admMobileSecondary'),
             emailPrimary: getValue('admEmailPrimary'),
             emailSecondary: getValue('admEmailSecondary'),
+            feeReminderEmailEnabled: document.getElementById('admFeeReminderEmailEnabled') ? document.getElementById('admFeeReminderEmailEnabled').checked : true,
             currentAddress: getValue('admCurrentAddress'),
             permanentAddress: getValue('admPermanentAddress'),
             pinCodeCurrent: getValue('admPinCodeCurrent'),
@@ -2680,6 +2784,60 @@
             document.getElementById('viewAdmMobile2').textContent = admission.mobileSecondary || '-';
             document.getElementById('viewAdmEmail').textContent = admission.emailPrimary || '-';
             document.getElementById('viewAdmAddress').textContent = admission.currentAddress || '-';
+
+            // Fee Reminder Status & Quick Toggle in View Modal
+            const viewReminderStatus = document.getElementById('viewAdmFeeReminderStatus');
+            const viewReminderContainer = document.getElementById('viewAdmFeeReminderToggleContainer');
+            const isReminderOn = admission.feeReminderEmailEnabled !== false;
+            const normCategory = (admission.studentCategory || '').trim().toUpperCase().replace(/ /g, '_');
+            const isCategoryEligible = normCategory === 'NEW_STUDENT' || normCategory === 'PURSUING';
+
+            if (viewReminderStatus) {
+                if (!isCategoryEligible) {
+                    viewReminderStatus.innerHTML = `
+                        <span class="badge bg-secondary" title="Automated reminders only apply to New Student & Pursuing categories">
+                            <i class="bi bi-slash-circle me-1"></i>Ineligible (${admission.studentCategory || 'N/A'})
+                        </span>
+                    `;
+                } else if (isReminderOn) {
+                    viewReminderStatus.innerHTML = '<span class="badge bg-success"><i class="bi bi-bell-fill me-1"></i>Active</span>';
+                } else {
+                    viewReminderStatus.innerHTML = '<span class="badge bg-danger"><i class="bi bi-bell-slash-fill me-1"></i>Disabled</span>';
+                }
+            }
+            if (viewReminderContainer) {
+                viewReminderContainer.innerHTML = `
+                    <button class="btn btn-sm ${isReminderOn ? 'btn-outline-danger' : 'btn-outline-success'} py-1 px-2" id="btnToggleReminderInView">
+                        <i class="bi ${isReminderOn ? 'bi-bell-slash' : 'bi-bell'} me-1"></i>
+                        ${isReminderOn ? 'Disable' : 'Enable'}
+                    </button>
+                `;
+                document.getElementById('btnToggleReminderInView')?.addEventListener('click', async () => {
+                    try {
+                        const csrfToken = typeof getCsrfToken === 'function' ? getCsrfToken() : null;
+                        const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+                        if (csrfToken && typeof getCsrfHeader === 'function') headers[getCsrfHeader()] = csrfToken;
+
+                        const toggleRes = await fetch(`/api/admissions/${id}/fee-reminder-toggle`, {
+                            method: 'PUT',
+                            headers: headers,
+                            body: JSON.stringify({ enabled: !isReminderOn })
+                        });
+                        if (!toggleRes.ok) throw new Error('Failed to update toggle');
+                        const updatedAdm = await toggleRes.json();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Status Updated',
+                            text: updatedAdm.feeReminderEmailEnabled ? 'Fee reminder emails enabled for this student' : 'Fee reminder emails disabled for this student',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        viewAdmission(id);
+                    } catch (tErr) {
+                        Swal.fire('Error', 'Failed to update reminder status: ' + tErr.message, 'error');
+                    }
+                });
+            }
 
             // Course & Batch Details
             document.getElementById('viewAdmPackage').textContent = admission.packageName || '-';
@@ -4833,6 +4991,9 @@
             'batchDetailsForm', 'installmentsForm', 'imageUploadForm'].forEach(id => {
                 document.getElementById(id)?.reset();
             });
+
+        const reminderToggle = document.getElementById('admFeeReminderEmailEnabled');
+        if (reminderToggle) reminderToggle.checked = true;
 
         document.getElementById('admTotalFees').value = '0';
         document.getElementById('admReceivableFees').value = '0';

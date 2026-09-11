@@ -738,6 +738,20 @@ public class AdmissionService {
         log.info("Soft deleted admission with id: {}", id);
     }
 
+    @Transactional
+    public AdmissionResponseDTO updateFeeReminderEmailEnabled(Long id, boolean enabled) {
+        log.info("Updating fee reminder email toggle for admission id: {} to {}", id, enabled);
+        Admission admission = admissionRepository.findById(id)
+                .filter(a -> !a.getIsDeleted())
+                .orElseThrow(() -> new ResourceNotFoundException("Admission not found with id: " + id));
+
+        admission.setFeeReminderEmailEnabled(enabled);
+        admission.setUpdatedBy(getCurrentLoggedInUser());
+        Admission updated = admissionRepository.save(admission);
+
+        return admissionMapper.toResponseDTO(updated);
+    }
+
     @Transactional(readOnly = true)
     public List<FeeInstallmentDTO> getInstallments(Long admissionId) {
         log.debug("Fetching installments for admission: {}", admissionId);

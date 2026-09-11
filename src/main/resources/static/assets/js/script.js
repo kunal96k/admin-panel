@@ -836,17 +836,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 500);
     }
 
+    // Helper to ensure all modal backdrops and body locks are removed when no modal is open
+    function cleanupModalBackdrop() {
+        setTimeout(() => {
+            const openModals = document.querySelectorAll('.modal.show');
+            if (openModals.length === 0) {
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }
+        }, 100);
+    }
+
     // Create Profile Modal
     function createProfileModal() {
+        if (document.getElementById('profileModal')) return;
         const modalHTML = `
-            <div class="modal fade" id="profileModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal fade" id="profileModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header bg-primary text-white">
                             <h5 class="modal-title">
                                 <i class="bi bi-person-circle me-2"></i>My Profile
                             </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <div id="profileContent">
@@ -864,23 +878,60 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        const modalEl = document.getElementById('profileModal');
+        if (modalEl) {
+            modalEl.addEventListener('hidden.bs.modal', cleanupModalBackdrop);
+            modalEl.querySelectorAll('[data-bs-dismiss="modal"]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                    cleanupModalBackdrop();
+                });
+            });
+        }
     }
 
     // Create Settings Modal
     function createSettingsModal() {
+        if (document.getElementById('settingsModal')) return;
         const currentYear = new Date().getFullYear();
         const modalHTML = `
-            <div class="modal fade" id="settingsModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header bg-info text-white">
                             <h5 class="modal-title">
                                 <i class="bi bi-gear me-2"></i>Settings
                             </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <div class="settings-content">
+                                <!-- Automated Fee Due Reminder Notification Setting -->
+                                <div class="card mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #0284c7 !important;">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="pe-3">
+                                                <h6 class="text-primary fw-bold mb-1 d-flex align-items-center">
+                                                    <i class="bi bi-bell-fill me-2 text-primary"></i>Fee Due Date Reminder Emails
+                                                </h6>
+                                                <p class="text-muted small mb-0">
+                                                    Automatically send daily reminder emails to <strong>New Student</strong> and <strong>Pursuing</strong> students 5 days before their installment due dates (runs daily at 11:00 AM IST).
+                                                </p>
+                                            </div>
+                                            <div class="form-check form-switch fs-4 mb-0">
+                                                <input class="form-check-input" type="checkbox" role="switch" id="globalFeeReminderToggle" checked style="cursor: pointer;">
+                                            </div>
+                                        </div>
+                                        <div class="mt-2 pt-2 border-top d-flex align-items-center small">
+                                            <span class="badge bg-success me-2" id="globalFeeReminderBadge">Active</span>
+                                            <span class="text-muted" id="globalFeeReminderStatusText">Automated 5-day reminders are currently enabled globally.</span>
+                                            <span id="globalFeeReminderSpinner" class="spinner-border spinner-border-sm text-primary ms-2 d-none" role="status"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="mb-4">
                                     <h6 class="text-primary fw-bold">
                                         <i class="bi bi-info-circle me-2"></i>About TechnoKraft CRM
@@ -899,27 +950,31 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <ul class="list-unstyled">
                                         <li class="mb-2">
                                             <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                            Student Enquiry Management
+                                            Student Admission & Registration Management
                                         </li>
                                         <li class="mb-2">
                                             <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                            Admission Processing
+                                            Enquiry Tracking & Follow-up System
                                         </li>
                                         <li class="mb-2">
                                             <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                            Fee Collection & Tracking
+                                            Fee Management & Installment Tracking
                                         </li>
                                         <li class="mb-2">
                                             <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                            Certificate Generation
+                                            Certificate Generation & Printing
                                         </li>
                                         <li class="mb-2">
                                             <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                            Employee & Role Management
+                                            Employee & Staff Management
                                         </li>
                                         <li class="mb-2">
                                             <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                            Course & Batch Management
+                                            Comprehensive Reports & Receipts
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                            Automated 5-Day Fee Due Email Reminders
                                         </li>
                                     </ul>
                                 </div>
@@ -967,7 +1022,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <i class="bi bi-c-circle me-1"></i>
                                         ${currentYear} TechnoKraft Training & Solution PVT LTD
                                     </p>
-                                    <p class="text-muted small">Version 1.0.0</p>
+                                    <p class="text-muted small">Version 7.1</p>
                                 </div>
                             </div>
                         </div>
@@ -979,12 +1034,33 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        const modalEl = document.getElementById('settingsModal');
+        if (modalEl) {
+            modalEl.addEventListener('hidden.bs.modal', cleanupModalBackdrop);
+            modalEl.querySelectorAll('[data-bs-dismiss="modal"]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                    cleanupModalBackdrop();
+                });
+            });
+        }
+
+        // Attach listener for global fee reminder toggle
+        const toggle = document.getElementById('globalFeeReminderToggle');
+        if (toggle) {
+            toggle.addEventListener('change', handleFeeReminderToggle);
+        }
     }
 
     // Open Profile Modal
     async function openProfileModal() {
+        if (!document.getElementById('profileModal')) {
+            createProfileModal();
+        }
         const modalElement = document.getElementById('profileModal');
-        const modal = new bootstrap.Modal(modalElement);
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
         modal.show();
 
         try {
@@ -1119,11 +1195,101 @@ document.addEventListener('DOMContentLoaded', function() {
         return genderMap[gender] || 'N/A';
     }
 
+    // Load Fee Reminder Status from System Configuration API
+    async function loadFeeReminderStatus() {
+        const toggle = document.getElementById('globalFeeReminderToggle');
+        const spinner = document.getElementById('globalFeeReminderSpinner');
+        if (!toggle) return;
+
+        try {
+            if (spinner) spinner.classList.remove('d-none');
+            const response = await fetch('/api/system-config/fee-reminder-status', {
+                headers: {
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                toggle.checked = data.enabled === true;
+                updateFeeReminderBadge(toggle.checked);
+            }
+        } catch (error) {
+            console.error('Failed to load fee reminder status:', error);
+        } finally {
+            if (spinner) spinner.classList.add('d-none');
+        }
+    }
+
+    // Update the visual status badge and message in Settings modal
+    function updateFeeReminderBadge(enabled) {
+        const badge = document.getElementById('globalFeeReminderBadge');
+        const statusText = document.getElementById('globalFeeReminderStatusText');
+        if (!badge || !statusText) return;
+
+        if (enabled) {
+            badge.className = 'badge bg-success me-2';
+            badge.textContent = 'Active';
+            statusText.textContent = 'Automated 5-day reminders are currently enabled globally.';
+        } else {
+            badge.className = 'badge bg-danger me-2';
+            badge.textContent = 'Disabled';
+            statusText.textContent = 'Automated fee reminder emails are stopped for all students.';
+        }
+    }
+
+    // Toggle Fee Reminder Status via API
+    async function handleFeeReminderToggle(e) {
+        const toggle = e.target;
+        const newStatus = toggle.checked;
+        const spinner = document.getElementById('globalFeeReminderSpinner');
+
+        try {
+            toggle.disabled = true;
+            if (spinner) spinner.classList.remove('d-none');
+
+            const response = await fetch('/api/system-config/fee-reminder-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                },
+                body: JSON.stringify({ enabled: newStatus })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update status on server');
+            }
+
+            const data = await response.json();
+            updateFeeReminderBadge(data.enabled);
+
+            // Optional toast message if available
+            if (typeof showToast === 'function') {
+                showToast(data.message || (newStatus ? 'Fee reminders enabled' : 'Fee reminders disabled'), 'success');
+            }
+        } catch (err) {
+            console.error('Error saving fee reminder status:', err);
+            toggle.checked = !newStatus; // Revert switch state
+            updateFeeReminderBadge(toggle.checked);
+            alert('Failed to update fee reminder status. Please check your permissions.');
+        } finally {
+            toggle.disabled = false;
+            if (spinner) spinner.classList.add('d-none');
+        }
+    }
+
     // Open Settings Modal
     function openSettingsModal() {
+        if (!document.getElementById('settingsModal')) {
+            createSettingsModal();
+        }
         const modalElement = document.getElementById('settingsModal');
-        const modal = new bootstrap.Modal(modalElement);
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
         modal.show();
+        loadFeeReminderStatus();
     }
 
     // Initialize on page load
@@ -1759,6 +1925,19 @@ window.addEventListener('scroll', function() {
 // Close action menu immediately whenever any Bootstrap modal starts to open
 document.addEventListener('show.bs.modal', function() {
     closeAllActionMenus();
+});
+
+// Clean up any dangling backdrop or body scroll lock whenever any Bootstrap modal is closed
+document.addEventListener('hidden.bs.modal', function() {
+    setTimeout(function() {
+        const visibleModals = document.querySelectorAll('.modal.show');
+        if (visibleModals.length === 0) {
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+        }
+    }, 150);
 });
 
 // Also handle SweetAlert2 — close action menu when Swal fires

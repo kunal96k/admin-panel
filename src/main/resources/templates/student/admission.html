@@ -410,6 +410,23 @@
                                             <label class="form-label">Secondary Email</label>
                                             <input type="email" class="form-control" id="admEmailSecondary">
                                         </div>
+                                        <div class="col-md-12 mb-3">
+                                            <div class="card border-0 shadow-sm p-3" style="background: #f8fafc; border-left: 4px solid #3b82f6 !important;">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <label class="form-label fw-bold mb-1 d-flex align-items-center" for="admFeeReminderEmailEnabled" style="cursor: pointer;">
+                                                            <i class="bi bi-bell-fill text-primary me-2"></i>Fee Due Date Reminder Emails
+                                                        </label>
+                                                        <p class="text-muted small mb-0">
+                                                            Send automatic email reminders 5 days before installment due dates. (Only sent to <strong>New Student</strong> &amp; <strong>Pursuing</strong> students with an email address).
+                                                        </p>
+                                                    </div>
+                                                    <div class="form-check form-switch fs-4 mb-0 ms-3">
+                                                        <input class="form-check-input" type="checkbox" role="switch" id="admFeeReminderEmailEnabled" checked style="cursor: pointer;">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label">Current Address</label>
                                             <textarea class="form-control" id="admCurrentAddress" rows="3"></textarea>
@@ -914,6 +931,15 @@
                                                                 Address</small>
                                                             <span class="fw-semibold text-dark"
                                                                 id="viewAdmEmail">-</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <div class="view-detail-card p-3 rounded-3 bg-light d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <small class="text-muted d-block uppercase-label">Fee Reminder Notifications</small>
+                                                                <span id="viewAdmFeeReminderStatus">-</span>
+                                                            </div>
+                                                            <div id="viewAdmFeeReminderToggleContainer"></div>
                                                         </div>
                                                     </div>
                                                     <div class="col-12">

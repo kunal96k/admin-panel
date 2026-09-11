@@ -12,6 +12,13 @@
             background-color: #f4f7fa;
             margin: 0;
             padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
         }
         .container {
             max-width: 650px;
@@ -45,11 +52,13 @@
             border-radius: 50%;
             padding: 15px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            box-sizing: border-box;
         }
         .logo img {
             max-width: 100%;
             height: auto;
             display: block;
+            margin: 0 auto;
         }
         .header h1 {
             margin: 0;
@@ -92,17 +101,14 @@
             padding: 10px;
             border-radius: 50%;
             background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            box-sizing: border-box;
         }
         .birthday-icon img {
-            background-color: #1e293b;
             max-width: 100%;
-            min-width: 70px;
             height: auto;
             display: block;
-            border-radius: 10px;
+            margin: 0 auto;
+            border-radius: 8px;
         }
         .wish-text {
             font-size: 20px;
@@ -179,6 +185,71 @@
             background: linear-gradient(90deg, transparent, #667eea, transparent);
             margin: 30px 0;
             border-radius: 2px;
+        }
+
+        /* Mobile-only responsive styles (Leaves MD and LG screens completely untouched) */
+        @media only screen and (max-width: 600px) {
+            body {
+                background-color: #f1f5f9 !important;
+                padding: 0 !important;
+            }
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+            .header {
+                padding: 30px 16px !important;
+            }
+            .header h1 {
+                font-size: 26px !important;
+            }
+            .header p {
+                font-size: 15px !important;
+                margin-top: 6px !important;
+            }
+            .logo {
+                width: 85px !important;
+                height: 85px !important;
+                padding: 10px !important;
+                margin-bottom: 15px !important;
+            }
+            .content {
+                padding: 24px 16px !important;
+            }
+            .employee-name {
+                font-size: 24px !important;
+                margin: 10px 0 !important;
+            }
+            .birthday-card {
+                padding: 20px 14px !important;
+                margin: 20px 0 !important;
+            }
+            .birthday-icon {
+                width: 85px !important;
+                height: 85px !important;
+                margin-bottom: 15px !important;
+                padding: 8px !important;
+            }
+            .wish-text {
+                font-size: 16px !important;
+                line-height: 1.4 !important;
+            }
+            .message-box {
+                padding: 18px 14px !important;
+                margin: 20px 0 !important;
+                font-size: 14px !important;
+            }
+            .signature {
+                margin-top: 25px !important;
+                padding-top: 20px !important;
+            }
+            .footer {
+                padding: 25px 16px !important;
+                font-size: 12px !important;
+            }
         }
     </style>
 </head>
@@ -265,7 +336,7 @@
         </div>
 
         <p style="margin-top: 20px; font-size: 12px; opacity: 0.8;">
-            &copy; <span th:text="${year}">2025</span> TechnoKraft. All rights reserved.
+            &copy; <span th:text="${year}">2025</span> TechnoKraft Training & Solution Pvt. Ltd. All rights reserved.
         </p>
     </div>
 </div>

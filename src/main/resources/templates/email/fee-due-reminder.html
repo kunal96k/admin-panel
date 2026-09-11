@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fee Due Reminder - TechnoKraft</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #f4f7fa;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 35px 30px;
+            text-align: center;
+        }
+        .logo {
+            width: 90px;
+            height: auto;
+            margin: 0 auto 15px;
+            display: block;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .header p {
+            margin: 6px 0 0;
+            opacity: 0.92;
+            font-size: 14px;
+        }
+        .content {
+            padding: 35px 30px;
+        }
+        .salutation {
+            font-size: 16px;
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+        .badge-notice {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            margin: 20px 0;
+        }
+        .amount-highlight {
+            background: linear-gradient(135deg, #f8f9ff 0%, #eef2ff 100%);
+            border: 2px solid #e0e7ff;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 25px 0;
+        }
+        .amount-highlight .label {
+            font-size: 13px;
+            color: #4338ca;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .amount-highlight .value {
+            font-size: 30px;
+            font-weight: 700;
+            color: #dc2626;
+            letter-spacing: 0.5px;
+        }
+        .amount-highlight .due-pill {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 4px 14px;
+            background-color: #fee2e2;
+            color: #991b1b;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .details-box {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 25px 0;
+        }
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #ffffff;
+        }
+        .details-table th {
+            background: #f8fafc;
+            padding: 12px 18px;
+            font-weight: 600;
+            color: #334155;
+            font-size: 14px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        .details-table td {
+            padding: 12px 18px;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+        .detail-label-td {
+            color: #64748b;
+            font-weight: 500;
+            text-align: left;
+            width: 44%;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .detail-value-td {
+            color: #0f172a;
+            font-weight: 600;
+            text-align: right;
+            width: 56%;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .info-card {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 13px;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+        .info-card strong {
+            color: #1e293b;
+        }
+        .footer {
+            background: #f8fafc;
+            padding: 25px 30px;
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .footer strong {
+            color: #334155;
+            font-size: 13px;
+        }
+
+        /* Mobile-only responsive styles (Leaves MD and LG screens completely untouched) */
+        @media only screen and (max-width: 600px) {
+            body {
+                background-color: #f1f5f9 !important;
+                padding: 0 !important;
+            }
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+            .header {
+                padding: 24px 16px !important;
+            }
+            .header h1 {
+                font-size: 20px !important;
+            }
+            .content {
+                padding: 20px 16px !important;
+            }
+            .amount-highlight {
+                padding: 16px 12px !important;
+                margin: 20px 0 !important;
+            }
+            .amount-highlight .value {
+                font-size: 26px !important;
+            }
+            .details-box {
+                margin: 20px 0 !important;
+            }
+            .details-table th {
+                padding: 11px 12px !important;
+                font-size: 13px !important;
+            }
+            .details-table td {
+                padding: 11px 12px !important;
+                font-size: 13px !important;
+            }
+            .detail-label-td {
+                width: 45% !important;
+                font-size: 13px !important;
+            }
+            .detail-value-td {
+                width: 55% !important;
+                font-size: 13px !important;
+            }
+            .info-card {
+                padding: 12px 14px !important;
+                font-size: 12px !important;
+            }
+            .badge-notice {
+                padding: 10px 14px !important;
+                font-size: 13px !important;
+            }
+            .footer {
+                padding: 20px 16px !important;
+                font-size: 11px !important;
+            }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+<div class="container" style="max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.12);">
+    <!-- Header -->
+    <div class="header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 35px 30px; text-align: center;">
+        <img src="https://powerbi.ttsnasik.com/assets/image/tts-logo-ev.png"
+             alt="TechnoKraft Logo"
+             class="logo"
+             style="width: 90px; height: auto; margin: 0 auto 15px; display: block;">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 0.5px; color: #ffffff;">Fee Due Reminder</h1>
+        <p style="margin: 6px 0 0; opacity: 0.92; font-size: 14px; color: #ffffff;">TechnoKraft Training & Solution Pvt. Ltd.</p>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content" style="padding: 35px 30px;">
+        <p class="salutation" style="font-size: 16px; color: #1e293b; margin: 0 0 15px 0;">
+            Dear <strong th:text="${studentName}" style="color: #1e293b;">Student Name</strong>,
+        </p>
+
+        <p style="margin: 0 0 18px 0; color: #333333; font-size: 14px; line-height: 1.6;">
+            This is a friendly reminder that your upcoming course fee installment is scheduled for payment in <strong style="color: #dc2626;">5 days</strong>.
+        </p>
+
+        <!-- Amount Highlight Card -->
+        <div class="amount-highlight" style="background: linear-gradient(135deg, #f8f9ff 0%, #eef2ff 100%); border: 2px solid #e0e7ff; border-radius: 10px; padding: 20px; text-align: center; margin: 25px 0;">
+            <div class="label" style="font-size: 13px; color: #4338ca; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 5px;">Installment Amount Due</div>
+            <div class="value" style="font-size: 30px; font-weight: 700; color: #dc2626; letter-spacing: 0.5px;" th:text="${dueAmount}">₹0.00</div>
+            <div class="due-pill" style="display: inline-block; margin-top: 8px; padding: 4px 14px; background-color: #fee2e2; color: #991b1b; border-radius: 20px; font-size: 12px; font-weight: 600;">
+                Due on: <span th:text="${dueDate}">Date</span> (In 5 Days)
+            </div>
+        </div>
+
+        <!-- Payment Details Summary Table (Two-column layout guaranteed with clear gap) -->
+        <div class="details-box" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin: 25px 0;">
+            <table class="details-table" width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse; margin: 0; background-color: #ffffff;">
+                <thead>
+                    <tr>
+                        <th colspan="2" style="background-color: #f8fafc; padding: 12px 18px; text-align: left; font-size: 14px; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0;">
+                            Payment Details Summary
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="detail-label-td" style="padding: 12px 18px; color: #64748b; font-weight: 500; font-size: 14px; border-bottom: 1px solid #f1f5f9; text-align: left; width: 44%; vertical-align: middle;">
+                            Student Name:
+                        </td>
+                        <td class="detail-value-td" style="padding: 12px 18px; color: #0f172a; font-weight: 600; font-size: 14px; border-bottom: 1px solid #f1f5f9; text-align: right; width: 56%; vertical-align: middle;" th:text="${studentName}">
+                            Student Name
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label-td" style="padding: 12px 18px; color: #64748b; font-weight: 500; font-size: 14px; border-bottom: 1px solid #f1f5f9; text-align: left; width: 44%; vertical-align: middle;">
+                            Registration No:
+                        </td>
+                        <td class="detail-value-td" style="padding: 12px 18px; color: #0f172a; font-weight: 600; font-size: 14px; border-bottom: 1px solid #f1f5f9; text-align: right; width: 56%; vertical-align: middle;" th:text="${regNo}">
+                            REG0001
+                        </td>
+                    </tr>
+                    <tr th:if="${courseName != null and !#strings.isEmpty(courseName)}">
+                        <td class="detail-label-td" style="padding: 12px 18px; color: #64748b; font-weight: 500; font-size: 14px; border-bottom: 1px solid #f1f5f9; text-align: left; width: 44%; vertical-align: middle;">
+                            Course / Package:
+                        </td>
+                        <td class="detail-value-td" style="padding: 12px 18px; color: #0f172a; font-weight: 600; font-size: 14px; border-bottom: 1px solid #f1f5f9; text-align: right; width: 56%; vertical-align: middle;" th:text="${courseName}">
+                            Course
+                        </td>
+                    </tr>
+                    <tr th:if="${installmentText != null and !#strings.isEmpty(installmentText)}">
+                        <td class="detail-label-td" style="padding: 12px 18px; color: #64748b; font-weight: 500; font-size: 14px; border-bottom: 1px solid #f1f5f9; text-align: left; width: 44%; vertical-align: middle;">
+                            Installment:
+                        </td>
+                        <td class="detail-value-td" style="padding: 12px 18px; color: #0f172a; font-weight: 600; font-size: 14px; border-bottom: 1px solid #f1f5f9; text-align: right; width: 56%; vertical-align: middle;" th:text="${installmentText}">
+                            Installment #1
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label-td" style="padding: 12px 18px; color: #64748b; font-weight: 500; font-size: 14px; border-bottom: 1px solid #f1f5f9; text-align: left; width: 44%; vertical-align: middle;">
+                            Due Date:
+                        </td>
+                        <td class="detail-value-td" style="padding: 12px 18px; color: #dc2626; font-weight: 600; font-size: 14px; border-bottom: 1px solid #f1f5f9; text-align: right; width: 56%; vertical-align: middle;" th:text="${dueDate}">
+                            Due Date
+                        </td>
+                    </tr>
+                    <tr th:if="${totalDue != null and !#strings.isEmpty(totalDue)}">
+                        <td class="detail-label-td" style="padding: 12px 18px; color: #64748b; font-weight: 500; font-size: 14px; border-bottom: none; text-align: left; width: 44%; vertical-align: middle;">
+                            Total Outstanding Balance:
+                        </td>
+                        <td class="detail-value-td" style="padding: 12px 18px; color: #0f172a; font-weight: 600; font-size: 14px; border-bottom: none; text-align: right; width: 56%; vertical-align: middle;" th:text="${totalDue}">
+                            ₹0.00
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- How to Pay Card -->
+        <div class="info-card" style="background: #f8fafc; border-radius: 8px; padding: 15px; margin: 20px 0; font-size: 13px; color: #475569; border: 1px solid #e2e8f0;">
+            <strong style="color: #1e293b;">💳 How to Pay:</strong>
+            <p style="margin: 6px 0 0; line-height: 1.5;">
+                You can pay your fee installment by visiting our campus office via <strong>Cash, UPI, Debit/Credit Card, or Net Banking</strong>. Upon payment, you will receive an official receipt immediately.
+            </p>
+        </div>
+
+        <!-- Note Notice -->
+        <div class="badge-notice" style="background-color: #fef3c7; border-left: 4px solid #f59e0b; color: #92400e; padding: 12px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; margin: 20px 0;">
+            <strong>Note:</strong> If you have already made this payment recently, please disregard this automated notification or contact our accounts desk to verify your records.
+        </div>
+
+        <!-- Sign-off -->
+        <p style="margin: 25px 0 0; font-size: 14px; color: #334155; line-height: 1.6;">
+            Best regards,<br>
+            <strong style="color: #0f172a;">Accounts Department</strong><br>
+            TechnoKraft Training & Solution Pvt. Ltd.
+        </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer" style="background: #f8fafc; padding: 25px 30px; text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #e2e8f0; line-height: 1.6;">
+        <strong style="color: #334155; font-size: 13px;">TechnoKraft Training & Solution Pvt. Ltd.</strong><br>
+        1st Floor, Kanchwala Avenue, Above Viju's Dabeli,<br>
+        Thatte Nagar Marg, College Road, Nashik, Maharashtra 422005, India<br><br>
+        📞 +91 86456 28278 &nbsp;|&nbsp; ✉️ support@tts.net.in<br>
+        🌐 <a href="https://tts.net.in" style="color: #667eea; text-decoration: none; font-weight: 500;">www.tts.net.in</a><br><br>
+        &copy; <span th:text="${year}">2026</span> TechnoKraft Training & Solution Pvt. Ltd. All rights reserved.
+    </div>
+</div>
+</body>
+</html>

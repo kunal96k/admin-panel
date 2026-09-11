@@ -7,7 +7,7 @@ This guide provides step-by-step instructions to compile, package, upload, deplo
 ## 1. Deployment Overview
 
 * **Local Environment:** Windows/macOS/Linux with Maven & Java 21.
-* **Target Server Host:** `3.110.90.204`
+* **Target Server Host:** `15.252.165.197`
 * **Target Server User:** `ec2-user`
 * **Private Key File:** `mumbai-yogesh.pem`
 * **Target Systemd Service:** `crm.service`
@@ -58,7 +58,7 @@ Use Secure Copy Protocol (`scp`) to upload the built `.war` file to the remote s
 Run the following command in your local terminal:
 
 ```bash
-scp -i "mumbai-yogesh.pem" target/sms-0.0.1-SNAPSHOT.war ec2-user@3.110.90.204:/opt/apps/crm/crm_updated.war
+scp -i "mumbai-yogesh.pem" target/sms-0.0.1-SNAPSHOT.war ec2-user@15.252.165.197:/opt/apps/crm/crm_updated.war
 ```
 
 > [!NOTE]
@@ -72,7 +72,7 @@ scp -i "mumbai-yogesh.pem" target/sms-0.0.1-SNAPSHOT.war ec2-user@3.110.90.204:/
 Connect to your AWS EC2 instance using the secure shell command:
 
 ```bash
-ssh -i "mumbai-yogesh.pem" ec2-user@3.110.90.204
+ssh -i "mumbai-yogesh.pem" ec2-user@15.252.165.197
 ```
 
 ---
@@ -158,7 +158,7 @@ Upload your custom static HTML files (e.g., `maintenance.html`, `404.html`) to t
 
 ```bash
 # Upload maintenance page to /var/www/tts-sms/static/
-scp -i "mumbai-yogesh.pem" src/main/resources/static/maintenance.html ec2-user@3.110.90.204:/var/www/tts-sms/static/maintenance.html
+scp -i "mumbai-yogesh.pem" src/main/resources/static/maintenance.html ec2-user@15.252.165.197:/var/www/tts-sms/static/maintenance.html
 ```
 
 ### 2. Configure Nginx Server Blocks
@@ -167,7 +167,7 @@ Connect to the server and update your Nginx configuration (typically in `/etc/ng
 ```nginx
 server {
     listen 80;
-    server_name 3.110.90.204;
+    server_name 15.252.165.197;
 
     # Specify local root where Nginx holds static files
     root /var/www/tts-sms/static;

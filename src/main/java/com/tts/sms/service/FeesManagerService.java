@@ -595,28 +595,18 @@ public class FeesManagerService {
             feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo)
                     .ifPresent(fees -> {
                         Double grossTotalPaid;
+                        boolean isNewStudent = (regNo != null && regNo.trim().toUpperCase().startsWith("REG"));
                         if (!receipts.isEmpty()) {
-                            // DEFINITIVE FIX: Opening balance = the amount imported/set in fees table
-                            // BEFORE any new receipts were ever created.
-                            // We derive it safely as: smallest previousPaid in fee_receipts (by ID)
-                            // which is what the UI populated from fees.totalPaid at the time of the
-                            // very first receipt.
-                            // But to avoid ANY dependency on previousPaid (which can be corrupted
-                            // by old running code), we use the most robust formula:
-                            //   openingBalance = Admission.totalPayableFees is the TOTAL FEES,
-                            //   not the opening paid. So we check admission for total fees and
-                            //   use the fees table original import data.
-                            //
-                            // The correct opening balance = fees.totalPaid before receipts were recorded.
-                            // Since fees.totalPaid gets corrupted, we read from the earliest receipt's
-                            // previousPaid (by smallest receipt ID). This value was set by the UI at
-                            // the time of FIRST receipt creation from student.totalPaid at that moment.
-                            // After DB reset, totalPaid=0, so first receipt's previousPaid=0. Correct.
-                            Double openingBalance = getOpeningBalance(receipts);
+                            // For NEW students (REG*), opening balance is ALWAYS 0.0 because all payments
+                            // are made within the CRM through fee_receipts.
+                            // Only OLD imported students (non-REG) can have an opening balance from pre-CRM records.
+                            Double openingBalance = isNewStudent ? 0.0 : getOpeningBalance(receipts);
                             grossTotalPaid = openingBalance + grossTotalPaidFromReceipts;
                         } else {
-                            // No receipts yet — preserve the imported total paid from fees table as-is
-                            grossTotalPaid = fees.getTotalPaid() != null ? fees.getTotalPaid() : 0.0;
+                            // No receipts yet:
+                            // For NEW students (REG*), no receipts means grossTotalPaid is 0.0 (prevents ghost balance on receipt deletion)!
+                            // For OLD students, preserve imported total paid from fees table as-is
+                            grossTotalPaid = isNewStudent ? 0.0 : (fees.getTotalPaid() != null ? fees.getTotalPaid() : 0.0);
                         }
 
                         // Net amount = Gross Paid - Refunds
@@ -742,6 +732,20 @@ public class FeesManagerService {
         receipt.setReceiptNumber(receiptNumber);
         receipt.setRegistrationNumber(requestDTO.getRegNo());
         receipt.setCreatedBy(currentUser); // Set creator
+
+        // For NEW students (REG*), compute previousPaid from existing active receipts in DB
+        // to protect against any stale or tainted values submitted by the frontend.
+        if (!isOldStudent) {
+            List<FeeReceipt> existingReceipts = feeReceiptRepository
+                    .findByRegistrationNumberAndIsDeletedFalseOrderByReceiptDateDesc(requestDTO.getRegNo());
+            double actualPreviousPaid = existingReceipts.stream()
+                    .mapToDouble(r -> r.getAmountReceived() != null ? r.getAmountReceived() : 0.0)
+                    .sum();
+            receipt.setPreviousPaid(actualPreviousPaid);
+            double totalFees = receipt.getTotalFees() != null ? receipt.getTotalFees() : 0.0;
+            double nowReceiving = receipt.getAmountReceived() != null ? receipt.getAmountReceived() : 0.0;
+            receipt.setPendingFees(Math.max(0, totalFees - (actualPreviousPaid + nowReceiving)));
+        }
 
         // Generate invoice number
         if (Boolean.TRUE.equals(requestDTO.getGstEnabled())) {
@@ -1217,6 +1221,7 @@ public class FeesManagerService {
 
         final String regNo = receipt.getRegistrationNumber();
         final Long installmentId = receipt.getInstallmentId();
+        boolean isOldStudent = (regNo != null && !regNo.trim().toUpperCase().startsWith("REG"));
 
         // HARD DELETE: Remove the record completely from database
         feeReceiptRepository.delete(receipt);
@@ -1235,6 +1240,15 @@ public class FeesManagerService {
             } catch (Exception e) {
                 log.error("Failed to revert installment {} for deleted receipt {}", installmentId, receiptId, e);
             }
+        }
+
+        // For old imported students, if receipts are deleted, revert fees.totalPaid by deducting the receipt amount
+        if (isOldStudent && receipt.getAmountReceived() != null) {
+            feesRepository.findByRegistrationNumberAndIsDeletedFalse(regNo).ifPresent(f -> {
+                double currentPaid = f.getTotalPaid() != null ? f.getTotalPaid() : 0.0;
+                f.setTotalPaid(Math.max(0, currentPaid - receipt.getAmountReceived()));
+                feesRepository.save(f);
+            });
         }
 
         if (regNo != null && !regNo.trim().isEmpty()) {

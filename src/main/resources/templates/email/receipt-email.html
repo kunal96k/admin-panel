@@ -12,6 +12,13 @@
             background-color: #f4f7fa;
             margin: 0;
             padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
         }
         .container {
             max-width: 600px;
@@ -29,8 +36,9 @@
         }
         .logo {
             width: 100px;
-            height: 100px;
+            height: auto;
             margin: 0 auto 20px;
+            display: block;
         }
         .header h1 {
             margin: 0;
@@ -47,22 +55,28 @@
             padding: 25px;
             margin: 25px 0;
         }
-        .receipt-item {
-            display: flex;
-            padding: 12px 0;
-            border-bottom: 1px solid #e0e7ff;
+        .receipt-table {
+            width: 100%;
+            border-collapse: collapse;
         }
-        .receipt-item:last-child {
-            border-bottom: none;
-        }
-        .receipt-label {
+        .receipt-label-td {
             font-weight: 600;
             color: #4338ca;
-            min-width: 140px;
+            width: 44%;
+            text-align: left;
+            padding: 12px 14px;
+            border-bottom: 1px solid #e0e7ff;
+            vertical-align: middle;
+            font-size: 14px;
         }
-        .receipt-value {
+        .receipt-value-td {
             color: #1e293b;
-            flex: 1;
+            width: 56%;
+            text-align: right;
+            padding: 12px 14px;
+            border-bottom: 1px solid #e0e7ff;
+            vertical-align: middle;
+            font-size: 14px;
         }
         .amount-highlight {
             font-size: 24px;
@@ -88,6 +102,56 @@
         .footer strong {
             color: #334155;
             font-size: 15px;
+        }
+
+        /* Mobile-only responsive styles (Leaves MD and LG screens completely untouched) */
+        @media only screen and (max-width: 600px) {
+            body {
+                background-color: #f1f5f9 !important;
+                padding: 0 !important;
+            }
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+            .header {
+                padding: 24px 16px !important;
+            }
+            .header h1 {
+                font-size: 22px !important;
+            }
+            .content {
+                padding: 20px 16px !important;
+            }
+            .amount-highlight {
+                font-size: 20px !important;
+                margin: 15px 0 !important;
+            }
+            .receipt-box {
+                padding: 16px 12px !important;
+                margin: 20px 0 !important;
+            }
+            .receipt-table td {
+                padding: 10px 8px !important;
+                font-size: 13px !important;
+            }
+            .receipt-label-td {
+                width: 44% !important;
+            }
+            .receipt-value-td {
+                width: 56% !important;
+            }
+            .info-box {
+                padding: 12px 14px !important;
+                font-size: 13px !important;
+            }
+            .footer {
+                padding: 20px 16px !important;
+                font-size: 12px !important;
+            }
         }
     </style>
 </head>
@@ -117,27 +181,26 @@
         </div>
 
         <div class="receipt-box">
-            <h3 style="color: #4338ca; margin: 0 0 15px; text-align: center;">Receipt Summary</h3>
+            <h3 style="color: #4338ca; margin: 0 0 15px; text-align: center; font-size: 18px;">Receipt Summary</h3>
 
-            <div class="receipt-item">
-                <div class="receipt-label">Receipt No:</div>
-                <div class="receipt-value"><strong th:text="${receiptNo}">REC001</strong></div>
-            </div>
-
-            <div class="receipt-item">
-                <div class="receipt-label">Receipt Date:</div>
-                <div class="receipt-value" th:text="${receiptDate}">January 15, 2025</div>
-            </div>
-
-            <div class="receipt-item">
-                <div class="receipt-label">Payment Mode:</div>
-                <div class="receipt-value" th:text="${paymentMode}">Cash</div>
-            </div>
-
-            <div class="receipt-item">
-                <div class="receipt-label">Amount Paid:</div>
-                <div class="receipt-value"><strong th:text="${amount}">₹0.00</strong></div>
-            </div>
+            <table class="receipt-table" width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td class="receipt-label-td" style="padding: 12px 14px; font-weight: 600; color: #4338ca; font-size: 14px; width: 44%; text-align: left; border-bottom: 1px solid #e0e7ff; vertical-align: middle;">Receipt No:</td>
+                    <td class="receipt-value-td" style="padding: 12px 14px; color: #1e293b; font-size: 14px; width: 56%; text-align: right; border-bottom: 1px solid #e0e7ff; vertical-align: middle;"><strong th:text="${receiptNo}">REC001</strong></td>
+                </tr>
+                <tr>
+                    <td class="receipt-label-td" style="padding: 12px 14px; font-weight: 600; color: #4338ca; font-size: 14px; width: 44%; text-align: left; border-bottom: 1px solid #e0e7ff; vertical-align: middle;">Receipt Date:</td>
+                    <td class="receipt-value-td" style="padding: 12px 14px; color: #1e293b; font-size: 14px; width: 56%; text-align: right; border-bottom: 1px solid #e0e7ff; vertical-align: middle;" th:text="${receiptDate}">January 15, 2025</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label-td" style="padding: 12px 14px; font-weight: 600; color: #4338ca; font-size: 14px; width: 44%; text-align: left; border-bottom: 1px solid #e0e7ff; vertical-align: middle;">Payment Mode:</td>
+                    <td class="receipt-value-td" style="padding: 12px 14px; color: #1e293b; font-size: 14px; width: 56%; text-align: right; border-bottom: 1px solid #e0e7ff; vertical-align: middle;" th:text="${paymentMode}">Cash</td>
+                </tr>
+                <tr>
+                    <td class="receipt-label-td" style="padding: 12px 14px; font-weight: 600; color: #4338ca; font-size: 14px; width: 44%; text-align: left; border-bottom: none; vertical-align: middle;">Amount Paid:</td>
+                    <td class="receipt-value-td" style="padding: 12px 14px; color: #10b981; font-size: 15px; width: 56%; text-align: right; border-bottom: none; vertical-align: middle;"><strong th:text="${amount}">₹0.00</strong></td>
+                </tr>
+            </table>
         </div>
 
         <div class="info-box" th:if="${message}">
@@ -167,7 +230,7 @@
         Nashik, Maharashtra 422005, India<br><br>
         📞 +91 86456 28278 | ✉️ support@tts.net.in<br>
         🌐 <a href="https://tts.net.in" style="color: #667eea;">www.tts.net.in</a><br><br>
-        &copy; <span th:text="${year}">2025</span> Mahindra. All rights reserved.
+        &copy; <span th:text="${year}">2025</span> TechnoKraft Training & Solution Pvt. Ltd. All rights reserved.
     </div>
 </div>
 </body>

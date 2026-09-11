@@ -98,4 +98,5 @@ public class AdmissionResponseDTO {
 
     private String createdBy;
     private String updatedBy;
+    private Boolean feeReminderEmailEnabled;
 }

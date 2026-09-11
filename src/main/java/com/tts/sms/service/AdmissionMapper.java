@@ -55,6 +55,7 @@ public class AdmissionMapper {
                 .rollNumber(dto.getRollNumber())
                 .notes(dto.getNotes())
                 .status("Active")
+                .feeReminderEmailEnabled(dto.getFeeReminderEmailEnabled() != null ? dto.getFeeReminderEmailEnabled() : true)
                 .isDeleted(false)
                 .build();
     }
@@ -109,6 +110,7 @@ public class AdmissionMapper {
                 .notes(admission.getNotes())
                 .photoPath(admission.getPhotoPath())
                 .status(admission.getStatus())
+                .feeReminderEmailEnabled(admission.isFeeReminderEmailEnabled())
                 .createdAt(admission.getCreatedAt())
                 .updatedAt(admission.getUpdatedAt())
                 .createdBy(admission.getCreatedBy())
@@ -154,6 +156,7 @@ public class AdmissionMapper {
         if (dto.getAdmissionDate() != null) admission.setAdmissionDate(dto.getAdmissionDate());
         if (dto.getRollNumber() != null) admission.setRollNumber(dto.getRollNumber());
         if (dto.getNotes() != null) admission.setNotes(dto.getNotes());
+        if (dto.getFeeReminderEmailEnabled() != null) admission.setFeeReminderEmailEnabled(dto.getFeeReminderEmailEnabled());
     }
 
     public FeeInstallmentDTO toInstallmentDTO(FeeInstallment installment) {

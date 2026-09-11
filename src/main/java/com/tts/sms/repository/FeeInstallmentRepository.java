@@ -51,4 +51,9 @@ public interface FeeInstallmentRepository extends JpaRepository<FeeInstallment, 
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    // Find pending installments due on a specific date (excluding Paid, Refund, Cancelled)
+    @Query("SELECT f FROM FeeInstallment f WHERE LOWER(f.status) NOT IN ('paid', 'refund', 'cancelled') " +
+            "AND f.dueDate = :dueDate ORDER BY f.dueDate ASC")
+    List<FeeInstallment> findPendingInstallmentsDueOnDate(@Param("dueDate") LocalDate dueDate);
 }

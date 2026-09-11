@@ -253,6 +253,21 @@ public class AdmissionController {
     }
 
     /**
+     * Toggle fee reminder email for individual student
+     */
+    @PutMapping(value = "/{id}/fee-reminder-toggle", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<AdmissionResponseDTO> updateFeeReminderToggle(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> request) {
+
+        boolean enabled = Boolean.parseBoolean(String.valueOf(request.get("enabled")));
+        log.info("PUT /api/admissions/{}/fee-reminder-toggle - enabled: {}", id, enabled);
+
+        AdmissionResponseDTO updated = admissionService.updateFeeReminderEmailEnabled(id, enabled);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
      * Get enquiry data for pre-fill
      */
     @GetMapping(value = "/enquiry-data/{mobile}", produces = MediaType.APPLICATION_JSON_VALUE)

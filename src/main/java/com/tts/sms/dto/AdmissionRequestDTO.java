@@ -76,4 +76,7 @@ public class AdmissionRequestDTO {
     private List<FeeInstallmentCreateDTO> customInstallments;
 
     private String studentPhoto;
+
+    @Builder.Default
+    private Boolean feeReminderEmailEnabled = true;
 }

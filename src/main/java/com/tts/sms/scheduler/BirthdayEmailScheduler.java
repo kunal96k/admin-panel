@@ -13,9 +13,14 @@ import java.util.List;
 
 /**
  * Scheduler to automatically send birthday wishes to employees
- * Runs daily at 9:00 AM
+ * (DISABLED: Feature disabled per configuration/request)
  */
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+        name = "app.scheduling.birthday-wishes.enabled",
+        havingValue = "true",
+        matchIfMissing = false
+)
 @RequiredArgsConstructor
 @Slf4j
 public class BirthdayEmailScheduler {
@@ -24,10 +29,9 @@ public class BirthdayEmailScheduler {
     private final EmailTemplateService emailTemplateService;
 
     /**
-     * Scheduled task that runs every day at 9:00 AM
-     * Checks for employees with birthdays today and sends them birthday wishes
+     * Scheduled task (DISABLED by default)
      */
-    @Scheduled(cron = "0 0 9 * * ?", zone = "Asia/Kolkata")  // Runs at 9:00 AM every day
+    // @Scheduled(cron = "0 0 9 * * ?", zone = "Asia/Kolkata")
     public void sendBirthdayWishes() {
         log.info(" Starting birthday email scheduler...");
 

@@ -41,4 +41,29 @@ public class SystemConfigurationService {
 
         configRepository.save(config);
     }
+
+    private static final String FEE_REMINDER_ENABLED_KEY = "FEE_REMINDER_EMAIL_ENABLED";
+
+    @Transactional(readOnly = true)
+    public boolean isFeeReminderEmailEnabled() {
+        return configRepository.findByConfigKey(FEE_REMINDER_ENABLED_KEY)
+                .map(config -> Boolean.parseBoolean(config.getConfigValue()))
+                .orElse(true); // Default: true (enabled)
+    }
+
+    @Transactional
+    public void setFeeReminderEmailEnabled(boolean enabled, String updatedBy) {
+        log.info("🔧 Setting fee reminder email enabled to: {} by {}", enabled, updatedBy);
+
+        SystemConfiguration config = configRepository.findByConfigKey(FEE_REMINDER_ENABLED_KEY)
+                .orElse(SystemConfiguration.builder()
+                        .configKey(FEE_REMINDER_ENABLED_KEY)
+                        .description("Master toggle to enable or disable daily automated fee due reminder emails")
+                        .build());
+
+        config.setConfigValue(String.valueOf(enabled));
+        config.setUpdatedBy(updatedBy);
+
+        configRepository.save(config);
+    }
 }

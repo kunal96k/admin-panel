@@ -160,4 +160,11 @@ public interface FeesRepository extends JpaRepository<Fees, Long>, JpaSpecificat
      */
     @Query("SELECT f FROM Fees f WHERE f.registrationNumber IN :regNos AND f.isDeleted = false")
     List<Fees> findAllByRegistrationNumberInAndIsDeletedFalse(@Param("regNos") List<String> registrationNumbers);
+
+    /**
+     * Find pending fees with due date matching target date
+     */
+    @Query("SELECT f FROM Fees f WHERE f.isDeleted = false AND f.feesDue > 0.01 " +
+            "AND f.dueDate = :dueDate")
+    List<Fees> findPendingFeesDueOnDate(@Param("dueDate") LocalDate dueDate);
 }
