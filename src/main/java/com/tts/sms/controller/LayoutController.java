@@ -95,7 +95,7 @@ public class LayoutController {
     @ModelAttribute("userMenuPermissions")
     public List<Long> getUserMenuPermissions(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            log.warn("⚠️ No authentication found");
+            log.warn("[WARN] No authentication found");
             return Collections.emptyList();
         }
 
@@ -103,7 +103,7 @@ public class LayoutController {
             User user = (User) authentication.getPrincipal();
             Employee employee = user.getEmployee();
 
-            log.info("🔑 Loading permissions for user: {} (Role: {})",
+            log.info("[KEY] Loading permissions for user: {} (Role: {})",
                     user.getUsername(),
                     employee.getRole().getRoleTitle());
 
@@ -114,7 +114,7 @@ public class LayoutController {
                     .findByRoleAndHasAccessTrue(employee.getRole());
 
             if (!rolePermissions.isEmpty()) {
-                log.info("👥 Found {} role-based permissions", rolePermissions.size());
+                log.info("[USERS] Found {} role-based permissions", rolePermissions.size());
                 rolePermissions.forEach(perm -> menuIds.add(perm.getMenu().getId()));
             }
 
@@ -123,7 +123,7 @@ public class LayoutController {
                     .findByEmployee(employee);
 
             if (!employeePermissions.isEmpty()) {
-                log.info("📋 Found {} employee-specific permissions", employeePermissions.size());
+                log.info("[INFO] Found {} employee-specific permissions", employeePermissions.size());
                 for (EmployeeMenuPermission perm : employeePermissions) {
                     if (perm.getHasAccess()) {
                         // Explicitly granted to employee
@@ -144,7 +144,7 @@ public class LayoutController {
             return sortedMenuIds;
 
         } catch (Exception e) {
-            log.error("❌ Error loading menu permissions: {}", e.getMessage(), e);
+            log.error("[FAIL] Error loading menu permissions: {}", e.getMessage(), e);
             return Collections.emptyList();
         }
     }

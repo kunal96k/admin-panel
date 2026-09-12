@@ -865,6 +865,6 @@
         };
     }
 
-    console.log('✅ Course Management System - Initialized Successfully');
+    console.log('[OK] Course Management System - Initialized Successfully');
 
 })();

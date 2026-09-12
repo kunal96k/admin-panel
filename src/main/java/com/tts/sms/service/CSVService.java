@@ -37,12 +37,12 @@ public class CSVService {
 
     /**
      * STRICT MODE: Parse OLD format CSV with ZERO modification
-     * - Empty/null → "N/A"
+     * - Empty/null -> "N/A"
      * - Keep exact CSV values
      * - No validation, no cleanup
      */
     public List<EnquiryRequestDTO> parseOldFormatCSV(MultipartFile file) throws IOException {
-        log.info("📥 STRICT PARSING - OLD FORMAT: {}", file.getOriginalFilename());
+        log.info("[IMPORT] STRICT PARSING - OLD FORMAT: {}", file.getOriginalFilename());
 
         List<EnquiryRequestDTO> dtos = new ArrayList<>();
         int totalRows = 0;
@@ -107,7 +107,7 @@ public class CSVService {
                     dtos.add(dto);
 
                 } catch (Exception e) {
-                    log.error("❌ Row {}: Error parsing - {}", i + 1, e.getMessage());
+                    log.error("[FAIL] Row {}: Error parsing - {}", i + 1, e.getMessage());
                     // Create minimal fallback
                     dtos.add(createFallbackEnquiryDTO(i));
                 }
@@ -126,7 +126,7 @@ public class CSVService {
      * STRICT MODE: Parse NEW format CSV with ZERO modification
      */
     public List<EnquiryRequestDTO> parseNewFormatCSV(MultipartFile file) throws IOException {
-        log.info("📥 STRICT PARSING - NEW FORMAT: {}", file.getOriginalFilename());
+        log.info("[IMPORT] STRICT PARSING - NEW FORMAT: {}", file.getOriginalFilename());
 
         List<EnquiryRequestDTO> dtos = new ArrayList<>();
         int totalRows = 0;
@@ -184,7 +184,7 @@ public class CSVService {
      * Counselor CSV Format: DATE, STUDENT NAME, SOURCE, CONTACT NO, COURSE, COUNSELOR NAME
      */
     public List<EnquiryRequestDTO> parseCounselorFormatCSV(MultipartFile file) throws IOException {
-        log.info("📥 STRICT PARSING - COUNSELOR FORMAT: {}", file.getOriginalFilename());
+        log.info("[IMPORT] STRICT PARSING - COUNSELOR FORMAT: {}", file.getOriginalFilename());
 
         List<EnquiryRequestDTO> dtos = new ArrayList<>();
         int totalRows = 0;
@@ -250,7 +250,7 @@ public class CSVService {
                     dtos.add(dto);
 
                 } catch (Exception e) {
-                    log.error("❌ Row {}: Error parsing counselor format - {}", i + 1, e.getMessage());
+                    log.error("[FAIL] Row {}: Error parsing counselor format - {}", i + 1, e.getMessage());
                     dtos.add(createFallbackEnquiryDTO(i));
                 }
             }
@@ -268,7 +268,7 @@ public class CSVService {
      * Parse OLD FORMAT Admission CSV - STRICT MODE
      */
     public List<AdmissionRequestDTO> parseOldFormatAdmissionCSV(MultipartFile file) throws IOException {
-        log.info("📥 STRICT PARSING - ADMISSION CSV: {}", file.getOriginalFilename());
+        log.info("[IMPORT] STRICT PARSING - ADMISSION CSV: {}", file.getOriginalFilename());
 
         List<AdmissionRequestDTO> dtos = new ArrayList<>();
         int totalRows = 0;
@@ -322,7 +322,7 @@ public class CSVService {
                     dtos.add(dto);
 
                 } catch (Exception e) {
-                    log.error("❌ Row {}: Error parsing - {}", i + 1, e.getMessage());
+                    log.error("[FAIL] Row {}: Error parsing - {}", i + 1, e.getMessage());
                     dtos.add(createFallbackAdmissionDTO(i));
                 }
             }
@@ -515,7 +515,7 @@ public class CSVService {
      * Format: Reg No, Student Name, Mobile, Total Fees, Fees Due, Total Paid, Due Date, Fees Refund, Status, Course
      */
     public List<FeesCSVImportDTO> parseFeesCSV(MultipartFile file) throws IOException {
-        log.info("📥 PARSING FEES CSV (PRESERVE NULLS): {}", file.getOriginalFilename());
+        log.info("[IMPORT] PARSING FEES CSV (PRESERVE NULLS): {}", file.getOriginalFilename());
 
         List<FeesCSVImportDTO> dtos = new ArrayList<>();
 
@@ -551,7 +551,7 @@ public class CSVService {
                     dtos.add(dto);
 
                 } catch (Exception e) {
-                    log.error("❌ Row {}: Error parsing - {}", i + 1, e.getMessage());
+                    log.error("[FAIL] Row {}: Error parsing - {}", i + 1, e.getMessage());
                     dtos.add(createFallbackFeesDTO(i));
                 }
             }

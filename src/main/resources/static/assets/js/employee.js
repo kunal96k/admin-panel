@@ -47,7 +47,7 @@
                     if (!data.canModify) {
                         Swal.fire({
                             icon: 'error',
-                            title: '🚫 Access Denied',
+                            title: ' Access Denied',
                             html: `<div style="text-align: left; padding: 10px;">
                                 ${data.message}
                             </div>`,
@@ -178,7 +178,7 @@
                 // Re-render menu permissions with role permissions pre-selected
                 renderMenuPermissions(rolePermissions);
 
-                console.log(`✅ Loaded ${rolePermissions.filter(p => p.hasAccess).length} permissions for role ${roleId}`);
+                console.log(`[OK] Loaded ${rolePermissions.filter(p => p.hasAccess).length} permissions for role ${roleId}`);
 
             } catch (error) {
                 console.error('Error loading role permissions:', error);

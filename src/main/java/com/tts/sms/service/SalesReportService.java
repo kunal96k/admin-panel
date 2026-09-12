@@ -306,7 +306,7 @@ public class SalesReportService {
             }
         }
 
-        log.info("✅ Calculated total paid amount: ₹{} for {} admissions", totalAmount, admissions.size());
+        log.info("[OK] Calculated total paid amount: ₹{} for {} admissions", totalAmount, admissions.size());
         return totalAmount;
     }
 
@@ -321,8 +321,8 @@ public class SalesReportService {
                 .studentMobileNo(admission.getMobilePrimary())
                 .createdDate(formatDate(admission.getAdmissionDate()))
                 .compareDate(admission.getAdmissionDate())
-                .courseAmount(formatCurrency(studentFees))  // ✅ Individual student fees
-                .totalCourseAmount(formatCurrency(totalCourseAmount))  // ✅ Grand total
+                .courseAmount(formatCurrency(studentFees))  // [OK] Individual student fees
+                .totalCourseAmount(formatCurrency(totalCourseAmount))  // [OK] Grand total
                 .build();
     }
 

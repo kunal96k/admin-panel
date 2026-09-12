@@ -32,7 +32,7 @@ public class AutoCertificateController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            log.info("🚀 Manual trigger: Auto generate certificates");
+            log.info("[START] Manual trigger: Auto generate certificates");
 
             int created = autoCertificateService.processFeesAndGenerateCertificates();
 
@@ -40,11 +40,11 @@ public class AutoCertificateController {
             response.put("message", "Auto certificate generation completed");
             response.put("certificatesCreated", created);
 
-            log.info("✅ Successfully created {} certificates", created);
+            log.info("[OK] Successfully created {} certificates", created);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("❌ Error in auto certificate generation", e);
+            log.error("[FAIL] Error in auto certificate generation", e);
 
             response.put("success", false);
             response.put("message", "Failed to generate certificates: " + e.getMessage());
@@ -64,7 +64,7 @@ public class AutoCertificateController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            log.info("🔧 Manual certificate generation: {} - {}",
+            log.info("[CONFIG] Manual certificate generation: {} - {}",
                     request.getRegistrationNo(), request.getCourseName());
 
             Certificate certificate = autoCertificateService.createManualCertificate(request);
@@ -76,7 +76,7 @@ public class AutoCertificateController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("❌ Error in manual certificate generation", e);
+            log.error("[FAIL] Error in manual certificate generation", e);
 
             response.put("success", false);
             response.put("message", e.getMessage());
@@ -94,7 +94,7 @@ public class AutoCertificateController {
             List<ManualCertificateLogDTO> logs = autoCertificateService.getManualCertificateLogs();
             return ResponseEntity.ok(logs);
         } catch (Exception e) {
-            log.error("❌ Error fetching manual logs", e);
+            log.error("[FAIL] Error fetching manual logs", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -107,7 +107,7 @@ public class AutoCertificateController {
             Page<ManualCertificateLogDTO> logs = autoCertificateService.getManualCertificateLogsPaginated(page, size);
             return ResponseEntity.ok(logs);
         } catch (Exception e) {
-            log.error("❌ Error fetching manual logs paged", e);
+            log.error("[FAIL] Error fetching manual logs paged", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -132,7 +132,7 @@ public class AutoCertificateController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            log.info("🚀 Bulk generate certificates for {} students", registrationNumbers.size());
+            log.info("[START] Bulk generate certificates for {} students", registrationNumbers.size());
 
             int created = autoCertificateService.bulkGenerateCertificates(registrationNumbers);
 
@@ -142,11 +142,11 @@ public class AutoCertificateController {
                     ? created + " certificate(s) created successfully"
                     : "No new certificates were created. Students may already have certificates.");
 
-            log.info("✅ Bulk generation complete: {} certificates created", created);
+            log.info("[OK] Bulk generation complete: {} certificates created", created);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("❌ Error in bulk certificate generation", e);
+            log.error("[FAIL] Error in bulk certificate generation", e);
 
             response.put("success", false);
             response.put("message", "Failed to generate certificates: " + e.getMessage());
@@ -155,4 +155,4 @@ public class AutoCertificateController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-}
+}

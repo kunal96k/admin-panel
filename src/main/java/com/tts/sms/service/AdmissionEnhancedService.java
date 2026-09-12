@@ -128,12 +128,12 @@ public class AdmissionEnhancedService {
         admission.setCreatedBy("SYSTEM");
 
         Admission savedAdmission = admissionRepository.save(admission);
-        log.info("✅ Admission created: {}", savedAdmission.getRegistrationNumber());
+        log.info("[OK] Admission created: {}", savedAdmission.getRegistrationNumber());
 
         // 2. Create Fees Record
         Fees fees = buildFeesEntity(savedAdmission);
         Fees savedFees = feesRepository.save(fees);
-        log.info("✅ Fees record created for: {}", savedAdmission.getRegistrationNumber());
+        log.info("[OK] Fees record created for: {}", savedAdmission.getRegistrationNumber());
 
         // 3. Generate Installments
         if (requestDTO.getInstallmentConfig() != null) {
@@ -142,7 +142,7 @@ public class AdmissionEnhancedService {
                     requestDTO.getInstallmentConfig(),
                     savedAdmission.getTotalReceivableFees()
             );
-            log.info("✅ Installments generated for: {}", savedAdmission.getRegistrationNumber());
+            log.info("[OK] Installments generated for: {}", savedAdmission.getRegistrationNumber());
         }
 
         return buildResponseDTO(savedAdmission);

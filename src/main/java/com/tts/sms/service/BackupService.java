@@ -74,7 +74,7 @@ public class BackupService {
             log.info("mysqldump completed successfully. Raw SQL size: {} bytes", sqlDumpFile.length());
 
             // 2. Compress SQL dump into ZIP archive
-            log.info("Creating Database ZIP → {}", dbZip.getAbsolutePath());
+            log.info("Creating Database ZIP -> {}", dbZip.getAbsolutePath());
             try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(dbZip))) {
                 String sqlEntryName = DOMAIN_PREFIX + "_db_backup_" + timestamp + ".sql";
                 zos.putNextEntry(new ZipEntry(sqlEntryName));
@@ -94,7 +94,7 @@ public class BackupService {
                         uploadsZip.length());
                 uploadsZipped = uploadsZip.length() > 100;
             } else {
-                log.warn("Uploads directory not found or empty at: {} — skipping uploads backup",
+                log.warn("Uploads directory not found or empty at: {} - skipping uploads backup",
                         uploadsPath.toAbsolutePath());
             }
 
@@ -109,7 +109,7 @@ public class BackupService {
                         logsZip.length());
                 logsZipped = logsZip.length() > 100;
             } else {
-                log.warn("Logs directory not found or empty at: {} — skipping logs backup", logsPath.toAbsolutePath());
+                log.warn("Logs directory not found or empty at: {} - skipping logs backup", logsPath.toAbsolutePath());
             }
 
             // 5. Upload Backup Archives to Google Drive
@@ -256,7 +256,7 @@ public class BackupService {
                             java.nio.file.Files.copy(path, zos);
                             zos.closeEntry();
                         } catch (IOException e) {
-                            log.warn("Could not add file to ZIP: {} — {}", path, e.getMessage());
+                            log.warn("Could not add file to ZIP: {} - {}", path, e.getMessage());
                         }
                     });
         }
@@ -277,7 +277,7 @@ public class BackupService {
         emailBody.append("<p>An automated backup execution completed successfully on <b>").append(timestamp)
                 .append("</b>.</p>");
 
-        emailBody.append("<h4>☁️ Google Drive Backup Status:</h4>");
+        emailBody.append("<h4>[CLOUD] Google Drive Backup Status:</h4>");
         emailBody.append("<ul>");
         appendDriveLinkInfo(emailBody, "Database ZIP Backup", driveResults.get("db"));
         appendDriveLinkInfo(emailBody, "Uploads Directory ZIP", driveResults.get("uploads"));
@@ -302,7 +302,7 @@ public class BackupService {
 
             helper.setFrom(fromEmail);
             helper.setTo(backupEmail);
-            helper.setSubject("❌ BACKUP FAILED: " + DOMAIN_PREFIX + " - " + timestamp);
+            helper.setSubject("[BACKUP FAILED] " + DOMAIN_PREFIX + " - " + timestamp);
 
             StringBuilder emailBody = new StringBuilder();
             emailBody.append("<h3>" + DOMAIN_PREFIX + " CRM System Backup Failed</h3>");

@@ -44,7 +44,7 @@ public class SecurityInterceptor implements HandlerInterceptor {
 
         if (authentication == null || !authentication.isAuthenticated() ||
                 authentication.getPrincipal().equals("anonymousUser")) {
-            log.warn("⚠️ Unauthenticated access attempt to: {}", requestURI);
+            log.warn("[WARN] Unauthenticated access attempt to: {}", requestURI);
             response.sendRedirect("/login?error=unauthorized");
             return false;
         }
@@ -60,7 +60,7 @@ public class SecurityInterceptor implements HandlerInterceptor {
         boolean hasPermission = checkUrlPermission(currentUser, requestURI);
 
         if (!hasPermission) {
-            log.warn("🚫 SECURITY ALERT: User {} attempted unauthorized access to: {}",
+            log.warn("[BLOCKED] SECURITY ALERT: User {} attempted unauthorized access to: {}",
                     currentUser.getUsername(), requestURI);
 
             // Return JSON for AJAX requests

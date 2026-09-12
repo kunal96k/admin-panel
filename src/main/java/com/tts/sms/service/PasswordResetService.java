@@ -37,7 +37,7 @@ public class PasswordResetService {
      */
     @Transactional
     public void resetPassword(PasswordResetDTO resetDTO) {
-        log.info("🔐 Password reset request initiated");
+        log.info("[AUTH] Password reset request initiated");
 
         // Get current user
         User currentUser = getCurrentUser();
@@ -81,7 +81,7 @@ public class PasswordResetService {
                     currentUser.getUsername(),
                     resetDTO.getNewPassword()
             );
-            log.info("📧 Password change notification sent");
+            log.info("[EMAIL] Password change notification sent");
         } catch (Exception e) {
             log.warn(" Failed to send password change notification: {}", e.getMessage());
         }

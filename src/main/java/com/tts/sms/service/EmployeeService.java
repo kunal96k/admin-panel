@@ -95,7 +95,7 @@ public class EmployeeService {
         User currentUser = getCurrentUser();
         Employee currentEmployee = currentUser.getEmployee();
 
-        log.info("🔒 Permission check - Current User: {} (Role: {}), Target: {} (Role: {}), Operation: {}",
+        log.info("[SECURE] Permission check - Current User: {} (Role: {}), Target: {} (Role: {}), Operation: {}",
                 currentEmployee.getEmployeeName(),
                 currentEmployee.getRole().getRoleTitle(),
                 targetEmployee.getEmployeeName(),
@@ -104,20 +104,20 @@ public class EmployeeService {
 
         // NEW RULE: Only SUPER_ADMIN can perform ANY modification (update, delete, lock, etc)
         if (!"view".equalsIgnoreCase(operation) && !isSuperAdmin()) {
-            log.warn("⚠️ SECURITY ALERT: Non-SUPER_ADMIN {} attempted to {} account {}",
+            log.warn("[WARN] SECURITY ALERT: Non-SUPER_ADMIN {} attempted to {} account {}",
                     currentEmployee.getEmployeeName(), operation, targetEmployee.getEmployeeName());
             throw new UnauthorizedException(
-                    "🚫 Access Denied: Only SUPER_ADMIN can perform this action. " +
+                    "[BLOCKED] Access Denied: Only SUPER_ADMIN can perform this action. " +
                             "You only have permission to view employee details."
             );
         }
 
         // Rule 1: Only SUPER_ADMIN can modify SUPER_ADMIN accounts (redundant now but safe)
         if (isTargetSuperAdmin(targetEmployee) && !isSuperAdmin()) {
-            log.warn("⚠️ SECURITY ALERT: User {} attempted to {} SUPER_ADMIN account {}",
+            log.warn("[WARN] SECURITY ALERT: User {} attempted to {} SUPER_ADMIN account {}",
                     currentEmployee.getEmployeeName(), operation, targetEmployee.getEmployeeName());
             throw new UnauthorizedException(
-                    "🚫 Access Denied: Only SUPER_ADMIN can " + operation + " SUPER_ADMIN accounts. " +
+                    "[BLOCKED] Access Denied: Only SUPER_ADMIN can " + operation + " SUPER_ADMIN accounts. " +
                             "This security violation has been logged."
             );
         }
@@ -125,9 +125,9 @@ public class EmployeeService {
         // Rule 2: Prevent self-deletion
         if ("delete".equalsIgnoreCase(operation) &&
                 currentEmployee.getId().equals(targetEmployee.getId()) && !isSuperAdmin() ) {
-            log.warn("⚠️ User {} attempted to delete their own account", currentEmployee.getEmployeeName());
+            log.warn("[WARN] User {} attempted to delete their own account", currentEmployee.getEmployeeName());
             throw new UnauthorizedException(
-                    "🚫 Security Policy: You cannot delete your own account. " +
+                    "[BLOCKED] Security Policy: You cannot delete your own account. " +
                             "Please contact another administrator."
             );
         }
@@ -135,10 +135,10 @@ public class EmployeeService {
         // Rule 3: Prevent self-modification of role/permissions
         if ("update".equalsIgnoreCase(operation) &&
                 currentEmployee.getId().equals(targetEmployee.getId()) && !isSuperAdmin() ) {
-            log.warn("⚠️ User {} attempted to modify their own role/permissions",
+            log.warn("[WARN] User {} attempted to modify their own role/permissions",
                     currentEmployee.getEmployeeName());
             throw new UnauthorizedException(
-                    "🚫 Security Policy: You cannot modify your own role or permissions. " +
+                    "[BLOCKED] Security Policy: You cannot modify your own role or permissions. " +
                             "Contact SUPER_ADMIN for changes to your account."
             );
         }
@@ -146,10 +146,10 @@ public class EmployeeService {
         // Rule 4: Prevent self-locking or deactivation (Super Admin Protection)
         if (("lock".equalsIgnoreCase(operation) || "deactivate".equalsIgnoreCase(operation)) &&
                 currentEmployee.getId().equals(targetEmployee.getId())) {
-            log.warn("⚠️ User {} attempted to {} their own account",
+            log.warn("[WARN] User {} attempted to {} their own account",
                     currentEmployee.getEmployeeName(), operation);
             throw new UnauthorizedException(
-                    "🚫 Security Policy: You cannot " + operation + " your own account. " +
+                    "[BLOCKED] Security Policy: You cannot " + operation + " your own account. " +
                             "This safety measure prevents you from accidentally locking yourself out of the system."
             );
         }
@@ -169,7 +169,7 @@ public class EmployeeService {
 
             // Log security check
             User currentUser = getCurrentUser();
-            log.info("🔒 Security Check: User {} attempting to access employee {} (ID: {})",
+            log.info("[SECURE] Security Check: User {} attempting to access employee {} (ID: {})",
                     currentUser.getUsername(),
                     targetEmployee.getEmployeeName(),
                     employeeId);
@@ -188,7 +188,7 @@ public class EmployeeService {
             result.put("canDelete", false);
             result.put("message", e.getMessage());
 
-            log.warn("⚠️ Permission denied: {}", e.getMessage());
+            log.warn("[WARN] Permission denied: {}", e.getMessage());
         }
 
         return result;
@@ -196,13 +196,13 @@ public class EmployeeService {
 
     @Transactional
     public EmployeeResponseDTO createEmployee(EmployeeRequestDTO requestDTO, MultipartFile photoFile) {
-        log.info("📝 Creating employee: {}", requestDTO.getEmployeeName());
+        log.info("[NOTE] Creating employee: {}", requestDTO.getEmployeeName());
 
         // Security: Only SUPER_ADMIN can create employees
         if (!isSuperAdmin()) {
-            log.warn("⚠️ SECURITY ALERT: Non-SUPER_ADMIN attempted to create an account");
+            log.warn("[WARN] SECURITY ALERT: Non-SUPER_ADMIN attempted to create an account");
             throw new UnauthorizedException(
-                    "🚫 Access Denied: Only SUPER_ADMIN can create new employees."
+                    "[BLOCKED] Access Denied: Only SUPER_ADMIN can create new employees."
             );
         }
 
@@ -249,7 +249,7 @@ public class EmployeeService {
                         plainPassword
                 );
             } catch (Exception e) {
-                log.warn("⚠️ Failed to send credentials email: {}", e.getMessage());
+                log.warn("[WARN] Failed to send credentials email: {}", e.getMessage());
             }
         }
 
@@ -262,12 +262,12 @@ public class EmployeeService {
 
     @Transactional
     public EmployeeResponseDTO updateEmployee(Long id, EmployeeRequestDTO requestDTO, MultipartFile photoFile) {
-        log.info("✏️ Updating employee ID: {}", id);
+        log.info("[EDIT] Updating employee ID: {}", id);
 
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
 
-        // 🔒 CRITICAL SECURITY CHECK
+        // [SECURE] CRITICAL SECURITY CHECK
         validateModificationPermission(employee, "update");
 
         // Security: Only SUPER_ADMIN can assign SUPER_ADMIN role
@@ -275,9 +275,9 @@ public class EmployeeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
 
         if (SUPER_ADMIN_ROLE.equalsIgnoreCase(targetRole.getRoleTitle()) && !isSuperAdmin()) {
-            log.warn("⚠️ SECURITY ALERT: Non-SUPER_ADMIN attempted to assign SUPER_ADMIN role");
+            log.warn("[WARN] SECURITY ALERT: Non-SUPER_ADMIN attempted to assign SUPER_ADMIN role");
             throw new UnauthorizedException(
-                    "🚫 Access Denied: Only SUPER_ADMIN can assign SUPER_ADMIN role. " +
+                    "[BLOCKED] Access Denied: Only SUPER_ADMIN can assign SUPER_ADMIN role. " +
                             "This security violation has been logged."
             );
         }
@@ -287,7 +287,7 @@ public class EmployeeService {
                 !SUPER_ADMIN_ROLE.equalsIgnoreCase(targetRole.getRoleTitle()) &&
                 !isSuperAdmin()) {
             throw new UnauthorizedException(
-                    "🚫 Security Policy: Cannot downgrade SUPER_ADMIN role"
+                    "[BLOCKED] Security Policy: Cannot downgrade SUPER_ADMIN role"
             );
         }
 
@@ -306,7 +306,7 @@ public class EmployeeService {
                             }
                             existingUser.setUsername(requestDTO.getUsername());
                             employee.setUsername(requestDTO.getUsername());
-                            log.info("📝 Username updated for employee: {}", id);
+                            log.info("[NOTE] Username updated for employee: {}", id);
                         }
 
                         // Update password ONLY if provided
@@ -322,7 +322,7 @@ public class EmployeeService {
                             String encodedPassword = passwordEncoder.encode(requestDTO.getPassword());
                             existingUser.setPassword(encodedPassword);
                             employee.setPassword(encodedPassword);
-                            log.info("🔐 Password updated for employee: {}", id);
+                            log.info("[AUTH] Password updated for employee: {}", id);
 
                             // Send email notification
                             try {
@@ -334,7 +334,7 @@ public class EmployeeService {
                                         true
                                 );
                             } catch (Exception e) {
-                                log.warn("⚠️ Failed to send credentials email: {}", e.getMessage());
+                                log.warn("[WARN] Failed to send credentials email: {}", e.getMessage());
                             }
                         }
 
@@ -387,7 +387,7 @@ public class EmployeeService {
 
         validateModificationPermission(employee, "unlock");
         if (!isSuperAdmin()) {
-            throw new UnauthorizedException("🚫 Access Denied: Only SUPER_ADMIN can unlock/activate users");
+            throw new UnauthorizedException("[BLOCKED] Access Denied: Only SUPER_ADMIN can unlock/activate users");
         }
 
         User user = userRepository.findByEmployee(employee)
@@ -401,7 +401,7 @@ public class EmployeeService {
         user.setLastCaptchaFail(null);
         userRepository.save(user);
 
-        log.info("🔓 User unlocked & activated for employeeId={}, username={}", employeeId, user.getUsername());
+        log.info("[UNLOCKED] User unlocked & activated for employeeId={}, username={}", employeeId, user.getUsername());
     }
 
     @Transactional
@@ -411,7 +411,7 @@ public class EmployeeService {
 
         validateModificationPermission(employee, "lock");
         if (!isSuperAdmin()) {
-            throw new UnauthorizedException("🚫 Access Denied: Only SUPER_ADMIN can lock users");
+            throw new UnauthorizedException("[BLOCKED] Access Denied: Only SUPER_ADMIN can lock users");
         }
 
         User user = userRepository.findByEmployee(employee)
@@ -419,7 +419,7 @@ public class EmployeeService {
 
         user.setIsLocked(true);
         userRepository.save(user);
-        log.info("🔒 User locked for employeeId={}, username={}", employeeId, user.getUsername());
+        log.info("[SECURE] User locked for employeeId={}, username={}", employeeId, user.getUsername());
     }
 
     @Transactional
@@ -429,7 +429,7 @@ public class EmployeeService {
 
         validateModificationPermission(employee, "unlock");
         if (!isSuperAdmin()) {
-            throw new UnauthorizedException("🚫 Access Denied: Only SUPER_ADMIN can unlock users");
+            throw new UnauthorizedException("[BLOCKED] Access Denied: Only SUPER_ADMIN can unlock users");
         }
 
         User user = userRepository.findByEmployee(employee)
@@ -441,7 +441,7 @@ public class EmployeeService {
         user.setCaptchaLockedUntil(null);
         user.setLastCaptchaFail(null);
         userRepository.save(user);
-        log.info("🔓 User unlocked for employeeId={}, username={}", employeeId, user.getUsername());
+        log.info("[UNLOCKED] User unlocked for employeeId={}, username={}", employeeId, user.getUsername());
     }
 
     @Transactional
@@ -451,7 +451,7 @@ public class EmployeeService {
 
         validateModificationPermission(employee, "deactivate");
         if (!isSuperAdmin()) {
-            throw new UnauthorizedException("🚫 Access Denied: Only SUPER_ADMIN can deactivate users");
+            throw new UnauthorizedException("[BLOCKED] Access Denied: Only SUPER_ADMIN can deactivate users");
         }
 
         User user = userRepository.findByEmployee(employee)
@@ -459,7 +459,7 @@ public class EmployeeService {
 
         user.setIsActive(false);
         userRepository.save(user);
-        log.info("⛔ User deactivated for employeeId={}, username={}", employeeId, user.getUsername());
+        log.info("[DENIED] User deactivated for employeeId={}, username={}", employeeId, user.getUsername());
     }
 
     @Transactional
@@ -469,7 +469,7 @@ public class EmployeeService {
 
         validateModificationPermission(employee, "activate");
         if (!isSuperAdmin()) {
-            throw new UnauthorizedException("🚫 Access Denied: Only SUPER_ADMIN can activate users");
+            throw new UnauthorizedException("[BLOCKED] Access Denied: Only SUPER_ADMIN can activate users");
         }
 
         User user = userRepository.findByEmployee(employee)
@@ -478,17 +478,17 @@ public class EmployeeService {
         user.setIsActive(true);
         user.setFailedAttempts(0);
         userRepository.save(user);
-        log.info("✅ User activated for employeeId={}, username={}", employeeId, user.getUsername());
+        log.info("[OK] User activated for employeeId={}, username={}", employeeId, user.getUsername());
     }
 
     @Transactional
     public void deleteEmployee(Long id) {
-        log.info("🗑️ Attempting to delete employee ID: {}", id);
+        log.info("[DELETE] Attempting to delete employee ID: {}", id);
 
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
 
-        // 🔒 CRITICAL SECURITY CHECK
+        // [SECURE] CRITICAL SECURITY CHECK
         validateModificationPermission(employee, "delete");
 
         // Additional check: Prevent deletion of last SUPER_ADMIN
@@ -496,7 +496,7 @@ public class EmployeeService {
             long superAdminCount = employeeRepository.countByRoleRoleTitle(SUPER_ADMIN_ROLE);
             if (superAdminCount <= 1) {
                 throw new UnauthorizedException(
-                        "🚫 Security Policy: Cannot delete the last SUPER_ADMIN account. " +
+                        "[BLOCKED] Security Policy: Cannot delete the last SUPER_ADMIN account. " +
                                 "At least one SUPER_ADMIN must exist in the system."
                 );
             }
@@ -544,7 +544,7 @@ public class EmployeeService {
                 employee.setPhoto(filename);
                 log.info(" Photo saved: {}", filename);
             } catch (Exception e) {
-                log.error("❌ Error saving photo: {}", e.getMessage());
+                log.error("[FAIL] Error saving photo: {}", e.getMessage());
                 throw new RuntimeException("Failed to save employee photo: " + e.getMessage());
             }
         }
@@ -572,7 +572,7 @@ public class EmployeeService {
     }
 
     private void createUserCredentials(Employee employee, EmployeeRequestDTO requestDTO) {
-        log.info("🔐 Creating user credentials for: {}", requestDTO.getUsername());
+        log.info("[AUTH] Creating user credentials for: {}", requestDTO.getUsername());
 
         User user = new User();
         user.setUsername(requestDTO.getUsername());
@@ -649,7 +649,7 @@ public class EmployeeService {
                 null // Password not available for resend
         );
 
-        log.info("📧 Credentials email sent to: {}", employee.getEmailId());
+        log.info("[EMAIL] Credentials email sent to: {}", employee.getEmailId());
     }
 
     private EmployeeResponseDTO convertToResponseDTO(Employee employee) {
@@ -731,11 +731,11 @@ public class EmployeeService {
                 throw new ResourceNotFoundException("Employee profile not found for current user");
             }
 
-            log.info("📋 Fetching profile for user: {}", currentUser.getUsername());
+            log.info("[INFO] Fetching profile for user: {}", currentUser.getUsername());
             return convertToResponseDTO(employee);
 
         } catch (Exception e) {
-            log.error("❌ Error fetching current user profile: {}", e.getMessage());
+            log.error("[FAIL] Error fetching current user profile: {}", e.getMessage());
             throw new RuntimeException("Failed to load profile: " + e.getMessage());
         }
     }

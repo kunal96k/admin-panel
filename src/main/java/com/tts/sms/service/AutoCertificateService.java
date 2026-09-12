@@ -50,7 +50,7 @@ public class AutoCertificateService {
      */
     @Transactional
     public void updateAdmissionStatusAfterCertificate(String registrationNumber) {
-        log.info("🔍 Checking if {} should be marked COMPLETED", registrationNumber);
+        log.info("[SEARCH] Checking if {} should be marked COMPLETED", registrationNumber);
 
         try {
             Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(registrationNumber);
@@ -86,10 +86,10 @@ public class AutoCertificateService {
      */
     @Transactional
     public int processFeesAndGenerateCertificates() {
-        log.info("🔄 Starting auto certificate generation for admissions with cleared fees...");
+        log.info("[SYNC] Starting auto certificate generation for admissions with cleared fees...");
 
         List<Fees> clearedFees = feesRepository.findFeesWithStatusClear();
-        log.info("📊 Found {} cleared fee records", clearedFees.size());
+        log.info("[STATS] Found {} cleared fee records", clearedFees.size());
 
         int certificatesCreated = 0;
 
@@ -104,14 +104,14 @@ public class AutoCertificateService {
                 Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
 
                 if (admission == null) {
-                    log.warn("⚠️ Admission not found for regNo: {}", regNo);
+                    log.warn("[WARN] Admission not found for regNo: {}", regNo);
                     continue;
                 }
 
                 List<String> courses = normalizeCourseList(admission.getCourses());
                 
                 if (courses.isEmpty()) {
-                    log.warn("⚠️ No courses found for regNo: {}", regNo);
+                    log.warn("[WARN] No courses found for regNo: {}", regNo);
                     continue;
                 }
 
@@ -122,7 +122,7 @@ public class AutoCertificateService {
                     );
 
                     if (exists) {
-                        log.debug("⏭️ Certificate already exists for {} - {}", regNo, courseName);
+                        log.debug("[SKIP] Certificate already exists for {} - {}", regNo, courseName);
                         continue;
                     }
 
@@ -151,7 +151,7 @@ public class AutoCertificateService {
      */
     @Transactional
     public Certificate createManualCertificate(ManualCertificateRequestDTO request) {
-        log.info("🔧 Manual certificate generation for: {} - {}",
+        log.info("[CONFIG] Manual certificate generation for: {} - {}",
                 request.getRegistrationNo(), request.getCourseName());
 
         // Get current logged-in user
@@ -358,7 +358,7 @@ public class AutoCertificateService {
      */
     @Transactional
     public int bulkGenerateCertificates(List<String> registrationNumbers) {
-        log.info("🔄 Bulk certificate generation for {} student(s)", registrationNumbers.size());
+        log.info("[SYNC] Bulk certificate generation for {} student(s)", registrationNumbers.size());
 
         int certificatesCreated = 0;
 
@@ -373,14 +373,14 @@ public class AutoCertificateService {
                 Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
 
                 if (admission == null) {
-                    log.warn("⚠️ Admission not found for regNo: {}", regNo);
+                    log.warn("[WARN] Admission not found for regNo: {}", regNo);
                     continue;
                 }
 
                 List<String> courses = normalizeCourseList(admission.getCourses());
 
                 if (courses.isEmpty()) {
-                    log.warn("⚠️ No courses found for regNo: {}", regNo);
+                    log.warn("[WARN] No courses found for regNo: {}", regNo);
                     continue;
                 }
 
@@ -391,7 +391,7 @@ public class AutoCertificateService {
                     );
 
                     if (exists) {
-                        log.debug("⏭️ Certificate already exists for {} - {}", regNo, courseName);
+                        log.debug("[SKIP] Certificate already exists for {} - {}", regNo, courseName);
                         continue;
                     }
 
@@ -399,16 +399,16 @@ public class AutoCertificateService {
                     certificateRepository.save(certificate);
 
                     certificatesCreated++;
-                    log.info("✅ Created certificate for {} - {} ({})",
+                    log.info("[OK] Created certificate for {} - {} ({})",
                             admission.getFullName(), courseName, regNo);
                 }
 
             } catch (Exception e) {
-                log.error("❌ Error creating certificate for {}: {}", regNo, e.getMessage());
+                log.error("[FAIL] Error creating certificate for {}: {}", regNo, e.getMessage());
             }
         }
 
-        log.info("✅ Bulk generation complete: {} certificates created", certificatesCreated);
+        log.info("[OK] Bulk generation complete: {} certificates created", certificatesCreated);
         return certificatesCreated;
     }
-}
+}

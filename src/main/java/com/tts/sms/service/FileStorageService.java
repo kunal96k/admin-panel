@@ -42,7 +42,7 @@ public class FileStorageService {
 
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
-                log.info("✅ Created base upload directory: {}", uploadPath);
+                log.info("[OK] Created base upload directory: {}", uploadPath);
             }
 
             // Create subdirectories for different entities
@@ -53,11 +53,11 @@ public class FileStorageService {
             maxFileSizeBytes = parseSize(maxFileSize);
             allowedExtensionsList = Arrays.asList(allowedExtensions.toLowerCase().split(","));
 
-            log.info("📏 Max file size: {} bytes ({})", maxFileSizeBytes, maxFileSize);
-            log.info("📝 Allowed extensions: {}", allowedExtensionsList);
+            log.info("[SIZE] Max file size: {} bytes ({})", maxFileSizeBytes, maxFileSize);
+            log.info("[NOTE] Allowed extensions: {}", allowedExtensionsList);
 
         } catch (IOException ex) {
-            log.error("❌ Could not create upload directory: {}", uploadDir, ex);
+            log.error("[FAIL] Could not create upload directory: {}", uploadDir, ex);
             throw new RuntimeException("Could not create upload directory!", ex);
         }
     }
@@ -66,7 +66,7 @@ public class FileStorageService {
         Path subPath = uploadPath.resolve(subDir);
         if (!Files.exists(subPath)) {
             Files.createDirectories(subPath);
-            log.info("✅ Created subdirectory: {}", subPath);
+            log.info("[OK] Created subdirectory: {}", subPath);
         }
     }
 
@@ -79,7 +79,7 @@ public class FileStorageService {
     public String saveBase64Image(String base64Data, String entityType) {
         try {
             if (base64Data == null || base64Data.isEmpty()) {
-                log.warn("⚠️ Base64 data is null or empty");
+                log.warn("[WARN] Base64 data is null or empty");
                 return null;
             }
 
@@ -91,7 +91,7 @@ public class FileStorageService {
             try {
                 decodedBytes = Base64.getDecoder().decode(imageData);
             } catch (IllegalArgumentException e) {
-                log.error("❌ Invalid base64 encoding: {}", e.getMessage());
+                log.error("[FAIL] Invalid base64 encoding: {}", e.getMessage());
                 throw new RuntimeException("Invalid image data encoding", e);
             }
 
@@ -112,13 +112,13 @@ public class FileStorageService {
             // Write file to disk
             Files.write(targetLocation, decodedBytes);
 
-            log.info("✅ Base64 image saved: {}/{}", entityType, filename);
+            log.info("[OK] Base64 image saved: {}/{}", entityType, filename);
 
             // Return ONLY filename (subdirectory will be handled by path resolution)
             return filename;
 
         } catch (IOException ex) {
-            log.error("❌ Could not save base64 image: {}", ex.getMessage());
+            log.error("[FAIL] Could not save base64 image: {}", ex.getMessage());
             throw new RuntimeException("Could not save image. Please try again!", ex);
         }
     }
@@ -140,11 +140,11 @@ public class FileStorageService {
             Path targetLocation = uploadPath.resolve(entityType).resolve(filename);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-            log.info("✅ File stored: {}/{} (original: {})", entityType, filename, originalFilename);
+            log.info("[OK] File stored: {}/{} (original: {})", entityType, filename, originalFilename);
             return filename;
 
         } catch (IOException ex) {
-            log.error("❌ Could not store file: {}", ex.getMessage());
+            log.error("[FAIL] Could not store file: {}", ex.getMessage());
             throw new RuntimeException("Could not store file. Please try again!", ex);
         }
     }
@@ -164,7 +164,7 @@ public class FileStorageService {
     public void deleteFile(String filename, String entityType) {
         try {
             if (filename == null || filename.trim().isEmpty()) {
-                log.warn("⚠️ Attempted to delete file with null or empty filename");
+                log.warn("[WARN] Attempted to delete file with null or empty filename");
                 return;
             }
 
@@ -172,18 +172,18 @@ public class FileStorageService {
 
             // Security check
             if (!filePath.startsWith(uploadPath.resolve(entityType))) {
-                log.error("❌ Security violation: Attempted to delete file outside directory: {}", filename);
+                log.error("[FAIL] Security violation: Attempted to delete file outside directory: {}", filename);
                 throw new RuntimeException("Invalid file path");
             }
 
             boolean deleted = Files.deleteIfExists(filePath);
             if (deleted) {
-                log.info("✅ File deleted: {}/{}", entityType, filename);
+                log.info("[OK] File deleted: {}/{}", entityType, filename);
             } else {
-                log.warn("⚠️ File not found for deletion: {}/{}", entityType, filename);
+                log.warn("[WARN] File not found for deletion: {}/{}", entityType, filename);
             }
         } catch (IOException ex) {
-            log.error("❌ Could not delete file: {}", filename, ex);
+            log.error("[FAIL] Could not delete file: {}", filename, ex);
         }
     }
 

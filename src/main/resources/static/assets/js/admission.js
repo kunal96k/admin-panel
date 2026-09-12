@@ -963,7 +963,7 @@
     window.changeStudentStatus = changeStudentStatus;
 
     /**
-     * 🔔 TOGGLE STUDENT FEE REMINDER EMAIL
+     *  TOGGLE STUDENT FEE REMINDER EMAIL
      */
     async function toggleStudentFeeReminder(admissionId, btnElement) {
         try {

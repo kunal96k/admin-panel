@@ -22,12 +22,12 @@ public class BackupScheduler {
      */
     @Scheduled(cron = "${app.backup.cron:0 0 20 * * ?}", zone = "Asia/Kolkata")
     public void scheduleDailyBackup() {
-        log.info("⏰ Scheduled daily backup execution started...");
+        log.info("[SCHEDULE] Scheduled daily backup execution started...");
         try {
             backupService.performBackupAndSendEmail();
-            log.info("✅ Scheduled daily backup execution completed successfully.");
+            log.info("[OK] Scheduled daily backup execution completed successfully.");
         } catch (Exception e) {
-            log.error("❌ Scheduled daily backup failed: {}", e.getMessage(), e);
+            log.error("[FAIL] Scheduled daily backup failed: {}", e.getMessage(), e);
         }
     }
 }

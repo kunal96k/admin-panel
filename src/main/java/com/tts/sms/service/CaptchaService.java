@@ -142,7 +142,7 @@ public class CaptchaService {
         }
 
         if (removedCount > 0) {
-            log.debug("🧹 Cleaned {} expired CAPTCHA(s)", removedCount);
+            log.debug("[CLEAN] Cleaned {} expired CAPTCHA(s)", removedCount);
         }
     }
 
@@ -156,7 +156,7 @@ public class CaptchaService {
         int sizeAfter = captchaStore.size();
 
         if (sizeBefore != sizeAfter) {
-            log.info("🧹 Scheduled CAPTCHA cleanup - Removed: {}, Remaining: {}",
+            log.info("[CLEAN] Scheduled CAPTCHA cleanup - Removed: {}, Remaining: {}",
                     (sizeBefore - sizeAfter), sizeAfter);
         }
     }
@@ -176,7 +176,7 @@ public class CaptchaService {
     public void clearAllCaptchas() {
         int count = captchaStore.size();
         captchaStore.clear();
-        log.info("🗑️ Cleared all {} CAPTCHA(s) from store", count);
+        log.info("[DELETE] Cleared all {} CAPTCHA(s) from store", count);
     }
 
     /**

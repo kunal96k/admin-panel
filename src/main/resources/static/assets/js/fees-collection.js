@@ -204,7 +204,7 @@
             }
 
             if (!originalActionFn) {
-                console.warn('⚠️ Could not find original action for:', buttonName || 'unknown');
+                console.warn('[WARN] Could not find original action for:', buttonName || 'unknown');
             }
 
             if (!totalRecords || totalRecords <= 0) {
@@ -237,11 +237,11 @@
                             dt.ajax.reload(null, false);
                         }, 100);
                     } catch (err) {
-                        console.error('❌ Export action failed:', err);
+                        console.error('[ERROR] Export action failed:', err);
                         hideLoading();
                     }
                 } else {
-                    console.error('❌ Cannot export: Original action not found');
+                    console.error('[ERROR] Cannot export: Original action not found');
                     hideLoading();
                 }
             });

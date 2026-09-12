@@ -31,11 +31,11 @@ public class UserDataLoader implements CommandLineRunner {
         try {
             // Check if ANY users already exist. We only auto-create if the database is empty.
             if (userRepository.count() > 0) {
-                log.info("ℹ️ Database already has users. Skipping default admin creation.");
+                log.info("[INFO] Database already has users. Skipping default admin creation.");
                 return;
             }
 
-            log.info("⚠️ No users found in database. Initializing default superadmin...");
+            log.info("[WARN] No users found in database. Initializing default superadmin...");
 
             // Create Admin Role if not exists
             Role adminRole = roleRepository.findByRoleTitle("ADMIN")
@@ -46,7 +46,7 @@ public class UserDataLoader implements CommandLineRunner {
                         return roleRepository.save(role);
                     });
 
-            log.info("✅ Admin role created/found: {}", adminRole.getRoleTitle());
+            log.info("[OK] Admin role created/found: {}", adminRole.getRoleTitle());
 
             // Create Admin Employee
             Employee adminEmployee = new Employee();
@@ -62,7 +62,7 @@ public class UserDataLoader implements CommandLineRunner {
             adminEmployee.setIsAdmin(true);
 
             Employee savedEmployee = employeeRepository.save(adminEmployee);
-            log.info("✅ Admin employee created: {}", savedEmployee.getEmployeeName());
+            log.info("[OK] Admin employee created: {}", savedEmployee.getEmployeeName());
 
             // Create Admin User with credentials
             User adminUser = new User();
@@ -76,18 +76,18 @@ public class UserDataLoader implements CommandLineRunner {
 
             userRepository.save(adminUser);
 
-            log.info("═══════════════════════════════════════════════════════");
-            log.info("🚀  FIRST-TIME DATABASE INITIALIZATION COMPLETE!");
-            log.info("✅  DEFAULT SUPERADMIN CREATED SUCCESSFULLY!");
-            log.info("═══════════════════════════════════════════════════════");
-            log.info("👤  Username : admin");
-            log.info("🔑  Password : admin@123");
-            log.info("📧  Email    : ktm.lover0123@gmail.com");
-            log.info("⚠️  IMPORTANT: Change the password immediately!");
-            log.info("═══════════════════════════════════════════════════════");
+            log.info("=======================================================");
+            log.info("[START] FIRST-TIME DATABASE INITIALIZATION COMPLETE!");
+            log.info("[OK] DEFAULT SUPERADMIN CREATED SUCCESSFULLY!");
+            log.info("=======================================================");
+            log.info("[USER]  Username : admin");
+            log.info("[KEY]  Password : admin@123");
+            log.info("[EMAIL]  Email    : ktm.lover0123@gmail.com");
+            log.info("[WARN] IMPORTANT: Change the password immediately!");
+            log.info("=======================================================");
 
         } catch (Exception e) {
-            log.error("❌ Error creating default admin user: {}", e.getMessage(), e);
+            log.error("[FAIL] Error creating default admin user: {}", e.getMessage(), e);
         }
     }
 }

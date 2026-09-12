@@ -228,8 +228,8 @@ public class EnquiryService {
     // ==================== LENIENT BULK IMPORT - IMPORT ALL DATA ====================
 
     public BulkImportResponseDTO processBulkImport(List<EnquiryRequestDTO> dtos, String importSource) {
-        log.info("🚀 STRICT IMPORT: {} records", dtos.size());
-        log.info("✅ MODE: Import ALL - No validation, no modification");
+        log.info("[START] STRICT IMPORT: {} records", dtos.size());
+        log.info("[OK] MODE: Import ALL - No validation, no modification");
 
         int successCount = 0;
         int duplicateCount = 0;
@@ -314,14 +314,14 @@ public class EnquiryService {
                         dto.setMobile(finalMobile);
                         duplicateCount++;
 
-                        log.warn("⚠️ Row {}: Duplicate mobile '{}' → '{}'",
+                        log.warn("[WARN] Row {}: Duplicate mobile '{}' -> '{}'",
                                 rowNumber, originalMobile, finalMobile);
 
                         errors.add(BulkImportResponseDTO.ImportError.builder()
                                 .rowNumber(rowNumber)
                                 .fieldName("mobile")
                                 .errorMessage("Duplicate - appended suffix")
-                                .rejectedValue(originalMobile + " → " + finalMobile)
+                                .rejectedValue(originalMobile + " -> " + finalMobile)
                                 .build());
                     }
                 }
@@ -334,11 +334,11 @@ public class EnquiryService {
                 successCount++;
 
                 if (rowNumber % 100 == 0) {
-                    log.info("✅ Progress: {}/{} imported", successCount, rowNumber - 1);
+                    log.info("[OK] Progress: {}/{} imported", successCount, rowNumber - 1);
                 }
 
             } catch (Exception e) {
-                log.error("❌ Row {}: Failed - {}", rowNumber, e.getMessage());
+                log.error("[FAIL] Row {}: Failed - {}", rowNumber, e.getMessage());
 
                 errors.add(BulkImportResponseDTO.ImportError.builder()
                         .rowNumber(rowNumber)
@@ -351,12 +351,12 @@ public class EnquiryService {
 
         int failedCount = dtos.size() - successCount;
 
-        log.info("📊 ==================== IMPORT COMPLETE ====================");
+        log.info("[STATS] ==================== IMPORT COMPLETE ====================");
         log.info("   Total Records: {}", dtos.size());
-        log.info("   ✅ Imported: {}", successCount);
-        log.info("   🔄 Duplicates: {}", duplicateCount);
-        log.info("   ❌ Failed: {}", failedCount);
-        log.info("   📈 Success Rate: {}%", (dtos.isEmpty() ? 0 : (successCount * 100 / dtos.size())));
+        log.info("   [OK] Imported: {}", successCount);
+        log.info("   [SYNC] Duplicates: {}", duplicateCount);
+        log.info("   [FAIL] Failed: {}", failedCount);
+        log.info("   [TREND] Success Rate: {}%", (dtos.isEmpty() ? 0 : (successCount * 100 / dtos.size())));
         log.info("==========================================================");
 
         return BulkImportResponseDTO.builder()

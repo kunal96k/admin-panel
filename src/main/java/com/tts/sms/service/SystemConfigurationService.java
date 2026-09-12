@@ -28,7 +28,7 @@ public class SystemConfigurationService {
 
     @Transactional
     public void setCutoffDate(LocalDate cutoffDate, String updatedBy) {
-        log.info("🔧 Setting cutoff date to: {} by {}", cutoffDate, updatedBy);
+        log.info("[CONFIG] Setting cutoff date to: {} by {}", cutoffDate, updatedBy);
 
         SystemConfiguration config = configRepository.findByConfigKey(CUTOFF_DATE_KEY)
                 .orElse(SystemConfiguration.builder()
@@ -53,7 +53,7 @@ public class SystemConfigurationService {
 
     @Transactional
     public void setFeeReminderEmailEnabled(boolean enabled, String updatedBy) {
-        log.info("🔧 Setting fee reminder email enabled to: {} by {}", enabled, updatedBy);
+        log.info("[CONFIG] Setting fee reminder email enabled to: {} by {}", enabled, updatedBy);
 
         SystemConfiguration config = configRepository.findByConfigKey(FEE_REMINDER_ENABLED_KEY)
                 .orElse(SystemConfiguration.builder()

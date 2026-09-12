@@ -63,9 +63,9 @@ public class SmsApplication extends SpringBootServletInitializer {
         String activeProfiles = env.getActiveProfiles().length == 0 ? "default" : String.join(", ", env.getActiveProfiles());
 
         log.info("\n" +
-                        "══════════════════════════════════════════════════════════════════════════\n" +
-                        "                🚀  TTS SMS APPLICATION STARTED SUCCESSFULLY!             \n" +
-                        "══════════════════════════════════════════════════════════════════════════\n" +
+                        "==========================================================================\n" +
+                        "                [READY] TTS SMS APPLICATION STARTED SUCCESSFULLY!         \n" +
+                        "==========================================================================\n" +
                         "  Application   : {}\n" +
                         "  Profiles      : {}\n" +
                         "  Port          : {}\n" +
@@ -75,11 +75,11 @@ public class SmsApplication extends SpringBootServletInitializer {
                         "  Access URLs   :\n" +
                         "    Local       : {}://localhost:{}{}\n" +
                         "    External    : {}://{}:{}{}\n" +
-                        "══════════════════════════════════════════════════════════════════════════",
+                        "==========================================================================",
                 env.getProperty("spring.application.name", "TTS-SMS"),
                 activeProfiles,
                 serverPort,
-                protocol.equals("https") ? "✅ YES" : "❌ NO (HTTP Mode)",
+                protocol.equals("https") ? "YES" : "NO (HTTP Mode)",
                 contextPath.isEmpty() ? "/" : contextPath,
                 allowedOrigins,
                 protocol, serverPort, contextPath,

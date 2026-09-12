@@ -17,7 +17,7 @@ public class ContentNegotiationConfig implements WebMvcConfigurer {
 
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
-        log.info("🔧 Configuring Content Negotiation for HTTPS Production");
+        log.info("[CONFIG] Configuring Content Negotiation for HTTPS Production");
 
         configurer
                 // CRITICAL: Disable path extension to prevent .json/.xml suffix issues
@@ -59,7 +59,7 @@ public class ContentNegotiationConfig implements WebMvcConfigurer {
                 .mediaType("ttf", MediaType.valueOf("font/ttf"))
                 .mediaType("eot", MediaType.valueOf("application/vnd.ms-fontobject"));
 
-        log.info("✅ Content Negotiation configured for HTTPS production");
+        log.info("[OK] Content Negotiation configured for HTTPS production");
     }
 
     @Override
@@ -71,6 +71,6 @@ public class ContentNegotiationConfig implements WebMvcConfigurer {
         // Allow both /api/endpoint and /api/endpoint/ to work
         configurer.setUseTrailingSlashMatch(true);
 
-        log.info("✅ Path matching configured for production");
+        log.info("[OK] Path matching configured for production");
     }
 }

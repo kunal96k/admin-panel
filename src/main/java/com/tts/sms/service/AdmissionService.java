@@ -160,7 +160,7 @@ public class AdmissionService {
      */
     @Transactional
     public AdmissionResponseDTO updateStudentCategory(Long admissionId, String newCategory) {
-        log.info("🔧 Manual category change for admission: {} to {}", admissionId, newCategory);
+        log.info("[CONFIG] Manual category change for admission: {} to {}", admissionId, newCategory);
 
         Admission admission = admissionRepository.findById(admissionId)
                 .filter(a -> !a.getIsDeleted())
@@ -951,12 +951,12 @@ public class AdmissionService {
 
                 if (changed) {
                     certificateRepository.save(cert);
-                    log.info("✅ Synced certificate {} for regNo: {} — name: {}",
+                    log.info("[OK] Synced certificate {} for regNo: {} - name: {}",
                             cert.getCertificateNo(), admission.getRegistrationNumber(), newName);
                 }
             }
         } catch (Exception e) {
-            log.error("❌ Failed to sync certificates for regNo: {}",
+            log.error("[FAIL] Failed to sync certificates for regNo: {}",
                     admission.getRegistrationNumber(), e);
         }
     }
@@ -1149,7 +1149,7 @@ public class AdmissionService {
 
     @Transactional
     public BulkImportResponseDTO processBulkAdmissionImport(List<AdmissionRequestDTO> dtos, String importSource) {
-        log.info("🔄 EXACT IMPORT: Processing {} records", dtos.size());
+        log.info("[SYNC] EXACT IMPORT: Processing {} records", dtos.size());
 
         int successCount = 0;
         int withWarnings = 0;
@@ -1286,7 +1286,7 @@ public class AdmissionService {
 
         int failedCount = dtos.size() - successCount;
 
-        log.info("📊 IMPORT RESULT: {}/{} saved ({} warnings, {} failed)",
+        log.info("[STATS] IMPORT RESULT: {}/{} saved ({} warnings, {} failed)",
                 successCount, dtos.size(), withWarnings, failedCount);
 
         return BulkImportResponseDTO.builder()
@@ -1714,7 +1714,7 @@ public class AdmissionService {
                     .findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber());
 
             if (existingFees.isPresent()) {
-                log.info("ℹ️ Fees record already exists for regNo: {} - Skipping",
+                log.info("[INFO] Fees record already exists for regNo: {} - Skipping",
                         admission.getRegistrationNumber());
                 return;
             }

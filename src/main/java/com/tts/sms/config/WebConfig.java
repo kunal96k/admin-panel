@@ -50,12 +50,12 @@ public class WebConfig implements WebMvcConfigurer {
             }
 
             if (sslEnabled) {
-                log.info("🔒 HTTPS/SSL is ENABLED - Production mode");
+                log.info("[SECURE] HTTPS/SSL is ENABLED - Production mode");
             } else {
-                log.warn("⚠️ HTTPS/SSL is DISABLED - Development mode");
+                log.warn("[WARN] HTTPS/SSL is DISABLED - Development mode");
             }
         } catch (IOException e) {
-            log.error("❌ Failed to create upload directories", e);
+            log.error("[FAIL] Failed to create upload directories", e);
             throw new RuntimeException("Could not create upload directories", e);
         }
     }
@@ -75,7 +75,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        log.info("📦 Configuring resource handlers for HTTPS production");
+        log.info("[RESOURCE] Configuring resource handlers for HTTPS production");
 
         // JavaScript resources with long cache
         registry.addResourceHandler("/assets/js/**")
@@ -170,7 +170,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Bean
     public WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> webServerFactoryCustomizer() {
         return factory -> {
-            log.info("🔧 Configuring MIME type mappings for production");
+            log.info("[CONFIG] Configuring MIME type mappings for production");
 
             MimeMappings mappings = new MimeMappings(MimeMappings.DEFAULT);
 

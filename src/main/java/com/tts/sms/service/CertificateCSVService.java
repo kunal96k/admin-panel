@@ -43,7 +43,7 @@ public class CertificateCSVService {
      * Format 2 (NO Course): Reg No, Certificate No, Student Name, Batch, Grade, Issue Date, Status
      */
     public List<CertificateCSVImportDTO> parseCertificatesCSV(MultipartFile file) throws IOException {
-        log.info("📥 PARSING: Certificate CSV - {}", file.getOriginalFilename());
+        log.info("[IMPORT] PARSING: Certificate CSV - {}", file.getOriginalFilename());
 
         List<CertificateCSVImportDTO> dtos = new ArrayList<>();
 
@@ -57,7 +57,7 @@ public class CertificateCSVService {
             }
 
             String[] header = records.get(0);
-            log.info("📋 CSV Header: {}", Arrays.toString(header));
+            log.info("[INFO] CSV Header: {}", Arrays.toString(header));
 
             //  AUTO-DETECT FORMAT
             boolean hasCourseColumn = detectFormat(header);
@@ -83,7 +83,7 @@ public class CertificateCSVService {
                     }
 
                 } catch (Exception e) {
-                    log.error("❌ Row {}: Error parsing - {}", i + 1, e.getMessage());
+                    log.error("[FAIL] Row {}: Error parsing - {}", i + 1, e.getMessage());
                     // Add placeholder for failed rows
                     dtos.add(CertificateCSVImportDTO.builder()
                             .registrationNo("ERROR_ROW_" + i)
@@ -138,7 +138,7 @@ public class CertificateCSVService {
         String rawStatus = getValueAsIs(row, 7);
         String status = normalizeStatus(rawStatus);
 
-        log.debug("Row {}: RegNo='{}', CertNo='{}', Course='{}', Status='{}' → '{}'",
+        log.debug("Row {}: RegNo='{}', CertNo='{}', Course='{}', Status='{}' -> '{}'",
                 rowIndex, regNo, certNo, courseName, rawStatus, status);
 
         // Fetch email from admission
@@ -173,7 +173,7 @@ public class CertificateCSVService {
         String rawStatus = getValueAsIs(row, 6);          // Column 6: Status
         String status = normalizeStatus(rawStatus);
 
-        log.debug(" Row {}: RegNo='{}', CertNo='{}', Course='{}', Grade='{}', Status='{}' → '{}'",
+        log.debug(" Row {}: RegNo='{}', CertNo='{}', Course='{}', Grade='{}', Status='{}' -> '{}'",
                 rowIndex, regNo, certNo, courseName, grade, rawStatus, status);
 
         // Fetch email from admission
@@ -207,7 +207,7 @@ public class CertificateCSVService {
                 .replace("'", "")
                 .toLowerCase();
 
-        log.debug(" Normalizing status: '{}' → '{}'", status, normalized);
+        log.debug(" Normalizing status: '{}' -> '{}'", status, normalized);
 
         // Check for "Issued" variations
         if (normalized.equals("issued")) {
@@ -239,7 +239,7 @@ public class CertificateCSVService {
      * Generate CSV export for certificates
      */
     public byte[] generateCertificateCSV(List<CertificateDTO> certificates) {
-        log.info("📤 Generating certificate CSV export for {} records", certificates.size());
+        log.info("[EXPORT] Generating certificate CSV export for {} records", certificates.size());
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              OutputStreamWriter writer = new OutputStreamWriter(baos, StandardCharsets.UTF_8);
@@ -272,7 +272,7 @@ public class CertificateCSVService {
             return baos.toByteArray();
 
         } catch (IOException e) {
-            log.error("❌ Error generating certificate CSV", e);
+            log.error("[FAIL] Error generating certificate CSV", e);
             throw new RuntimeException("Failed to generate CSV export", e);
         }
     }

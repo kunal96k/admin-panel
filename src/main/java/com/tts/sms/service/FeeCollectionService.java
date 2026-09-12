@@ -196,7 +196,7 @@ public class FeeCollectionService {
                 .newDataCount(newDataCount)
                 .build();
 
-        log.info("📊 Statistics: Total={}, Amount=₹{}, Old={}, New={}",
+        log.info("[STATS] Statistics: Total={}, Amount=₹{}, Old={}, New={}",
                 stats.getTotalReceipts(), stats.getTotalAmount(),
                 stats.getOldDataCount(), stats.getNewDataCount());
 
@@ -252,7 +252,7 @@ public class FeeCollectionService {
      */
     @Transactional
     public Map<String, Object> importCSVData(MultipartFile file) {
-        log.info("🔄 Starting CSV import (AS-IS mode): {}", file.getOriginalFilename());
+        log.info("[SYNC] Starting CSV import (AS-IS mode): {}", file.getOriginalFilename());
 
         int totalRows = 0;
         int successCount = 0;
@@ -294,18 +294,18 @@ public class FeeCollectionService {
                     feeCollectionRepository.save(feeCollection);
                     successCount++;
 
-                    log.debug("✅ Row {}: Imported - Receipt: {}, Student: {}",
+                    log.debug("[OK] Row {}: Imported - Receipt: {}, Student: {}",
                             i + 1, feeCollection.getReceiptNo(), feeCollection.getStudentName());
 
                 } catch (Exception e) {
                     errorCount++;
                     String errorMsg = String.format("Row %d: %s", i + 1, e.getMessage());
                     errors.add(errorMsg);
-                    log.error("❌ {}", errorMsg);
+                    log.error("[FAIL] {}", errorMsg);
                 }
             }
 
-            log.info("✅ CSV Import Complete: {}/{} records imported (Batch: {})",
+            log.info("[OK] CSV Import Complete: {}/{} records imported (Batch: {})",
                     successCount, totalRows, importBatchId);
 
             return Map.of(
@@ -320,7 +320,7 @@ public class FeeCollectionService {
             );
 
         } catch (Exception e) {
-            log.error("❌ CSV import failed", e);
+            log.error("[FAIL] CSV import failed", e);
             return Map.of(
                     "success", false,
                     "message", "Import failed: " + e.getMessage(),
@@ -346,7 +346,7 @@ public class FeeCollectionService {
         feeCollection.setDeletedAt(LocalDateTime.now());
         feeCollectionRepository.save(feeCollection);
 
-        log.info("✅ Deleted fee collection: {}", id);
+        log.info("[OK] Deleted fee collection: {}", id);
 
         // Recalculate fees for the student associated with this mobile number
         String mobile = feeCollection.getMobileNo();
@@ -407,7 +407,7 @@ public class FeeCollectionService {
             }
         }
 
-        log.warn("⚠️ Could not parse date: {} - Storing as null", dateStr);
+        log.warn("[WARN] Could not parse date: {} - Storing as null", dateStr);
         return null;
     }
 
@@ -422,7 +422,7 @@ public class FeeCollectionService {
         try {
             return Double.parseDouble(value.trim());
         } catch (NumberFormatException e) {
-            log.warn("⚠️ Could not parse number: {} - Storing as null", value);
+            log.warn("[WARN] Could not parse number: {} - Storing as null", value);
             return null;
         }
     }
@@ -454,16 +454,16 @@ public class FeeCollectionService {
         List<FeeCollection> oldData = feeCollectionRepository.findByFiltersAsList(
                 fromDate, toDate, "IMPORTED_OLD_DATA", null
         );
-        log.info("🔍 DEBUG: Old data count: {}", oldData.size());
+        log.info("[SEARCH] DEBUG: Old data count: {}", oldData.size());
 
         // Check new data
         List<FeeReceipt> newData = feeReceiptRepository.findByFiltersForCollection(
                 fromDate, toDate, null
         );
-        log.info("🔍 DEBUG: New data count: {}", newData.size());
+        log.info("[SEARCH] DEBUG: New data count: {}", newData.size());
 
         // Check admissions
         long admissionCount = admissionRepository.count();
-        log.info("🔍 DEBUG: Total admissions: {}", admissionCount);
+        log.info("[SEARCH] DEBUG: Total admissions: {}", admissionCount);
     }
 }

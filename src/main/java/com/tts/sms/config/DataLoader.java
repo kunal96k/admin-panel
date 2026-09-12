@@ -189,20 +189,20 @@ public class DataLoader implements CommandLineRunner {
                 );
                 log.info(" Credentials email sent to: {}", superAdminEmail);
             } catch (Exception e) {
-                log.warn("⚠️ Failed to send credentials email: {}", e.getMessage());
+                log.warn("[WARN] Failed to send credentials email: {}", e.getMessage());
             }
 
-            log.info("═══════════════════════════════════════════════════════");
+            log.info("=======================================================");
             log.info(" SUPER ADMIN USER CREATED SUCCESSFULLY!");
-            log.info("═══════════════════════════════════════════════════════");
-            log.info("📧 Email: {}", superAdminEmail);
-            log.info("👤 Username: {}", superAdminUsername);
-            log.info("🔑 Password: {}", superAdminPassword);
-            log.info("⚠️  IMPORTANT: Change the password after first login!");
-            log.info("═══════════════════════════════════════════════════════");
+            log.info("=======================================================");
+            log.info("[EMAIL] Email: {}", superAdminEmail);
+            log.info("[USER] Username: {}", superAdminUsername);
+            log.info("[KEY] Password: {}", superAdminPassword);
+            log.info("[WARN] IMPORTANT: Change the password after first login!");
+            log.info("=======================================================");
 
         } catch (Exception e) {
-            log.error("❌ Error creating super admin user: {}", e.getMessage(), e);
+            log.error("[FAIL] Error creating super admin user: {}", e.getMessage(), e);
         }
     }
 

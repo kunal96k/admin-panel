@@ -174,7 +174,7 @@ public class EmployeeController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("canModify", false);
             errorResponse.put("canDelete", false);
-            errorResponse.put("message", "❌ Security check failed: " + e.getMessage());
+            errorResponse.put("message", "Security check failed: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
         }
     }

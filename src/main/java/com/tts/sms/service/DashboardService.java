@@ -35,69 +35,69 @@ public class DashboardService {
 
         // Get cutoff date from system config
         LocalDate cutoffDate = systemConfigurationService.getCutoffDate();
-        log.info("📊 Dashboard stats calculated from cutoff date: {}", cutoffDate);
+        log.info("[STATS] Dashboard stats calculated from cutoff date: {}", cutoffDate);
 
         // ========== TOTAL STUDENTS (ALL TIME - NO FILTER) ==========
         Long totalStudents = admissionRepository.countTotalAdmissions();
         stats.put("totalStudents", totalStudents != null ? totalStudents : 0L);
-        log.info("👥 Total Students: {}", totalStudents);
+        log.info("[USERS] Total Students: {}", totalStudents);
 
         // ========== TOTAL ENQUIRIES (ALL TIME - NO FILTER) ==========
         Long totalEnquiries = enquiryRepository.count();
         stats.put("totalEnquiries", totalEnquiries != null ? totalEnquiries : 0L);
-        log.info("📋 Total Enquiries: {}", totalEnquiries);
+        log.info("[INFO] Total Enquiries: {}", totalEnquiries);
 
         // ==========  FEES CALCULATIONS (FROM CUTOFF DATE - BASED ON ADMISSION DATE) ==========
 
-        // 1️⃣ Get ALL admissions FROM cutoff date onwards (using admission_date)
+        // Step 1: Get ALL admissions FROM cutoff date onwards (using admission_date)
         List<Admission> admissionsFromCutoff = admissionRepository.findByIsDeletedFalse()
                 .stream()
                 .filter(a -> a.getAdmissionDate() != null &&
                         !a.getAdmissionDate().isBefore(cutoffDate))
                 .collect(Collectors.toList());
 
-        log.info("📊 Found {} admissions from cutoff date {} (based on admission_date)",
+        log.info("[STATS] Found {} admissions from cutoff date {} (based on admission_date)",
                 admissionsFromCutoff.size(), cutoffDate);
 
-        // 2️⃣ Get registration numbers for these admissions
+        // Step 2: Get registration numbers for these admissions
         Set<String> regNosFromCutoff = admissionsFromCutoff.stream()
                 .map(Admission::getRegistrationNumber)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        log.info("📊 Processing fees for {} registration numbers", regNosFromCutoff.size());
+        log.info("[STATS] Processing fees for {} registration numbers", regNosFromCutoff.size());
 
-        // 3️⃣ Get ONLY fees records for these admissions
+        // Step 3: Get ONLY fees records for these admissions
         List<Fees> feesFromCutoff = feesRepository.findByIsDeletedFalse()
                 .stream()
                 .filter(f -> regNosFromCutoff.contains(f.getRegistrationNumber()))
                 .collect(Collectors.toList());
 
-        log.info("📊 Found {} fees records for admissions from cutoff date", feesFromCutoff.size());
+        log.info("[STATS] Found {} fees records for admissions from cutoff date", feesFromCutoff.size());
 
-        // 4️⃣ Calculate GROSS total paid (sum of totalPaid from fees table)
+        // Step 4: Calculate GROSS total paid (sum of totalPaid from fees table)
         Double grossTotalPaid = feesFromCutoff.stream()
                 .mapToDouble(f -> f.getTotalPaid() != null ? f.getTotalPaid() : 0.0)
                 .sum();
 
-        // 5️⃣ Get ALL refunds for these registration numbers
+        // Step 5: Get ALL refunds for these registration numbers
         List<FeeRefund> refundsFromCutoff = feeRefundRepository.findByIsDeletedFalse(null)
                 .stream()
                 .filter(r -> regNosFromCutoff.contains(r.getRegistrationNumber()))
                 .collect(Collectors.toList());
 
-        log.info("📊 Found {} refund records for admissions from cutoff date",
+        log.info("[STATS] Found {} refund records for admissions from cutoff date",
                 refundsFromCutoff.size());
 
-        // 6️⃣ Calculate total refunds
+        // Step 6: Calculate total refunds
         Double totalRefunds = refundsFromCutoff.stream()
                 .mapToDouble(r -> r.getRefundAmount() != null ? r.getRefundAmount() : 0.0)
                 .sum();
 
-        // 7️⃣  CORRECT FORMULA: Net Collected = Gross Paid - Refunds
+        // Step 7: CORRECT FORMULA: Net Collected = Gross Paid - Refunds
         Double netCollected = grossTotalPaid - totalRefunds;
 
-        // 8️⃣ Calculate total pending (sum of feesDue)
+        // Step 8: Calculate total pending (sum of feesDue)
         Double totalPending = feesFromCutoff.stream()
                 .mapToDouble(f -> f.getFeesDue() != null ? f.getFeesDue() : 0.0)
                 .sum();
@@ -149,7 +149,7 @@ public class DashboardService {
             default: startDate = endDate.minusMonths(6); groupByMonth = true;
         }
 
-        log.info("📊 Revenue chart: period={}, startDate={}, endDate={}", period, startDate, endDate);
+        log.info("[STATS] Revenue chart: period={}, startDate={}, endDate={}", period, startDate, endDate);
 
         // ==========  STEP 1: Get OLD student receipts from fee_collections ==========
         List<FeeCollection> oldReceipts = feeCollectionRepository.findByFiltersAsList(
@@ -158,11 +158,11 @@ public class DashboardService {
                 "IMPORTED_OLD_DATA",
                 null
         );
-        log.info("📊 Found {} old receipts from fee_collections", oldReceipts.size());
+        log.info("[STATS] Found {} old receipts from fee_collections", oldReceipts.size());
 
         // ==========  STEP 2: Get NEW student receipts from fee_receipts (REG*) ==========
         List<FeeReceipt> newReceipts = feeReceiptRepository.findByDateRange(startDate, endDate);
-        log.info("📊 Found {} new receipts from fee_receipts", newReceipts.size());
+        log.info("[STATS] Found {} new receipts from fee_receipts", newReceipts.size());
 
         // ==========  STEP 3: Get refunds for the period ==========
         List<FeeRefund> refunds = feeRefundRepository.findByIsDeletedFalse(null).stream()
@@ -170,7 +170,7 @@ public class DashboardService {
                         !r.getRefundDate().isBefore(startDate) &&
                         !r.getRefundDate().isAfter(endDate))
                 .collect(Collectors.toList());
-        log.info("📊 Found {} refunds in date range", refunds.size());
+        log.info("[STATS] Found {} refunds in date range", refunds.size());
 
         // ==========  STEP 4: Build chart data ==========
         List<String> labels = new ArrayList<>();
@@ -218,7 +218,7 @@ public class DashboardService {
                 current = current.plusMonths(1);
             }
 
-            log.info("📊 Generated {} monthly data points", data.size());
+            log.info("[STATS] Generated {} monthly data points", data.size());
 
         } else {
             // ========== GROUP BY DAY ==========
@@ -256,7 +256,7 @@ public class DashboardService {
                 current = current.plusDays(1);
             }
 
-            log.info("📊 Generated {} daily data points", data.size());
+            log.info("[STATS] Generated {} daily data points", data.size());
         }
 
         chartData.put("labels", labels);
@@ -266,7 +266,7 @@ public class DashboardService {
         chartData.put("endDate", endDate.toString());
 
         double totalRevenue = data.stream().mapToDouble(Double::doubleValue).sum();
-        log.info("📈 Revenue chart complete: {} data points, Total NET Revenue: ₹{}",
+        log.info("[TREND] Revenue chart complete: {} data points, Total NET Revenue: ₹{}",
                 data.size(), totalRevenue);
 
         return chartData;
@@ -311,7 +311,7 @@ public class DashboardService {
         chartData.put("data", data);
         chartData.put("colors", colors);
 
-        log.info("📊 Course distribution: {} courses found", sortedCourses.size());
+        log.info("[STATS] Course distribution: {} courses found", sortedCourses.size());
 
         return chartData;
     }

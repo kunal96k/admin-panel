@@ -491,7 +491,7 @@ public class FeesManagerController {
             @PathVariable String receiptNo,
             @RequestBody(required = false) Map<String, Object> emailData) {  // CHANGED: required = false
 
-        log.info("📧 POST /api/fees-manager/receipts/{}/send-email", receiptNo);
+        log.info("[EMAIL] POST /api/fees-manager/receipts/{}/send-email", receiptNo);
 
         try {
             // ADDED: Check if body is null
@@ -507,7 +507,7 @@ public class FeesManagerController {
             String studentName = (String) emailData.get("studentName");
             String pdfData = (String) emailData.get("pdfData");
 
-            log.info("📧 Received email request - Email: {}, StudentName: {}, PDFDataLength: {}",
+            log.info("[EMAIL] Received email request - Email: {}, StudentName: {}, PDFDataLength: {}",
                     email, studentName, (pdfData != null ? pdfData.length() : 0));
 
             if (email == null || email.trim().isEmpty()) {
@@ -531,7 +531,7 @@ public class FeesManagerController {
 
             // ADDED: Check PDF size (warn if > 5MB)
             int pdfSizeKB = (pdfData.length() * 3) / 4 / 1024;
-            log.info("📊 PDF size: {} KB", pdfSizeKB);
+            log.info("[STATS] PDF size: {} KB", pdfSizeKB);
 
             if (pdfSizeKB > 5120) { // 5MB
                 log.warn(" PDF size is large: {} KB - may cause issues", pdfSizeKB);

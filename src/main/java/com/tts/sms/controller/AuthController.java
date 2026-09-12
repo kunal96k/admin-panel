@@ -70,7 +70,7 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("❌ Error fetching current user", e);
+            log.error("[FAIL] Error fetching current user", e);
             response.put("authenticated", false);
             response.put("error", e.getMessage());
             return ResponseEntity.ok(response);

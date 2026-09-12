@@ -200,3 +200,7 @@ logging:
     name: logs/sms-application.log
     max-size: 10MB
     max-history: 30
+
+  charset:
+    console: UTF-8
+    file: UTF-8

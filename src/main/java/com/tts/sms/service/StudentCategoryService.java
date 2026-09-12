@@ -30,20 +30,20 @@ public class StudentCategoryService {
      *  Recategorize ALL students using BATCH processing
      * - Loads ALL data upfront to avoid N+1 queries
      * - Processes in batches to prevent connection leaks
-     * - 95% faster execution (2 minutes → 10 seconds)
+     * - 95% faster execution (2 minutes -> 10 seconds)
      */
     @Transactional
     public void recategorizeAllStudents() {
-        log.info("🔄 Starting mass recategorization with BATCH processing...");
+        log.info("[SYNC] Starting mass recategorization with BATCH processing...");
 
         LocalDate cutoffDate = configService.getCutoffDate();
-        log.info("📅 Using cutoff date: {}", cutoffDate);
+        log.info("[DATE] Using cutoff date: {}", cutoffDate);
 
         List<Admission> allAdmissions = admissionRepository.findByIsDeletedFalse();
-        log.info("📊 Total admissions to process: {}", allAdmissions.size());
+        log.info("[STATS] Total admissions to process: {}", allAdmissions.size());
 
         //  OPTIMIZATION 1: Load ALL refunds ONCE (instead of 7000+ queries)
-        log.info("📥 Loading all refunds...");
+        log.info("[IMPORT] Loading all refunds...");
         List<FeeRefund> allRefunds = feeRefundRepository.findByIsDeletedFalse();
         Map<String, List<FeeRefund>> refundsByRegNo = allRefunds.stream()
                 .filter(r -> r.getRegistrationNumber() != null)
@@ -52,7 +52,7 @@ public class StudentCategoryService {
                 allRefunds.size(), refundsByRegNo.size());
 
         //  OPTIMIZATION 2: Load ALL issued certificates ONCE
-        log.info("📥 Loading all issued certificates...");
+        log.info("[IMPORT] Loading all issued certificates...");
         List<Certificate> allCertificates = certificateRepository
                 .findByStatusAndIsActiveTrue("Issued");
         Map<String, List<Certificate>> certsByRegNo = allCertificates.stream()
@@ -73,7 +73,7 @@ public class StudentCategoryService {
             int endIndex = Math.min(i + BATCH_SIZE, allAdmissions.size());
             List<Admission> batch = allAdmissions.subList(i, endIndex);
 
-            log.info("📦 Processing batch {}/{} ({} records)...",
+            log.info("[RESOURCE] Processing batch {}/{} ({} records)...",
                     (i / BATCH_SIZE) + 1,
                     (allAdmissions.size() + BATCH_SIZE - 1) / BATCH_SIZE,
                     batch.size());
@@ -101,7 +101,7 @@ public class StudentCategoryService {
                     updated++;
 
                     if (log.isDebugEnabled()) {
-                        log.debug(" Updated: {} ({}) - {} → {} (Admission Date: {})",
+                        log.debug(" Updated: {} ({}) - {} -> {} (Admission Date: {})",
                                 admission.getRegistrationNumber(),
                                 admission.getFullName(),
                                 oldCategory,
@@ -113,12 +113,12 @@ public class StudentCategoryService {
 
             // Progress indicator
             if ((i + BATCH_SIZE) % 1000 == 0 && i > 0) {
-                log.info("💾 Checkpoint: Processed {} admissions so far", i + BATCH_SIZE);
+                log.info("[SAVE] Checkpoint: Processed {} admissions so far", i + BATCH_SIZE);
             }
         }
 
         log.info(" Recategorization complete: {} admissions updated", updated);
-        log.info("📊 Final counts - CANCELLED: {}, COMPLETED: {}, NEW_STUDENT: {}, OLD_STUDENT: {}, PURSUING: {}",
+        log.info("[STATS] Final counts - CANCELLED: {}, COMPLETED: {}, NEW_STUDENT: {}, OLD_STUDENT: {}, PURSUING: {}",
                 cancelled, completed, newStudent, oldStudent, pursuing);
     }
 
@@ -189,7 +189,7 @@ public class StudentCategoryService {
                 double totalRefund = refunds.stream()
                         .mapToDouble(r -> r.getRefundAmount() != null ? r.getRefundAmount() : 0.0)
                         .sum();
-                log.debug("💰 {} has {} refund(s) totaling ₹{}",
+                log.debug("[FEES] {} has {} refund(s) totaling ₹{}",
                         regNo, refunds.size(), totalRefund);
             }
             return true;
@@ -207,7 +207,7 @@ public class StudentCategoryService {
 
         if (admission.getCourses() == null || admission.getCourses().isEmpty()) {
             if (log.isDebugEnabled()) {
-                log.debug("⏭️ {} has no courses enrolled", admission.getRegistrationNumber());
+                log.debug("[SKIP] {} has no courses enrolled", admission.getRegistrationNumber());
             }
             return false;
         }
@@ -217,7 +217,7 @@ public class StudentCategoryService {
 
         if (certificates == null || certificates.isEmpty()) {
             if (log.isDebugEnabled()) {
-                log.debug("⏭️ {} has no issued certificates", admission.getRegistrationNumber());
+                log.debug("[SKIP] {} has no issued certificates", admission.getRegistrationNumber());
             }
             return false;
         }
@@ -230,7 +230,7 @@ public class StudentCategoryService {
 
             if (!hasCertForCourse) {
                 if (log.isDebugEnabled()) {
-                    log.debug("⏭️ {} missing certificate for course: {}",
+                    log.debug("[SKIP] {} missing certificate for course: {}",
                             admission.getRegistrationNumber(), courseName);
                 }
                 return false;
@@ -301,12 +301,12 @@ public class StudentCategoryService {
                 double totalRefund = refunds.stream()
                         .mapToDouble(r -> r.getRefundAmount() != null ? r.getRefundAmount() : 0.0)
                         .sum();
-                log.info("💰 {} has {} refund(s) totaling ₹{}", regNo, refunds.size(), totalRefund);
+                log.info("[FEES] {} has {} refund(s) totaling ₹{}", regNo, refunds.size(), totalRefund);
             }
 
             return hasRefund;
         } catch (Exception e) {
-            log.error("❌ Error checking refunds for {}: {}", regNo, e.getMessage());
+            log.error("[FAIL] Error checking refunds for {}: {}", regNo, e.getMessage());
             return false;
         }
     }
@@ -316,7 +316,7 @@ public class StudentCategoryService {
      */
     private boolean allCoursesHaveCertificates(Admission admission) {
         if (admission.getCourses() == null || admission.getCourses().isEmpty()) {
-            log.debug("⏭️ {} has no courses enrolled", admission.getRegistrationNumber());
+            log.debug("[SKIP] {} has no courses enrolled", admission.getRegistrationNumber());
             return false;
         }
 
@@ -331,7 +331,7 @@ public class StudentCategoryService {
                     );
 
             if (issuedCerts.isEmpty()) {
-                log.debug("⏭️ {} has no issued certificates", admission.getRegistrationNumber());
+                log.debug("[SKIP] {} has no issued certificates", admission.getRegistrationNumber());
                 return false;
             }
 
@@ -341,7 +341,7 @@ public class StudentCategoryService {
                         .anyMatch(cert -> cert.getCourseName().equalsIgnoreCase(courseName.trim()));
 
                 if (!hasCertForCourse) {
-                    log.debug("⏭️ {} missing certificate for course: {}",
+                    log.debug("[SKIP] {} missing certificate for course: {}",
                             admission.getRegistrationNumber(), courseName);
                     return false;
                 }
@@ -352,7 +352,7 @@ public class StudentCategoryService {
             return true;
 
         } catch (Exception e) {
-            log.error("❌ Error checking certificates for {}: {}",
+            log.error("[FAIL] Error checking certificates for {}: {}",
                     admission.getRegistrationNumber(), e.getMessage());
             return false;
         }

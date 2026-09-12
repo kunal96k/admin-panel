@@ -117,7 +117,7 @@ public class CustomUserDetailsService implements UserDetailsService {
             user.setCaptchaLockedUntil(null);
             user.setLastCaptchaFail(null);
             userRepository.saveAndFlush(user); // Use saveAndFlush to ensure immediate DB update
-            log.info("🔓 CAPTCHA auto-unlocked for user: {}", username);
+            log.info("[UNLOCKED] CAPTCHA auto-unlocked for user: {}", username);
         }
 
         return isLocked;

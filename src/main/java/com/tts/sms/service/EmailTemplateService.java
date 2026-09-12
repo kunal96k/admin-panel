@@ -50,7 +50,7 @@ public class EmailTemplateService {
         // ADDED: Log PDF size
         if (pdfBase64 != null) {
             int sizeKB = (pdfBase64.length() * 3 / 4) / 1024;
-            log.info("📊 PDF attachment size: {} KB", sizeKB);
+            log.info("[STATS] PDF attachment size: {} KB", sizeKB);
         }
 
         try {
@@ -78,7 +78,7 @@ public class EmailTemplateService {
             // Decode base64 PDF and attach
             if (pdfBase64 != null && !pdfBase64.isEmpty()) {
                 try {
-                    log.info("🔄 Decoding PDF base64 (length: {})", pdfBase64.length());
+                    log.info("[SYNC] Decoding PDF base64 (length: {})", pdfBase64.length());
 
                     byte[] pdfBytes = Base64.getDecoder().decode(pdfBase64);
 

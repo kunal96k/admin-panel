@@ -37,7 +37,7 @@ public class ForgotPasswordService {
      */
     @Transactional
     public boolean processForgotPassword(String email) {
-        log.info("🔐 Processing forgot password request for email: {}", email);
+        log.info("[AUTH] Processing forgot password request for email: {}", email);
 
         try {
             // Find user by employee email
@@ -45,13 +45,13 @@ public class ForgotPasswordService {
                     .orElse(null);
 
             if (user == null) {
-                log.warn("⚠️ Forgot password attempt for non-existent user email: {}", email);
+                log.warn("[WARN] Forgot password attempt for non-existent user email: {}", email);
                 return false;
             }
 
             // Verify if user's role is SUPER_ADMIN
             if (user.getRole() == null || !"SUPER_ADMIN".equalsIgnoreCase(user.getRole().getRoleTitle())) {
-                log.warn("⚠️ Unauthorized forgot password attempt (not a SUPER_ADMIN) for email: {}", email);
+                log.warn("[WARN] Unauthorized forgot password attempt (not a SUPER_ADMIN) for email: {}", email);
                 return false;
             }
 
@@ -65,11 +65,11 @@ public class ForgotPasswordService {
             // Send password email with new temporary password
             sendPasswordEmail(user, tempPassword);
 
-            log.info("✅ Password successfully reset and sent to super admin: {}", email);
+            log.info("[OK] Password successfully reset and sent to super admin: {}", email);
             return true;
 
         } catch (Exception e) {
-            log.error("❌ Error processing forgot password: {}", e.getMessage(), e);
+            log.error("[FAIL] Error processing forgot password: {}", e.getMessage(), e);
             return false;
         }
     }
@@ -130,9 +130,9 @@ public class ForgotPasswordService {
                     htmlContent
             );
 
-            log.info("✅ Password reset email sent successfully");
+            log.info("[OK] Password reset email sent successfully");
         } catch (Exception e) {
-            log.error("❌ Failed to send password reset email: {}", e.getMessage(), e);
+            log.error("[FAIL] Failed to send password reset email: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to send email", e);
         }
     }
@@ -161,7 +161,7 @@ public class ForgotPasswordService {
                 "<body>" +
                 "    <div class='container'>" +
                 "        <div class='header'>" +
-                "            <h1>🔑 Password Reset Request</h1>" +
+                "            <h1>[KEY] Password Reset Request</h1>" +
                 "        </div>" +
                 "        <div class='content'>" +
                 "            <p>Dear <strong>" + name + "</strong>,</p>" +
@@ -171,7 +171,7 @@ public class ForgotPasswordService {
                 "                <p><strong>Password:</strong> " + password + "</p>" +
                 "            </div>" +
                 "            <div class='warning'>" +
-                "                <p><strong>⚠️ Security Notice:</strong></p>" +
+                "                <p><strong>[WARN] Security Notice:</strong></p>" +
                 "                <p>For your security, please change this password immediately after logging in.</p>" +
                 "                <p>If you did not request this password reset, please contact the administrator immediately.</p>" +
                 "            </div>" +
@@ -180,7 +180,7 @@ public class ForgotPasswordService {
                 "            <p><strong>TechnoKraft Training & Solutions</strong></p>" +
                 "            <p>Kanchwala Avenue, College Road, Nashik, Maharashtra - 422005</p>" +
                 "            <p>Phone: +91 02532312447 | Email: info@tts.net.in</p>" +
-                "            <p>© " + java.time.Year.now().getValue() + " TechnoKraft. All rights reserved.</p>" +
+                "            <p>&copy; " + java.time.Year.now().getValue() + " TechnoKraft. All rights reserved.</p>" +
                 "        </div>" +
                 "    </div>" +
                 "</body>" +

@@ -36,7 +36,7 @@ public class CertificateSpecifications {
             // 1. Always filter by active records
             predicates.add(cb.equal(root.get("isActive"), true));
 
-            // 2. General search term — multi-token aware
+            // 2. General search term - multi-token aware
             if (hasValue(search)) {
                 String clean = search.trim().toLowerCase();
                 String[] tokens = clean.split("\\s+");
@@ -95,7 +95,7 @@ public class CertificateSpecifications {
                 predicates.add(cb.equal(root.get("status"), status.trim()));
             }
 
-            // 5. Mobile No filter — join to Admission via registrationNo
+            // 5. Mobile No filter - join to Admission via registrationNo
             if (hasValue(mobileNo)) {
                 String mob = mobileNo.trim();
                 // Subquery: find registrationNumbers in Admission where mobilePrimary or mobileSecondary matches

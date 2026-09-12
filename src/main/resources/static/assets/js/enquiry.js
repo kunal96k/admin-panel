@@ -282,7 +282,7 @@ async function loadCoursesForSearch() {
         renderCourseDropdown('');
 
     } catch (error) {
-        console.error('❌ Error loading courses:', error);
+        console.error('[ERROR] Error loading courses:', error);
         coursesCache = [];
 
         if (dropdownEmpty) {
@@ -2331,7 +2331,7 @@ async function deleteFollowUp(followUpId, enquiryId) {
         */
        async function loadAllDropdownData() {
            try {
-               console.log('🔄 Loading all dropdown data...');
+               console.log('[SYNC] Loading all dropdown data...');
 
                if (coursesCache.length > 0 && packagesCache.length > 0 && employeesCache.length > 0 && leadSourcesCache.length > 0) {
                    populateCourseSelect();
@@ -2350,7 +2350,7 @@ async function deleteFollowUp(followUpId, enquiryId) {
 
                console.log(' All dropdown data loaded');
            } catch (error) {
-               console.error('❌ Error loading dropdown data:', error);
+               console.error('[ERROR] Error loading dropdown data:', error);
                throw error; // Re-throw to be caught by openAddModal
            }
        }
@@ -2385,7 +2385,7 @@ async function deleteFollowUp(followUpId, enquiryId) {
         */
        async function loadEmployees() {
            try {
-               console.log('🔄 Loading employees...');
+               console.log('[SYNC] Loading employees...');
 
                const response = await fetch('/api/employees?page=0&size=200', {
                    method: 'GET',
@@ -2410,7 +2410,7 @@ async function deleteFollowUp(followUpId, enquiryId) {
                await populateEmployeeSelect();
 
            } catch (error) {
-               console.error('❌ Error loading employees:', error);
+               console.error('[ERROR] Error loading employees:', error);
                employeesCache = [];
 
                // Still populate dropdown (will show "No employees available")
@@ -2507,7 +2507,7 @@ async function deleteFollowUp(followUpId, enquiryId) {
                         console.log(' Current logged-in user:', currentUserName);
                     }
                 } else {
-                    console.warn('⚠️ Failed to fetch current user');
+                    console.warn('[WARN] Failed to fetch current user');
                 }
             } catch (error) {
                 console.error('Error fetching current user:', error);
@@ -2517,7 +2517,7 @@ async function deleteFollowUp(followUpId, enquiryId) {
             if (!employeesCache || employeesCache.length === 0) {
                 assignToSelect.innerHTML = '<option value="">-- No Employees Available --</option>';
                 assignToSelect.disabled = false;
-                console.warn('⚠️ No employees in cache');
+                console.warn('[WARN] No employees in cache');
                 return;
             }
         
@@ -2561,7 +2561,7 @@ async function deleteFollowUp(followUpId, enquiryId) {
         
             //  Step 5: Validation - Log if current user not found
             if (currentUserName && !currentUserFound) {
-                console.warn('⚠️ Current user not found in employee list:', currentUserName);
+                console.warn('[WARN] Current user not found in employee list:', currentUserName);
                 console.log('Available employees:', employeesCache.map(e => e.employeeName || `${e.firstName} ${e.lastName}`));
             }
         
@@ -2677,7 +2677,7 @@ async function deleteFollowUp(followUpId, enquiryId) {
                 console.log(' Form data loaded successfully');
             } catch (error) {
                 Swal.close();
-                console.error('❌ Error loading form data:', error);
+                console.error('[ERROR] Error loading form data:', error);
                 showError('Failed to load form options. Please refresh and try again.');
             }
         }

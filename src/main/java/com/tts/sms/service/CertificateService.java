@@ -102,7 +102,7 @@ public class CertificateService {
     }
 
     /**
-     * Get certificates using JPA Specifications — supports multi-token name search,
+     * Get certificates using JPA Specifications - supports multi-token name search,
      * mobile number (via Admission join), issue date range, course, and status.
      */
     @Transactional(readOnly = true)
@@ -310,7 +310,7 @@ public class CertificateService {
      */
     @Transactional
     public Map<String, Object> importCertificatesFromCSV(MultipartFile file) throws IOException {
-        log.info("📥 IMPORTING: Certificates from CSV - {}", file.getOriginalFilename());
+        log.info("[IMPORT] IMPORTING: Certificates from CSV - {}", file.getOriginalFilename());
 
         List<CertificateCSVImportDTO> importData = csvService.parseCertificatesCSV(file);
         int successCount = 0;
@@ -328,7 +328,7 @@ public class CertificateService {
                 String errorMsg = String.format("Row %s (%s): %s",
                         dto.getRegistrationNo(), dto.getStudentName(), e.getMessage());
                 errorMessages.add(errorMsg);
-                log.error("❌ Error importing: {}", errorMsg);
+                log.error("[FAIL] Error importing: {}", errorMsg);
             }
         }
 
@@ -544,7 +544,7 @@ public class CertificateService {
             return result;
 
         } catch (IOException e) {
-            log.error("❌ Error generating certificate image", e);
+            log.error("[FAIL] Error generating certificate image", e);
             return null;
         }
     }

@@ -66,7 +66,7 @@ public class EnquiryMapper {
     }
 
     /**
-     * STRICT CONVERSION: DTO → Entity
+     * STRICT CONVERSION: DTO -> Entity
      * - No validation
      * - Keep all values as-is
      * - Only set defaults for truly null fields

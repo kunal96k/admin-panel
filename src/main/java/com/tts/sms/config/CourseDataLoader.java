@@ -30,11 +30,11 @@ public class CourseDataLoader {
         return args -> {
             // Check if courses already exist
             if (courseRepository.countByIsActiveTrue() > 0) {
-                log.info("✅ Courses already exist in database. Skipping data initialization.");
+                log.info("[OK] Courses already exist in database. Skipping data initialization.");
                 return;
             }
 
-            log.info("🔄 Initializing default course data...");
+            log.info("[SYNC] Initializing default course data...");
 
             List<CourseData> defaultCourses = Arrays.asList(
                     new CourseData("SPRING BOOT", 6000),
@@ -160,11 +160,11 @@ public class CourseDataLoader {
                         savedCount++;
                     }
                 } catch (Exception e) {
-                    log.error("❌ Failed to save course: {} - {}", courseData.name, e.getMessage());
+                    log.error("[FAIL] Failed to save course: {} - {}", courseData.name, e.getMessage());
                 }
             }
 
-            log.info("✅ Successfully initialized {} default courses", savedCount);
+            log.info("[OK] Successfully initialized {} default courses", savedCount);
         };
     }
 

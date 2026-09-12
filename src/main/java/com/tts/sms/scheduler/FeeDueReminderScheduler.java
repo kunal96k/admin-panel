@@ -61,7 +61,7 @@ public class FeeDueReminderScheduler {
     @Scheduled(cron = "${app.scheduling.fee-reminder.cron:0 0 11 * * ?}", zone = "Asia/Kolkata")
     public void sendDailyFeeDueReminders() {
         LocalDate targetDueDate = LocalDate.now().plusDays(5);
-        log.info("🔔 [DAILY SCHEDULER] Running automated fee due reminder for due date: {} (today + 5 days)", targetDueDate);
+        log.info("[NOTIF] [DAILY SCHEDULER] Running automated fee due reminder for due date: {} (today + 5 days)", targetDueDate);
         sendFeeRemindersForDate(targetDueDate);
     }
 
@@ -74,7 +74,7 @@ public class FeeDueReminderScheduler {
      */
     public Map<String, Object> sendFeeRemindersForDate(LocalDate targetDueDate) {
         log.info("==================================================================");
-        log.info("🔔 Processing Fee Due Reminders for Target Due Date: {}", targetDueDate);
+        log.info("[NOTIF] Processing Fee Due Reminders for Target Due Date: {}", targetDueDate);
         log.info("==================================================================");
 
         Map<String, Object> result = new HashMap<>();
@@ -82,7 +82,7 @@ public class FeeDueReminderScheduler {
 
         // Global master toggle check
         if (!systemConfigurationService.isFeeReminderEmailEnabled()) {
-            log.info("⛔ [GLOBAL DISABLED] Automated fee reminder emails are globally disabled in System Configuration. Skipping execution.");
+            log.info("[DENIED] [GLOBAL DISABLED] Automated fee reminder emails are globally disabled in System Configuration. Skipping execution.");
             result.put("status", "DISABLED");
             result.put("message", "Fee reminder emails are globally disabled in system configuration.");
             result.put("sentCount", 0);
@@ -103,7 +103,7 @@ public class FeeDueReminderScheduler {
 
             // 1. Check FeeInstallments due on targetDueDate
             List<FeeInstallment> pendingInstallments = feeInstallmentRepository.findPendingInstallmentsDueOnDate(targetDueDate);
-            log.info("📋 Found {} pending installment(s) with due date = {}", pendingInstallments.size(), targetDueDate);
+            log.info("[INFO] Found {} pending installment(s) with due date = {}", pendingInstallments.size(), targetDueDate);
 
             for (FeeInstallment installment : pendingInstallments) {
                 String regNo = installment.getRegistrationNumber();
@@ -138,7 +138,7 @@ public class FeeDueReminderScheduler {
 
             // 2. Check Fees table for students whose primary dueDate is targetDueDate
             List<Fees> pendingFees = feesRepository.findPendingFeesDueOnDate(targetDueDate);
-            log.info("📋 Found {} pending fee record(s) with due date = {}", pendingFees.size(), targetDueDate);
+            log.info("[INFO] Found {} pending fee record(s) with due date = {}", pendingFees.size(), targetDueDate);
 
             for (Fees fees : pendingFees) {
                 String regNo = fees.getRegistrationNumber();
@@ -158,7 +158,7 @@ public class FeeDueReminderScheduler {
                 }
             }
 
-            log.info("🎯 Total unique student(s) eligible for 5-day fee reminder: {}", reminderMap.size());
+            log.info("[TARGET] Total unique student(s) eligible for 5-day fee reminder: {}", reminderMap.size());
 
             // 3. Process each eligible student
             for (StudentReminderInfo info : reminderMap.values()) {
@@ -167,7 +167,7 @@ public class FeeDueReminderScheduler {
                 // Fetch student admission details
                 Admission admission = admissionRepository.findByRegistrationNumberAndIsDeletedFalse(regNo);
                 if (admission == null) {
-                    log.warn("⚠️ Admission record not found for registration number: {}. Skipping.", regNo);
+                    log.warn("[WARN] Admission record not found for registration number: {}. Skipping.", regNo);
                     skippedNoAdmissionCount++;
                     skippedStudents.add(regNo + " (No Admission Record)");
                     continue;
@@ -175,7 +175,7 @@ public class FeeDueReminderScheduler {
 
                 // Individual student toggle check: do not send if disabled for this student
                 if (!admission.isFeeReminderEmailEnabled()) {
-                    log.info("ℹ️ [INDIVIDUAL DISABLED] Fee reminder emails disabled for student: {} ({}) - Skipping email notification",
+                    log.info("[INFO] [INDIVIDUAL DISABLED] Fee reminder emails disabled for student: {} ({}) - Skipping email notification",
                             admission.getFullName(), regNo);
                     skippedDisabledCount++;
                     skippedStudents.add(regNo + " (" + admission.getFullName() + " - Individually Disabled)");
@@ -185,7 +185,7 @@ public class FeeDueReminderScheduler {
                 // Student category check: ONLY 'NEW_STUDENT' and 'PURSUING' are eligible
                 String studentCategory = admission.getStudentCategory();
                 if (!isEligibleCategory(studentCategory)) {
-                    log.info("ℹ️ [CATEGORY SKIPPED] Student: {} ({}) has category '{}' (only NEW_STUDENT / PURSUING eligible) - Skipping email reminder",
+                    log.info("[INFO] [CATEGORY SKIPPED] Student: {} ({}) has category '{}' (only NEW_STUDENT / PURSUING eligible) - Skipping email reminder",
                             admission.getFullName(), regNo, studentCategory);
                     skippedNonEligibleCategoryCount++;
                     skippedStudents.add(regNo + " (" + admission.getFullName() + " - Ineligible Category: " + studentCategory + ")");
@@ -202,7 +202,7 @@ public class FeeDueReminderScheduler {
 
                 // If no email present in admission, DO NOT send email to any account
                 if (recipientEmail == null || recipientEmail.isEmpty() || !recipientEmail.contains("@")) {
-                    log.info("ℹ️ [SKIPPED] No email provided in admission for student: {} ({}) - Skipping email notification",
+                    log.info("[INFO] [SKIPPED] No email provided in admission for student: {} ({}) - Skipping email notification",
                             admission.getFullName(), regNo);
                     skippedNoEmailCount++;
                     skippedStudents.add(regNo + " (" + admission.getFullName() + " - No Email)");
@@ -258,7 +258,7 @@ public class FeeDueReminderScheduler {
 
                 sentCount++;
                 sentToEmails.add(regNo + " -> " + recipientEmail + " (" + studentName + ", ₹" + info.getDueAmount() + ")");
-                log.info("✅ Queued 5-day fee reminder email to: {} for student: {} ({}), Due Amount: ₹{}",
+                log.info("[OK] Queued 5-day fee reminder email to: {} for student: {} ({}), Due Amount: ₹{}",
                         recipientEmail, studentName, regNo, info.getDueAmount());
             }
 
@@ -272,11 +272,11 @@ public class FeeDueReminderScheduler {
             result.put("sentDetails", sentToEmails);
             result.put("skippedDetails", skippedStudents);
 
-            log.info("🎉 Fee reminder execution finished. Sent: {}, Skipped (No email): {}, Skipped (No admission): {}, Skipped (Individually disabled): {}, Skipped (Ineligible category): {}",
+            log.info("[SUCCESS] Fee reminder execution finished. Sent: {}, Skipped (No email): {}, Skipped (No admission): {}, Skipped (Individually disabled): {}, Skipped (Ineligible category): {}",
                     sentCount, skippedNoEmailCount, skippedNoAdmissionCount, skippedDisabledCount, skippedNonEligibleCategoryCount);
 
         } catch (Exception e) {
-            log.error("❌ Error during fee due reminder scheduler execution: {}", e.getMessage(), e);
+            log.error("[FAIL] Error during fee due reminder scheduler execution: {}", e.getMessage(), e);
             result.put("status", "ERROR");
             result.put("error", e.getMessage());
         }

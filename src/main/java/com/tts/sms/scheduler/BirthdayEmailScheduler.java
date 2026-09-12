@@ -40,17 +40,17 @@ public class BirthdayEmailScheduler {
             int todayMonth = today.getMonthValue();
             int todayDay = today.getDayOfMonth();
 
-            log.info("📅 Checking for birthdays on: {}-{}", todayMonth, todayDay);
+            log.info("[DATE] Checking for birthdays on: {}-{}", todayMonth, todayDay);
 
             // Find all employees with birthdays today
             List<Employee> birthdayEmployees = employeeRepository.findEmployeesWithBirthdayToday(todayMonth, todayDay);
 
             if (birthdayEmployees.isEmpty()) {
-                log.info("ℹ️ No birthdays today");
+                log.info("[INFO] No birthdays today");
                 return;
             }
 
-            log.info("🎉 Found {} employee(s) with birthday today", birthdayEmployees.size());
+            log.info("[SUCCESS] Found {} employee(s) with birthday today", birthdayEmployees.size());
 
             // Send birthday wishes to each employee
             for (Employee employee : birthdayEmployees) {
@@ -59,10 +59,10 @@ public class BirthdayEmailScheduler {
                             employee.getEmailId(),
                             employee.getEmployeeName()
                     );
-                    log.info("✅ Birthday wishes sent to: {} ({})",
+                    log.info("[OK] Birthday wishes sent to: {} ({})",
                             employee.getEmployeeName(), employee.getEmailId());
                 } catch (Exception e) {
-                    log.error("❌ Failed to send birthday wishes to {}: {}",
+                    log.error("[FAIL] Failed to send birthday wishes to {}: {}",
                             employee.getEmployeeName(), e.getMessage());
                 }
             }
@@ -70,7 +70,7 @@ public class BirthdayEmailScheduler {
             log.info(" Birthday email scheduler completed successfully");
 
         } catch (Exception e) {
-            log.error("❌ Error in birthday email scheduler: {}", e.getMessage(), e);
+            log.error("[FAIL] Error in birthday email scheduler: {}", e.getMessage(), e);
         }
     }
 

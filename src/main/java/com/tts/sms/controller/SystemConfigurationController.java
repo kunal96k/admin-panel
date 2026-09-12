@@ -41,11 +41,11 @@ public class SystemConfigurationController {
         LocalDate cutoffDate = LocalDate.parse(dateStr);
         String username = authentication.getName();
 
-        log.info("📅 SUPER_ADMIN {} changing cutoff date to: {}", username, cutoffDate);
+        log.info("[DATE] SUPER_ADMIN {} changing cutoff date to: {}", username, cutoffDate);
 
         configService.setCutoffDate(cutoffDate, username);
 
-        log.info("🔄 Triggering mass recategorization...");
+        log.info("[SYNC] Triggering mass recategorization...");
         categoryService.recategorizeAllStudents();
 
         return ResponseEntity.ok(Map.of(
@@ -73,7 +73,7 @@ public class SystemConfigurationController {
         boolean enabled = Boolean.parseBoolean(String.valueOf(request.get("enabled")));
         String username = authentication != null ? authentication.getName() : "system";
 
-        log.info("🔔 User {} toggling fee reminder email enabled to: {}", username, enabled);
+        log.info("[NOTIF] User {} toggling fee reminder email enabled to: {}", username, enabled);
         configService.setFeeReminderEmailEnabled(enabled, username);
 
         return ResponseEntity.ok(Map.of(

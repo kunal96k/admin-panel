@@ -62,7 +62,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedException.class)
     public Object handleUnauthorized(UnauthorizedException ex, WebRequest request) {
-        log.warn("🚫 Unauthorized access attempt: {}", ex.getMessage());
+        log.warn("[BLOCKED] Unauthorized access attempt: {}", ex.getMessage());
         return handleResponse(
                 HttpStatus.FORBIDDEN,
                 "Access Denied",
@@ -231,7 +231,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<Map<String, Object>> handleMethodNotSupported(
             org.springframework.web.HttpRequestMethodNotSupportedException ex, WebRequest request) {
-        log.warn("⚠️ Method not supported: {} (Allowed methods: {})", ex.getMethod(), ex.getSupportedHttpMethods());
+        log.warn("[WARN] Method not supported: {} (Allowed methods: {})", ex.getMethod(), ex.getSupportedHttpMethods());
 
         Map<String, Object> response = new HashMap<>();
         response.put("timestamp", LocalDateTime.now().toString());
@@ -249,7 +249,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<Map<String, Object>> handleMediaTypeNotSupported(
             org.springframework.web.HttpMediaTypeNotSupportedException ex, WebRequest request) {
-        log.warn("⚠️ Media type not supported: {}", ex.getContentType());
+        log.warn("[WARN] Media type not supported: {}", ex.getContentType());
 
         Map<String, Object> response = new HashMap<>();
         response.put("timestamp", LocalDateTime.now().toString());
@@ -267,7 +267,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
     public ResponseEntity<Map<String, Object>> handleMissingParams(
             org.springframework.web.bind.MissingServletRequestParameterException ex, WebRequest request) {
-        log.warn("⚠️ Missing request parameter: {}", ex.getParameterName());
+        log.warn("[WARN] Missing request parameter: {}", ex.getParameterName());
 
         Map<String, Object> response = new HashMap<>();
         response.put("timestamp", LocalDateTime.now().toString());

@@ -53,7 +53,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        log.info("Configuring security with FULL CSRF protection…");
+        log.info("Configuring security with FULL CSRF protection...");
 
         // CSRF Token handler and cookie repository
         CsrfTokenRequestAttributeHandler csrfHandler = new CsrfTokenRequestAttributeHandler();
@@ -70,7 +70,7 @@ public class SecurityConfig {
         boolean isCookieSecure = Boolean
                 .parseBoolean(environment.getProperty("server.servlet.session.cookie.secure", "false"));
 
-        log.info("🔒 CSRF Secure Cookie: {}", isCookieSecure);
+        log.info("[SECURE] CSRF Secure Cookie: {}", isCookieSecure);
         csrfRepo.setSecure(isCookieSecure);
 
         // Also ensure JSESSIONID follows the same pattern
@@ -211,13 +211,13 @@ public class SecurityConfig {
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        log.info("═════════════════════════════ CORS CONFIGURATION ═════════════════════════════");
-        log.info("🌐 Configured Allowed Origins: {}", allowedOrigins);
+        log.info("============================= CORS CONFIGURATION =============================");
+        log.info("[CORS] Configured Allowed Origins: {}", allowedOrigins);
 
         CorsConfiguration configuration = new CorsConfiguration();
 
         if ("*".equals(allowedOrigins) || allowedOrigins.isEmpty()) {
-            log.info("⚠️  CORS: Allowing all origin patterns (*)");
+            log.info("[WARN] CORS: Allowing all origin patterns (*)");
             configuration.addAllowedOriginPattern("*");
         } else {
             String[] origins = allowedOrigins.split(",");
@@ -230,7 +230,7 @@ public class SecurityConfig {
                 }
             }
             if (originList.contains("*")) {
-                log.info("⚠️  CORS: Allowed origins includes wildcard (*)");
+                log.info("[WARN] CORS: Allowed origins includes wildcard (*)");
                 configuration.addAllowedOriginPattern("*");
             } else {
                 configuration.setAllowedOriginPatterns(originList);
@@ -247,7 +247,7 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
 
-        log.info("═════════════════════════════════════════════════════════════════════════════");
+        log.info("=============================================================================");
         return source;
     }
 
