@@ -984,7 +984,7 @@
                         <p class="mb-2"><strong>Student:</strong> ${studentName}</p>
                         <p class="text-muted small mb-0">
                             ${targetState
-                                ? 'Are you sure you want to <strong>enable</strong> automated fee due reminder emails for this student? (Emails are sent 5 days before due date).'
+                                ? 'Are you sure you want to <strong>enable</strong> automated fee due reminder emails for this student? (Emails are sent daily: 5, 4, 3, 2, 1 days before &amp; on due date).'
                                 : 'Are you sure you want to <strong>disable</strong> automated fee due reminder emails for this student? No reminder emails will be sent to this student.'}
                         </p>
                     </div>

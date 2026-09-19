@@ -917,7 +917,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                     <i class="bi bi-bell-fill me-2 text-primary"></i>Fee Due Date Reminder Emails
                                                 </h6>
                                                 <p class="text-muted small mb-0">
-                                                    Automatically send daily reminder emails to <strong>New Student</strong> and <strong>Pursuing</strong> students 5 days before their installment due dates (runs daily at 11:00 AM IST).
+                                                    Automatically send daily countdown reminder emails (5, 4, 3, 2, 1 days before &amp; on due date) to <strong>New Student</strong> and <strong>Pursuing</strong> students for their installment due dates (runs daily at 11:00 AM IST).
                                                 </p>
                                             </div>
                                             <div class="form-check form-switch fs-4 mb-0">
@@ -926,7 +926,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </div>
                                         <div class="mt-2 pt-2 border-top d-flex align-items-center small">
                                             <span class="badge bg-success me-2" id="globalFeeReminderBadge">Active</span>
-                                            <span class="text-muted" id="globalFeeReminderStatusText">Automated 5-day reminders are currently enabled globally.</span>
+                                            <span class="text-muted" id="globalFeeReminderStatusText">Automated daily countdown reminders (5 days to due date) are currently enabled globally.</span>
                                             <span id="globalFeeReminderSpinner" class="spinner-border spinner-border-sm text-primary ms-2 d-none" role="status"></span>
                                         </div>
                                     </div>
@@ -974,7 +974,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </li>
                                         <li class="mb-2">
                                             <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                            Automated 5-Day Fee Due Email Reminders
+                                            Automated Daily Fee Due Countdown Reminders (5 Days to Due Date)
                                         </li>
                                     </ul>
                                 </div>
@@ -993,16 +993,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                             SMS & Email Automation - <span class="badge bg-warning text-dark">Coming Soon</span>
                                         </li>
                                         <li class="mb-2">
-                                            <i class="bi bi-hourglass-split text-warning me-2"></i>
-                                            Online Exam Module - <span class="badge bg-warning text-dark">Coming Soon</span>
+                                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                            Online Exam Module - <span class="badge bg-success">Completed</span>
                                         </li>
                                         <li class="mb-2">
                                             <i class="bi bi-hourglass-split text-warning me-2"></i>
                                             Student Mobile App - <span class="badge bg-warning text-dark">Coming Soon</span>
                                         </li>
                                         <li class="mb-2">
-                                            <i class="bi bi-hourglass-split text-warning me-2"></i>
-                                            Attendance Management - <span class="badge bg-warning text-dark">Coming Soon</span>
+                                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                            Attendance Management - <span class="badge bg-success">Completed</span>
                                         </li>
                                         <li class="mb-2">
                                             <i class="bi bi-hourglass-split text-warning me-2"></i>
@@ -1231,7 +1231,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (enabled) {
             badge.className = 'badge bg-success me-2';
             badge.textContent = 'Active';
-            statusText.textContent = 'Automated 5-day reminders are currently enabled globally.';
+            statusText.textContent = 'Automated daily countdown reminders (5 days to due date) are currently enabled globally.';
         } else {
             badge.className = 'badge bg-danger me-2';
             badge.textContent = 'Disabled';

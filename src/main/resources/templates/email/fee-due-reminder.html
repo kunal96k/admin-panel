@@ -247,16 +247,31 @@
             Dear <strong th:text="${studentName}" style="color: #1e293b;">Student Name</strong>,
         </p>
 
-        <p style="margin: 0 0 18px 0; color: #333333; font-size: 14px; line-height: 1.6;">
-            This is a friendly reminder that your upcoming course fee installment is scheduled for payment in <strong style="color: #dc2626;">5 days</strong>.
+        <!-- Dynamic countdown message -->
+        <p th:if="${isDueToday}" style="margin: 0 0 18px 0; color: #333333; font-size: 14px; line-height: 1.6;">
+            This is your <strong style="color: #dc2626;">final reminder</strong> that your course fee installment is scheduled for payment <strong style="color: #dc2626;">today</strong>. Please clear your dues at the earliest to prevent any disruption in your classes.
+        </p>
+        <p th:if="${isTomorrow}" style="margin: 0 0 18px 0; color: #333333; font-size: 14px; line-height: 1.6;">
+            This is an <strong style="color: #ea580c;">urgent reminder</strong> that your upcoming course fee installment is scheduled for payment <strong style="color: #dc2626;">tomorrow</strong>.
+        </p>
+        <p th:if="${!isDueToday and !isTomorrow}" style="margin: 0 0 18px 0; color: #333333; font-size: 14px; line-height: 1.6;">
+            This is a friendly reminder that your upcoming course fee installment is scheduled for payment in <strong style="color: #dc2626;" th:text="${daysRemaining != null ? daysRemaining + ' days' : '5 days'}">5 days</strong>.
         </p>
 
         <!-- Amount Highlight Card -->
         <div class="amount-highlight" style="background: linear-gradient(135deg, #f8f9ff 0%, #eef2ff 100%); border: 2px solid #e0e7ff; border-radius: 10px; padding: 20px; text-align: center; margin: 25px 0;">
             <div class="label" style="font-size: 13px; color: #4338ca; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 5px;">Installment Amount Due</div>
             <div class="value" style="font-size: 30px; font-weight: 700; color: #dc2626; letter-spacing: 0.5px;" th:text="${dueAmount}">₹0.00</div>
-            <div class="due-pill" style="display: inline-block; margin-top: 8px; padding: 4px 14px; background-color: #fee2e2; color: #991b1b; border-radius: 20px; font-size: 12px; font-weight: 600;">
-                Due on: <span th:text="${dueDate}">Date</span> (In 5 Days)
+            
+            <!-- Dynamic countdown pill -->
+            <div class="due-pill" th:if="${isDueToday}" style="display: inline-block; margin-top: 8px; padding: 6px 16px; background-color: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 20px; font-size: 13px; font-weight: 700;">
+                ⚠️ Due Today: <span th:text="${dueDate}">Date</span> (Final Reminder)
+            </div>
+            <div class="due-pill" th:if="${isTomorrow}" style="display: inline-block; margin-top: 8px; padding: 5px 15px; background-color: #fff7ed; border: 1px solid #ffedd5; color: #c2410c; border-radius: 20px; font-size: 12px; font-weight: 600;">
+                ⏰ Due Tomorrow: <span th:text="${dueDate}">Date</span> (1 Day Left)
+            </div>
+            <div class="due-pill" th:if="${!isDueToday and !isTomorrow}" style="display: inline-block; margin-top: 8px; padding: 4px 14px; background-color: #fee2e2; color: #991b1b; border-radius: 20px; font-size: 12px; font-weight: 600;">
+                Due on: <span th:text="${dueDate}">Date</span> <span th:if="${daysRemaining != null}">(In <span th:text="${daysRemaining}">5</span> Days)</span>
             </div>
         </div>
 

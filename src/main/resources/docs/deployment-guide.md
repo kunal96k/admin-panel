@@ -208,3 +208,11 @@ sudo nginx -t
 # Reload configuration gracefully
 sudo systemctl reload nginx
 ```
+
+---
+
+## 9. SSL / TLS Certificate Renewal & Maintenance
+
+For instructions on checking expiry, manual renewal, automated timers, and troubleshooting Let's Encrypt certificates for `team.ttsnashik.com` and `finance.ttsnashik.com`, refer to the dedicated guide:
+* [ssl-renewal-guide.md](file:///c:/Users/sidpe/OneDrive/Music/Desktop/tts-sms/tts-sms/sms/src/main/resources/docs/ssl-renewal-guide.md)
+

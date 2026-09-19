@@ -245,7 +245,7 @@
                 margin-left: 0 !important;
                 width: 100vw;
                 max-width: 100vw;
-                overflow-x: hidden;
+                overflow-x: clip;
             }
 
             /* Topbar full width */
@@ -506,6 +506,24 @@
         /* Alternative: Make backdrop non-blocking */
         #cutoffDateModal~.modal-backdrop {
             pointer-events: none !important;
+        }
+
+        /* ========================================
+           FIXED/STICKY TOPBAR ON SCROLL
+           Maintains exact original position, size & width
+           ======================================== */
+        .main-wrapper {
+            overflow: visible !important;
+        }
+
+        .topbar,
+        header.topbar,
+        .topbar.is-fixed {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 1020 !important;
+            width: 100% !important;
+            background: #ffffff !important;
         }
     </style>
 

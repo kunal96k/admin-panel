@@ -291,7 +291,7 @@ public class EmailTemplateService {
     }
 
     /**
-     * Send fee due reminder email (5 days in advance)
+     * Send fee due reminder email (backward-compatible 8-parameter version)
      */
     @Async("emailTaskExecutor")
     public void sendFeeDueReminderEmail(
@@ -303,12 +303,36 @@ public class EmailTemplateService {
             Double dueAmount,
             LocalDate dueDate,
             Double totalPendingFees) {
+        Integer daysRemaining = null;
+        if (dueDate != null) {
+            daysRemaining = (int) java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), dueDate);
+        }
+        sendFeeDueReminderEmail(toEmail, studentName, registrationNumber, courseName, installmentNumber, dueAmount, dueDate, totalPendingFees, daysRemaining);
+    }
 
-        log.info(" [ASYNC] Sending fee due reminder email to: {} for regNo: {}", toEmail, registrationNumber);
+    /**
+     * Send fee due reminder email with countdown (5, 4, 3, 2, 1 days before & due date final reminder)
+     */
+    @Async("emailTaskExecutor")
+    public void sendFeeDueReminderEmail(
+            String toEmail,
+            String studentName,
+            String registrationNumber,
+            String courseName,
+            Integer installmentNumber,
+            Double dueAmount,
+            LocalDate dueDate,
+            Double totalPendingFees,
+            Integer daysRemaining) {
+
+        log.info("📧 [ASYNC] Sending fee due reminder email to: {} for regNo: {}, daysRemaining: {}", toEmail, registrationNumber, daysRemaining);
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            boolean isDueToday = daysRemaining != null && daysRemaining == 0;
+            boolean isTomorrow = daysRemaining != null && daysRemaining == 1;
 
             Context context = new Context();
             context.setVariable("studentName", studentName != null ? studentName : "Student");
@@ -321,22 +345,42 @@ public class EmailTemplateService {
             context.setVariable("totalDue", totalPendingFees != null && totalPendingFees > 0 ?
                     String.format("₹%,.2f", totalPendingFees) : null);
             context.setVariable("year", java.time.Year.now().getValue());
+            context.setVariable("daysRemaining", daysRemaining);
+            context.setVariable("isDueToday", isDueToday);
+            context.setVariable("isTomorrow", isTomorrow);
+
+            String countdownNotice;
+            String subject;
+            if (isDueToday) {
+                subject = "Final Fee Due Reminder - Installment Due Today - TechnoKraft";
+                countdownNotice = "due today";
+            } else if (isTomorrow) {
+                subject = "Urgent Fee Due Reminder - Installment Due Tomorrow - TechnoKraft";
+                countdownNotice = "tomorrow";
+            } else if (daysRemaining != null && daysRemaining > 1) {
+                subject = "Fee Due Reminder - Installment Due in " + daysRemaining + " Days - TechnoKraft";
+                countdownNotice = "in " + daysRemaining + " days";
+            } else {
+                subject = "Fee Due Reminder - Installment Due Date Notice - TechnoKraft";
+                countdownNotice = "soon";
+            }
+            context.setVariable("countdownNotice", countdownNotice);
 
             String htmlContent = templateEngine.process("email/fee-due-reminder", context);
 
             helper.setFrom(fromEmail);
             helper.setTo(toEmail);
-            helper.setSubject("Fee Due Reminder - Installment Due in 5 Days - TechnoKraft");
+            helper.setSubject(subject);
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
 
-            log.info(" Fee due reminder email sent successfully to: {} ({})", toEmail, registrationNumber);
+            log.info("✅ Fee due reminder email ({}) sent successfully to: {} ({})", subject, toEmail, registrationNumber);
 
         } catch (MessagingException e) {
-            log.error(" Failed to send fee due reminder email to: {} - {}", toEmail, e.getMessage(), e);
+            log.error("❌ Failed to send fee due reminder email to: {} - {}", toEmail, e.getMessage(), e);
         } catch (Exception e) {
-            log.error(" Unexpected error sending fee due reminder email to: {} - {}", toEmail, e.getMessage(), e);
+            log.error("❌ Unexpected error sending fee due reminder email to: {} - {}", toEmail, e.getMessage(), e);
         }
     }
 }

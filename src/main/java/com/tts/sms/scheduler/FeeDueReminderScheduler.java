@@ -18,11 +18,13 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
  * Scheduler to send automated daily fee due reminders to students
- * exactly 5 days before their installment/fee due date.
+ * with countdown: 5, 4, 3, 2, 1 days before installment due date,
+ * and a final reminder on the due date itself.
  *
  * Runs daily at 11:00 AM IST (Asia/Kolkata).
  */
@@ -52,37 +54,105 @@ public class FeeDueReminderScheduler {
         private Double dueAmount;
         private LocalDate dueDate;
         private Double totalDue;
+        private Integer daysRemaining;
     }
 
     /**
-     * Scheduled job running daily at 11:00 AM Asia/Kolkata (Indian Standard Time)
-     * Checks for fee installments and fees due exactly 5 days from today
+     * Scheduled job running daily at 11:00 AM Asia/Kolkata (Indian Standard Time).
+     * Executes daily countdown reminders for installments due in 5, 4, 3, 2, 1 days,
+     * and on the due date itself (final reminder).
      */
     @Scheduled(cron = "${app.scheduling.fee-reminder.cron:0 0 11 * * ?}", zone = "Asia/Kolkata")
     public void sendDailyFeeDueReminders() {
-        LocalDate targetDueDate = LocalDate.now().plusDays(5);
-        log.info("[NOTIF] [DAILY SCHEDULER] Running automated fee due reminder for due date: {} (today + 5 days)", targetDueDate);
-        sendFeeRemindersForDate(targetDueDate);
+        log.info("🔔 [DAILY SCHEDULER] Running automated daily fee due countdown reminders (5, 4, 3, 2, 1 days before & due date)...");
+        sendDailyCountdownFeeDueReminders(LocalDate.now());
+    }
+
+    /**
+     * Executes countdown reminders from 5 days before down to 0 days (due today).
+     *
+     * @param today base date for countdown (defaults to LocalDate.now())
+     * @return summary of countdown run across all days
+     */
+    public Map<String, Object> sendDailyCountdownFeeDueReminders(LocalDate today) {
+        if (today == null) {
+            today = LocalDate.now();
+        }
+        log.info("==================================================================");
+        log.info("🔔 [COUNTDOWN] Executing Daily Fee Due Reminders for Countdown 5..0 days from: {}", today);
+        log.info("==================================================================");
+
+        Map<String, Object> overallResult = new LinkedHashMap<>();
+        overallResult.put("executionDate", today.toString());
+
+        if (!systemConfigurationService.isFeeReminderEmailEnabled()) {
+            log.info("🚫 [GLOBAL DISABLED] Automated fee reminder emails are globally disabled in System Configuration. Skipping execution.");
+            overallResult.put("status", "DISABLED");
+            overallResult.put("message", "Fee reminder emails are globally disabled in system configuration.");
+            overallResult.put("totalSent", 0);
+            return overallResult;
+        }
+
+        int totalSentAcrossAllDays = 0;
+        List<Map<String, Object>> dailyBreakdown = new ArrayList<>();
+
+        // Countdown from 5 days before, 4, 3, 2, 1 down to 0 (Due Today)
+        for (int daysRemaining = 5; daysRemaining >= 0; daysRemaining--) {
+            LocalDate targetDueDate = today.plusDays(daysRemaining);
+            log.info("📅 [COUNTDOWN DAY] Checking {} days remaining (Due Date: {})", daysRemaining, targetDueDate);
+            Map<String, Object> dayResult = sendFeeRemindersForDate(targetDueDate, daysRemaining);
+            dailyBreakdown.add(dayResult);
+            int sentForDay = (int) dayResult.getOrDefault("sentCount", 0);
+            totalSentAcrossAllDays += sentForDay;
+        }
+
+        overallResult.put("status", "SUCCESS");
+        overallResult.put("totalSent", totalSentAcrossAllDays);
+        overallResult.put("breakdown", dailyBreakdown);
+
+        log.info("🏁 [COUNTDOWN COMPLETED] Finished daily countdown fee reminders. Total emails queued: {}", totalSentAcrossAllDays);
+        return overallResult;
     }
 
     /**
      * Sends fee due reminder emails for any given target date.
-     * Can be invoked manually from REST endpoints for testing or on-demand execution.
+     * Calculates daysRemaining relative to today.
      *
-     * @param targetDueDate the due date to check (normally today + 5 days)
+     * @param targetDueDate the due date to check
      * @return Map containing execution statistics
      */
     public Map<String, Object> sendFeeRemindersForDate(LocalDate targetDueDate) {
+        Integer daysRemaining = null;
+        if (targetDueDate != null) {
+            daysRemaining = (int) ChronoUnit.DAYS.between(LocalDate.now(), targetDueDate);
+        }
+        return sendFeeRemindersForDate(targetDueDate, daysRemaining);
+    }
+
+    /**
+     * Sends fee due reminder emails for a target due date with an explicit daysRemaining offset.
+     *
+     * @param targetDueDate the due date to check
+     * @param daysRemaining days remaining until due date (5, 4, 3, 2, 1, 0)
+     * @return Map containing execution statistics
+     */
+    public Map<String, Object> sendFeeRemindersForDate(LocalDate targetDueDate, Integer daysRemaining) {
+        String label = (daysRemaining != null && daysRemaining == 0)
+                ? "DUE TODAY (FINAL REMINDER)"
+                : (daysRemaining != null ? daysRemaining + " Days Left" : "Notice");
+
         log.info("==================================================================");
-        log.info("[NOTIF] Processing Fee Due Reminders for Target Due Date: {}", targetDueDate);
+        log.info("📧 [NOTIF] Processing Fee Due Reminders for Due Date: {} [{}]", targetDueDate, label);
         log.info("==================================================================");
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("targetDueDate", targetDueDate.toString());
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("targetDueDate", targetDueDate != null ? targetDueDate.toString() : null);
+        result.put("daysRemaining", daysRemaining);
+        result.put("reminderLabel", label);
 
         // Global master toggle check
         if (!systemConfigurationService.isFeeReminderEmailEnabled()) {
-            log.info("[DENIED] [GLOBAL DISABLED] Automated fee reminder emails are globally disabled in System Configuration. Skipping execution.");
+            log.info("🚫 [GLOBAL DISABLED] Automated fee reminder emails are globally disabled in System Configuration. Skipping execution.");
             result.put("status", "DISABLED");
             result.put("message", "Fee reminder emails are globally disabled in system configuration.");
             result.put("sentCount", 0);
@@ -128,6 +198,7 @@ public class FeeDueReminderScheduler {
                             .installmentNumber(installment.getInstallmentNumber())
                             .dueAmount(installmentDue)
                             .dueDate(installment.getDueDate())
+                            .daysRemaining(daysRemaining != null ? daysRemaining : (int) ChronoUnit.DAYS.between(LocalDate.now(), targetDueDate))
                             .build());
                 } else {
                     // Accumulate if student has multiple installments on the same date
@@ -154,11 +225,12 @@ public class FeeDueReminderScheduler {
                             .dueAmount(fees.getFeesDue())
                             .dueDate(fees.getDueDate())
                             .totalDue(fees.getFeesDue())
+                            .daysRemaining(daysRemaining != null ? daysRemaining : (int) ChronoUnit.DAYS.between(LocalDate.now(), targetDueDate))
                             .build());
                 }
             }
 
-            log.info("[TARGET] Total unique student(s) eligible for 5-day fee reminder: {}", reminderMap.size());
+            log.info("🎯 [TARGET] Found {} unique student(s) with fee due date: {} [{}]", reminderMap.size(), targetDueDate, label);
 
             // 3. Process each eligible student
             for (StudentReminderInfo info : reminderMap.values()) {
@@ -244,7 +316,7 @@ public class FeeDueReminderScheduler {
                             .orElse(info.getDueAmount());
                 }
 
-                // Send the email asynchronously
+                // Send the email asynchronously with countdown days remaining
                 emailTemplateService.sendFeeDueReminderEmail(
                         recipientEmail,
                         studentName,
@@ -253,13 +325,17 @@ public class FeeDueReminderScheduler {
                         info.getInstallmentNumber(),
                         info.getDueAmount(),
                         info.getDueDate(),
-                        totalDue
+                        totalDue,
+                        info.getDaysRemaining()
                 );
 
                 sentCount++;
-                sentToEmails.add(regNo + " -> " + recipientEmail + " (" + studentName + ", ₹" + info.getDueAmount() + ")");
-                log.info("[OK] Queued 5-day fee reminder email to: {} for student: {} ({}), Due Amount: ₹{}",
-                        recipientEmail, studentName, regNo, info.getDueAmount());
+                String reminderType = (info.getDaysRemaining() != null && info.getDaysRemaining() == 0)
+                        ? "DUE TODAY (FINAL REMINDER)"
+                        : (info.getDaysRemaining() + " days before");
+                sentToEmails.add(regNo + " -> " + recipientEmail + " (" + studentName + ", ₹" + info.getDueAmount() + ", " + reminderType + ")");
+                log.info("✅ Queued fee reminder email [{}] to: {} for student: {} ({}), Due Amount: ₹{}",
+                        reminderType, recipientEmail, studentName, regNo, info.getDueAmount());
             }
 
             result.put("status", "SUCCESS");
