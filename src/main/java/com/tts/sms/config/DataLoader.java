@@ -28,6 +28,7 @@ public class DataLoader implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final EmailTemplateService emailTemplateService;
     private final EmailTemplateRepository emailTemplateRepository;
+    private final com.tts.sms.repository.WhatsAppAuditLogRepository whatsAppAuditLogRepository;
 
     @Value("${app.superadmin.email:kunalpatil192001@gmail.com}")
     private String superAdminEmail;
@@ -45,6 +46,16 @@ public class DataLoader implements CommandLineRunner {
         loadMenus();
         loadSuperAdmin();
         loadDefaultEmailTemplates();
+        sanitizeWhatsAppAuditLogCategories();
+    }
+
+    private void sanitizeWhatsAppAuditLogCategories() {
+        try {
+            whatsAppAuditLogRepository.updateAllToUtility();
+            log.info(" Synchronized WhatsApp audit log categories to UTILITY");
+        } catch (Exception e) {
+            log.warn(" Could not synchronize WhatsApp audit log categories: {}", e.getMessage());
+        }
     }
 
     private void loadRoles() {

@@ -72,17 +72,6 @@ public class WhatsAppAuditLogService {
         return username;
     }
 
-    @jakarta.annotation.PostConstruct
-    @Transactional
-    public void sanitizeBillingCategories() {
-        try {
-            logRepository.updateAllToUtility();
-            log.info("[WHATSAPP-AUDIT] All template billing categories synchronized to UTILITY.");
-        } catch (Exception e) {
-            log.warn("[WHATSAPP-AUDIT] Could not sanitize billing categories: {}", e.getMessage());
-        }
-    }
-
     /**
      * Saves an audit log entry with independent transaction propagation.
      * Guaranteed fail-safe so it will NEVER interrupt primary business logic.
@@ -184,11 +173,6 @@ public class WhatsAppAuditLogService {
         Specification<WhatsAppAuditLog> spec = WhatsAppAuditLogSpecifications.createSpecification(
                 startDate, endDate, moduleType, status, triggerType, search);
 
-        try {
-            logRepository.updateAllToUtility();
-        } catch (Exception ignored) {
-        }
-
         Page<WhatsAppAuditLog> entityPage = logRepository.findAll(spec, pageable);
 
         return entityPage.map(e -> WhatsAppAuditLogSummaryDTO.builder()
@@ -224,13 +208,8 @@ public class WhatsAppAuditLogService {
     /**
      * Calculates KPI statistics for the selected period.
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public WhatsAppKpiStatsDTO getKpiStats(LocalDate startDate, LocalDate endDate) {
-        try {
-            logRepository.updateAllToUtility();
-        } catch (Exception ignored) {
-        }
-
         LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
         LocalDateTime endDateTime = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
 
