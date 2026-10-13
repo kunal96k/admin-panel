@@ -476,7 +476,7 @@ public class EnquiryService {
         WhatsAppAuditContext auditContext = WhatsAppAuditContext.builder()
                 .moduleType("COURSE_INFORMATION")
                 .templateName("crm_course_information")
-                .billingCategory("MARKETING")
+                .billingCategory("UTILITY")
                 .triggerType("MANUAL")
                 .triggeredByUsername(currentUsername)
                 .referenceId(enquiry.getId())

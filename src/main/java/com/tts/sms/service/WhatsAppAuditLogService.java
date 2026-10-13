@@ -72,6 +72,17 @@ public class WhatsAppAuditLogService {
         return username;
     }
 
+    @jakarta.annotation.PostConstruct
+    @Transactional
+    public void sanitizeBillingCategories() {
+        try {
+            logRepository.updateAllToUtility();
+            log.info("[WHATSAPP-AUDIT] All template billing categories synchronized to UTILITY.");
+        } catch (Exception e) {
+            log.warn("[WHATSAPP-AUDIT] Could not sanitize billing categories: {}", e.getMessage());
+        }
+    }
+
     /**
      * Saves an audit log entry with independent transaction propagation.
      * Guaranteed fail-safe so it will NEVER interrupt primary business logic.
@@ -102,17 +113,8 @@ public class WhatsAppAuditLogService {
             String moduleType = context.getModuleType() != null ? context.getModuleType() : "UNKNOWN";
             String templateName = context.getTemplateName() != null ? context.getTemplateName() : "unknown";
 
-            // Determine billing category: UTILITY vs MARKETING
-            String billingCategory = context.getBillingCategory();
-            if (billingCategory == null || billingCategory.isBlank()) {
-                if ("FEE_REMINDER".equalsIgnoreCase(moduleType) || templateName.toLowerCase().contains("fee")) {
-                    billingCategory = "UTILITY";
-                } else if ("COURSE_INFORMATION".equalsIgnoreCase(moduleType) || templateName.toLowerCase().contains("course")) {
-                    billingCategory = "MARKETING";
-                } else {
-                    billingCategory = "UTILITY";
-                }
-            }
+            // All Meta WhatsApp templates in system are registered as UTILITY
+            String billingCategory = "UTILITY";
 
             // Determine status
             String status = "FAILED";
@@ -182,13 +184,18 @@ public class WhatsAppAuditLogService {
         Specification<WhatsAppAuditLog> spec = WhatsAppAuditLogSpecifications.createSpecification(
                 startDate, endDate, moduleType, status, triggerType, search);
 
+        try {
+            logRepository.updateAllToUtility();
+        } catch (Exception ignored) {
+        }
+
         Page<WhatsAppAuditLog> entityPage = logRepository.findAll(spec, pageable);
 
         return entityPage.map(e -> WhatsAppAuditLogSummaryDTO.builder()
                 .id(e.getId())
                 .moduleType(e.getModuleType())
                 .templateName(e.getTemplateName())
-                .billingCategory(e.getBillingCategory())
+                .billingCategory("UTILITY")
                 .triggerType(e.getTriggerType())
                 .triggeredByUsername(e.getTriggeredByUsername())
                 .triggeredByEmployeeName(e.getTriggeredByEmployeeName())
@@ -217,8 +224,13 @@ public class WhatsAppAuditLogService {
     /**
      * Calculates KPI statistics for the selected period.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public WhatsAppKpiStatsDTO getKpiStats(LocalDate startDate, LocalDate endDate) {
+        try {
+            logRepository.updateAllToUtility();
+        } catch (Exception ignored) {
+        }
+
         LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
         LocalDateTime endDateTime = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
 
@@ -227,8 +239,9 @@ public class WhatsAppAuditLogService {
         long failed = logRepository.countFailedBetween(startDateTime, endDateTime);
         long blocked = logRepository.countBlockedBetween(startDateTime, endDateTime);
 
-        long utility = logRepository.countSuccessfulByCategoryBetween("UTILITY", startDateTime, endDateTime);
-        long marketing = logRepository.countSuccessfulByCategoryBetween("MARKETING", startDateTime, endDateTime);
+        // All templates in system are registered as UTILITY
+        long utility = logRepository.countSuccessfulBetween(startDateTime, endDateTime);
+        long marketing = 0;
 
         long courseInfo = logRepository.countByModuleTypeBetween("COURSE_INFORMATION", startDateTime, endDateTime);
         long feeReminder = logRepository.countByModuleTypeBetween("FEE_REMINDER", startDateTime, endDateTime);

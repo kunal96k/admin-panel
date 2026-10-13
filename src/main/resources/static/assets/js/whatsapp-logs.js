@@ -42,6 +42,7 @@
     const kpiBlockedCount = document.getElementById('kpiBlockedCount');
     const kpiUtilityCount = document.getElementById('kpiUtilityCount');
     const kpiMarketingCount = document.getElementById('kpiMarketingCount');
+    const kpiCourseInfoCount = document.getElementById('kpiCourseInfoCount');
 
     // Modal Details Elements
     const modalElement = document.getElementById('modalLogDetails');
@@ -290,6 +291,7 @@
                 if (kpiSuccessCount) kpiSuccessCount.innerText = (stats.successCount || 0).toLocaleString();
                 if (kpiFailedCount) kpiFailedCount.innerText = (stats.failedCount || 0).toLocaleString();
                 if (kpiUtilityCount) kpiUtilityCount.innerText = (stats.utilityCount || 0).toLocaleString();
+                if (kpiCourseInfoCount) kpiCourseInfoCount.innerText = (stats.courseInfoCount || 0).toLocaleString();
                 if (kpiMarketingCount) kpiMarketingCount.innerText = (stats.marketingCount || 0).toLocaleString();
 
                 if (kpiSuccessRate) {
@@ -444,14 +446,8 @@
     }
 
     function getCategoryBadge(cat) {
-        if (!cat) return '<span class="badge bg-secondary">-</span>';
-        if (cat.toUpperCase() === 'UTILITY') {
-            return `<span class="badge badge-utility"><i class="bi bi-wallet2 me-1"></i>UTILITY</span>`;
-        }
-        if (cat.toUpperCase() === 'MARKETING') {
-            return `<span class="badge badge-marketing"><i class="bi bi-megaphone me-1"></i>MARKETING</span>`;
-        }
-        return `<span class="badge bg-light text-dark border">${escapeHtml(cat)}</span>`;
+        // All WhatsApp templates across the system are registered as UTILITY
+        return `<span class="badge badge-utility"><i class="bi bi-wallet2 me-1"></i>UTILITY</span>`;
     }
 
     function getStatusBadge(status, reason) {
@@ -568,7 +564,7 @@
                 document.getElementById('detailCreatedAt').innerText = log.createdAt ? log.createdAt.replace('T', ' ') : '-';
                 document.getElementById('detailModuleType').innerText = formatModuleName(log.moduleType);
                 document.getElementById('detailTemplateName').innerText = log.templateName || '-';
-                document.getElementById('detailBillingCategory').innerText = log.billingCategory || '-';
+                document.getElementById('detailBillingCategory').innerText = 'UTILITY';
                 document.getElementById('detailTriggerType').innerText = log.triggerType || '-';
                 document.getElementById('detailTriggeredBy').innerText = `${log.triggeredByEmployeeName || ''} (${log.triggeredByUsername || 'System'})`;
 

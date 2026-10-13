@@ -37,4 +37,9 @@ public interface WhatsAppAuditLogRepository extends JpaRepository<WhatsAppAuditL
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("UPDATE WhatsAppAuditLog l SET l.billingCategory = 'UTILITY' WHERE l.billingCategory = 'MARKETING' OR l.billingCategory IS NULL")
+    int updateAllToUtility();
 }

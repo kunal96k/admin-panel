@@ -167,7 +167,7 @@ public class WhatsAppService {
             auditContext = com.tts.sms.dto.WhatsAppAuditContext.builder()
                     .moduleType("COURSE_INFORMATION")
                     .templateName(courseTemplateName)
-                    .billingCategory("MARKETING")
+                    .billingCategory("UTILITY")
                     .triggerType("MANUAL")
                     .referenceId(referenceId)
                     .studentName(studentName)
@@ -177,7 +177,7 @@ public class WhatsAppService {
         } else {
             if (auditContext.getModuleType() == null) auditContext.setModuleType("COURSE_INFORMATION");
             if (auditContext.getTemplateName() == null) auditContext.setTemplateName(courseTemplateName);
-            if (auditContext.getBillingCategory() == null) auditContext.setBillingCategory("MARKETING");
+            if (auditContext.getBillingCategory() == null) auditContext.setBillingCategory("UTILITY");
             if (auditContext.getReferenceId() == null) auditContext.setReferenceId(referenceId);
             if (auditContext.getStudentName() == null) auditContext.setStudentName(studentName);
             if (auditContext.getRecipientMobile() == null) auditContext.setRecipientMobile(rawMobile);
