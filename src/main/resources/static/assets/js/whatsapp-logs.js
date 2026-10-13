@@ -11,6 +11,8 @@
     let pageSize = 25;
     let totalPages = 1;
     let totalElements = 0;
+    let currentSortBy = 'createdAt';
+    let currentSortDir = 'DESC';
 
     // Elements
     const logsTableBody = document.getElementById('logsTableBody');
@@ -59,6 +61,8 @@
     function initDefaultDate() {
         // By default, set filter to This Month
         setQuickDateRange('this-month');
+        const defaultBtn = document.querySelector('.btn-quick-date[data-range="this-month"]');
+        if (defaultBtn) defaultBtn.classList.add('active');
     }
 
     function bindEvents() {
@@ -78,6 +82,9 @@
                 filterStatus.value = '';
                 filterTrigger.value = '';
                 filterSearch.value = '';
+                document.querySelectorAll('.btn-quick-date').forEach(b => b.classList.remove('active'));
+                const allBtn = document.querySelector('.btn-quick-date[data-range="all"]');
+                if (allBtn) allBtn.classList.add('active');
                 currentPage = 0;
                 loadKpiStats();
                 loadLogs(0);
@@ -124,10 +131,28 @@
             btn.addEventListener('click', function () {
                 const range = this.getAttribute('data-range');
                 setQuickDateRange(range);
-                document.querySelectorAll('.btn-quick-date').forEach(b => b.classList.remove('active', 'btn-secondary'));
+                document.querySelectorAll('.btn-quick-date').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
                 currentPage = 0;
                 loadKpiStats();
+                loadLogs(0);
+            });
+        });
+
+        // Column Sorting click events
+        document.querySelectorAll('.sortable-th').forEach(th => {
+            th.addEventListener('click', function () {
+                const sortField = this.getAttribute('data-sort');
+                if (!sortField) return;
+
+                if (currentSortBy === sortField) {
+                    currentSortDir = (currentSortDir === 'DESC') ? 'ASC' : 'DESC';
+                } else {
+                    currentSortBy = sortField;
+                    currentSortDir = (sortField === 'id' || sortField === 'createdAt') ? 'DESC' : 'ASC';
+                }
+                updateSortIcons();
+                currentPage = 0;
                 loadLogs(0);
             });
         });
@@ -156,6 +181,24 @@
                     });
                 }
             });
+        });
+    }
+
+    function updateSortIcons() {
+        document.querySelectorAll('.sortable-th').forEach(th => {
+            const field = th.getAttribute('data-sort');
+            const icon = th.querySelector('.sort-icon');
+            if (!icon) return;
+
+            if (field === currentSortBy) {
+                if (currentSortDir === 'ASC') {
+                    icon.className = 'bi bi-arrow-up text-primary sort-icon';
+                } else {
+                    icon.className = 'bi bi-arrow-down text-primary sort-icon';
+                }
+            } else {
+                icon.className = 'bi bi-arrow-down-up text-muted sort-icon';
+            }
         });
     }
 
@@ -212,6 +255,12 @@
         }
         if (filterSearch && filterSearch.value.trim()) {
             params.append('search', filterSearch.value.trim());
+        }
+        if (currentSortBy) {
+            params.append('sortBy', currentSortBy);
+        }
+        if (currentSortDir) {
+            params.append('sortDir', currentSortDir);
         }
         return params;
     }
@@ -337,32 +386,38 @@
 
             html += `
                 <tr>
-                    <td class="font-monospace text-muted small">#${log.id}</td>
-                    <td class="small text-nowrap">${escapeHtml(log.createdAt || '-')}</td>
-                    <td>
-                        <div class="fw-semibold small">${escapeHtml(formatModuleName(log.moduleType))}</div>
-                        <div class="text-muted font-monospace fs-xs" style="font-size: 0.76rem;">${escapeHtml(log.templateName || '-')}</div>
+                    <td data-label="LOG ID" class="font-monospace text-muted small">
+                        <strong>#${log.id}</strong>
                     </td>
-                    <td>${categoryBadge}</td>
-                    <td class="small">
+                    <td data-label="TIMESTAMP" class="small text-nowrap"><span class="log-cell-val text-secondary">${escapeHtml(log.createdAt || '-')}</span></td>
+                    <td data-label="MODULE &amp; TEMPLATE">
+                        <div>
+                            <div class="fw-semibold small">${escapeHtml(formatModuleName(log.moduleType))}</div>
+                            <div class="text-muted font-monospace fs-xs" style="font-size: 0.76rem;">${escapeHtml(log.templateName || '-')}</div>
+                        </div>
+                    </td>
+                    <td data-label="CATEGORY"><span class="log-cell-val">${categoryBadge}</span></td>
+                    <td data-label="TRIGGERED BY" class="small">
                         <div class="d-flex align-items-center">
                             ${triggerSourceIcon}
-                            <span class="text-truncate" style="max-width: 120px;" title="${escapeHtml(userDisplay)}">
+                            <span class="text-truncate" style="max-width: 140px;" title="${escapeHtml(userDisplay)}">
                                 ${escapeHtml(userDisplay)}
                             </span>
                         </div>
                     </td>
-                    <td>
-                        <div class="fw-semibold small">${escapeHtml(log.studentName || '-')}</div>
-                        <div class="text-muted small font-monospace">${escapeHtml(log.recipientMobile || '-')}</div>
+                    <td data-label="RECIPIENT">
+                        <div>
+                            <div class="fw-semibold small">${escapeHtml(log.studentName || '-')}</div>
+                            <div class="text-muted small font-monospace">${escapeHtml(log.recipientMobile || '-')}</div>
+                        </div>
                     </td>
-                    <td class="small font-monospace">${escapeHtml(log.referenceNumber || '-')}</td>
-                    <td>${wamidSnippet}</td>
-                    <td>${statusBadge}</td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 btn-view-log" 
+                    <td data-label="REF #" class="small font-monospace"><span class="log-cell-val text-secondary">${escapeHtml(log.referenceNumber || '-')}</span></td>
+                    <td data-label="META MSG ID"><span class="log-cell-val">${wamidSnippet}</span></td>
+                    <td data-label="STATUS"><span class="log-cell-val">${statusBadge}</span></td>
+                    <td data-label="ACTIONS" class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-primary py-1 px-3 btn-view-log" 
                                 data-id="${log.id}" title="Inspect API Call & Raw Payloads">
-                            <i class="bi bi-eye"></i>
+                            <i class="bi bi-eye me-1"></i> Inspect
                         </button>
                     </td>
                 </tr>
@@ -567,16 +622,31 @@
     }
 
     /**
-     * Export filtered logs to CSV
+     * Export filtered logs to CSV.
+     * Exports ALL matching records across the entire database matching current filters
+     * (not limited to the current pagination page).
      */
     function exportCsv() {
+        if (totalElements === 0) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'No Records to Export',
+                    text: 'There are no WhatsApp API logs matching your current filters.'
+                });
+            } else {
+                alert('No records found matching current filters to export.');
+            }
+            return;
+        }
+
         const params = buildFilterParams();
         const exportUrl = '/api/whatsapp-logs/export/csv?' + params.toString();
 
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 title: 'Export WhatsApp Audit Logs?',
-                text: 'A reconciliation CSV containing all matching records will be downloaded.',
+                text: `Exporting all ${totalElements.toLocaleString()} records matching your active filters to CSV for Meta billing reconciliation.`,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: '<i class="bi bi-download me-1"></i> Download CSV',

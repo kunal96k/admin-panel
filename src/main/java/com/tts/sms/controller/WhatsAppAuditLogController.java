@@ -46,10 +46,17 @@ public class WhatsAppAuditLogController {
             @RequestParam(required = false) String triggerType,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) String search) {
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDir) {
 
-        log.debug("GET /api/whatsapp-logs - page: {}, size: {}, module: {}, status: {}", page, size, moduleType, status);
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        log.debug("GET /api/whatsapp-logs - page: {}, size: {}, module: {}, status: {}, sortBy: {}, sortDir: {}",
+                page, size, moduleType, status, sortBy, sortDir);
+
+        String safeSortBy = sanitizeSortField(sortBy);
+        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, safeSortBy));
+
         Page<WhatsAppAuditLogSummaryDTO> result = auditLogService.getLogsWithFilters(
                 startDate, endDate, moduleType, status, triggerType, search, pageable);
         return ResponseEntity.ok(result);
@@ -79,6 +86,7 @@ public class WhatsAppAuditLogController {
 
     /**
      * Export filtered logs to CSV for Meta billing reconciliation.
+     * Applies the exact same filters applied on the table and respects the active sort order.
      */
     @GetMapping("/export/csv")
     public ResponseEntity<byte[]> exportCsv(
@@ -87,11 +95,17 @@ public class WhatsAppAuditLogController {
             @RequestParam(required = false) String triggerType,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) String search) {
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDir) {
 
-        log.info("Exporting WhatsApp logs to CSV by SUPER_ADMIN");
+        log.info("Exporting WhatsApp logs to CSV by SUPER_ADMIN with filters");
+        String safeSortBy = sanitizeSortField(sortBy);
+        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Sort sort = Sort.by(direction, safeSortBy);
+
         String csvContent = auditLogService.exportLogsToCsv(
-                startDate, endDate, moduleType, status, triggerType, search);
+                startDate, endDate, moduleType, status, triggerType, search, sort);
 
         String fileName = "whatsapp_api_audit_logs_" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".csv";
 
@@ -99,5 +113,24 @@ public class WhatsAppAuditLogController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .body(csvContent.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String sanitizeSortField(String sortBy) {
+        if (sortBy == null) return "createdAt";
+        return switch (sortBy.trim()) {
+            case "id" -> "id";
+            case "moduleType" -> "moduleType";
+            case "templateName" -> "templateName";
+            case "billingCategory" -> "billingCategory";
+            case "triggerType" -> "triggerType";
+            case "triggeredByUsername" -> "triggeredByUsername";
+            case "triggeredByEmployeeName" -> "triggeredByEmployeeName";
+            case "studentName" -> "studentName";
+            case "recipientMobile" -> "recipientMobile";
+            case "referenceNumber" -> "referenceNumber";
+            case "status" -> "status";
+            case "metaMessageId" -> "metaMessageId";
+            default -> "createdAt";
+        };
     }
 }

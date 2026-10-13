@@ -8,11 +8,12 @@ import com.tts.sms.model.User;
 import com.tts.sms.model.WhatsAppAuditLog;
 import com.tts.sms.repository.UserRepository;
 import com.tts.sms.repository.WhatsAppAuditLogRepository;
-import jakarta.persistence.criteria.Predicate;
+import com.tts.sms.specification.WhatsAppAuditLogSpecifications;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,7 +25,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -167,7 +167,7 @@ public class WhatsAppAuditLogService {
     }
 
     /**
-     * Retrieves paginated summary records for the audit log dashboard.
+     * Retrieves paginated summary records for the audit log dashboard using JPA Specification.
      */
     @Transactional(readOnly = true)
     public Page<WhatsAppAuditLogSummaryDTO> getLogsWithFilters(
@@ -179,41 +179,8 @@ public class WhatsAppAuditLogService {
             String search,
             Pageable pageable) {
 
-        LocalDateTime startDateTime = (startDate != null ? startDate : LocalDate.now().minusDays(30)).atStartOfDay();
-        LocalDateTime endDateTime = (endDate != null ? endDate : LocalDate.now()).atTime(LocalTime.MAX);
-
-        Specification<WhatsAppAuditLog> spec = (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-
-            predicates.add(cb.between(root.get("createdAt"), startDateTime, endDateTime));
-
-            if (moduleType != null && !moduleType.isBlank() && !"ALL".equalsIgnoreCase(moduleType)) {
-                predicates.add(cb.equal(root.get("moduleType"), moduleType.trim()));
-            }
-
-            if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
-                predicates.add(cb.equal(root.get("status"), status.trim()));
-            }
-
-            if (triggerType != null && !triggerType.isBlank() && !"ALL".equalsIgnoreCase(triggerType)) {
-                predicates.add(cb.equal(root.get("triggerType"), triggerType.trim()));
-            }
-
-            if (search != null && !search.isBlank()) {
-                String term = "%" + search.trim().toLowerCase() + "%";
-                Predicate mobileMatch = cb.like(cb.lower(root.get("recipientMobile")), term);
-                Predicate studentMatch = cb.like(cb.lower(root.get("studentName")), term);
-                Predicate refMatch = cb.like(cb.lower(root.get("referenceNumber")), term);
-                Predicate courseMatch = cb.like(cb.lower(root.get("courseName")), term);
-                Predicate metaMsgMatch = cb.like(cb.lower(root.get("metaMessageId")), term);
-                Predicate userMatch = cb.like(cb.lower(root.get("triggeredByUsername")), term);
-                Predicate empMatch = cb.like(cb.lower(root.get("triggeredByEmployeeName")), term);
-
-                predicates.add(cb.or(mobileMatch, studentMatch, refMatch, courseMatch, metaMsgMatch, userMatch, empMatch));
-            }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
+        Specification<WhatsAppAuditLog> spec = WhatsAppAuditLogSpecifications.createSpecification(
+                startDate, endDate, moduleType, status, triggerType, search);
 
         Page<WhatsAppAuditLog> entityPage = logRepository.findAll(spec, pageable);
 
@@ -252,8 +219,8 @@ public class WhatsAppAuditLogService {
      */
     @Transactional(readOnly = true)
     public WhatsAppKpiStatsDTO getKpiStats(LocalDate startDate, LocalDate endDate) {
-        LocalDateTime startDateTime = (startDate != null ? startDate : LocalDate.now().minusDays(30)).atStartOfDay();
-        LocalDateTime endDateTime = (endDate != null ? endDate : LocalDate.now()).atTime(LocalTime.MAX);
+        LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endDateTime = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
 
         long total = logRepository.countTotalBetween(startDateTime, endDateTime);
         long success = logRepository.countSuccessfulBetween(startDateTime, endDateTime);
@@ -280,6 +247,8 @@ public class WhatsAppAuditLogService {
 
     /**
      * Generates a UTF-8 BOM CSV export string for Excel billing reconciliation.
+     * Applies the exact same JPA Specification filters so ALL matching records
+     * across the entire table are exported.
      */
     @Transactional(readOnly = true)
     public String exportLogsToCsv(
@@ -288,39 +257,17 @@ public class WhatsAppAuditLogService {
             String moduleType,
             String status,
             String triggerType,
-            String search) {
+            String search,
+            Sort sort) {
 
-        LocalDateTime startDateTime = (startDate != null ? startDate : LocalDate.now().minusDays(30)).atStartOfDay();
-        LocalDateTime endDateTime = (endDate != null ? endDate : LocalDate.now()).atTime(LocalTime.MAX);
+        Specification<WhatsAppAuditLog> spec = WhatsAppAuditLogSpecifications.createSpecification(
+                startDate, endDate, moduleType, status, triggerType, search);
 
-        Specification<WhatsAppAuditLog> spec = (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-            predicates.add(cb.between(root.get("createdAt"), startDateTime, endDateTime));
+        Sort effectiveSort = (sort != null && sort.isSorted())
+                ? sort
+                : Sort.by(Sort.Direction.DESC, "createdAt");
 
-            if (moduleType != null && !moduleType.isBlank() && !"ALL".equalsIgnoreCase(moduleType)) {
-                predicates.add(cb.equal(root.get("moduleType"), moduleType.trim()));
-            }
-            if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
-                predicates.add(cb.equal(root.get("status"), status.trim()));
-            }
-            if (triggerType != null && !triggerType.isBlank() && !"ALL".equalsIgnoreCase(triggerType)) {
-                predicates.add(cb.equal(root.get("triggerType"), triggerType.trim()));
-            }
-            if (search != null && !search.isBlank()) {
-                String term = "%" + search.trim().toLowerCase() + "%";
-                predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("recipientMobile")), term),
-                        cb.like(cb.lower(root.get("studentName")), term),
-                        cb.like(cb.lower(root.get("referenceNumber")), term),
-                        cb.like(cb.lower(root.get("courseName")), term),
-                        cb.like(cb.lower(root.get("metaMessageId")), term),
-                        cb.like(cb.lower(root.get("triggeredByUsername")), term)
-                ));
-            }
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-
-        List<WhatsAppAuditLog> logs = logRepository.findAll(spec);
+        List<WhatsAppAuditLog> logs = logRepository.findAll(spec, effectiveSort);
 
         StringBuilder csv = new StringBuilder();
         // UTF-8 Byte Order Mark for Excel
