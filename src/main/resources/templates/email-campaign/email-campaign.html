@@ -1,0 +1,3014 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+    layout:decorate="~{layout/layout}">
+
+<head>
+    <title>Email Campaign</title>
+    <style>
+        :root {
+            --ec-primary: #2563eb;
+            --ec-primary-dark: #1d4ed8;
+            --ec-primary-light: #eff6ff;
+            --ec-success: #059669;
+            --ec-success-light: #ecfdf5;
+            --ec-danger: #dc2626;
+            --ec-danger-light: #fef2f2;
+            --ec-warning: #d97706;
+            --ec-warning-light: #fffbeb;
+            --ec-dark: #0f172a;
+            --ec-card-bg: #ffffff;
+            --ec-border: #e2e8f0;
+            --ec-muted: #64748b;
+            --ec-radius: 8px;
+        }
+
+        .ec-wrapper {
+            padding: 6px 10px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* ── WIZARD PROGRESS & TOOLBAR ── */
+        .ec-wizard {
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border: 1px solid var(--ec-border);
+            border-radius: var(--ec-radius);
+            padding: 5px 10px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+            overflow-x: auto;
+        }
+
+        .ec-step {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            gap: 5px;
+            cursor: pointer;
+            padding: 2px 5px;
+            border-radius: 5px;
+            transition: all 0.2s ease;
+        }
+
+        .ec-step:hover {
+            background: #f8fafc;
+        }
+
+        .ec-step-num {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 10.5px;
+            background: #f1f5f9;
+            color: var(--ec-muted);
+            transition: all 0.25s ease;
+        }
+
+        .ec-step.active .ec-step-num {
+            background: var(--ec-primary);
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+        }
+
+        .ec-step.done .ec-step-num {
+            background: var(--ec-success);
+            color: #ffffff;
+        }
+
+        .ec-step-info .step-title {
+            font-weight: 700;
+            font-size: 11px;
+            color: #1e293b;
+            white-space: nowrap;
+            line-height: 1.15;
+        }
+
+        .ec-step-info .step-desc {
+            font-size: 9px;
+            color: var(--ec-muted);
+            white-space: nowrap;
+            line-height: 1.15;
+        }
+
+        .ec-step.active .step-title {
+            color: var(--ec-primary);
+        }
+
+        .ec-connector {
+            flex: 1;
+            height: 1.5px;
+            background: var(--ec-border);
+            margin: 0 6px;
+            min-width: 14px;
+        }
+
+        .ec-connector.done {
+            background: var(--ec-success);
+        }
+
+        .ec-wizard-actions {
+            border-left: 1px solid var(--ec-border);
+            gap: 5px;
+        }
+
+        /* ── PANELS & CARDS ── */
+        .ec-panel {
+            display: none;
+        }
+
+        .ec-panel.active {
+            display: block;
+        }
+
+        .ec-card {
+            background: var(--ec-card-bg);
+            border: 1px solid var(--ec-border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+            margin-bottom: 8px;
+        }
+
+        .ec-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--ec-border);
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .ec-card-title-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ec-card-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .ec-card-icon.blue { background: var(--ec-primary-light); color: var(--ec-primary); }
+        .ec-card-icon.green { background: var(--ec-success-light); color: var(--ec-success); }
+        .ec-card-icon.amber { background: var(--ec-warning-light); color: var(--ec-warning); }
+        .ec-card-icon.purple { background: #f5f3ff; color: #7c3aed; }
+        .ec-card-icon.dark { background: #f1f5f9; color: #334155; }
+
+        .ec-card-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .ec-card-subtitle {
+            font-size: 10px;
+            color: var(--ec-muted);
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        /* ── BUTTONS ── */
+        .ec-btn {
+            padding: 4px 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            text-decoration: none;
+            white-space: nowrap;
+            height: 28px;
+            line-height: 1;
+        }
+
+        .ec-btn-primary {
+            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+            color: #ffffff !important;
+            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.2);
+        }
+
+        .ec-btn-primary:hover {
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .ec-btn-secondary {
+            background: #f8fafc;
+            color: #334155 !important;
+            border: 1px solid var(--ec-border);
+        }
+
+        .ec-btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .ec-btn-success {
+            background: linear-gradient(135deg, #047857 0%, #059669 100%);
+            color: #ffffff !important;
+            box-shadow: 0 1px 4px rgba(5, 150, 105, 0.2);
+        }
+
+        .ec-btn-danger {
+            background: var(--ec-danger-light);
+            color: var(--ec-danger) !important;
+            border: 1px solid #fecaca;
+        }
+
+        .ec-btn-danger:hover {
+            background: #fee2e2;
+        }
+
+        .ec-btn-outline-primary {
+            background: transparent;
+            color: var(--ec-primary) !important;
+            border: 1px solid var(--ec-primary);
+        }
+
+        .ec-btn-outline-primary:hover {
+            background: var(--ec-primary-light);
+        }
+
+        .ec-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .ec-btn-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px solid var(--ec-border);
+        }
+
+        /* ── RECIPIENTS TABLE ── */
+        .ec-email-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .ec-email-table-wrap {
+            max-height: 320px;
+            overflow-y: auto;
+            border: 1px solid var(--ec-border);
+            border-radius: 6px;
+        }
+
+        .ec-email-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .ec-email-table thead th {
+            background: #f8fafc;
+            padding: 5px 8px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--ec-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            border-bottom: 1px solid var(--ec-border);
+        }
+
+        .ec-email-table tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.15s;
+        }
+
+        .ec-email-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .ec-email-table td {
+            padding: 4px 8px;
+            font-size: 11px;
+            color: #1e293b;
+        }
+
+        .email-checkbox {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+            accent-color: var(--ec-primary);
+        }
+
+        .selected-count-badge {
+            background: var(--ec-primary-light);
+            color: var(--ec-primary);
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            padding: 1px 6px;
+            font-size: 10.5px;
+            font-weight: 700;
+        }
+
+        /* ── EMPTY STATE ── */
+        .ec-empty-state {
+            text-align: center;
+            padding: 18px 12px;
+            background: #f8fafc;
+            border: 1.5px dashed var(--ec-border);
+            border-radius: var(--ec-radius);
+        }
+
+        .ec-empty-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--ec-primary-light);
+            color: var(--ec-primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+
+        /* ── MODAL UPLOAD DROPZONE ── */
+        .ec-upload-zone {
+            border: 1.5px dashed #93c5fd;
+            border-radius: 6px;
+            padding: 18px 12px;
+            text-align: center;
+            background: #f0f9ff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .ec-upload-zone:hover {
+            background: #e0f2fe;
+            border-color: var(--ec-primary);
+        }
+
+        .ec-upload-zone.dragover {
+            background: #bfdbfe;
+            border-color: var(--ec-primary-dark);
+            transform: scale(1.01);
+        }
+
+        .ec-upload-icon {
+            font-size: 28px;
+            color: var(--ec-primary);
+            margin-bottom: 4px;
+        }
+
+        .ec-upload-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 2px;
+        }
+
+        .ec-upload-hint {
+            font-size: 10.5px;
+            color: var(--ec-muted);
+        }
+
+        #csvFileInput {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .ec-import-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .stat-box {
+            background: #f8fafc;
+            border: 1px solid var(--ec-border);
+            border-radius: 5px;
+            padding: 6px 4px;
+            text-align: center;
+        }
+
+        .stat-box .stat-num {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 1px;
+        }
+
+        .stat-box .stat-label {
+            font-size: 9.5px;
+            color: var(--ec-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+        }
+
+        .stat-box.imported .stat-num { color: var(--ec-success); }
+        .stat-box.skipped .stat-num { color: var(--ec-warning); }
+        .stat-box.failed .stat-num { color: var(--ec-danger); }
+
+        /* ── FORM FIELDS ── */
+        .ec-form-group {
+            margin-bottom: 6px;
+        }
+
+        .ec-label {
+            display: block;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 2px;
+        }
+
+        .ec-label .required {
+            color: var(--ec-danger);
+            margin-left: 2px;
+        }
+
+        .ec-input,
+        .ec-select,
+        .ec-textarea {
+            width: 100%;
+            padding: 3px 8px;
+            border: 1px solid var(--ec-border);
+            border-radius: 5px;
+            font-size: 11.5px;
+            color: #1e293b;
+            background: #ffffff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
+            min-height: 28px;
+        }
+
+        .ec-input:focus,
+        .ec-select:focus,
+        .ec-textarea:focus {
+            outline: none;
+            border-color: var(--ec-primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+        }
+
+        .ec-textarea {
+            resize: vertical;
+            min-height: 44px;
+        }
+
+        .ec-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .ec-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .ec-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+
+        /* ── MODE TABS ── */
+        .ec-mode-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .ec-mode-tab {
+            flex: 1;
+            padding: 4px 10px;
+            text-align: center;
+            border: 1.5px solid var(--ec-border);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            font-size: 11px;
+            color: var(--ec-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            min-height: 28px;
+        }
+
+        .ec-mode-tab.active-tab {
+            border-color: var(--ec-primary);
+            background: var(--ec-primary-light);
+            color: var(--ec-primary);
+        }
+
+        .ec-platform-picker {
+            display: flex;
+            gap: 5px;
+        }
+
+        .ec-platform-btn {
+            flex: 1;
+            padding: 4px 6px;
+            border: 1.5px solid var(--ec-border);
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--ec-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            min-height: 28px;
+        }
+
+        .ec-platform-btn:hover {
+            border-color: var(--ec-primary);
+            color: var(--ec-primary);
+        }
+
+        .ec-platform-btn.selected {
+            border-color: var(--ec-primary);
+            background: var(--ec-primary-light);
+            color: var(--ec-primary);
+        }
+
+        .ec-platform-btn .plat-icon {
+            font-size: 13px;
+        }
+
+        /* ── SEND OPTIONS ── */
+        .ec-send-option {
+            border: 1.5px solid var(--ec-border);
+            border-radius: 5px;
+            padding: 5px 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 28px;
+        }
+
+        .ec-send-option.selected {
+            border-color: var(--ec-primary);
+            background: var(--ec-primary-light);
+        }
+
+        .ec-send-radio {
+            width: 14px;
+            height: 14px;
+            accent-color: var(--ec-primary);
+            flex-shrink: 0;
+            margin: 0;
+        }
+
+        .ec-send-option-title {
+            font-weight: 700;
+            font-size: 11.5px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .ec-send-option-desc {
+            font-size: 9.5px;
+            color: var(--ec-muted);
+            margin-top: 0px;
+        }
+
+        /* ── PREVIEW FRAME & CONTAINER ── */
+        .ec-preview-frame {
+            background: #f1f5f9;
+            border-radius: 6px;
+            padding: 10px 8px;
+            border: 1px solid var(--ec-border);
+            display: flex;
+            justify-content: center;
+        }
+
+        .ec-preview-inner {
+            width: 100%;
+            max-width: 620px;
+            margin: 0 auto;
+            background: transparent;
+        }
+
+        /* ── ALERTS & PROGRESS ── */
+        .ec-alert {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ec-alert.visible {
+            display: flex;
+        }
+
+        .ec-alert.success {
+            background: var(--ec-success-light);
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+        }
+
+        .ec-alert.error {
+            background: var(--ec-danger-light);
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        .ec-alert.info {
+            background: var(--ec-primary-light);
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+        }
+
+        .ec-progress-wrap {
+            background: #f1f5f9;
+            border-radius: 6px;
+            overflow: hidden;
+            height: 6px;
+            margin: 8px 0;
+        }
+
+        .ec-progress-bar {
+            height: 100%;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            transition: width 0.4s ease;
+        }
+
+        /* ── STATUS BADGES ── */
+        .ec-status-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .badge-sent { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .badge-partial { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .badge-scheduled { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        .badge-sending { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
+        .badge-draft { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+        .badge-failed { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+        /* ── USER PILL & SENDER BADGE ── */
+        .ec-sender-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .ec-sender-avatar {
+            width: 17px;
+            height: 17px;
+            border-radius: 50%;
+            background: #3b82f6;
+            color: #ffffff;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        /* ── HISTORY TABLE & PAGINATION ── */
+        .ec-history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .ec-history-table th {
+            background: #f8fafc;
+            padding: 7px 10px;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--ec-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--ec-border);
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .ec-history-table td {
+            padding: 7px 10px;
+            font-size: 11.5px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        .ec-history-table tr:hover td {
+            background: #f8fafc;
+        }
+
+        .ec-filter-nav {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--ec-border);
+            margin-bottom: 8px;
+            padding-bottom: 1px;
+            overflow-x: auto;
+        }
+
+        .ec-filter-tab {
+            padding: 5px 11px;
+            border: none;
+            background: transparent;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .ec-filter-tab:hover {
+            color: var(--ec-primary);
+        }
+
+        .ec-filter-tab.active {
+            color: var(--ec-primary);
+            border-bottom-color: var(--ec-primary);
+        }
+
+        .ec-pagination-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            margin-top: 8px;
+            border-top: 1px solid var(--ec-border);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .ec-page-btn {
+            padding: 3px 8px;
+            border: 1px solid var(--ec-border);
+            background: #ffffff;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ec-page-btn:hover:not(:disabled) {
+            background: var(--ec-primary-light);
+            border-color: var(--ec-primary);
+            color: var(--ec-primary);
+        }
+
+        .ec-page-btn.active {
+            background: var(--ec-primary);
+            border-color: var(--ec-primary);
+            color: #ffffff;
+        }
+
+        .ec-page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 992px) {
+            .ec-wizard {
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 8px 10px;
+            }
+
+            .ec-wizard-actions {
+                margin-left: 0 !important;
+                padding-left: 0 !important;
+                border-left: none !important;
+                width: 100%;
+                justify-content: flex-end;
+                padding-top: 6px;
+                border-top: 1px solid var(--ec-border);
+            }
+
+            .ec-grid-4 {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .ec-wrapper {
+                padding: 8px;
+            }
+
+            .ec-wizard {
+                padding: 8px 10px;
+            }
+
+            .ec-grid-2,
+            .ec-grid-3,
+            .ec-grid-4 {
+                grid-template-columns: 1fr;
+            }
+
+            .ec-platform-picker {
+                flex-wrap: wrap;
+            }
+
+            .ec-card {
+                padding: 10px 12px;
+            }
+
+            .ec-wizard-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .ec-wizard-actions .ec-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div layout:fragment="content">
+        <div class="ec-wrapper">
+
+            <!-- WIZARD STEPPERS WITH QUICK ACTIONS -->
+            <div class="ec-wizard">
+                <div class="ec-step active" id="stepNav1" onclick="goToStep(1)">
+                    <div class="ec-step-num"><i class="bi bi-people-fill"></i></div>
+                    <div class="ec-step-info">
+                        <div class="step-title">1. Target Recipients</div>
+                        <div class="step-desc">CSV Import or Manual Entry</div>
+                    </div>
+                </div>
+                <div class="ec-connector" id="conn1"></div>
+                <div class="ec-step" id="stepNav2" onclick="goToStep(2)">
+                    <div class="ec-step-num"><i class="bi bi-sliders"></i></div>
+                    <div class="ec-step-info">
+                        <div class="step-title">2. Configure Template</div>
+                        <div class="step-desc">Event, Role &amp; Venue</div>
+                    </div>
+                </div>
+                <div class="ec-connector" id="conn2"></div>
+                <div class="ec-step" id="stepNav3" onclick="goToStep(3)">
+                    <div class="ec-step-num"><i class="bi bi-send-check-fill"></i></div>
+                    <div class="ec-step-info">
+                        <div class="step-title">3. Preview &amp; Dispatch</div>
+                        <div class="step-desc">Review &amp; live preview</div>
+                    </div>
+                </div>
+
+                <!-- TOP ACTION BUTTONS -->
+                <div class="ec-wizard-actions ms-auto d-flex gap-2 align-items-center ps-2 flex-shrink-0">
+                    <button class="ec-btn ec-btn-secondary" onclick="openTemplateListModal()">
+                        <i class="bi bi-collection-fill text-warning"></i> Template Master
+                    </button>
+                    <button class="ec-btn ec-btn-primary" onclick="scrollToHistory()">
+                        <i class="bi bi-clock-history"></i> Send Audit History
+                    </button>
+                </div>
+            </div>
+
+            <!-- ========================================
+                 STEP 1: RECIPIENTS MANAGEMENT
+                 ======================================== -->
+            <div class="ec-panel active" id="panel1">
+                <div class="ec-card">
+                    <div class="ec-card-header">
+                        <div class="ec-card-title-group">
+                            <div class="ec-card-icon blue"><i class="bi bi-person-lines-fill"></i></div>
+                            <div>
+                                <div class="ec-card-title">Campaign Recipients List</div>
+                                <div class="ec-card-subtitle">Import CSV or add/paste manual candidate emails</div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-1 align-items-center">
+                            <button class="ec-btn ec-btn-primary" data-bs-toggle="modal"
+                                data-bs-target="#addEmailModal">
+                                <i class="bi bi-plus-circle-fill"></i> Add Email (Manual)
+                            </button>
+                            <button class="ec-btn ec-btn-outline-primary" data-bs-toggle="modal"
+                                data-bs-target="#importCsvModal">
+                                <i class="bi bi-cloud-arrow-up-fill"></i> Import CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="recipientsEmptyState" class="ec-empty-state">
+                        <div class="ec-empty-icon"><i class="bi bi-envelope-plus"></i></div>
+                        <h6 style="font-weight:700;color:#1e293b;margin-bottom:4px;font-size:13px;">No Recipients Added Yet</h6>
+                        <p style="color:#64748b;font-size:11.5px;max-width:480px;margin:0 auto 12px;">
+                            Upload a CSV file or directly enter candidate emails using <strong>Add Email</strong>.
+                        </p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <button class="ec-btn ec-btn-primary" data-bs-toggle="modal"
+                                data-bs-target="#addEmailModal">
+                                <i class="bi bi-plus-circle-fill"></i> Add Manual Email
+                            </button>
+                            <button class="ec-btn ec-btn-secondary" data-bs-toggle="modal"
+                                data-bs-target="#importCsvModal">
+                                <i class="bi bi-cloud-arrow-up-fill"></i> Import CSV File
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Table Container -->
+                    <div id="recipientsTableContainer" style="display:none;">
+                        <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="font-weight:700;font-size:12px;color:#1e293b;" id="totalEmailsLabel">0 emails ready</span>
+                                <span class="selected-count-badge" id="selectedCountBadge">0 selected</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1 flex-wrap">
+                                <div style="position:relative; width: 170px;">
+                                    <i class="bi bi-search"
+                                        style="position:absolute;left:8px;top:7px;color:#94a3b8;font-size:11px;"></i>
+                                    <input type="text" class="ec-input" id="recipientFilterInput"
+                                        placeholder="Filter emails..." onkeyup="filterRecipientTable(this.value)"
+                                        style="padding-left:24px;padding-top:3px;padding-bottom:3px;font-size:11px;min-height:26px;">
+                                </div>
+                                <button class="ec-btn ec-btn-secondary" style="padding:3px 8px;font-size:11px;height:26px;"
+                                    onclick="selectAll()">
+                                    <i class="bi bi-check2-all"></i> Select All
+                                </button>
+                                <button class="ec-btn ec-btn-secondary" style="padding:3px 8px;font-size:11px;height:26px;"
+                                    onclick="deselectAll()">
+                                    <i class="bi bi-dash-circle"></i> Deselect All
+                                </button>
+                                <button class="ec-btn ec-btn-danger" style="padding:3px 8px;font-size:11px;height:26px;"
+                                    onclick="resetRecipients()">
+                                    <i class="bi bi-trash3"></i> Clear List
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="ec-email-table-wrap">
+                            <table class="ec-email-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:36px;"><input type="checkbox" class="email-checkbox"
+                                                id="masterCheck" onchange="masterToggle(this)"></th>
+                                        <th style="width:40px;">#</th>
+                                        <th>Email Address</th>
+                                        <th style="width:110px;">Status</th>
+                                        <th style="width:60px;text-align:end;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="emailTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="ec-btn-row">
+                        <div></div>
+                        <button class="ec-btn ec-btn-primary" id="btnStep1Next" onclick="goToStep(2)">
+                            Next: Configure Template <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================
+                 STEP 2: CONFIGURE TEMPLATE (COMPACT SINGLE-ROW BUTTONS)
+                 ======================================== -->
+            <div class="ec-panel" id="panel2">
+
+                <!-- SAVED TEMPLATE MASTER SELECTOR (SINGLE ROW) -->
+                <div class="ec-card"
+                    style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1.5px dashed #cbd5e1; margin-bottom: 8px; padding: 6px 12px;">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2" style="flex: 1; min-width: 240px; max-width: 480px;">
+                            <div class="ec-card-icon blue" style="width: 24px; height: 24px; font-size: 11px; margin: 0; flex-shrink: 0;">
+                                <i class="bi bi-bookmark-star-fill"></i>
+                            </div>
+                            <div style="flex: 1;">
+                                <select class="ec-select" id="savedTemplateSelect"
+                                    onchange="onSavedTemplateChange(this.value)"
+                                    style="background:#ffffff; font-weight: 600; padding: 3px 8px; font-size: 11px; min-height: 26px;">
+                                    <option value="">-- Select a Saved Template to Auto-Fill --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-1 align-items-center flex-shrink-0">
+                            <button type="button" class="ec-btn ec-btn-primary" data-bs-toggle="modal"
+                                data-bs-target="#templateMasterModal" onclick="openNewTemplateForm()">
+                                <i class="bi bi-plus-circle-fill"></i> Create Template
+                            </button>
+                            <button type="button" class="ec-btn ec-btn-outline-primary"
+                                onclick="saveCurrentAsNewTemplate()"
+                                title="Save currently entered details as a new reusable template">
+                                <i class="bi bi-bookmark-plus-fill"></i> Save Current
+                            </button>
+                            <button type="button" class="ec-btn ec-btn-secondary" data-bs-toggle="modal"
+                                data-bs-target="#templateMasterModal" onclick="openTemplateListTab()">
+                                <i class="bi bi-sliders"></i> Manage
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 1: CAMPAIGN & ROLE DETAILS -->
+                <div class="ec-card">
+                    <div class="ec-card-header">
+                        <div class="ec-card-title-group">
+                            <div class="ec-card-icon purple"><i class="bi bi-card-heading"></i></div>
+                            <div>
+                                <div class="ec-card-title">1. Campaign &amp; Role Information</div>
+                                <div class="ec-card-subtitle">Set campaign identifier, subject line, role domain and schedule</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ec-grid-2 mb-1">
+                        <div class="ec-form-group">
+                            <label class="ec-label">Campaign Name <span class="required">*</span></label>
+                            <input type="text" class="ec-input" id="campaignName"
+                                placeholder="e.g. Campus Recruitment Drive 2026" value="">
+                        </div>
+                        <div class="ec-form-group">
+                            <label class="ec-label">Email Subject <span class="required">*</span></label>
+                            <input type="text" class="ec-input" id="emailSubject"
+                                placeholder="e.g. Invitation for Interview at TechnoKraft" value="">
+                        </div>
+                    </div>
+                    <div class="ec-grid-4">
+                        <div class="ec-form-group">
+                            <label class="ec-label">Hiring Role / Domain <span class="required">*</span></label>
+                            <input type="text" class="ec-input" id="hiringRole" placeholder="e.g. Full Stack Java Developer" value="">
+                        </div>
+                        <div class="ec-form-group">
+                            <label class="ec-label">Opportunity Type <span class="required">*</span></label>
+                            <select class="ec-select" id="opportunityType">
+                                <option value="" disabled selected>-- Select Type --</option>
+                                <option value="JOB">Full-time Job</option>
+                                <option value="INTERNSHIP">Internship</option>
+                                <option value="PART_TIME">Part-time Opportunity</option>
+                                <option value="CAMPUS_DRIVE">Campus Hiring Drive</option>
+                            </select>
+                        </div>
+                        <div class="ec-form-group">
+                            <label class="ec-label"><i class="bi bi-calendar-event me-1"></i> Event Date</label>
+                            <input type="date" class="ec-input" id="eventDate">
+                        </div>
+                        <div class="ec-form-group">
+                            <label class="ec-label"><i class="bi bi-clock me-1"></i> Event Time</label>
+                            <input type="time" class="ec-input" id="eventTime" value="">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: CONDUCTED MODE & LOGISTICS -->
+                <div class="ec-card">
+                    <div class="ec-card-header">
+                        <div class="ec-card-title-group">
+                            <div class="ec-card-icon green"><i class="bi bi-geo-alt-fill"></i></div>
+                            <div>
+                                <div class="ec-card-title">2. Conducted Mode &amp; Access Details</div>
+                                <div class="ec-card-subtitle">Choose between virtual session or in-person reporting venue</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-4">
+                            <label class="ec-label">Conducted Mode <span class="required">*</span></label>
+                            <div class="ec-mode-tabs mb-0">
+                                <div class="ec-mode-tab active-tab" id="tabOnline" onclick="setConductMode('ONLINE')">
+                                    <i class="bi bi-camera-video-fill"></i> Online
+                                </div>
+                                <div class="ec-mode-tab" id="tabOffline" onclick="setConductMode('OFFLINE')">
+                                    <i class="bi bi-building"></i> Offline Venue
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div id="onlineFields">
+                                <div class="row g-2">
+                                    <div class="col-md-5">
+                                        <label class="ec-label">Platform</label>
+                                        <div class="ec-platform-picker">
+                                            <div class="ec-platform-btn selected" id="platGoogleMeet" onclick="setPlatform('GOOGLE_MEET')">
+                                                <span class="plat-icon"><i class="bi bi-google"></i></span> Meet
+                                            </div>
+                                            <div class="ec-platform-btn" id="platZoom" onclick="setPlatform('ZOOM')">
+                                                <span class="plat-icon"><i class="bi bi-camera-video"></i></span> Zoom
+                                            </div>
+                                            <div class="ec-platform-btn" id="platOther" onclick="setPlatform('OTHER')">
+                                                <span class="plat-icon"><i class="bi bi-link-45deg"></i></span> Other
+                                            </div>
+                                        </div>
+                                        <input type="hidden" id="onlinePlatform" value="GOOGLE_MEET">
+                                    </div>
+                                    <div class="col-md-7">
+                                        <label class="ec-label">Meeting Link</label>
+                                        <input type="url" class="ec-input" id="meetingLink" placeholder="https://meet.google.com/xxx-xxxx-xxx">
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="offlineFields" style="display:none;">
+                                <label class="ec-label">Venue / Physical Address</label>
+                                <textarea class="ec-textarea" id="venueAddress" rows="1" placeholder="1st Floor, Kanchwala Avenue, Thatte Nagar Marg, College Road, Nashik, Maharashtra 422005" style="min-height:28px;"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="conductMode" value="ONLINE">
+                </div>
+
+                <!-- CARD 3: INSTRUCTIONS & SEND MODE -->
+                <div class="ec-card">
+                    <div class="ec-card-header">
+                        <div class="ec-card-title-group">
+                            <div class="ec-card-icon amber"><i class="bi bi-sliders2"></i></div>
+                            <div>
+                                <div class="ec-card-title">3. Instructions &amp; Dispatch Automation</div>
+                                <div class="ec-card-subtitle">Custom guidelines and immediate or scheduled dispatch</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-7">
+                            <label class="ec-label"><i class="bi bi-pencil-square me-1"></i> Special Notes / Evaluation Rounds</label>
+                            <textarea class="ec-textarea" id="customNotes" rows="2" placeholder="e.g. Round 1: Problem Solving &amp; Technical Aptitude. Round 2: Architecture &amp; Project Discussion." style="min-height:48px;"></textarea>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="ec-label"><i class="bi bi-clock-history me-1"></i> Send Mode</label>
+                            <div class="d-flex gap-2">
+                                <div class="ec-send-option selected flex-fill" id="sendOptImmediate" onclick="setSendMode('IMMEDIATE')">
+                                    <input type="radio" class="ec-send-radio" name="sendModeRadio" checked>
+                                    <div>
+                                        <div class="ec-send-option-title"><i class="bi bi-send-fill text-primary"></i> Immediate</div>
+                                        <div class="ec-send-option-desc">Dispatch in background</div>
+                                    </div>
+                                </div>
+                                <div class="ec-send-option flex-fill" id="sendOptScheduled" onclick="setSendMode('SCHEDULED')">
+                                    <input type="radio" class="ec-send-radio" name="sendModeRadio">
+                                    <div>
+                                        <div class="ec-send-option-title"><i class="bi bi-calendar2-check text-warning"></i> Schedule</div>
+                                        <div class="ec-send-option-desc">Automated future time</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="scheduledFields" style="display:none;margin-top:4px;">
+                                <input type="datetime-local" class="ec-input" id="scheduledAt">
+                            </div>
+                            <input type="hidden" id="sendMode" value="IMMEDIATE">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ec-btn-row">
+                    <button class="ec-btn ec-btn-secondary" onclick="goToStep(1)"><i class="bi bi-arrow-left"></i> Back to Recipients</button>
+                    <button class="ec-btn ec-btn-primary" onclick="goToStep(3)">Preview &amp; Review <i class="bi bi-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- ========================================
+                 STEP 3: PREVIEW & SEND
+                 ======================================== -->
+            <div class="ec-panel" id="panel3">
+                <div class="ec-card">
+                    <div class="ec-card-header">
+                        <div class="ec-card-title-group">
+                            <div class="ec-card-icon blue"><i class="bi bi-clipboard-check-fill"></i></div>
+                            <div>
+                                <div class="ec-card-title">Campaign Configuration Summary</div>
+                                <div class="ec-card-subtitle">Verify details before broadcasting</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ec-grid-3" id="summaryGrid"></div>
+                </div>
+
+                <div class="ec-card">
+                    <div class="ec-card-header">
+                        <div class="ec-card-title-group">
+                            <div class="ec-card-icon purple"><i class="bi bi-eye-fill"></i></div>
+                            <div>
+                                <div class="ec-card-title">Live Mobile-Optimized Email Preview</div>
+                                <div class="ec-card-subtitle">Exact rendering formatted with corporate header and footer
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ec-preview-frame">
+                        <div class="ec-preview-inner" id="emailPreviewContent"></div>
+                    </div>
+                </div>
+
+                <div class="ec-alert" id="sendAlert"></div>
+
+                <div id="sendProgressSection" style="display:none;" class="ec-card">
+                    <div class="ec-card-header">
+                        <div class="ec-card-title-group">
+                            <div class="ec-card-icon green"><i class="bi bi-send-check-fill"></i></div>
+                            <div>
+                                <div class="ec-card-title">Sending Campaign...</div>
+                                <div class="ec-card-subtitle">Background worker is processing recipient queue</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ec-progress-wrap">
+                        <div class="ec-progress-bar" id="sendProgressBar" style="width:0%"></div>
+                    </div>
+                    <div style="font-size:12px;color:#64748b;margin-top:6px;" id="sendProgressText">Preparing email
+                        queue...</div>
+                </div>
+
+                <div class="ec-btn-row">
+                    <button class="ec-btn ec-btn-secondary" onclick="goToStep(2)" id="btnBack3"><i
+                            class="bi bi-arrow-left"></i> Edit Details</button>
+                    <button class="ec-btn ec-btn-success" id="btnSendNow" onclick="sendCampaign()">
+                        <i class="bi bi-send-fill"></i> <span id="sendBtnText">Send Campaign</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ========================================
+                 CAMPAIGN SEND HISTORY & AUDIT SECTION
+                 ======================================== -->
+            <div class="ec-card" id="historySection" style="margin-top:12px;">
+                <div class="ec-card-header">
+                    <div class="ec-card-title-group">
+                        <div class="ec-card-icon amber"><i class="bi bi-shield-check"></i></div>
+                        <div>
+                            <div class="ec-card-title">Campaign Send History &amp; Delivery Audit</div>
+                            <div class="ec-card-subtitle">Complete audit logs with sender full names, delivery
+                                timestamps &amp; server-side pagination</div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <button class="ec-btn ec-btn-secondary" onclick="loadCampaignHistory(0)">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status Filter Tabs -->
+                <div class="ec-filter-nav">
+                    <button class="ec-filter-tab active" onclick="setHistoryStatusFilter('')">All Campaigns</button>
+                    <button class="ec-filter-tab" onclick="setHistoryStatusFilter('SENT')"><i
+                            class="bi bi-check-circle-fill text-success me-1"></i> Sent (100% Success)</button>
+                    <button class="ec-filter-tab" onclick="setHistoryStatusFilter('PARTIALLY_FAILED')"><i
+                            class="bi bi-exclamation-triangle-fill text-warning me-1"></i> Partial Errors</button>
+                    <button class="ec-filter-tab" onclick="setHistoryStatusFilter('FAILED')"><i
+                            class="bi bi-x-circle-fill text-danger me-1"></i> Failed</button>
+                    <button class="ec-filter-tab" onclick="setHistoryStatusFilter('SCHEDULED')"><i
+                            class="bi bi-calendar2-check text-primary me-1"></i> Scheduled</button>
+                </div>
+
+                <!-- Search and Page Size Filter Bar -->
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-1">
+                        <span style="font-size:11px;color:#64748b;font-weight:600;">Show:</span>
+                        <select class="ec-select" id="historyPageSize" onchange="onPageSizeChange(this.value)"
+                            style="width:65px;padding:2px 6px;font-size:11px;min-height:26px;">
+                            <option value="10" selected>10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span style="font-size:11px;color:#64748b;">entries/page</span>
+                    </div>
+                    <div style="position:relative; width: 240px;">
+                        <i class="bi bi-search"
+                            style="position:absolute;left:8px;top:7px;color:#94a3b8;font-size:11px;"></i>
+                        <input type="text" class="ec-input" id="historySearchInput"
+                            placeholder="Search campaign, role, sender..." onkeyup="onHistorySearchDebounce(this.value)"
+                            style="padding-left:26px;padding-top:3px;padding-bottom:3px;font-size:11px;min-height:26px;">
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div style="overflow-x:auto;">
+                    <table class="ec-history-table" id="historyTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Campaign Details</th>
+                                <th>Role &amp; Mode</th>
+                                <th>Sender (Audit)</th>
+                                <th>Delivery Status</th>
+                                <th style="text-align:center;">Delivery Stats</th>
+                                <th>Timestamps</th>
+                                <th style="text-align:end;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align:center;color:#64748b;padding:24px;">Loading
+                                    campaigns...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Server-Side Pagination Controls -->
+                <div class="ec-pagination-bar" id="historyPaginationBar">
+                    <div style="font-size:12px;color:#64748b;font-weight:600;" id="historyPaginationInfo">Showing 0 to 0
+                        of 0 entries</div>
+                    <div class="d-flex gap-1 align-items-center" id="historyPaginationButtons"></div>
+                </div>
+            </div>
+
+        </div><!-- end ec-wrapper -->
+
+        <!-- ========================================
+             MODAL 1: ADD MANUAL EMAIL (BACKUP ENTRY)
+             ======================================== -->
+        <div class="modal fade" id="addEmailModal" tabindex="-1" aria-labelledby="addEmailModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content"
+                    style="border-radius:14px;border:none;box-shadow:0 10px 40px rgba(0,0,0,0.18);">
+                    <div class="modal-header"
+                        style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%);color:white;border-top-left-radius:14px;border-top-right-radius:14px;padding:16px 24px;">
+                        <h5 class="modal-title" id="addEmailModalLabel"
+                            style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px;">
+                            <i class="bi bi-person-plus-fill text-primary"></i> Add Manual Emails (Single / Bulk Backup)
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+
+                    <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:8px 24px 0;">
+                        <ul class="nav nav-tabs border-0" id="manualEmailTabs" role="tablist">
+                            <li class="nav-item">
+                                <button class="nav-link active fw-bold" id="tabSingleEmailBtn" data-bs-toggle="tab"
+                                    data-bs-target="#tabSingleEmail" type="button"
+                                    style="border:none;border-bottom:3px solid var(--ec-primary);color:#1e293b;padding:8px 16px;">
+                                    <i class="bi bi-envelope-plus me-1 text-primary"></i> Single Email Entry
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link fw-bold text-muted" id="tabBulkEmailBtn" data-bs-toggle="tab"
+                                    data-bs-target="#tabBulkEmail" type="button" style="border:none;padding:8px 16px;">
+                                    <i class="bi bi-textarea-t me-1 text-secondary"></i> Paste Multi-Email List
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="modal-body" style="padding:24px;">
+                        <div class="tab-content" id="manualEmailTabsContent">
+                            <!-- TAB 1: SINGLE EMAIL -->
+                            <div class="tab-pane fade show active" id="tabSingleEmail" role="tabpanel">
+                                <div class="ec-form-group">
+                                    <label class="ec-label">Candidate Email Address <span
+                                            class="required">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="bi bi-at"></i></span>
+                                        <input type="email" class="form-control" id="singleEmailInput"
+                                            placeholder="e.g. candidate@domain.com"
+                                            onkeyup="validateSingleEmailInput(this.value)"
+                                            onkeydown="if(event.key==='Enter') addSingleEmail();">
+                                        <button class="btn btn-primary fw-bold" type="button"
+                                            onclick="addSingleEmail()">
+                                            <i class="bi bi-plus-lg"></i> Add to List
+                                        </button>
+                                    </div>
+                                    <div id="singleEmailFeedback"
+                                        style="font-size:12px;margin-top:6px;font-weight:600;"></div>
+                                </div>
+                            </div>
+
+                            <!-- TAB 2: BULK TEXTAREA -->
+                            <div class="tab-pane fade" id="tabBulkEmail" role="tabpanel">
+                                <div class="ec-form-group">
+                                    <label class="ec-label">Paste Raw Email List (Comma, semicolon, or newline
+                                        separated)</label>
+                                    <textarea class="ec-textarea" id="bulkEmailTextarea" rows="6"
+                                        placeholder="john.doe@example.com, sara.smith@gmail.com&#10;rahul.k@outlook.com&#10;alex99@domain.org"
+                                        onkeyup="analyzeBulkEmailInput()"></textarea>
+                                    <div style="font-size:11px;color:#64748b;margin-top:4px;">Emails will be
+                                        auto-trimmed, validated, and duplicates against your existing list will be
+                                        filtered out.</div>
+                                </div>
+
+                                <div id="bulkAnalysisStats" style="display:none;"
+                                    class="p-3 bg-light rounded border mb-3">
+                                    <div class="d-flex gap-3 flex-wrap">
+                                        <span
+                                            class="badge bg-success-subtle text-success border border-success-subtle"><i
+                                                class="bi bi-check-circle me-1"></i> <strong
+                                                id="bulkValidCount">0</strong> Valid</span>
+                                        <span
+                                            class="badge bg-warning-subtle text-warning border border-warning-subtle"><i
+                                                class="bi bi-exclamation-triangle me-1"></i> <strong
+                                                id="bulkDuplicateCount">0</strong> Duplicate</span>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i
+                                                class="bi bi-x-circle me-1"></i> <strong
+                                                id="bulkInvalidCount">0</strong> Invalid</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ec-alert mt-3" id="manualEmailAlert"></div>
+                    </div>
+
+                    <div class="modal-footer" style="border-top:1px solid #e2e8f0;padding:14px 24px;">
+                        <button type="button" class="ec-btn ec-btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="ec-btn ec-btn-primary" id="btnApplyBulkManual"
+                            onclick="applyBulkManualEmails()">
+                            <i class="bi bi-check-lg"></i> Append Valid Emails
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================
+             MODAL 2: IMPORT CSV MODAL
+             ======================================== -->
+        <div class="modal fade" id="importCsvModal" tabindex="-1" aria-labelledby="importCsvModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content"
+                    style="border-radius:14px;border:none;box-shadow:0 10px 40px rgba(0,0,0,0.15);">
+                    <div class="modal-header"
+                        style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%);color:white;border-top-left-radius:14px;border-top-right-radius:14px;padding:18px 24px;">
+                        <h5 class="modal-title" id="importCsvModalLabel"
+                            style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px;">
+                            <i class="bi bi-cloud-arrow-up-fill text-primary"></i> Import Contacts from CSV
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" style="padding:24px;">
+                        <div class="ec-upload-zone" id="uploadZone">
+                            <input type="file" id="csvFileInput" accept=".csv">
+                            <div class="ec-upload-icon"><i class="bi bi-file-earmark-arrow-up"></i></div>
+                            <div class="ec-upload-title">Click to browse or drag &amp; drop your CSV file here</div>
+                            <div class="ec-upload-hint">File must contain a column named <strong>email</strong></div>
+                        </div>
+
+                        <div id="importLoading" style="display:none;text-align:center;padding:24px;">
+                            <div class="spinner-border text-primary" role="status" style="width:2.2rem;height:2.2rem;">
+                            </div>
+                            <div style="margin-top:12px;font-weight:600;color:#334155;">Parsing CSV and verifying email
+                                formats...</div>
+                        </div>
+
+                        <div class="ec-alert mt-3" id="importAlert"></div>
+
+                        <div id="importStats" style="display:none;">
+                            <div class="ec-import-stats">
+                                <div class="stat-box imported">
+                                    <div class="stat-num" id="statImported">0</div>
+                                    <div class="stat-label"><i class="bi bi-check-circle-fill text-success"></i> Valid
+                                        Emails</div>
+                                </div>
+                                <div class="stat-box skipped">
+                                    <div class="stat-num" id="statSkipped">0</div>
+                                    <div class="stat-label"><i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                                        Skipped</div>
+                                </div>
+                                <div class="stat-box failed">
+                                    <div class="stat-num" id="statFailed">0</div>
+                                    <div class="stat-label"><i class="bi bi-x-circle-fill text-danger"></i> Failed</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="border-top:1px solid #e2e8f0;padding:14px 24px;">
+                        <button type="button" class="ec-btn ec-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="ec-btn ec-btn-primary" id="btnApplyImport" style="display:none;"
+                            onclick="applyImportAndClose()">
+                            <i class="bi bi-check-lg"></i> Apply <span id="btnApplyCount">0</span> Emails
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================
+             MODAL 3: RECIPIENT AUDIT & DELIVERY BREAKDOWN (SERVER-SIDE PAGINATED)
+             ======================================== -->
+        <div class="modal fade" id="recipientsAuditModal" tabindex="-1" aria-labelledby="recipientsAuditModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content"
+                    style="border-radius:14px;border:none;box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+                    <div class="modal-header"
+                        style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%);color:white;border-top-left-radius:14px;border-top-right-radius:14px;padding:18px 24px;">
+                        <div style="flex:1;">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <h5 class="modal-title fw-bold mb-0" id="auditModalCampaignTitle">Campaign Recipients
+                                    Delivery Audit</h5>
+                                <span id="auditModalStatusBadge"></span>
+                            </div>
+                            <div style="font-size:12px;color:#94a3b8;" id="auditModalSubtitle">Detailed recipient-level
+                                SMTP delivery statuses and diagnostic logs</div>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body" style="padding:20px 24px;">
+                        <!-- Filter & Action Toolbar -->
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <select class="ec-select" id="auditStatusFilter"
+                                    onchange="onAuditStatusFilterChange(this.value)"
+                                    style="width:160px;font-size:12px;padding:6px 10px;">
+                                    <option value="">All Delivery Statuses</option>
+                                    <option value="SENT">Sent (Success)</option>
+                                    <option value="FAILED">Failed</option>
+                                    <option value="PENDING">Pending</option>
+                                </select>
+                                <div style="position:relative; width: 260px;">
+                                    <i class="bi bi-search"
+                                        style="position:absolute;left:10px;top:9px;color:#94a3b8;font-size:12px;"></i>
+                                    <input type="text" class="ec-input" id="auditSearchInput"
+                                        placeholder="Search email or failure reason..."
+                                        onkeyup="onAuditSearchDebounce(this.value)"
+                                        style="padding-left:30px;padding-top:6px;padding-bottom:6px;font-size:12px;">
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="ec-btn ec-btn-danger" id="btnAuditRetryFailed"
+                                    onclick="retryFailedRecipientsCurrentModal()"
+                                    style="display:none;padding:6px 14px;font-size:12px;">
+                                    <i class="bi bi-arrow-repeat"></i> Retry Failed Only
+                                </button>
+                                <button type="button" class="ec-btn ec-btn-secondary" onclick="exportAuditReportCsv()"
+                                    style="padding:6px 14px;font-size:12px;">
+                                    <i class="bi bi-download"></i> Export CSV
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Recipient Audit Table -->
+                        <div
+                            style="overflow-x:auto; border:1px solid var(--ec-border); border-radius:10px; max-height:420px;">
+                            <table class="ec-history-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width:50px;">#</th>
+                                        <th>Recipient Email</th>
+                                        <th style="width:120px;">Status</th>
+                                        <th style="width:90px;text-align:center;">Attempts</th>
+                                        <th>Delivery Diagnostic / Failure Reason</th>
+                                        <th style="width:170px;">Timestamp</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-muted">Loading audit records...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Audit Pagination -->
+                        <div class="ec-pagination-bar" id="auditPaginationBar">
+                            <div style="font-size:12px;color:#64748b;font-weight:600;" id="auditPaginationInfo">Showing
+                                0 to 0 of 0 recipients</div>
+                            <div class="d-flex gap-1 align-items-center" id="auditPaginationButtons"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================
+             MODAL 4: TEMPLATE MASTER MODAL
+             ======================================== -->
+        <div class="modal fade" id="templateMasterModal" tabindex="-1" aria-labelledby="templateMasterModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content"
+                    style="border-radius:14px;border:none;box-shadow:0 10px 40px rgba(0,0,0,0.18);">
+                    <div class="modal-header"
+                        style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%);color:white;border-top-left-radius:14px;border-top-right-radius:14px;padding:16px 24px;">
+                        <h5 class="modal-title" id="templateMasterModalLabel"
+                            style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px;">
+                            <i class="bi bi-bookmark-star-fill text-warning"></i> Email Template Master
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+
+                    <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:8px 24px 0;">
+                        <ul class="nav nav-tabs border-0" id="templateTabs" role="tablist">
+                            <li class="nav-item">
+                                <button class="nav-link active fw-bold" id="tabCreateTplBtn" data-bs-toggle="tab"
+                                    data-bs-target="#tabCreateTpl" type="button"
+                                    style="border:none;border-bottom:3px solid var(--ec-primary);color:#1e293b;padding:8px 16px;">
+                                    <i class="bi bi-pencil-square me-1 text-primary"></i> Create / Edit Template
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link fw-bold text-muted" id="tabListTplBtn" data-bs-toggle="tab"
+                                    data-bs-target="#tabListTpl" type="button" style="border:none;padding:8px 16px;"
+                                    onclick="renderTemplateTable()">
+                                    <i class="bi bi-collection-fill me-1 text-secondary"></i> All Saved Templates (<span
+                                        id="tplCountBadge">0</span>)
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="modal-body" style="padding:24px;">
+                        <div class="tab-content" id="templateTabsContent">
+                            <!-- TAB 1: FORM -->
+                            <div class="tab-pane fade show active" id="tabCreateTpl" role="tabpanel">
+                                <input type="hidden" id="tplId" value="">
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="ec-label">Template Title / Name <span
+                                                class="required">*</span></label>
+                                        <input type="text" class="ec-input" id="tplName"
+                                            placeholder="e.g. AI/ML Engineer - Google Meet Interview">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="ec-label">Role / Domain <span class="required">*</span></label>
+                                        <input type="text" class="ec-input" id="tplRole"
+                                            placeholder="e.g. Full Stack Java Developer" value="">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="ec-label">Email Subject Line <span
+                                                class="required">*</span></label>
+                                        <input type="text" class="ec-input" id="tplSubject"
+                                            placeholder="e.g. Exclusive Career Opportunity: Full Stack Java Developer Position"
+                                            value="">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="ec-label">Opportunity Classification</label>
+                                        <select class="ec-select" id="tplType">
+                                            <option value="JOB" selected>Full-Time Job</option>
+                                            <option value="INTERNSHIP">Internship Opportunity</option>
+                                            <option value="CAMPUS_DRIVE">Campus Hiring Drive</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="ec-label">Conduct Mode</label>
+                                        <select class="ec-select" id="tplMode"
+                                            onchange="toggleTplModeFields(this.value)">
+                                            <option value="ONLINE" selected>Online (Virtual)</option>
+                                            <option value="OFFLINE">Offline (In-Person / Venue)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6" id="tplOnlinePlatformGroup">
+                                        <label class="ec-label">Online Platform</label>
+                                        <select class="ec-select" id="tplPlatform">
+                                            <option value="GOOGLE_MEET" selected>Google Meet</option>
+                                            <option value="ZOOM">Zoom Meeting</option>
+                                            <option value="OTHER">Other Platform Link</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6" id="tplMeetingLinkGroup">
+                                        <label class="ec-label">Meeting Link</label>
+                                        <input type="text" class="ec-input" id="tplMeetingLink"
+                                            placeholder="https://meet.google.com/xyz-abcd-efg"
+                                            value="">
+                                    </div>
+
+                                    <div class="col-12" id="tplVenueGroup" style="display:none;">
+                                        <label class="ec-label">Venue / Physical Address</label>
+                                        <textarea class="ec-textarea" id="tplVenue" rows="2"
+                                            placeholder="Full address, premises, floor, landmark..."></textarea>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="ec-label">Event Date</label>
+                                        <input type="text" class="ec-input" id="tplDate"
+                                            placeholder="e.g. Upcoming Monday" value="">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="ec-label">Event Time</label>
+                                        <input type="text" class="ec-input" id="tplTime" placeholder="e.g. 10:30 AM IST"
+                                            value="">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="ec-label">Custom Notes / Key Requirements</label>
+                                        <textarea class="ec-textarea" id="tplNotes" rows="2"
+                                            placeholder="e.g. Please join with your updated resume and webcam enabled."></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="ec-alert mt-3" id="tplAlert"></div>
+
+                                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                                    <button type="button" class="btn btn-light" onclick="resetTplForm()">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                                    </button>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-secondary"
+                                            data-bs-dismiss="modal">Close</button>
+                                        <button type="button" class="btn btn-primary" onclick="submitTemplateForm()">
+                                            <i class="bi bi-check-circle-fill me-1"></i> <span
+                                                id="tplSubmitBtnText">Save Template</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB 2: LIST TABLE -->
+                            <div class="tab-pane fade" id="tabListTpl" role="tabpanel">
+                                <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                                    <table class="table table-hover align-middle mb-0" style="font-size: 13px;">
+                                        <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+                                            <tr>
+                                                <th>Template Name</th>
+                                                <th>Role / Type</th>
+                                                <th>Mode &amp; Details</th>
+                                                <th class="text-end">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tplTableBody">
+                                            <tr>
+                                                <td colspan="4" class="text-center text-muted py-4">Loading saved
+                                                    templates...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================
+             JAVASCRIPT LOGIC
+             ======================================== -->
+        <script>
+            var importedEmails = [];
+            var currentStep = 1;
+
+            var EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+            function getCsrf() {
+                var token = (document.querySelector('meta[name="_csrf"]') || { content: '' }).content;
+                var header = (document.querySelector('meta[name="_csrf_header"]') || { content: 'X-CSRF-TOKEN' }).content;
+                return { token: token, header: header };
+            }
+
+            function goToStep(n) {
+                if (n > 1 && importedEmails.length === 0) {
+                    showAlert('importAlert', 'error', 'Please add or import email recipients first.');
+                    var modal = new bootstrap.Modal(document.getElementById('addEmailModal'));
+                    modal.show();
+                    return;
+                }
+                if (n === 3) {
+                    buildPreview();
+                }
+
+                document.querySelectorAll('.ec-panel').forEach(function (p) { p.classList.remove('active'); });
+                var targetPanel = document.getElementById('panel' + n);
+                if (targetPanel) targetPanel.classList.add('active');
+
+                document.querySelectorAll('.ec-step').forEach(function (s, i) {
+                    s.classList.remove('active', 'done');
+                    if (i + 1 < n) s.classList.add('done');
+                    if (i + 1 === n) s.classList.add('active');
+                });
+
+                document.querySelectorAll('.ec-connector').forEach(function (c, i) {
+                    c.classList.remove('done');
+                    if (i + 1 < n) c.classList.add('done');
+                });
+
+                currentStep = n;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            /* ── MANUAL EMAIL ENTRY ── */
+            function validateSingleEmailInput(val) {
+                var feedback = document.getElementById('singleEmailFeedback');
+                var trimmed = (val || '').trim();
+                if (!trimmed) {
+                    feedback.innerHTML = '';
+                    return;
+                }
+                if (!EMAIL_REGEX.test(trimmed)) {
+                    feedback.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i> Invalid email format</span>';
+                } else if (importedEmails.some(function (e) { return e.toLowerCase() === trimmed.toLowerCase(); })) {
+                    feedback.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i> Already added in recipient list</span>';
+                } else {
+                    feedback.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i> Valid email address</span>';
+                }
+            }
+
+            function addSingleEmail() {
+                var input = document.getElementById('singleEmailInput');
+                var email = (input.value || '').trim();
+                if (!email) return;
+
+                if (!EMAIL_REGEX.test(email)) {
+                    showAlert('manualEmailAlert', 'error', 'Invalid email address format.');
+                    return;
+                }
+
+                if (importedEmails.some(function (e) { return e.toLowerCase() === email.toLowerCase(); })) {
+                    showAlert('manualEmailAlert', 'error', 'Email "' + email + '" is already in your recipient list.');
+                    return;
+                }
+
+                importedEmails.push(email);
+                buildEmailTable(importedEmails);
+                input.value = '';
+                document.getElementById('singleEmailFeedback').innerHTML = '';
+                showAlert('manualEmailAlert', 'success', '<i class="bi bi-check-circle-fill me-1"></i> Added <strong>' + email + '</strong> to list.');
+
+                setTimeout(function () {
+                    var modalEl = document.getElementById('addEmailModal');
+                    var modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                    hideAlert('manualEmailAlert');
+                }, 600);
+            }
+
+            function analyzeBulkEmailInput() {
+                var raw = document.getElementById('bulkEmailTextarea').value;
+                var csrf = getCsrf();
+
+                fetch('/api/email-campaign/parse-manual-emails', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', [csrf.header]: csrf.token },
+                    body: JSON.stringify({ rawInput: raw, existingEmails: importedEmails })
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.success) {
+                            document.getElementById('bulkAnalysisStats').style.display = 'block';
+                            document.getElementById('bulkValidCount').textContent = data.validCount || 0;
+                            document.getElementById('bulkDuplicateCount').textContent = data.duplicateCount || 0;
+                            document.getElementById('bulkInvalidCount').textContent = data.invalidCount || 0;
+                        }
+                    })
+                    .catch(function () { });
+            }
+
+            function applyBulkManualEmails() {
+                var raw = document.getElementById('bulkEmailTextarea').value;
+                if (!raw.trim()) {
+                    showAlert('manualEmailAlert', 'error', 'Please enter or paste emails.');
+                    return;
+                }
+                var csrf = getCsrf();
+
+                fetch('/api/email-campaign/parse-manual-emails', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', [csrf.header]: csrf.token },
+                    body: JSON.stringify({ rawInput: raw, existingEmails: importedEmails })
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.success && data.validEmails && data.validEmails.length > 0) {
+                            importedEmails = importedEmails.concat(data.validEmails);
+                            buildEmailTable(importedEmails);
+                            document.getElementById('bulkEmailTextarea').value = '';
+                            document.getElementById('bulkAnalysisStats').style.display = 'none';
+
+                            var modalEl = document.getElementById('addEmailModal');
+                            var modal = bootstrap.Modal.getInstance(modalEl);
+                            if (modal) modal.hide();
+                        } else {
+                            showAlert('manualEmailAlert', 'error', data.message || 'No valid new emails to add.');
+                        }
+                    })
+                    .catch(function (err) {
+                        showAlert('manualEmailAlert', 'error', 'Error parsing emails: ' + err.message);
+                    });
+            }
+
+            /* ── CSV UPLOAD ── */
+            var uploadZone = document.getElementById('uploadZone');
+            var csvFileInput = document.getElementById('csvFileInput');
+
+            if (uploadZone && csvFileInput) {
+                uploadZone.addEventListener('dragover', function (e) { e.preventDefault(); uploadZone.classList.add('dragover'); });
+                uploadZone.addEventListener('dragleave', function () { uploadZone.classList.remove('dragover'); });
+                uploadZone.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    uploadZone.classList.remove('dragover');
+                    if (e.dataTransfer.files[0]) handleCsvFile(e.dataTransfer.files[0]);
+                });
+                csvFileInput.addEventListener('change', function () {
+                    if (this.files[0]) handleCsvFile(this.files[0]);
+                });
+            }
+
+            function handleCsvFile(file) {
+                if (!file.name.toLowerCase().endsWith('.csv')) {
+                    showAlert('importAlert', 'error', 'Please select a valid .csv file.');
+                    return;
+                }
+                var formData = new FormData();
+                formData.append('file', file);
+
+                document.getElementById('importLoading').style.display = 'block';
+                uploadZone.style.display = 'none';
+                hideAlert('importAlert');
+
+                var csrf = getCsrf();
+
+                fetch('/api/email-campaign/import-csv', {
+                    method: 'POST',
+                    headers: { [csrf.header]: csrf.token },
+                    body: formData
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        document.getElementById('importLoading').style.display = 'none';
+                        uploadZone.style.display = 'block';
+
+                        if (data.success) {
+                            var newEmails = data.emails || [];
+                            var existingSet = new Set(importedEmails.map(function (e) { return e.toLowerCase(); }));
+                            var added = [];
+                            newEmails.forEach(function (e) {
+                                if (!existingSet.has(e.toLowerCase())) {
+                                    importedEmails.push(e);
+                                    added.push(e);
+                                }
+                            });
+
+                            document.getElementById('importStats').style.display = 'block';
+                            document.getElementById('statImported').textContent = added.length;
+                            document.getElementById('statSkipped').textContent = (data.skipped || 0) + (newEmails.length - added.length);
+                            document.getElementById('statFailed').textContent = data.failed || 0;
+
+                            document.getElementById('btnApplyImport').style.display = 'inline-flex';
+                            document.getElementById('btnApplyCount').textContent = added.length;
+                            showAlert('importAlert', 'success', 'Parsed ' + added.length + ' new valid emails.');
+                        } else {
+                            showAlert('importAlert', 'error', data.message || 'CSV Import failed');
+                        }
+                    })
+                    .catch(function (err) {
+                        document.getElementById('importLoading').style.display = 'none';
+                        uploadZone.style.display = 'block';
+                        showAlert('importAlert', 'error', 'Network error during upload: ' + err.message);
+                    });
+            }
+
+            function applyImportAndClose() {
+                buildEmailTable(importedEmails);
+                var modalEl = document.getElementById('importCsvModal');
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+
+            function resetRecipients() {
+                importedEmails = [];
+                document.getElementById('recipientsTableContainer').style.display = 'none';
+                document.getElementById('recipientsEmptyState').style.display = 'block';
+                if (document.getElementById('importStats')) document.getElementById('importStats').style.display = 'none';
+                if (document.getElementById('btnApplyImport')) document.getElementById('btnApplyImport').style.display = 'none';
+                if (csvFileInput) csvFileInput.value = '';
+                hideAlert('importAlert');
+            }
+
+            function removeRecipient(index) {
+                if (index >= 0 && index < importedEmails.length) {
+                    importedEmails.splice(index, 1);
+                    buildEmailTable(importedEmails);
+                }
+            }
+
+            function filterRecipientTable(query) {
+                var q = (query || '').toLowerCase().trim();
+                var rows = document.querySelectorAll('#emailTableBody tr');
+                rows.forEach(function (tr) {
+                    var text = tr.getAttribute('data-email') || '';
+                    tr.style.display = text.includes(q) ? '' : 'none';
+                });
+            }
+
+            function buildEmailTable(emails) {
+                if (!emails || emails.length === 0) {
+                    resetRecipients();
+                    return;
+                }
+                document.getElementById('recipientsEmptyState').style.display = 'none';
+                document.getElementById('recipientsTableContainer').style.display = 'block';
+
+                var tbody = document.getElementById('emailTableBody');
+                tbody.innerHTML = '';
+
+                emails.forEach(function (email, i) {
+                    var tr = document.createElement('tr');
+                    tr.setAttribute('data-email', email.toLowerCase());
+                    tr.innerHTML = '<td><input type="checkbox" class="email-checkbox email-row-check" value="' + email + '" checked onchange="updateSelectedCount()"></td>'
+                        + '<td style="color:#64748b;font-size:12px;">' + (i + 1) + '</td>'
+                        + '<td style="font-weight:600;"><i class="bi bi-envelope me-2 text-muted"></i>' + email + '</td>'
+                        + '<td><span class="ec-status-badge badge-sent"><i class="bi bi-check2"></i> Ready</span></td>'
+                        + '<td style="text-align:end;"><button type="button" class="btn btn-sm btn-outline-danger" style="padding:2px 7px;font-size:11px;" title="Remove recipient" onclick="removeRecipient(' + i + ')"><i class="bi bi-trash"></i></button></td>';
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('totalEmailsLabel').textContent = emails.length + ' emails ready';
+                document.getElementById('masterCheck').checked = true;
+                updateSelectedCount();
+            }
+
+            function updateSelectedCount() {
+                var total = document.querySelectorAll('.email-row-check').length;
+                var selected = document.querySelectorAll('.email-row-check:checked').length;
+                document.getElementById('selectedCountBadge').textContent = selected + ' of ' + total + ' selected';
+
+                var mc = document.getElementById('masterCheck');
+                if (mc) {
+                    mc.indeterminate = (selected > 0 && selected < total);
+                    mc.checked = (selected === total && total > 0);
+                }
+            }
+
+            function masterToggle(cb) {
+                document.querySelectorAll('.email-row-check').forEach(function (c) { c.checked = cb.checked; });
+                updateSelectedCount();
+            }
+            function selectAll() { document.querySelectorAll('.email-row-check').forEach(function (c) { c.checked = true; }); updateSelectedCount(); }
+            function deselectAll() { document.querySelectorAll('.email-row-check').forEach(function (c) { c.checked = false; }); updateSelectedCount(); }
+            function getSelectedEmails() {
+                return Array.from(document.querySelectorAll('.email-row-check:checked')).map(function (c) { return c.value; });
+            }
+
+            /* ── STEP 2 CONFIGURATION HELPERS ── */
+            function setConductMode(mode) {
+                document.getElementById('conductMode').value = mode;
+                document.getElementById('tabOnline').classList.toggle('active-tab', mode === 'ONLINE');
+                document.getElementById('tabOffline').classList.toggle('active-tab', mode === 'OFFLINE');
+                document.getElementById('onlineFields').style.display = mode === 'ONLINE' ? 'block' : 'none';
+                document.getElementById('offlineFields').style.display = mode === 'OFFLINE' ? 'block' : 'none';
+            }
+
+            function setPlatform(p) {
+                document.getElementById('onlinePlatform').value = p;
+                document.querySelectorAll('.ec-platform-btn').forEach(function (b) { b.classList.remove('selected'); });
+                var map = { GOOGLE_MEET: 'platGoogleMeet', ZOOM: 'platZoom', OTHER: 'platOther' };
+                if (map[p]) document.getElementById(map[p]).classList.add('selected');
+            }
+
+            function setSendMode(mode) {
+                document.getElementById('sendMode').value = mode;
+                document.getElementById('sendOptImmediate').classList.toggle('selected', mode === 'IMMEDIATE');
+                document.getElementById('sendOptScheduled').classList.toggle('selected', mode === 'SCHEDULED');
+                document.getElementById('scheduledFields').style.display = mode === 'SCHEDULED' ? 'block' : 'none';
+                document.getElementById('sendBtnText').textContent = mode === 'SCHEDULED' ? 'Schedule Campaign' : 'Send Campaign';
+            }
+
+            /* ── STEP 3 PREVIEW GENERATOR (EXACT MATCH WITH hiring-campaign.html) ── */
+            function buildPreview() {
+                var role = (document.getElementById('hiringRole') || {}).value || 'Software Engineer';
+                var typeVal = (document.getElementById('opportunityType') || {}).value || 'JOB';
+                var mode = (document.getElementById('conductMode') || {}).value || 'ONLINE';
+                var plat = (document.getElementById('onlinePlatform') || {}).value || 'GOOGLE_MEET';
+                var link = (document.getElementById('meetingLink') || {}).value || '';
+                var venue = (document.getElementById('venueAddress') || {}).value || '';
+                var date = (document.getElementById('eventDate') || {}).value || '';
+                var time = (document.getElementById('eventTime') || {}).value || '';
+                var selected = getSelectedEmails();
+                var sampleEmail = (selected && selected.length > 0) ? selected[0] : 'candidate@example.com';
+                var currentYear = new Date().getFullYear();
+
+                var badgeMap = {
+                    JOB: 'Full-Time Position',
+                    INTERNSHIP: 'Internship Program',
+                    PART_TIME: 'Part-Time Position',
+                    CAMPUS_DRIVE: 'Campus Recruitment'
+                };
+                var categoryMap = {
+                    JOB: 'Full-Time Employment',
+                    INTERNSHIP: 'Industrial Internship',
+                    PART_TIME: 'Part-Time Opportunity',
+                    CAMPUS_DRIVE: 'Campus Recruitment Drive'
+                };
+                var opportunityBadge = badgeMap[typeVal] || (typeVal || 'Full-Time Position');
+                var opportunityCategory = categoryMap[typeVal] || (typeVal || 'Full-Time Employment');
+
+                var platMap = {
+                    GOOGLE_MEET: 'GOOGLE MEET',
+                    ZOOM: 'ZOOM MEETING',
+                    OTHER: 'VIRTUAL PLATFORM'
+                };
+                var platDisplay = platMap[plat] || (plat ? plat.replace(/_/g, ' ') : 'GOOGLE MEET');
+
+                var displayDate = date || 'To Be Announced';
+                var displayTime = time ? (time + (time.toLowerCase().includes('am') || time.toLowerCase().includes('pm') ? '' : ' IST')) : '10:30 AM IST';
+
+                var grid = document.getElementById('summaryGrid');
+                if (grid) {
+                    grid.innerHTML = buildSummaryBox('<i class="bi bi-people-fill text-primary"></i> Target Recipients', selected.length + ' emails') +
+                        buildSummaryBox('<i class="bi bi-briefcase-fill text-primary"></i> Hiring Role', role) +
+                        buildSummaryBox('<i class="bi bi-tag-fill text-primary"></i> Type', opportunityBadge) +
+                        buildSummaryBox('<i class="bi bi-globe2 text-primary"></i> Mode', mode === 'ONLINE' ? 'Online (Virtual)' : 'Offline (In-Person)') +
+                        buildSummaryBox('<i class="bi bi-calendar-event text-primary"></i> Date', displayDate) +
+                        buildSummaryBox('<i class="bi bi-clock text-primary"></i> Time', displayTime);
+                }
+
+                var modeContentHtml = '';
+                var ctaButtonHtml = '';
+
+                if (mode === 'ONLINE') {
+                    var linkHtml = link
+                        ? '<tr><td style="padding: 8px 0 0 0; font-size: 13px; color: #334155;">'
+                          + '<strong>Direct Meeting Link:</strong><br />'
+                          + '<a href="' + link + '" target="_blank" style="color: #2563eb; font-weight: 600; font-size: 13px; word-break: break-all; text-decoration: underline;">' + link + '</a>'
+                          + '</td></tr>'
+                        : '<tr><td style="padding: 6px 0 0 0; font-size: 12px; color: #64748b; font-style: italic;">'
+                          + 'Your specific meeting room access link and passcodes will be delivered 30 minutes before your scheduled slot.'
+                          + '</td></tr>';
+
+                    modeContentHtml = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px 0; background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0f172a; border-radius: 4px;">'
+                        + '<tr><td style="padding: 18px 20px;">'
+                        + '<div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #0f172a; margin-bottom: 6px;">Virtual Interview Access Details</div>'
+                        + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+                        + '<tr><td style="padding: 4px 0; font-size: 13px; color: #334155;"><strong>Evaluation Mode:</strong> Virtual / Video Conference</td></tr>'
+                        + '<tr><td style="padding: 4px 0; font-size: 13px; color: #334155;"><strong>Platform:</strong> <span>' + platDisplay + '</span></td></tr>'
+                        + linkHtml
+                        + '</table></td></tr></table>';
+
+                    if (link) {
+                        ctaButtonHtml = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 28px 0;">'
+                            + '<tr><td align="left">'
+                            + '<table role="presentation" cellpadding="0" cellspacing="0" border="0">'
+                            + '<tr><td align="center" style="background-color: #0f172a; border-radius: 4px;">'
+                            + '<a href="' + link + '" target="_blank" style="display: inline-block; padding: 12px 28px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; letter-spacing: 0.2px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">Join Virtual Interview</a>'
+                            + '</td></tr></table></td></tr></table>';
+                    }
+                } else {
+                    var venueDisplay = venue || 'TechnoKraft Training & Solution Pvt. Ltd., 1st Floor, Kanchwala Avenue, Above Viju\'s Dabeli, Thatte Nagar Marg, College Road, Nashik 422005';
+                    var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(venueDisplay);
+
+                    modeContentHtml = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px 0; background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0f172a; border-radius: 4px;">'
+                        + '<tr><td style="padding: 18px 20px;">'
+                        + '<div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #0f172a; margin-bottom: 6px;">Physical Interview Venue &amp; Reporting</div>'
+                        + '<div style="font-size: 13px; line-height: 20px; font-weight: 600; color: #0f172a; margin-bottom: 8px;">' + venueDisplay + '</div>'
+                        + '<div style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Please report at the reception desk 15 minutes prior to the scheduled start time.</div>'
+                        + '<table role="presentation" cellpadding="0" cellspacing="0" border="0">'
+                        + '<tr><td><a href="' + mapsUrl + '" target="_blank" style="display: inline-block; font-size: 12px; font-weight: 600; color: #2563eb; text-decoration: underline;">View Venue Location on Google Maps &rarr;</a></td></tr>'
+                        + '</table></td></tr></table>';
+                }
+
+                var fullHtml = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06); border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">'
+                    + '<!-- TOP ACCENT BAR -->'
+                    + '<tr><td height="4" style="background-color: #0f172a; font-size: 0px; line-height: 0px;">&nbsp;</td></tr>'
+                    + '<!-- HEADER SECTION -->'
+                    + '<tr><td style="background-color: #ffffff; padding: 32px 36px 22px 36px; border-bottom: 1px solid #edf2f7;">'
+                    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+                    + '<tr>'
+                    + '<td valign="middle" align="left"><img src="https://powerbi.ttsnasik.com/assets/image/tts-logo-ev.png" alt="TechnoKraft Training &amp; Solution" width="62" height="62" style="display: block; width: 62px; height: auto;" /></td>'
+                    + '<td valign="middle" align="right">'
+                    + '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="background-color: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 12px;">'
+                    + '<span style="font-size: 11px; font-weight: 700; color: #334155; letter-spacing: 0.8px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">' + opportunityBadge + '</span>'
+                    + '</td></tr></table>'
+                    + '</td>'
+                    + '</tr>'
+                    + '</table>'
+                    + '<div style="margin-top: 20px;">'
+                    + '<div style="font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #2563eb; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; margin-bottom: 6px;">Talent Acquisition &amp; Recruitment</div>'
+                    + '<h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">Interview Call Letter: ' + role + '</h1>'
+                    + '</div>'
+                    + '</td></tr>'
+                    + '<!-- MAIN BODY -->'
+                    + '<tr><td style="padding: 28px 36px 24px 36px; background-color: #ffffff;">'
+                    + '<p style="margin: 0 0 14px 0; font-size: 15px; line-height: 24px; font-weight: 600; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">Dear Candidate,</p>'
+                    + '<p style="margin: 0 0 22px 0; font-size: 14px; line-height: 23px; color: #334155; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">Thank you for your interest in career opportunities with <strong>TechnoKraft Training &amp; Solution Pvt. Ltd.</strong> Following an assessment of your profile and technical background, we are pleased to invite you to the interview evaluation round for the position of <strong style="color: #0f172a;">' + role + '</strong>.</p>'
+                    + '<!-- MATRIX -->'
+                    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 22px 0; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">'
+                    + '<tr>'
+                    + '<td width="50%" valign="top" style="padding: 12px 16px; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">'
+                    + '<div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; margin-bottom: 4px;">Position / Designation</div>'
+                    + '<div style="font-size: 14px; font-weight: 700; color: #0f172a;">' + role + '</div>'
+                    + '</td>'
+                    + '<td width="50%" valign="top" style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">'
+                    + '<div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; margin-bottom: 4px;">Opportunity Category</div>'
+                    + '<div style="font-size: 14px; font-weight: 700; color: #0f172a;">' + opportunityCategory + '</div>'
+                    + '</td>'
+                    + '</tr>'
+                    + '<tr>'
+                    + '<td width="50%" valign="top" style="padding: 12px 16px; border-right: 1px solid #e2e8f0; background-color: #ffffff;">'
+                    + '<div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; margin-bottom: 4px;">Scheduled Date</div>'
+                    + '<div style="font-size: 14px; font-weight: 700; color: #0f172a;">' + displayDate + '</div>'
+                    + '</td>'
+                    + '<td width="50%" valign="top" style="padding: 12px 16px; background-color: #ffffff;">'
+                    + '<div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; margin-bottom: 4px;">Scheduled Time</div>'
+                    + '<div style="font-size: 14px; font-weight: 700; color: #0f172a;">' + displayTime + '</div>'
+                    + '</td>'
+                    + '</tr>'
+                    + '</table>'
+                    + modeContentHtml
+                    + ctaButtonHtml
+                    + '<!-- CANDIDATE GUIDELINES -->'
+                    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 22px 0; border: 1px solid #e2e8f0; border-radius: 6px;">'
+                    + '<tr><td style="padding: 18px 20px;">'
+                    + '<div style="font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px;">Candidate Guidelines &amp; Protocol</div>'
+                    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+                    + '<tr><td width="16" valign="top" style="font-size: 13px; line-height: 22px; color: #0f172a; padding-bottom: 8px;">&bull;</td><td style="font-size: 13px; line-height: 22px; color: #334155; padding-bottom: 8px;"><strong>Reporting Time:</strong> Please log in to the virtual platform or arrive at the physical venue at least <strong>10 minutes prior</strong> to your scheduled time slot.</td></tr>'
+                    + '<tr><td width="16" valign="top" style="font-size: 13px; line-height: 22px; color: #0f172a; padding-bottom: 8px;">&bull;</td><td style="font-size: 13px; line-height: 22px; color: #334155; padding-bottom: 8px;"><strong>Portfolio &amp; Projects:</strong> Have active repository links, hosted projects, or relevant code samples accessible for live screen sharing or technical review.</td></tr>'
+                    + '<tr><td width="16" valign="top" style="font-size: 13px; line-height: 22px; color: #0f172a;">&bull;</td><td style="font-size: 13px; line-height: 22px; color: #334155;"><strong>Technical Environment (Virtual Mode):</strong> Ensure an uninterrupted high-speed internet connection, functional audio headset, and webcam in a quiet environment.</td></tr>'
+                    + '</table>'
+                    + '</td></tr></table>'
+                    + '<!-- SIGNATURE BLOCK -->'
+                    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0;">'
+                    + '<tr><td>'
+                    + '<p style="margin: 0 0 4px 0; font-size: 13px; color: #64748b; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">Regards,</p>'
+                    + '<p style="margin: 0 0 2px 0; font-size: 14px; font-weight: 700; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">Talent Acquisition Team</p>'
+                    + '<p style="margin: 0; font-size: 13px; font-weight: 600; color: #334155; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">TechnoKraft Training &amp; Solution Pvt. Ltd.</p>'
+                    + '</td></tr></table>'
+                    + '</td></tr>'
+                    + '<!-- FOOTER SECTION -->'
+                    + '<tr><td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 24px 36px; text-align: left; color: #64748b; font-size: 12px; line-height: 19px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">'
+                    + '<div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">TechnoKraft Training &amp; Solution Pvt. Ltd.</div>'
+                    + '<div style="margin-bottom: 10px; color: #64748b;">1st Floor, Kanchwala Avenue, Above Viju\'s Dabeli, Thatte Nagar Marg, College Road, Nashik, Maharashtra 422005, India</div>'
+                    + '<div style="margin-bottom: 12px;">'
+                    + '<span style="display: inline-block; margin-right: 14px;">Phone: <a href="tel:+918645628278" style="color: #2563eb; text-decoration: none; font-weight: 600;">+91 86456 28278</a></span>'
+                    + '<span style="display: inline-block; margin-right: 14px;">Email: <a href="mailto:info@tts.net.in" style="color: #2563eb; text-decoration: none; font-weight: 600;">info@tts.net.in</a></span>'
+                    + '<span style="display: inline-block;">Website: <a href="https://tts.net.in" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 600;">www.tts.net.in</a></span>'
+                    + '</div>'
+                    + '<div style="height: 1px; background-color: #e2e8f0; margin: 12px 0;"></div>'
+                    + '<p style="margin: 0; font-size: 11px; line-height: 17px; color: #94a3b8;">'
+                    + '&copy; ' + currentYear + ' TechnoKraft Training &amp; Solution Pvt. Ltd. All rights reserved.<br />'
+                    + 'This message was dispatched to <strong style="color: #64748b;">' + sampleEmail + '</strong>. This communication contains official and confidential recruitment details.'
+                    + '</p>'
+                    + '</td></tr>'
+                    + '</table>';
+
+                var previewEl = document.getElementById('emailPreviewContent');
+                if (previewEl) {
+                    previewEl.innerHTML = fullHtml;
+                }
+            }
+
+            function buildSummaryBox(label, value) {
+                return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;text-align:center;">'
+                    + '<div style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.3px;">' + label + '</div>'
+                    + '<div style="font-size:11.5px;font-weight:700;color:#1e293b;word-break:break-word;">' + value + '</div>'
+                    + '</div>';
+            }
+
+            /* ── SEND CAMPAIGN ── */
+            function sendCampaign() {
+                var selected = getSelectedEmails();
+                if (selected.length === 0) {
+                    showAlert('sendAlert', 'error', '<i class="bi bi-exclamation-triangle-fill me-1"></i> No recipients selected. Please go back to Step 1 and select at least one email.');
+                    return;
+                }
+
+                var payload = {
+                    campaignName: document.getElementById('campaignName').value,
+                    emailSubject: document.getElementById('emailSubject').value,
+                    hiringRole: document.getElementById('hiringRole').value,
+                    opportunityType: document.getElementById('opportunityType').value,
+                    conductMode: document.getElementById('conductMode').value,
+                    onlinePlatform: document.getElementById('onlinePlatform').value,
+                    meetingLink: document.getElementById('meetingLink').value,
+                    venueAddress: document.getElementById('venueAddress').value,
+                    eventDate: document.getElementById('eventDate').value,
+                    eventTime: document.getElementById('eventTime').value,
+                    customNotes: (document.getElementById('customNotes') || {}).value || '',
+                    sendMode: document.getElementById('sendMode').value,
+                    scheduledAt: document.getElementById('scheduledAt').value || null,
+                    emails: selected
+                };
+
+                if (!payload.campaignName) { showAlert('sendAlert', 'error', 'Campaign Name is required.'); return; }
+                if (!payload.emailSubject) { showAlert('sendAlert', 'error', 'Email Subject is required.'); return; }
+
+                var btn = document.getElementById('btnSendNow');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...';
+                document.getElementById('btnBack3').disabled = true;
+
+                if (payload.sendMode === 'IMMEDIATE') {
+                    document.getElementById('sendProgressSection').style.display = 'block';
+                    animateProgress();
+                }
+
+                var csrf = getCsrf();
+
+                fetch('/api/email-campaign/create-and-send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', [csrf.header]: csrf.token },
+                    body: JSON.stringify(payload)
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        btn.disabled = false;
+                        document.getElementById('btnBack3').disabled = false;
+                        document.getElementById('sendProgressSection').style.display = 'none';
+                        clearInterval(window._progressTimer);
+
+                        if (data.success) {
+                            showAlert('sendAlert', 'success', '<i class="bi bi-check-circle-fill me-1"></i> ' + data.message);
+                            btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> ' + (payload.sendMode === 'SCHEDULED' ? 'Scheduled Successfully!' : 'Dispatched!');
+                            setTimeout(function () {
+                                loadCampaignHistory(0);
+                                scrollToHistory();
+                            }, 1200);
+                        } else {
+                            btn.innerHTML = '<i class="bi bi-send-fill me-1"></i> Retry';
+                            showAlert('sendAlert', 'error', data.message || 'Failed to dispatch campaign');
+                        }
+                    })
+                    .catch(function (err) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-send-fill me-1"></i> Retry';
+                        showAlert('sendAlert', 'error', 'Network error: ' + err.message);
+                    });
+            }
+
+            function animateProgress() {
+                var pct = 0;
+                var bar = document.getElementById('sendProgressBar');
+                var text = document.getElementById('sendProgressText');
+                window._progressTimer = setInterval(function () {
+                    pct = Math.min(pct + Math.random() * 4, 92);
+                    bar.style.width = pct + '%';
+                    text.textContent = 'Broadcasting emails asynchronously in background: ' + Math.floor(pct) + '%';
+                }, 350);
+            }
+
+            /* ── SERVER-SIDE PAGINATED CAMPAIGN HISTORY ── */
+            var historyState = {
+                page: 0,
+                size: 10,
+                status: '',
+                search: '',
+                searchTimer: null
+            };
+
+            function setHistoryStatusFilter(status) {
+                historyState.status = status;
+                historyState.page = 0;
+                document.querySelectorAll('.ec-filter-tab').forEach(function (tab) {
+                    tab.classList.remove('active');
+                });
+                if (event && event.target) event.target.classList.add('active');
+                loadCampaignHistory(0);
+            }
+
+            function onPageSizeChange(size) {
+                historyState.size = parseInt(size, 10) || 10;
+                historyState.page = 0;
+                loadCampaignHistory(0);
+            }
+
+            function onHistorySearchDebounce(val) {
+                clearTimeout(historyState.searchTimer);
+                historyState.searchTimer = setTimeout(function () {
+                    historyState.search = (val || '').trim();
+                    historyState.page = 0;
+                    loadCampaignHistory(0);
+                }, 350);
+            }
+
+            function loadCampaignHistory(pageNumber) {
+                if (pageNumber !== undefined) historyState.page = pageNumber;
+
+                var url = '/api/email-campaign/history/paged?page=' + historyState.page
+                    + '&size=' + historyState.size
+                    + '&status=' + encodeURIComponent(historyState.status)
+                    + '&search=' + encodeURIComponent(historyState.search);
+
+                fetch(url)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        renderHistoryTable(data);
+                    })
+                    .catch(function () {
+                        document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc2626;padding:24px;">Failed to load campaign history.</td></tr>';
+                    });
+            }
+
+            function renderHistoryTable(data) {
+                var tbody = document.getElementById('historyTableBody');
+                var items = data.content || [];
+                var total = data.totalElements || 0;
+                var page = data.currentPage || 0;
+                var size = data.pageSize || 10;
+                var totalPages = data.totalPages || 0;
+
+                if (items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;padding:32px;"><i class="bi bi-inbox me-1"></i> No campaign records found.</td></tr>';
+                    document.getElementById('historyPaginationInfo').textContent = 'Showing 0 to 0 of 0 entries';
+                    document.getElementById('historyPaginationButtons').innerHTML = '';
+                    return;
+                }
+
+                var startIdx = page * size;
+                tbody.innerHTML = items.map(function (c, i) {
+                    var retryBtn = (c.status === 'FAILED' || c.status === 'PARTIALLY_FAILED' || (c.failedCount > 0))
+                        ? ('<button class="ec-btn ec-btn-danger" style="padding:4px 9px;font-size:11px;" title="Retry sending to failed recipients" onclick="retryCampaign(' + c.id + ')"><i class="bi bi-arrow-repeat"></i> Retry</button>')
+                        : '';
+
+                    var initials = (c.createdByName || c.createdBy || 'U').substring(0, 2).toUpperCase();
+
+                    return '<tr>'
+                        + '<td style="color:#64748b;font-size:12px;font-weight:700;">' + (startIdx + i + 1) + '</td>'
+                        + '<td>'
+                        + '<div style="font-weight:700;color:#1e293b;">' + (c.campaignName || '-') + '</div>'
+                        + '<div style="font-size:11px;color:#64748b;"><i class="bi bi-chat-left-text me-1"></i>' + (c.emailSubject || '-') + '</div>'
+                        + '</td>'
+                        + '<td>'
+                        + '<span style="font-size:12px;font-weight:600;color:#1e40af;">' + (c.hiringRole || '-') + '</span>'
+                        + '<div style="font-size:11px;color:#64748b;"><i class="bi bi-globe me-1"></i>' + (c.conductMode || '-') + '</div>'
+                        + '</td>'
+                        + '<td>'
+                        + '<div class="ec-sender-pill">'
+                        + '<div class="ec-sender-avatar">' + initials + '</div>'
+                        + '<span>' + (c.createdByName || c.createdBy || 'System') + '</span>'
+                        + '</div>'
+                        + '</td>'
+                        + '<td><span class="ec-status-badge ' + badgeClass(c.status) + '">' + statusIcon(c.status) + ' ' + (c.status || '-') + '</span></td>'
+                        + '<td style="text-align:center;">'
+                        + '<div class="d-inline-flex gap-1 align-items-center">'
+                        + '<span class="badge bg-success-subtle text-success border border-success-subtle" title="Delivered"><i class="bi bi-check2"></i> ' + (c.sentCount || 0) + '</span>'
+                        + '<span class="badge bg-danger-subtle text-danger border border-danger-subtle" title="Failed"><i class="bi bi-x"></i> ' + (c.failedCount || 0) + '</span>'
+                        + '<span class="badge bg-light text-dark border" title="Total Recipients">' + (c.totalRecipients || 0) + '</span>'
+                        + '</div>'
+                        + '</td>'
+                        + '<td style="font-size:12px;color:#64748b;">'
+                        + '<div><i class="bi bi-calendar me-1"></i>' + formatDate(c.createdAt) + '</div>'
+                        + (c.sentAt ? '<div style="font-size:11px;color:#059669;"><i class="bi bi-check-all me-1"></i>' + formatDate(c.sentAt) + '</div>' : '')
+                        + '</td>'
+                        + '<td style="text-align:end;">'
+                        + '<div class="d-flex justify-content-end gap-1">'
+                        + '<button class="ec-btn ec-btn-secondary" style="padding:4px 9px;font-size:11px;" title="View recipient delivery audit log" onclick="openRecipientsAuditModal(' + c.id + ', \'' + escapeQuotes(c.campaignName) + '\', \'' + c.status + '\', \'' + escapeQuotes(c.createdByName || c.createdBy) + '\')">'
+                        + '<i class="bi bi-people-fill text-primary"></i> Audit</button>'
+                        + retryBtn
+                        + '<button class="ec-btn ec-btn-secondary" style="padding:4px 8px;font-size:11px;" title="Export CSV" onclick="window.open(\'/api/email-campaign/' + c.id + '/export-csv\')"><i class="bi bi-download"></i></button>'
+                        + '</div>'
+                        + '</td>'
+                        + '</tr>';
+                }).join('');
+
+                var endIdx = Math.min(startIdx + size, total);
+                document.getElementById('historyPaginationInfo').textContent = 'Showing ' + (startIdx + 1) + ' to ' + endIdx + ' of ' + total + ' campaigns';
+                renderPaginationButtons('historyPaginationButtons', page, totalPages, 'loadCampaignHistory');
+            }
+
+            function renderPaginationButtons(containerId, currentPage, totalPages, funcName) {
+                var container = document.getElementById(containerId);
+                if (!container) return;
+                if (totalPages <= 1) {
+                    container.innerHTML = '';
+                    return;
+                }
+
+                var html = '';
+                html += '<button class="ec-page-btn" ' + (currentPage === 0 ? 'disabled' : '') + ' onclick="' + funcName + '(' + (currentPage - 1) + ')"><i class="bi bi-chevron-left"></i> Prev</button>';
+
+                var startPage = Math.max(0, currentPage - 2);
+                var endPage = Math.min(totalPages - 1, currentPage + 2);
+
+                if (startPage > 0) {
+                    html += '<button class="ec-page-btn" onclick="' + funcName + '(0)">1</button>';
+                    if (startPage > 1) html += '<span style="padding:4px;">...</span>';
+                }
+
+                for (var p = startPage; p <= endPage; p++) {
+                    html += '<button class="ec-page-btn ' + (p === currentPage ? 'active' : '') + '" onclick="' + funcName + '(' + p + ')">' + (p + 1) + '</button>';
+                }
+
+                if (endPage < totalPages - 1) {
+                    if (endPage < totalPages - 2) html += '<span style="padding:4px;">...</span>';
+                    html += '<button class="ec-page-btn" onclick="' + funcName + '(' + (totalPages - 1) + ')">' + totalPages + '</button>';
+                }
+
+                html += '<button class="ec-page-btn" ' + (currentPage >= totalPages - 1 ? 'disabled' : '') + ' onclick="' + funcName + '(' + (currentPage + 1) + ')">Next <i class="bi bi-chevron-right"></i></button>';
+                container.innerHTML = html;
+            }
+
+            /* ── RECIPIENTS AUDIT MODAL (SERVER-SIDE PAGINATED) ── */
+            var currentAuditCampaignId = null;
+            var auditState = {
+                page: 0,
+                size: 20,
+                status: '',
+                search: '',
+                searchTimer: null
+            };
+
+            function openRecipientsAuditModal(campaignId, name, status, senderName) {
+                currentAuditCampaignId = campaignId;
+                auditState.page = 0;
+                auditState.status = '';
+                auditState.search = '';
+
+                document.getElementById('auditModalCampaignTitle').textContent = name || ('Campaign #' + campaignId);
+                document.getElementById('auditModalSubtitle').textContent = 'Sender: ' + (senderName || 'System') + ' | ID: ' + campaignId;
+                document.getElementById('auditModalStatusBadge').className = 'ec-status-badge ' + badgeClass(status);
+                document.getElementById('auditModalStatusBadge').innerHTML = statusIcon(status) + ' ' + (status || 'UNKNOWN');
+                document.getElementById('auditStatusFilter').value = '';
+                document.getElementById('auditSearchInput').value = '';
+
+                var modal = new bootstrap.Modal(document.getElementById('recipientsAuditModal'));
+                modal.show();
+                loadAuditRecipients(0);
+            }
+
+            function onAuditStatusFilterChange(val) {
+                auditState.status = val || '';
+                auditState.page = 0;
+                loadAuditRecipients(0);
+            }
+
+            function onAuditSearchDebounce(val) {
+                clearTimeout(auditState.searchTimer);
+                auditState.searchTimer = setTimeout(function () {
+                    auditState.search = (val || '').trim();
+                    auditState.page = 0;
+                    loadAuditRecipients(0);
+                }, 350);
+            }
+
+            function loadAuditRecipients(pageNumber) {
+                if (!currentAuditCampaignId) return;
+                if (pageNumber !== undefined) auditState.page = pageNumber;
+
+                var tbody = document.getElementById('auditTableBody');
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Loading delivery audit logs...</td></tr>';
+
+                var url = '/api/email-campaign/' + currentAuditCampaignId + '/recipients/paged?page=' + auditState.page
+                    + '&size=' + auditState.size
+                    + '&status=' + encodeURIComponent(auditState.status)
+                    + '&search=' + encodeURIComponent(auditState.search);
+
+                fetch(url)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        renderAuditTable(data);
+                    })
+                    .catch(function (err) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Error loading audit records: ' + err.message + '</td></tr>';
+                    });
+            }
+
+            function renderAuditTable(data) {
+                var tbody = document.getElementById('auditTableBody');
+                var items = data.content || [];
+                var total = data.totalElements || 0;
+                var page = data.currentPage || 0;
+                var size = data.pageSize || 20;
+                var totalPages = data.totalPages || 0;
+
+                var hasFailed = items.some(function (r) { return r.status === 'FAILED'; });
+                var retryBtn = document.getElementById('btnAuditRetryFailed');
+                if (retryBtn) retryBtn.style.display = hasFailed ? 'inline-flex' : 'none';
+
+                if (items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-inbox me-1"></i> No matching recipient logs found.</td></tr>';
+                    document.getElementById('auditPaginationInfo').textContent = 'Showing 0 to 0 of 0 recipients';
+                    document.getElementById('auditPaginationButtons').innerHTML = '';
+                    return;
+                }
+
+                var startIdx = page * size;
+                tbody.innerHTML = items.map(function (r, i) {
+                    var failureHtml = '-';
+                    if (r.status === 'FAILED') {
+                        var cleanReason = r.failureReason || 'Delivery failure / unhandled SMTP exception';
+                        failureHtml = '<div style="background:#fef2f2;border:1px solid #fecaca;padding:6px 10px;border-radius:6px;color:#991b1b;font-size:12px;word-break:break-word;">'
+                            + '<i class="bi bi-exclamation-octagon-fill text-danger me-1"></i>' + cleanReason
+                            + '</div>';
+                    } else if (r.status === 'SENT') {
+                        failureHtml = '<span style="color:#059669;font-size:12px;font-weight:600;"><i class="bi bi-check-circle-fill me-1"></i> Delivered successfully</span>';
+                    }
+
+                    return '<tr>'
+                        + '<td style="color:#64748b;font-size:12px;font-weight:700;">' + (startIdx + i + 1) + '</td>'
+                        + '<td style="font-weight:600;color:#1e293b;"><i class="bi bi-envelope me-1 text-muted"></i>' + r.email + '</td>'
+                        + '<td><span class="ec-status-badge ' + badgeClass(r.status) + '">' + statusIcon(r.status) + ' ' + r.status + '</span></td>'
+                        + '<td style="text-align:center;font-weight:700;color:#64748b;">' + (r.attemptCount || 1) + '</td>'
+                        + '<td>' + failureHtml + '</td>'
+                        + '<td style="font-size:12px;color:#64748b;">' + formatDate(r.sentAt || r.createdAt) + '</td>'
+                        + '</tr>';
+                }).join('');
+
+                var endIdx = Math.min(startIdx + size, total);
+                document.getElementById('auditPaginationInfo').textContent = 'Showing ' + (startIdx + 1) + ' to ' + endIdx + ' of ' + total + ' recipients';
+                renderPaginationButtons('auditPaginationButtons', page, totalPages, 'loadAuditRecipients');
+            }
+
+            function retryCampaign(campaignId) {
+                if (!confirm('Do you want to retry sending only the failed recipients for this campaign?')) return;
+
+                var csrf = getCsrf();
+                fetch('/api/email-campaign/' + campaignId + '/retry-failed', {
+                    method: 'POST',
+                    headers: { [csrf.header]: csrf.token }
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        alert(data.message || 'Retry initiated.');
+                        loadCampaignHistory();
+                    })
+                    .catch(function (err) {
+                        alert('Error triggering retry: ' + err.message);
+                    });
+            }
+
+            function retryFailedRecipientsCurrentModal() {
+                if (currentAuditCampaignId) {
+                    retryCampaign(currentAuditCampaignId);
+                    setTimeout(function () {
+                        loadAuditRecipients();
+                    }, 1000);
+                }
+            }
+
+            function exportAuditReportCsv() {
+                if (currentAuditCampaignId) {
+                    window.open('/api/email-campaign/' + currentAuditCampaignId + '/export-csv');
+                }
+            }
+
+            function badgeClass(status) {
+                var map = {
+                    SENT: 'badge-sent',
+                    PARTIALLY_FAILED: 'badge-partial',
+                    SCHEDULED: 'badge-scheduled',
+                    SENDING: 'badge-sending',
+                    DRAFT: 'badge-draft',
+                    FAILED: 'badge-failed'
+                };
+                return map[status] || 'badge-draft';
+            }
+
+            function statusIcon(status) {
+                var map = {
+                    SENT: '<i class="bi bi-check-circle-fill"></i>',
+                    PARTIALLY_FAILED: '<i class="bi bi-exclamation-triangle-fill"></i>',
+                    SCHEDULED: '<i class="bi bi-calendar-event-fill"></i>',
+                    SENDING: '<i class="bi bi-arrow-repeat"></i>',
+                    DRAFT: '<i class="bi bi-file-earmark"></i>',
+                    FAILED: '<i class="bi bi-x-circle-fill"></i>'
+                };
+                return map[status] || '';
+            }
+
+            function formatDate(dt) {
+                if (!dt) return '-';
+                try {
+                    return new Date(dt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                } catch (e) {
+                    return dt;
+                }
+            }
+
+            function escapeQuotes(str) {
+                if (!str) return '';
+                return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            }
+
+            function scrollToHistory() {
+                var el = document.getElementById('historySection');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            function showAlert(id, type, msg) {
+                var el = document.getElementById(id);
+                if (el) {
+                    el.className = 'ec-alert visible ' + type;
+                    el.innerHTML = msg;
+                }
+            }
+            function hideAlert(id) {
+                var el = document.getElementById(id);
+                if (el) el.className = 'ec-alert';
+            }
+
+            /* ── TEMPLATE MASTER CRUD ── */
+            var savedTemplatesList = [];
+
+            function loadSavedTemplates() {
+                fetch('/api/email-campaign/templates')
+                    .then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (data) {
+                        savedTemplatesList = Array.isArray(data) ? data : [];
+                        var select = document.getElementById('savedTemplateSelect');
+                        var badge = document.getElementById('tplCountBadge');
+                        if (badge) badge.textContent = savedTemplatesList.length;
+
+                        if (select) {
+                            var currentVal = select.value;
+                            select.innerHTML = '<option value="">-- Select a Saved Template to Auto-Fill --</option>';
+                            savedTemplatesList.forEach(function (tpl) {
+                                var opt = document.createElement('option');
+                                opt.value = tpl.id;
+                                opt.textContent = tpl.templateName + ' (' + (tpl.hiringRole || 'Role') + ' - ' + (tpl.conductMode || 'ONLINE') + ')';
+                                select.appendChild(opt);
+                            });
+                            if (currentVal) select.value = currentVal;
+                        }
+                    })
+                    .catch(function (err) {
+                        console.error('Failed to load templates:', err);
+                    });
+            }
+
+            function onSavedTemplateChange(templateId) {
+                if (!templateId) return;
+                var tpl = savedTemplatesList.find(function (t) { return t.id == templateId; });
+                if (!tpl) return;
+
+                if (tpl.templateName && document.getElementById('campaignName')) document.getElementById('campaignName').value = tpl.templateName;
+                if (tpl.emailSubject && document.getElementById('emailSubject')) document.getElementById('emailSubject').value = tpl.emailSubject;
+                if (tpl.hiringRole && document.getElementById('hiringRole')) document.getElementById('hiringRole').value = tpl.hiringRole;
+                if (tpl.opportunityType && document.getElementById('opportunityType')) document.getElementById('opportunityType').value = tpl.opportunityType;
+                if (tpl.conductMode) setConductMode(tpl.conductMode);
+                if (tpl.onlinePlatform) setPlatform(tpl.onlinePlatform);
+                if (tpl.meetingLink && document.getElementById('meetingLink')) document.getElementById('meetingLink').value = tpl.meetingLink;
+                if (tpl.venueAddress && document.getElementById('venueAddress')) document.getElementById('venueAddress').value = tpl.venueAddress;
+                if (tpl.eventDate && document.getElementById('eventDate')) document.getElementById('eventDate').value = tpl.eventDate;
+                if (tpl.eventTime && document.getElementById('eventTime')) document.getElementById('eventTime').value = tpl.eventTime;
+                if (tpl.customNotes !== undefined && document.getElementById('customNotes')) document.getElementById('customNotes').value = tpl.customNotes || '';
+
+                if (typeof buildPreview === 'function') buildPreview();
+            }
+
+            function toggleTplModeFields(mode) {
+                var isOnline = (mode === 'ONLINE');
+                var onlinePlat = document.getElementById('tplOnlinePlatformGroup');
+                var meetLink = document.getElementById('tplMeetingLinkGroup');
+                var venue = document.getElementById('tplVenueGroup');
+                if (onlinePlat) onlinePlat.style.display = isOnline ? 'block' : 'none';
+                if (meetLink) meetLink.style.display = isOnline ? 'block' : 'none';
+                if (venue) venue.style.display = isOnline ? 'none' : 'block';
+            }
+
+            function openNewTemplateForm() {
+                resetTplForm();
+                var tabBtn = document.getElementById('tabCreateTplBtn');
+                if (tabBtn) new bootstrap.Tab(tabBtn).show();
+            }
+
+            function openTemplateListModal() {
+                var modal = new bootstrap.Modal(document.getElementById('templateMasterModal'));
+                modal.show();
+                openTemplateListTab();
+            }
+
+            function openTemplateListTab() {
+                var tabBtn = document.getElementById('tabListTplBtn');
+                if (tabBtn) new bootstrap.Tab(tabBtn).show();
+                renderTemplateTable();
+            }
+
+            function resetTplForm() {
+                document.getElementById('tplId').value = '';
+                document.getElementById('tplName').value = '';
+                document.getElementById('tplSubject').value = '';
+                document.getElementById('tplRole').value = '';
+                document.getElementById('tplType').value = 'JOB';
+                document.getElementById('tplMode').value = 'ONLINE';
+                document.getElementById('tplPlatform').value = 'GOOGLE_MEET';
+                document.getElementById('tplMeetingLink').value = '';
+                document.getElementById('tplVenue').value = '';
+                document.getElementById('tplDate').value = '';
+                document.getElementById('tplTime').value = '';
+                document.getElementById('tplNotes').value = '';
+                document.getElementById('tplSubmitBtnText').textContent = 'Save Template';
+                toggleTplModeFields('ONLINE');
+                hideAlert('tplAlert');
+            }
+
+            function saveCurrentAsNewTemplate() {
+                resetTplForm();
+                var cName = (document.getElementById('campaignName') || {}).value || '';
+                var subject = (document.getElementById('emailSubject') || {}).value || '';
+                var role = (document.getElementById('hiringRole') || {}).value || 'AI/ML Engineer';
+                var type = (document.getElementById('opportunityType') || {}).value || 'JOB';
+                var mode = (document.getElementById('conductMode') || {}).value || 'ONLINE';
+                var platform = (document.getElementById('onlinePlatform') || {}).value || 'GOOGLE_MEET';
+                var meetLink = (document.getElementById('meetingLink') || {}).value || '';
+                var venue = (document.getElementById('venueAddress') || {}).value || '';
+                var eDate = (document.getElementById('eventDate') || {}).value || '';
+                var eTime = (document.getElementById('eventTime') || {}).value || '';
+                var notes = (document.getElementById('customNotes') || {}).value || '';
+
+                document.getElementById('tplName').value = cName ? (cName + ' (Template)') : (role + ' Template');
+                document.getElementById('tplSubject').value = subject;
+                document.getElementById('tplRole').value = role;
+                document.getElementById('tplType').value = type;
+                document.getElementById('tplMode').value = mode;
+                document.getElementById('tplPlatform').value = platform;
+                document.getElementById('tplMeetingLink').value = meetLink;
+                document.getElementById('tplVenue').value = venue;
+                document.getElementById('tplDate').value = eDate;
+                document.getElementById('tplTime').value = eTime;
+                document.getElementById('tplNotes').value = notes;
+                toggleTplModeFields(mode);
+
+                var modalEl = document.getElementById('templateMasterModal');
+                var modal = new bootstrap.Modal(modalEl);
+                modal.show();
+                openNewTemplateForm();
+            }
+
+            function submitTemplateForm() {
+                var tplId = document.getElementById('tplId').value;
+                var tplName = document.getElementById('tplName').value.trim();
+                var tplSubject = document.getElementById('tplSubject').value.trim();
+                var tplRole = document.getElementById('tplRole').value.trim();
+                var tplType = document.getElementById('tplType').value;
+                var tplMode = document.getElementById('tplMode').value;
+                var tplPlatform = document.getElementById('tplPlatform').value;
+                var tplMeetingLink = document.getElementById('tplMeetingLink').value.trim();
+                var tplVenue = document.getElementById('tplVenue').value.trim();
+                var tplDate = document.getElementById('tplDate').value.trim();
+                var tplTime = document.getElementById('tplTime').value.trim();
+                var tplNotes = document.getElementById('tplNotes').value.trim();
+
+                if (!tplName) { showAlert('tplAlert', 'error', 'Please enter a Template Name.'); return; }
+                if (!tplSubject) { showAlert('tplAlert', 'error', 'Please enter an Email Subject Line.'); return; }
+
+                var payload = {
+                    templateName: tplName,
+                    emailSubject: tplSubject,
+                    hiringRole: tplRole,
+                    opportunityType: tplType,
+                    conductMode: tplMode,
+                    onlinePlatform: tplPlatform,
+                    meetingLink: tplMeetingLink,
+                    venueAddress: tplVenue,
+                    eventDate: tplDate,
+                    eventTime: tplTime,
+                    customNotes: tplNotes
+                };
+
+                var csrf = getCsrf();
+                var url = '/api/email-campaign/templates' + (tplId ? ('/' + tplId) : '');
+                var method = tplId ? 'PUT' : 'POST';
+
+                fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json', [csrf.header]: csrf.token },
+                    body: JSON.stringify(payload)
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.success) {
+                            showAlert('tplAlert', 'success', '<i class="bi bi-check-circle-fill me-1"></i> ' + data.message);
+                            loadSavedTemplates();
+                            setTimeout(function () { openTemplateListTab(); }, 700);
+                        } else {
+                            showAlert('tplAlert', 'error', data.message || 'Failed to save template');
+                        }
+                    })
+                    .catch(function (err) {
+                        showAlert('tplAlert', 'error', 'Error saving template: ' + err.message);
+                    });
+            }
+
+            function renderTemplateTable() {
+                var tbody = document.getElementById('tplTableBody');
+                if (!tbody) return;
+
+                if (!savedTemplatesList || savedTemplatesList.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox me-1"></i> No saved templates found. Create one above!</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = savedTemplatesList.map(function (tpl) {
+                    var details = tpl.conductMode === 'ONLINE'
+                        ? ('<span class="text-primary"><i class="bi bi-camera-video me-1"></i>' + (tpl.onlinePlatform || 'ONLINE') + '</span>')
+                        : ('<span class="text-secondary"><i class="bi bi-geo-alt me-1"></i>' + (tpl.venueAddress ? (tpl.venueAddress.substring(0, 30) + '...') : 'Offline Venue') + '</span>');
+
+                    return '<tr>'
+                        + '<td><strong>' + tpl.templateName + '</strong><br><small class="text-muted">' + (tpl.emailSubject || '') + '</small></td>'
+                        + '<td><span class="badge bg-light text-dark border">' + (tpl.hiringRole || '-') + '</span><br><small class="text-muted">' + (tpl.opportunityType || 'JOB') + '</small></td>'
+                        + '<td><span class="badge bg-primary-subtle text-primary">' + tpl.conductMode + '</span><br><small>' + details + '</small></td>'
+                        + '<td class="text-end">'
+                        + '<button type="button" class="btn btn-sm btn-outline-primary me-1" title="Use in Campaign" onclick="useTemplateInCampaign(' + tpl.id + ')"><i class="bi bi-check2-circle"></i> Use</button>'
+                        + '<button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Edit Template" onclick="editSavedTemplate(' + tpl.id + ')"><i class="bi bi-pencil"></i></button>'
+                        + '<button type="button" class="btn btn-sm btn-outline-danger" title="Delete Template" onclick="deleteSavedTemplate(' + tpl.id + ')"><i class="bi bi-trash3"></i></button>'
+                        + '</td>'
+                        + '</tr>';
+                }).join('');
+            }
+
+            function useTemplateInCampaign(templateId) {
+                var select = document.getElementById('savedTemplateSelect');
+                if (select) {
+                    select.value = templateId;
+                    onSavedTemplateChange(templateId);
+                }
+                var modalEl = document.getElementById('templateMasterModal');
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                goToStep(2);
+            }
+
+            function editSavedTemplate(templateId) {
+                var tpl = savedTemplatesList.find(function (t) { return t.id == templateId; });
+                if (!tpl) return;
+
+                document.getElementById('tplId').value = tpl.id;
+                document.getElementById('tplName').value = tpl.templateName || '';
+                document.getElementById('tplSubject').value = tpl.emailSubject || '';
+                document.getElementById('tplRole').value = tpl.hiringRole || 'AI/ML Engineer';
+                document.getElementById('tplType').value = tpl.opportunityType || 'JOB';
+                document.getElementById('tplMode').value = tpl.conductMode || 'ONLINE';
+                document.getElementById('tplPlatform').value = tpl.onlinePlatform || 'GOOGLE_MEET';
+                document.getElementById('tplMeetingLink').value = tpl.meetingLink || '';
+                document.getElementById('tplVenue').value = tpl.venueAddress || '';
+                document.getElementById('tplDate').value = tpl.eventDate || '';
+                document.getElementById('tplTime').value = tpl.eventTime || '';
+                document.getElementById('tplNotes').value = tpl.customNotes || '';
+                document.getElementById('tplSubmitBtnText').textContent = 'Update Template';
+                toggleTplModeFields(tpl.conductMode || 'ONLINE');
+                hideAlert('tplAlert');
+
+                var tabBtn = document.getElementById('tabCreateTplBtn');
+                if (tabBtn) new bootstrap.Tab(tabBtn).show();
+            }
+
+            function deleteSavedTemplate(templateId) {
+                if (!confirm('Are you sure you want to delete this template?')) return;
+                var csrf = getCsrf();
+
+                fetch('/api/email-campaign/templates/' + templateId, {
+                    method: 'DELETE',
+                    headers: { [csrf.header]: csrf.token }
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function () {
+                        loadSavedTemplates();
+                        setTimeout(function () { renderTemplateTable(); }, 400);
+                    })
+                    .catch(function (err) {
+                        alert('Error deleting template: ' + err.message);
+                    });
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                loadCampaignHistory(0);
+                loadSavedTemplates();
+            });
+        </script>
+
+    </div>
+</body>
+
+</html>

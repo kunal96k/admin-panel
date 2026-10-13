@@ -88,10 +88,11 @@ public class SecurityConfig {
                  * --------------------
                  */
                 .csrf(csrf -> csrf
-                        // Allow public auth and attendance sync endpoints
+                        // Allow public auth, attendance sync, and dev test endpoints
                         .ignoringRequestMatchers(
                                 "/api/auth/**", // captcha, forgot-password etc.
                                 "/api/attendance-sync/**",
+                                "/api/test/**",
                                 "/error")
                         .csrfTokenRepository(csrfRepo)
                         .csrfTokenRequestHandler(csrfHandler))
@@ -105,6 +106,7 @@ public class SecurityConfig {
                                 "/access-denied",
                                 "/api/auth/**",
                                 "/api/attendance-sync/**",
+                                "/api/test/**",
                                 "/assets/**",
                                 "/css/**",
                                 "/js/**",

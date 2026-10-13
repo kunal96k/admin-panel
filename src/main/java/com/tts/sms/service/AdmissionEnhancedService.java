@@ -44,11 +44,24 @@ public class AdmissionEnhancedService {
                         .totalAmount(pkg.getTotalAmount())
                         .courses(pkg.getCourses().stream()
                                 .filter(Course::getIsActive)
-                                .map(course -> CourseDropdownDTO.builder()
-                                        .id(course.getId())
-                                        .courseName(course.getCourseName())
-                                        .courseFees(course.getCourseFees())
-                                        .build())
+                                .map(course -> {
+                                    boolean hasBrochure = course.getBrochurePath() != null && !course.getBrochurePath().isBlank();
+                                    String ext = (course.getBrochurePath() != null && course.getBrochurePath().contains("."))
+                                            ? course.getBrochurePath().substring(course.getBrochurePath().lastIndexOf("."))
+                                            : ".pdf";
+                                    String brochureDisplayFileName = hasBrochure
+                                            ? CourseService.formatBrochureFileName(course.getCourseName(), ext)
+                                            : null;
+                                    return CourseDropdownDTO.builder()
+                                            .id(course.getId())
+                                            .courseName(course.getCourseName())
+                                            .courseFees(course.getCourseFees())
+                                            .brochurePath(course.getBrochurePath())
+                                            .brochureFileName(brochureDisplayFileName)
+                                            .brochureUrl(hasBrochure ? "/uploads/courses/brochures/" + course.getBrochurePath() : null)
+                                            .hasBrochure(hasBrochure)
+                                            .build();
+                                })
                                 .collect(Collectors.toList()))
                         .build())
                 .collect(Collectors.toList());
@@ -61,11 +74,24 @@ public class AdmissionEnhancedService {
         List<Course> courses = courseRepository.findByIsActiveTrueOrderByCourseNameAsc();
 
         return courses.stream()
-                .map(course -> CourseDropdownDTO.builder()
-                        .id(course.getId())
-                        .courseName(course.getCourseName())
-                        .courseFees(course.getCourseFees())
-                        .build())
+                .map(course -> {
+                    boolean hasBrochure = course.getBrochurePath() != null && !course.getBrochurePath().isBlank();
+                    String ext = (course.getBrochurePath() != null && course.getBrochurePath().contains("."))
+                            ? course.getBrochurePath().substring(course.getBrochurePath().lastIndexOf("."))
+                            : ".pdf";
+                    String brochureDisplayFileName = hasBrochure
+                            ? CourseService.formatBrochureFileName(course.getCourseName(), ext)
+                            : null;
+                    return CourseDropdownDTO.builder()
+                            .id(course.getId())
+                            .courseName(course.getCourseName())
+                            .courseFees(course.getCourseFees())
+                            .brochurePath(course.getBrochurePath())
+                            .brochureFileName(brochureDisplayFileName)
+                            .brochureUrl(hasBrochure ? "/uploads/courses/brochures/" + course.getBrochurePath() : null)
+                            .hasBrochure(hasBrochure)
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 

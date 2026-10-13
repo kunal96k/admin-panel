@@ -38,6 +38,42 @@ public class FeeDueReminderScheduler {
     private final AdmissionRepository admissionRepository;
     private final EmailTemplateService emailTemplateService;
     private final SystemConfigurationService systemConfigurationService;
+    private final com.tts.sms.service.WhatsAppService whatsAppService;
+
+    /**
+     * Isolated single-instance in-memory duplicate guard to prevent duplicate WhatsApp fee reminders on the same day.
+     * NOTE: This guard stores records in JVM memory for the current process lifecycle and does NOT
+     * provide persistent or distributed multi-instance duplicate protection.
+     */
+    public static class InMemoryFeeReminderDuplicateGuard {
+        private final Set<String> sentKeys = Collections.synchronizedSet(new HashSet<>());
+
+        public boolean hasBeenSentToday(String regNo, LocalDate targetDueDate, LocalDate executionDate) {
+            return sentKeys.contains(buildKey(regNo, targetDueDate, executionDate));
+        }
+
+        public void markAsSent(String regNo, LocalDate targetDueDate, LocalDate executionDate) {
+            sentKeys.add(buildKey(regNo, targetDueDate, executionDate));
+        }
+
+        public void clear() {
+            sentKeys.clear();
+        }
+
+        public int size() {
+            return sentKeys.size();
+        }
+
+        private String buildKey(String regNo, LocalDate targetDueDate, LocalDate executionDate) {
+            return (regNo != null ? regNo.trim() : "") + ":" + targetDueDate + ":" + executionDate;
+        }
+    }
+
+    private final InMemoryFeeReminderDuplicateGuard duplicateGuard = new InMemoryFeeReminderDuplicateGuard();
+
+    public InMemoryFeeReminderDuplicateGuard getDuplicateGuard() {
+        return this.duplicateGuard;
+    }
 
     /**
      * DTO to aggregate reminder information per student
@@ -85,15 +121,20 @@ public class FeeDueReminderScheduler {
         Map<String, Object> overallResult = new LinkedHashMap<>();
         overallResult.put("executionDate", today.toString());
 
-        if (!systemConfigurationService.isFeeReminderEmailEnabled()) {
-            log.info("🚫 [GLOBAL DISABLED] Automated fee reminder emails are globally disabled in System Configuration. Skipping execution.");
+        boolean emailEnabled = systemConfigurationService.isFeeReminderEmailEnabled();
+        boolean whatsAppEnabled = systemConfigurationService.isFeeReminderWhatsAppEnabled();
+
+        if (!emailEnabled && !whatsAppEnabled) {
+            log.info("🚫 [GLOBAL DISABLED] Both fee reminder emails and WhatsApp messages are globally disabled in System Configuration. Skipping execution.");
             overallResult.put("status", "DISABLED");
-            overallResult.put("message", "Fee reminder emails are globally disabled in system configuration.");
+            overallResult.put("message", "Fee reminder emails and WhatsApp messages are globally disabled in system configuration.");
             overallResult.put("totalSent", 0);
+            overallResult.put("totalWhatsAppSent", 0);
             return overallResult;
         }
 
         int totalSentAcrossAllDays = 0;
+        int totalWhatsAppSentAcrossAllDays = 0;
         List<Map<String, Object>> dailyBreakdown = new ArrayList<>();
 
         // Countdown from 5 days before, 4, 3, 2, 1 down to 0 (Due Today)
@@ -103,14 +144,19 @@ public class FeeDueReminderScheduler {
             Map<String, Object> dayResult = sendFeeRemindersForDate(targetDueDate, daysRemaining);
             dailyBreakdown.add(dayResult);
             int sentForDay = (int) dayResult.getOrDefault("sentCount", 0);
+            int waSentForDay = (int) dayResult.getOrDefault("whatsappSentCount", 0);
             totalSentAcrossAllDays += sentForDay;
+            totalWhatsAppSentAcrossAllDays += waSentForDay;
         }
 
         overallResult.put("status", "SUCCESS");
         overallResult.put("totalSent", totalSentAcrossAllDays);
+        overallResult.put("totalEmailsSent", totalSentAcrossAllDays);
+        overallResult.put("totalWhatsAppSent", totalWhatsAppSentAcrossAllDays);
         overallResult.put("breakdown", dailyBreakdown);
 
-        log.info("🏁 [COUNTDOWN COMPLETED] Finished daily countdown fee reminders. Total emails queued: {}", totalSentAcrossAllDays);
+        log.info("🏁 [COUNTDOWN COMPLETED] Finished daily countdown fee reminders. Emails queued: {}, WhatsApp messages sent: {}",
+                totalSentAcrossAllDays, totalWhatsAppSentAcrossAllDays);
         return overallResult;
     }
 
@@ -150,12 +196,16 @@ public class FeeDueReminderScheduler {
         result.put("daysRemaining", daysRemaining);
         result.put("reminderLabel", label);
 
-        // Global master toggle check
-        if (!systemConfigurationService.isFeeReminderEmailEnabled()) {
-            log.info("🚫 [GLOBAL DISABLED] Automated fee reminder emails are globally disabled in System Configuration. Skipping execution.");
+        boolean emailEnabled = systemConfigurationService.isFeeReminderEmailEnabled();
+        boolean whatsAppEnabled = systemConfigurationService.isFeeReminderWhatsAppEnabled();
+
+        // Global master toggle check: skip only if BOTH channels are disabled
+        if (!emailEnabled && !whatsAppEnabled) {
+            log.info("🚫 [GLOBAL DISABLED] Both fee reminder emails and WhatsApp messages are globally disabled in System Configuration. Skipping execution.");
             result.put("status", "DISABLED");
-            result.put("message", "Fee reminder emails are globally disabled in system configuration.");
+            result.put("message", "Fee reminder emails and WhatsApp messages are globally disabled in system configuration.");
             result.put("sentCount", 0);
+            result.put("whatsappSentCount", 0);
             return result;
         }
 
@@ -166,6 +216,13 @@ public class FeeDueReminderScheduler {
         int skippedNonEligibleCategoryCount = 0;
         List<String> sentToEmails = new ArrayList<>();
         List<String> skippedStudents = new ArrayList<>();
+
+        // WhatsApp execution statistics
+        int sentWhatsAppCount = 0;
+        int skippedNoMobileWhatsAppCount = 0;
+        int skippedDuplicateWhatsAppCount = 0;
+        int failedWhatsAppCount = 0;
+        List<String> sentToWhatsAppList = new ArrayList<>();
 
         try {
             // Map of registrationNumber -> StudentReminderInfo to avoid sending multiple emails for the same student
@@ -247,7 +304,7 @@ public class FeeDueReminderScheduler {
 
                 // Individual student toggle check: do not send if disabled for this student
                 if (!admission.isFeeReminderEmailEnabled()) {
-                    log.info("[INFO] [INDIVIDUAL DISABLED] Fee reminder emails disabled for student: {} ({}) - Skipping email notification",
+                    log.info("[INFO] [INDIVIDUAL DISABLED] Fee reminders disabled for student: {} ({}) - Skipping notifications",
                             admission.getFullName(), regNo);
                     skippedDisabledCount++;
                     skippedStudents.add(regNo + " (" + admission.getFullName() + " - Individually Disabled)");
@@ -257,27 +314,10 @@ public class FeeDueReminderScheduler {
                 // Student category check: ONLY 'NEW_STUDENT' and 'PURSUING' are eligible
                 String studentCategory = admission.getStudentCategory();
                 if (!isEligibleCategory(studentCategory)) {
-                    log.info("[INFO] [CATEGORY SKIPPED] Student: {} ({}) has category '{}' (only NEW_STUDENT / PURSUING eligible) - Skipping email reminder",
+                    log.info("[INFO] [CATEGORY SKIPPED] Student: {} ({}) has category '{}' (only NEW_STUDENT / PURSUING eligible) - Skipping reminders",
                             admission.getFullName(), regNo, studentCategory);
                     skippedNonEligibleCategoryCount++;
                     skippedStudents.add(regNo + " (" + admission.getFullName() + " - Ineligible Category: " + studentCategory + ")");
-                    continue;
-                }
-
-                // Strict rule: check if email is provided in admission
-                String recipientEmail = null;
-                if (admission.getEmailPrimary() != null && !admission.getEmailPrimary().trim().isEmpty()) {
-                    recipientEmail = admission.getEmailPrimary().trim();
-                } else if (admission.getEmailSecondary() != null && !admission.getEmailSecondary().trim().isEmpty()) {
-                    recipientEmail = admission.getEmailSecondary().trim();
-                }
-
-                // If no email present in admission, DO NOT send email to any account
-                if (recipientEmail == null || recipientEmail.isEmpty() || !recipientEmail.contains("@")) {
-                    log.info("[INFO] [SKIPPED] No email provided in admission for student: {} ({}) - Skipping email notification",
-                            admission.getFullName(), regNo);
-                    skippedNoEmailCount++;
-                    skippedStudents.add(regNo + " (" + admission.getFullName() + " - No Email)");
                     continue;
                 }
 
@@ -316,26 +356,118 @@ public class FeeDueReminderScheduler {
                             .orElse(info.getDueAmount());
                 }
 
-                // Send the email asynchronously with countdown days remaining
-                emailTemplateService.sendFeeDueReminderEmail(
-                        recipientEmail,
-                        studentName,
-                        regNo,
-                        courseName,
-                        info.getInstallmentNumber(),
-                        info.getDueAmount(),
-                        info.getDueDate(),
-                        totalDue,
-                        info.getDaysRemaining()
-                );
+                // ==================== 1. EMAIL NOTIFICATION CHANNEL ====================
+                if (emailEnabled) {
+                    String recipientEmail = null;
+                    if (admission.getEmailPrimary() != null && !admission.getEmailPrimary().trim().isEmpty()) {
+                        recipientEmail = admission.getEmailPrimary().trim();
+                    } else if (admission.getEmailSecondary() != null && !admission.getEmailSecondary().trim().isEmpty()) {
+                        recipientEmail = admission.getEmailSecondary().trim();
+                    }
 
-                sentCount++;
-                String reminderType = (info.getDaysRemaining() != null && info.getDaysRemaining() == 0)
-                        ? "DUE TODAY (FINAL REMINDER)"
-                        : (info.getDaysRemaining() + " days before");
-                sentToEmails.add(regNo + " -> " + recipientEmail + " (" + studentName + ", ₹" + info.getDueAmount() + ", " + reminderType + ")");
-                log.info("✅ Queued fee reminder email [{}] to: {} for student: {} ({}), Due Amount: ₹{}",
-                        reminderType, recipientEmail, studentName, regNo, info.getDueAmount());
+                    if (recipientEmail != null && !recipientEmail.isEmpty() && recipientEmail.contains("@")) {
+                        emailTemplateService.sendFeeDueReminderEmail(
+                                recipientEmail,
+                                studentName,
+                                regNo,
+                                courseName,
+                                info.getInstallmentNumber(),
+                                info.getDueAmount(),
+                                info.getDueDate(),
+                                totalDue,
+                                info.getDaysRemaining()
+                        );
+
+                        sentCount++;
+                        String reminderType = (info.getDaysRemaining() != null && info.getDaysRemaining() == 0)
+                                ? "DUE TODAY (FINAL REMINDER)"
+                                : (info.getDaysRemaining() + " days before");
+                        sentToEmails.add(regNo + " -> " + recipientEmail + " (" + studentName + ", ₹" + info.getDueAmount() + ", " + reminderType + ")");
+                        log.info("✅ Queued fee reminder email [{}] to: {} for student: {} ({}), Due Amount: ₹{}",
+                                reminderType, recipientEmail, studentName, regNo, info.getDueAmount());
+                    } else {
+                        log.info("[INFO] [SKIPPED EMAIL] No email provided in admission for student: {} ({}) - Skipping email notification",
+                                admission.getFullName(), regNo);
+                        skippedNoEmailCount++;
+                        skippedStudents.add(regNo + " (" + admission.getFullName() + " - No Email)");
+                    }
+                }
+
+                // ==================== 2. OPTIONAL WHATSAPP CHANNEL ====================
+                if (whatsAppEnabled) {
+                    // Preserve existing mobile fallback: mobilePrimary -> mobileSecondary
+                    String recipientMobile = (admission.getMobilePrimary() != null && !admission.getMobilePrimary().isBlank())
+                            ? admission.getMobilePrimary().trim()
+                            : (admission.getMobileSecondary() != null ? admission.getMobileSecondary().trim() : null);
+
+                    if (recipientMobile == null || recipientMobile.isBlank()) {
+                        log.info("[INFO] [SKIPPED WHATSAPP] No primary/secondary mobile for student: {} ({})",
+                                admission.getFullName(), regNo);
+                        skippedNoMobileWhatsAppCount++;
+                    } else if (duplicateGuard.hasBeenSentToday(regNo, targetDueDate, LocalDate.now())) {
+                        log.info("[INFO] [WHATSAPP GUARD] Reminder already sent today for student: {} ({}), Due Date: {}. Skipping.",
+                                admission.getFullName(), regNo, targetDueDate);
+                        skippedDuplicateWhatsAppCount++;
+                    } else {
+                        // Dynamic payment due status string
+                        String paymentDueStatus;
+                        if (daysRemaining != null && daysRemaining == 0) {
+                            paymentDueStatus = "is due today.";
+                        } else if (daysRemaining != null && daysRemaining == 1) {
+                            paymentDueStatus = "is due tomorrow.";
+                        } else if (daysRemaining != null && daysRemaining > 1) {
+                            paymentDueStatus = "is due in " + daysRemaining + " days.";
+                        } else {
+                            paymentDueStatus = "is due soon.";
+                        }
+
+                        String installmentText = "Installment #" + (info.getInstallmentNumber() != null ? info.getInstallmentNumber() : 1);
+                        String installmentAmountText = String.format("%.2f", info.getDueAmount() != null ? info.getDueAmount() : 0.0);
+                        String dueDateText = info.getDueDate() != null
+                                ? info.getDueDate().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+                                : "";
+                        String outstandingBalanceText = String.format("%.2f", totalDue != null ? totalDue : 0.0);
+
+                        com.tts.sms.dto.WhatsAppAuditContext auditContext = com.tts.sms.dto.WhatsAppAuditContext.builder()
+                                .moduleType("FEE_REMINDER")
+                                .templateName("crm_fee_reminder_utility")
+                                .billingCategory("UTILITY")
+                                .triggerType("AUTOMATED_SCHEDULER")
+                                .triggeredByUsername("SYSTEM")
+                                .triggeredByEmployeeName("System Scheduler")
+                                .referenceId(admission.getId())
+                                .referenceNumber(regNo)
+                                .studentName(studentName)
+                                .recipientMobile(recipientMobile)
+                                .courseName(courseName != null ? courseName : "-")
+                                .build();
+
+                        com.tts.sms.dto.WhatsAppSendResult waResult = whatsAppService.sendFeeReminder(
+                                recipientMobile,
+                                studentName,
+                                courseName != null ? courseName : "-",
+                                paymentDueStatus,
+                                regNo,
+                                installmentText,
+                                installmentAmountText,
+                                dueDateText,
+                                outstandingBalanceText,
+                                auditContext
+                        );
+
+                        if (waResult != null && waResult.isSuccess()) {
+                            duplicateGuard.markAsSent(regNo, targetDueDate, LocalDate.now());
+                            sentWhatsAppCount++;
+                            sentToWhatsAppList.add(regNo + " -> " + waResult.getRecipientMobile() + " (" + studentName + ", ₹" + installmentAmountText + ")");
+                            log.info("✅ Sent fee reminder WhatsApp to: {} for student: {} ({}), Due: ₹{}",
+                                    waResult.getRecipientMobile(), studentName, regNo, installmentAmountText);
+                        } else {
+                            failedWhatsAppCount++;
+                            log.warn("⚠️ Failed to send fee reminder WhatsApp to student: {} ({}): {}",
+                                    studentName, regNo, waResult != null ? waResult.getMessage() : "Unknown error");
+                        }
+                    }
+                }
             }
 
             result.put("status", "SUCCESS");
@@ -348,8 +480,15 @@ public class FeeDueReminderScheduler {
             result.put("sentDetails", sentToEmails);
             result.put("skippedDetails", skippedStudents);
 
-            log.info("[SUCCESS] Fee reminder execution finished. Sent: {}, Skipped (No email): {}, Skipped (No admission): {}, Skipped (Individually disabled): {}, Skipped (Ineligible category): {}",
-                    sentCount, skippedNoEmailCount, skippedNoAdmissionCount, skippedDisabledCount, skippedNonEligibleCategoryCount);
+            // WhatsApp stats
+            result.put("whatsappSentCount", sentWhatsAppCount);
+            result.put("whatsappSkippedDuplicateCount", skippedDuplicateWhatsAppCount);
+            result.put("whatsappSkippedNoMobileCount", skippedNoMobileWhatsAppCount);
+            result.put("whatsappFailedCount", failedWhatsAppCount);
+            result.put("whatsappSentDetails", sentToWhatsAppList);
+
+            log.info("[SUCCESS] Fee reminder execution finished. Email Sent: {}, WhatsApp Sent: {}, Skipped (No email): {}, Skipped (No WhatsApp mobile): {}",
+                    sentCount, sentWhatsAppCount, skippedNoEmailCount, skippedNoMobileWhatsAppCount);
 
         } catch (Exception e) {
             log.error("[FAIL] Error during fee due reminder scheduler execution: {}", e.getMessage(), e);

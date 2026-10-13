@@ -752,7 +752,7 @@ public class AdmissionService {
         return admissionMapper.toResponseDTO(updated);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<FeeInstallmentDTO> getInstallments(Long admissionId) {
         log.debug("Fetching installments for admission: {}", admissionId);
 
@@ -761,6 +761,32 @@ public class AdmissionService {
 
         List<FeeInstallment> installments = feeInstallmentRepository.findByRegistrationNumberOrderByDueDateAsc(
                 admission.getRegistrationNumber());
+
+        // Retroactive auto-sync for Paid installments to match receipt payment date
+        for (FeeInstallment inst : installments) {
+            if ("Paid".equalsIgnoreCase(inst.getStatus())) {
+                if (inst.getPaidDate() == null) {
+                    List<FeeReceipt> receipts = feeReceiptRepository.findByInstallmentIdAndIsDeletedFalse(inst.getId());
+                    if (!receipts.isEmpty() && receipts.get(0).getReceiptDate() != null) {
+                        LocalDate receiptDate = receipts.get(0).getReceiptDate();
+                        inst.setPaidDate(receiptDate);
+                        inst.setDueDate(receiptDate);
+                        try {
+                            feeInstallmentRepository.save(inst);
+                        } catch (Exception e) {
+                            log.warn("Could not backfill installment {}: {}", inst.getId(), e.getMessage());
+                        }
+                    }
+                } else if (!inst.getPaidDate().equals(inst.getDueDate())) {
+                    inst.setDueDate(inst.getPaidDate());
+                    try {
+                        feeInstallmentRepository.save(inst);
+                    } catch (Exception e) {
+                        log.warn("Could not sync dueDate for installment {}: {}", inst.getId(), e.getMessage());
+                    }
+                }
+            }
+        }
 
         return installments.stream()
                 .map(admissionMapper::toInstallmentDTO)

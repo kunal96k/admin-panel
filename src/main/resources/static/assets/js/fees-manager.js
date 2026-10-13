@@ -22,7 +22,10 @@ let feesFilters = {
     status: '',
     course: '',
     fromDate: '',
-    toDate: ''
+    toDate: '',
+    createdDateFrom: '',
+    createdDateTo: '',
+    dashFilter: ''
 };
 let currentStudentId = null;
 let importedFeesData = [];
@@ -197,13 +200,76 @@ function populatePaymentModeDropdowns() {
 
 document.addEventListener('DOMContentLoaded', async function () {
     initializeEventListeners();
-    loadFeesFromBackend();
-    await loadCoursesForFilter();
-    initCourseTypeahead();   // initialize custom typeahead dropdown chips
     initFilterToggle();      // initialize advanced collapsible filters toggle
     setDefaultDates();
-    updateFilterBadge();     // update initial filters badge state
+
+    // ── Dashboard reminder card deep-link: read ?dashFilter= param ──
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('dashFilter')) {
+        applyDashboardFilterFromURL();
+    } else {
+        loadFeesFromBackend();
+        updateFilterBadge();     // update initial filters badge state
+    }
+
+    await loadCoursesForFilter();
+    initCourseTypeahead();   // initialize custom typeahead dropdown chips
 });
+
+/**
+ * Reads the ?dashFilter= URL query param set by dashboard reminder cards
+ * and pre-applies the matching filter combination on the Fees Manager.
+ */
+function applyDashboardFilterFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const dashFilter = urlParams.get('dashFilter');
+    if (!dashFilter) return;
+
+    feesFilters.dashFilter = dashFilter;
+
+    const statusFilter   = document.getElementById('statusFilter');
+    const fromDateFilter = document.getElementById('fromDateFilter');
+    const toDateFilter   = document.getElementById('toDateFilter');
+
+    // Reset date fields so they do not conflict with the dashFilter query
+    if (fromDateFilter) fromDateFilter.value = '';
+    if (toDateFilter)   toDateFilter.value   = '';
+
+    switch (dashFilter) {
+        case 'pending':
+            if (statusFilter) statusFilter.value = 'Pending';
+            break;
+
+        case 'overdue':
+            if (statusFilter) statusFilter.value = 'Overdue';
+            break;
+
+        case 'upcoming5days':
+            if (statusFilter) statusFilter.value = 'Pending';
+            break;
+
+        case 'last6months':
+            if (statusFilter) statusFilter.value = 'Pending';
+            break;
+
+        default:
+            break;
+    }
+
+    // Open the advanced filters panel so user can see which filters are active
+    const panel = document.getElementById('advancedFiltersPanel');
+    if (panel && !panel.classList.contains('show')) {
+        try {
+            new bootstrap.Collapse(panel, { toggle: false }).show();
+        } catch(e) { /* bootstrap may not be ready yet */ }
+    }
+
+    // Apply the filters and update badge
+    updateFilterBadge();
+    applyFilters();
+
+    console.log('[DASH-FILTER] Applied dashboard filter:', dashFilter);
+}
 
 function debugAPICall(endpoint, method = 'GET') {
 }
@@ -217,11 +283,12 @@ function initializeEventListeners() {
     document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 500));
     document.getElementById('searchFieldSelect')?.addEventListener('change', applyFilters);
 
-    // Entries per page
+    // Entries per page — preserve active filters when changing page size
     document.getElementById('entriesPerPage').addEventListener('change', function () {
         entriesPerPage = parseInt(this.value);
         currentPage = 1;
-        loadFeesFromBackend();
+        // Re-run applyFilters so active dashboard filters are preserved
+        applyFilters();
     });
 
     // Import Type Selection
@@ -486,7 +553,19 @@ function initFilterToggle() {
 }
 
 function applyFilters() {
-    feesFilters.status = document.getElementById('statusFilter')?.value || '';
+    const newStatus = document.getElementById('statusFilter')?.value || '';
+
+    // If user changed status manually away from the dashboard filter, clear dashFilter
+    if (feesFilters.dashFilter) {
+        if (feesFilters.dashFilter === 'overdue' && newStatus && newStatus.toLowerCase() !== 'overdue') {
+            feesFilters.dashFilter = '';
+        } else if ((feesFilters.dashFilter === 'pending' || feesFilters.dashFilter === 'upcoming5days' || feesFilters.dashFilter === 'last6months') 
+                && newStatus && newStatus.toLowerCase() !== 'pending') {
+            feesFilters.dashFilter = '';
+        }
+    }
+
+    feesFilters.status = newStatus;
     feesFilters.course = document.getElementById('courseFilter')?.value || '';
     feesFilters.searchTerm = document.getElementById('searchInput')?.value || '';
     feesFilters.searchField = document.getElementById('searchFieldSelect')?.value || 'ALL';
@@ -525,8 +604,17 @@ function clearFilters() {
         status: '',
         course: '',
         fromDate: '',
-        toDate: ''
+        toDate: '',
+        createdDateFrom: '',
+        createdDateTo: '',
+        dashFilter: ''
     };
+
+    // Clean up query param from browser address bar without reload
+    if (window.history.replaceState) {
+        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    }
 
     filteredCourses = [...allCourses];
     populateCourseFilter();
@@ -740,7 +828,11 @@ async function loadFeesFromBackend() {
             params.set('searchField', feesFilters.searchField.trim());
         }
         if (feesFilters.status && feesFilters.status.trim() !== '' && feesFilters.status.trim().toLowerCase() !== 'all') {
-            params.set('status', feesFilters.status.trim());
+            if (feesFilters.status.trim().toLowerCase() === 'overdue') {
+                params.set('overdue', 'true');
+            } else {
+                params.set('status', feesFilters.status.trim());
+            }
         }
         if (feesFilters.course && feesFilters.course.trim() !== '') {
             params.set('course', feesFilters.course.trim());
@@ -750,6 +842,15 @@ async function loadFeesFromBackend() {
         }
         if (feesFilters.toDate && feesFilters.toDate.trim() !== '') {
             params.set('dueDateTo', feesFilters.toDate.trim());
+        }
+        if (feesFilters.dashFilter && feesFilters.dashFilter.trim() !== '') {
+            params.set('dashFilter', feesFilters.dashFilter.trim());
+        }
+        if (feesFilters.createdDateFrom) {
+            params.set('createdDateFrom', feesFilters.createdDateFrom);
+        }
+        if (feesFilters.createdDateTo) {
+            params.set('createdDateTo', feesFilters.createdDateTo);
         }
 
         const response = await fetch(`/api/fees-manager?${params.toString()}`, {
@@ -994,6 +1095,8 @@ async function openFeeInstallments(regNo) {
 
                 const createdTimeStr = inst.createdAt ? formatDateTime(inst.createdAt) : 'N/A';
                 const updatedTimeStr = inst.updatedAt ? formatDateTime(inst.updatedAt) : 'N/A';
+                const effectiveDate = inst.paidDate || inst.dueDate || '';
+                const formattedDate = formatDate(effectiveDate);
 
                 return `
                 <tr data-installment-id="${inst.id}" 
@@ -1002,13 +1105,13 @@ async function openFeeInstallments(regNo) {
                     data-updated-by="${inst.updatedBy || '-'}" 
                     data-updated-time="${updatedTimeStr}"
                     style="cursor: pointer;">
-                    <td data-label="DUE DATE">${inst.dueDate}</td>
+                    <td data-label="DUE DATE">${formattedDate}</td>
                     <td data-label="AMOUNT">₹${parseFloat(inst.amount).toFixed(2)}</td>
                     <td data-label="STATUS">${statusBadge}</td>
                     <td data-label="NOTES" class="small text-muted">${inst.notes || '-'}</td>
                     <td data-label="ACTIONS">
                         <div class="d-flex align-items-center justify-content-end gap-2">
-                            <button class="btn btn-sm btn-primary" onclick="editInstallment(${inst.id}, '${inst.dueDate}', ${inst.amount}, '${inst.status}', '${(inst.notes || '').replace(/'/g, "\\'")}')" title="Edit">
+                            <button class="btn btn-sm btn-primary" onclick="editInstallment(${inst.id}, '${effectiveDate}', ${inst.amount}, '${inst.status}', '${(inst.notes || '').replace(/'/g, "\\'")}')" title="Edit">
                                 <i class="bi bi-pencil"></i>
                             </button>
                             ${inst.status !== 'Refund' ? `
@@ -1296,7 +1399,7 @@ function renderTable() {
             statusBadge = 'bg-success';
             statusText = 'Clear';
         } else if (normalizedStatus === 'overdue') {
-            statusBadge = 'bg-secondary';
+            statusBadge = 'bg-danger';
             statusText = 'Overdue';
         } else if (normalizedStatus === 'refund') {
             statusBadge = 'bg-danger';
@@ -1550,8 +1653,20 @@ function changePage(page) {
 }
 
 function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    if (typeof dateString === 'string') {
+        const clean = dateString.split('T')[0].trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+            const parts = clean.split('-');
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+    }
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB');
+    if (isNaN(date.getTime())) return String(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
 }
 
 // Generate Receipt HTML
@@ -1575,7 +1690,7 @@ function generateReceiptHTML(data) {
                     <h3 class="mb-1" style="color: #667eea; font-weight: 700;">TechnoKraft Training Solutions</h3>
                     <p class="mb-0 text-muted">Excellence in Technical Education</p>
                     <p class="mb-0 small text-muted">Kanchwala Avenue, College Road, Nashik, Maharashtra - 422005</p>
-                    <p class="mb-0 small text-muted">Phone: +91 86456 28278 | Email: support@tts.net.in</p>
+                    <p class="mb-0 small text-muted">Phone: +91 86456 28278 | Email: info@tts.net.in</p>
                 </div>
 
                 <div style="border-top: 3px solid #667eea; border-bottom: 3px solid #667eea; padding: 10px 0; margin: 20px 0;">
@@ -3815,13 +3930,6 @@ async function generateInvoicePDF(receiptData) {
 
 // ==================== HELPER FUNCTIONS ====================
 
-function formatDate(date) {
-    if (!date) return 'N/A';
-    const d = new Date(date);
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return d.toLocaleDateString('en-US', options);
-}
-
 function formatCurrency(amount) {
     if (!amount) return '0.00';
     return parseFloat(amount).toLocaleString('en-IN', {
@@ -3895,6 +4003,12 @@ async function fetchAllFeesForExport() {
         }
         if (feesFilters.toDate && feesFilters.toDate.trim() !== '') {
             params.set('dueDateTo', feesFilters.toDate.trim());
+        }
+        if (feesFilters.dashFilter && feesFilters.dashFilter.trim() !== '') {
+            params.set('dashFilter', feesFilters.dashFilter.trim());
+        }
+        if (feesFilters.status && feesFilters.status.trim().toLowerCase() === 'overdue') {
+            params.set('overdue', 'true');
         }
 
         const queryString = params.toString();

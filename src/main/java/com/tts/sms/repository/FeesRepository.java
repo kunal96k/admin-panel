@@ -17,154 +17,195 @@ import com.tts.sms.model.Fees;
 @Repository
 public interface FeesRepository extends JpaRepository<Fees, Long>, JpaSpecificationExecutor<Fees> {
 
-    Page<Fees> findByIsDeletedFalse(Pageable pageable);
+        Page<Fees> findByIsDeletedFalse(Pageable pageable);
 
-    List<Fees> findByIsDeletedFalse();
+        List<Fees> findByIsDeletedFalse();
 
-    List<Fees> findByMobileAndIsDeletedFalse(String mobile);
+        List<Fees> findByMobileAndIsDeletedFalse(String mobile);
+
+        /**
+         * Use native query with LIMIT 1 to avoid NonUniqueResultException
+         */
+        @Query(value = "SELECT * FROM fees f WHERE f.registration_number = :regNo " +
+                        "AND f.is_deleted = false ORDER BY f.created_at DESC LIMIT 1", nativeQuery = true)
+        Optional<Fees> findByRegistrationNumberAndIsDeletedFalse(@Param("regNo") String registrationNumber);
+
+        /**
+         * Get all fees records for a registration number (allows duplicates)
+         */
+        @Query("SELECT f FROM Fees f WHERE f.registrationNumber = :regNo " +
+                        "AND f.isDeleted = false ORDER BY f.createdAt DESC")
+        List<Fees> findAllByRegistrationNumberAndIsDeletedFalse(@Param("regNo") String registrationNumber);
+
+        /**
+         * Find fees by registration number and course
+         */
+        @Query(value = "SELECT * FROM fees f WHERE f.registration_number = :regNo " +
+                        "AND f.course = :courseName AND f.is_deleted = false " +
+                        "ORDER BY f.created_at DESC LIMIT 1", nativeQuery = true)
+        Optional<Fees> findByRegistrationNumberAndCourseAndIsDeletedFalse(
+                        @Param("regNo") String registrationNumber,
+                        @Param("courseName") String courseName);
+
+        /**
+         * Find cleared fees by registration number
+         */
+        @Query("SELECT f FROM Fees f WHERE f.isDeleted = false AND " +
+                        "f.registrationNumber = :regNo AND " +
+                        "(LOWER(f.status) = 'clear' OR " +
+                        "f.feesDue = 0 OR " +
+                        "f.feesDue IS NULL OR " +
+                        "(f.totalFees = f.totalPaid AND f.totalFees > 0)) " +
+                        "ORDER BY f.createdAt DESC")
+        List<Fees> findClearedFeesByRegistrationNumber(@Param("regNo") String registrationNumber);
+
+        /**
+         * Find all fees records that are cleared (paid in full)
+         */
+        @Query("SELECT f FROM Fees f WHERE f.isDeleted = false AND " +
+                        "f.registrationNumber LIKE 'REG%' AND " +
+                        "(LOWER(f.status) = 'clear' OR " +
+                        "f.feesDue IS NULL OR f.feesDue <= 0.01 OR " +
+                        "ABS(f.totalFees - f.totalPaid) < 0.01) " +
+                        "ORDER BY f.createdAt DESC")
+        List<Fees> findClearedFees();
+
+        @Query("SELECT f FROM Fees f WHERE f.isDeleted = false AND LOWER(f.status) = 'clear' ORDER BY f.createdAt DESC")
+        List<Fees> findFeesWithStatusClear();
+
+        /**
+         * Find cleared fees for specific student/course combination
+         */
+        @Query(value = "SELECT * FROM fees f WHERE f.is_deleted = false AND " +
+                        "f.registration_number = :regNo AND f.course = :course AND " +
+                        "f.registration_number LIKE 'REG%' AND " +
+                        "(LOWER(f.status) = 'clear' OR " +
+                        "f.fees_due IS NULL OR f.fees_due <= 0.01 OR " +
+                        "ABS(f.total_fees - f.total_paid) < 0.01) " +
+                        "ORDER BY f.created_at DESC LIMIT 1", nativeQuery = true)
+        Optional<Fees> findClearedFeesByRegistrationAndCourse(
+                        @Param("regNo") String regNo,
+                        @Param("course") String course);
+
+        /**
+         * Count total cleared fees
+         */
+        @Query("SELECT COUNT(f) FROM Fees f WHERE f.isDeleted = false AND " +
+                        "f.registrationNumber LIKE 'REG%' AND " +
+                        "(LOWER(f.status) = 'clear' OR " +
+                        "f.feesDue IS NULL OR f.feesDue <= 0.01 OR " +
+                        "ABS(f.totalFees - f.totalPaid) < 0.01)")
+        long countClearedFees();
+
+        /**
+         * Get revenue from Fees table grouped by month/year
+         * This aggregates total_paid by created_at date for ALL historical data
+         */
+        @Query(value = "SELECT DATE(f.created_at) as payment_date, SUM(f.total_paid) as total_revenue " +
+                        "FROM fees f " +
+                        "WHERE f.is_deleted = false " +
+                        "AND f.created_at BETWEEN :startDate AND :endDate " +
+                        "AND f.total_paid > 0 " +
+                        "GROUP BY DATE(f.created_at) " +
+                        "ORDER BY payment_date ASC", nativeQuery = true)
+        List<Object[]> getRevenueByDateRange(
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        /**
+         * Get total revenue for a specific period
+         */
+        @Query(value = "SELECT COALESCE(SUM(f.total_paid), 0) " +
+                        "FROM fees f " +
+                        "WHERE f.is_deleted = false " +
+                        "AND f.created_at BETWEEN :startDate AND :endDate", nativeQuery = true)
+        Double getTotalRevenueByDateRange(
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        /**
+         * Get all fees records created from a specific date onwards
+         */
+        @Query("SELECT f FROM Fees f WHERE f.isDeleted = false " +
+                        "AND f.createdAt >= :fromDate " +
+                        "ORDER BY f.createdAt DESC")
+        List<Fees> findByCreatedAtAfter(@Param("fromDate") LocalDate fromDate);
+
+        /**
+         * Get total collected from cutoff date
+         */
+        @Query("SELECT COALESCE(SUM(f.totalPaid), 0.0) FROM Fees f " +
+                        "WHERE f.isDeleted = false " +
+                        "AND f.createdAt >= :fromDate")
+        Double getTotalCollectedFromDate(@Param("fromDate") LocalDate fromDate);
+
+        /**
+         * Get total pending from cutoff date
+         */
+        @Query("SELECT COALESCE(SUM(f.feesDue), 0.0) FROM Fees f " +
+                        "WHERE f.isDeleted = false " +
+                        "AND f.createdAt >= :fromDate " +
+                        "AND f.feesDue > 0")
+        Double getTotalPendingFromDate(@Param("fromDate") LocalDate fromDate);
+
+        /**
+         * Batch fetch fees for multiple registration numbers
+         */
+        @Query("SELECT f FROM Fees f WHERE f.registrationNumber IN :regNos AND f.isDeleted = false")
+        List<Fees> findAllByRegistrationNumberInAndIsDeletedFalse(@Param("regNos") List<String> registrationNumbers);
+
+        /**
+         * Find pending fees with due date matching target date
+         */
+        @Query("SELECT f FROM Fees f WHERE f.isDeleted = false AND f.feesDue > 0.01 " +
+                        "AND f.dueDate = :dueDate")
+        List<Fees> findPendingFeesDueOnDate(@Param("dueDate") LocalDate dueDate);
+
+        /**
+         * Dashboard reminder: count all pending (not cleared) fees records
+         */
+        @Query("SELECT COUNT(f) FROM Fees f WHERE f.isDeleted = false AND LOWER(f.status) = 'pending'")
+        Long countPendingFees();
+
+        /**
+         * Dashboard reminder: count pending fees for a given set of registration
+         * numbers
+         * (used for Last-6-Months filter based on admission date)
+         */
+        @Query("SELECT COUNT(f) FROM Fees f " +
+                        "WHERE f.isDeleted = false AND LOWER(f.status) = 'pending' " +
+                        "AND f.registrationNumber IN :regNos")
+        Long countPendingFeesForRegistrations(@Param("regNos") List<String> regNos);
+
+        /**
+         * Dashboard reminder: count pending fees created on or after cutoff datetime
+         */
+        @Query("SELECT COUNT(f) FROM Fees f " +
+                        "WHERE f.isDeleted = false AND LOWER(f.status) = 'pending' " +
+                        "AND f.createdAt >= :cutoffDateTime")
+        Long countPendingFeesCreatedAfter(@Param("cutoffDateTime") java.time.LocalDateTime cutoffDateTime);
 
     /**
-     *  Use native query with LIMIT 1 to avoid NonUniqueResultException
-     */
-    @Query(value = "SELECT * FROM fees f WHERE f.registration_number = :regNo " +
-            "AND f.is_deleted = false ORDER BY f.created_at DESC LIMIT 1",
-            nativeQuery = true)
-    Optional<Fees> findByRegistrationNumberAndIsDeletedFalse(@Param("regNo") String registrationNumber);
-
-    /**
-     * Get all fees records for a registration number (allows duplicates)
-     */
-    @Query("SELECT f FROM Fees f WHERE f.registrationNumber = :regNo " +
-            "AND f.isDeleted = false ORDER BY f.createdAt DESC")
-    List<Fees> findAllByRegistrationNumberAndIsDeletedFalse(@Param("regNo") String registrationNumber);
-
-    /**
-     * Find fees by registration number and course
-     */
-    @Query(value = "SELECT * FROM fees f WHERE f.registration_number = :regNo " +
-            "AND f.course = :courseName AND f.is_deleted = false " +
-            "ORDER BY f.created_at DESC LIMIT 1",
-            nativeQuery = true)
-    Optional<Fees> findByRegistrationNumberAndCourseAndIsDeletedFalse(
-            @Param("regNo") String registrationNumber,
-            @Param("courseName") String courseName
-    );
-
-    /**
-     * Find cleared fees by registration number
-     */
-    @Query("SELECT f FROM Fees f WHERE f.isDeleted = false AND " +
-            "f.registrationNumber = :regNo AND " +
-            "(LOWER(f.status) = 'clear' OR " +
-            "f.feesDue = 0 OR " +
-            "f.feesDue IS NULL OR " +
-            "(f.totalFees = f.totalPaid AND f.totalFees > 0)) " +
-            "ORDER BY f.createdAt DESC")
-    List<Fees> findClearedFeesByRegistrationNumber(@Param("regNo") String registrationNumber);
-
-    /**
-     * Find all fees records that are cleared (paid in full)
-     */
-    @Query("SELECT f FROM Fees f WHERE f.isDeleted = false AND " +
-            "f.registrationNumber LIKE 'REG%' AND " +
-            "(LOWER(f.status) = 'clear' OR " +
-            "f.feesDue IS NULL OR f.feesDue <= 0.01 OR " +
-            "ABS(f.totalFees - f.totalPaid) < 0.01) " +
-            "ORDER BY f.createdAt DESC")
-    List<Fees> findClearedFees();
-
-    @Query("SELECT f FROM Fees f WHERE f.isDeleted = false AND LOWER(f.status) = 'clear' ORDER BY f.createdAt DESC")
-    List<Fees> findFeesWithStatusClear();
-
-    /**
-     * Find cleared fees for specific student/course combination
-     */
-    @Query(value = "SELECT * FROM fees f WHERE f.is_deleted = false AND " +
-            "f.registration_number = :regNo AND f.course = :course AND " +
-            "f.registration_number LIKE 'REG%' AND " +
-            "(LOWER(f.status) = 'clear' OR " +
-            "f.fees_due IS NULL OR f.fees_due <= 0.01 OR " +
-            "ABS(f.total_fees - f.total_paid) < 0.01) " +
-            "ORDER BY f.created_at DESC LIMIT 1",
-            nativeQuery = true)
-    Optional<Fees> findClearedFeesByRegistrationAndCourse(
-            @Param("regNo") String regNo,
-            @Param("course") String course
-    );
-
-    /**
-     * Count total cleared fees
-     */
-    @Query("SELECT COUNT(f) FROM Fees f WHERE f.isDeleted = false AND " +
-            "f.registrationNumber LIKE 'REG%' AND " +
-            "(LOWER(f.status) = 'clear' OR " +
-            "f.feesDue IS NULL OR f.feesDue <= 0.01 OR " +
-            "ABS(f.totalFees - f.totalPaid) < 0.01)")
-    long countClearedFees();
-
-    /**
- Get revenue from Fees table grouped by month/year
-     * This aggregates total_paid by created_at date for ALL historical data
-     */
-    @Query(value = "SELECT DATE(f.created_at) as payment_date, SUM(f.total_paid) as total_revenue " +
-            "FROM fees f " +
-            "WHERE f.is_deleted = false " +
-            "AND f.created_at BETWEEN :startDate AND :endDate " +
-            "AND f.total_paid > 0 " +
-            "GROUP BY DATE(f.created_at) " +
-            "ORDER BY payment_date ASC",
-            nativeQuery = true)
-    List<Object[]> getRevenueByDateRange(
-            @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate);
-
-    /**
- Get total revenue for a specific period
-     */
-    @Query(value = "SELECT COALESCE(SUM(f.total_paid), 0) " +
-            "FROM fees f " +
-            "WHERE f.is_deleted = false " +
-            "AND f.created_at BETWEEN :startDate AND :endDate",
-            nativeQuery = true)
-    Double getTotalRevenueByDateRange(
-            @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate);
-
-    /**
-     *  Get all fees records created from a specific date onwards
-     */
-    @Query("SELECT f FROM Fees f WHERE f.isDeleted = false " +
-            "AND f.createdAt >= :fromDate " +
-            "ORDER BY f.createdAt DESC")
-    List<Fees> findByCreatedAtAfter(@Param("fromDate") LocalDate fromDate);
-
-    /**
-     *  Get total collected from cutoff date
+     * Fast DB aggregate: total paid for students whose admissionDate >= cutoffDate
      */
     @Query("SELECT COALESCE(SUM(f.totalPaid), 0.0) FROM Fees f " +
-            "WHERE f.isDeleted = false " +
-            "AND f.createdAt >= :fromDate")
-    Double getTotalCollectedFromDate(@Param("fromDate") LocalDate fromDate);
+            "WHERE f.isDeleted = false AND f.registrationNumber IN " +
+            "(SELECT a.registrationNumber FROM Admission a WHERE a.isDeleted = false AND a.admissionDate >= :cutoffDate)")
+    Double getTotalPaidForAdmissionsFromCutoff(@Param("cutoffDate") LocalDate cutoffDate);
 
     /**
-     *  Get total pending from cutoff date
+     * Fast DB aggregate: total pending fees for students whose admissionDate >= cutoffDate
      */
     @Query("SELECT COALESCE(SUM(f.feesDue), 0.0) FROM Fees f " +
-            "WHERE f.isDeleted = false " +
-            "AND f.createdAt >= :fromDate " +
-            "AND f.feesDue > 0")
-    Double getTotalPendingFromDate(@Param("fromDate") LocalDate fromDate);
+            "WHERE f.isDeleted = false AND f.registrationNumber IN " +
+            "(SELECT a.registrationNumber FROM Admission a WHERE a.isDeleted = false AND a.admissionDate >= :cutoffDate)")
+    Double getTotalPendingForAdmissionsFromCutoff(@Param("cutoffDate") LocalDate cutoffDate);
 
     /**
-     * Batch fetch fees for multiple registration numbers
+     * Fast DB aggregate: count pending fees for students admitted in date range
      */
-    @Query("SELECT f FROM Fees f WHERE f.registrationNumber IN :regNos AND f.isDeleted = false")
-    List<Fees> findAllByRegistrationNumberInAndIsDeletedFalse(@Param("regNos") List<String> registrationNumbers);
-
-    /**
-     * Find pending fees with due date matching target date
-     */
-    @Query("SELECT f FROM Fees f WHERE f.isDeleted = false AND f.feesDue > 0.01 " +
-            "AND f.dueDate = :dueDate")
-    List<Fees> findPendingFeesDueOnDate(@Param("dueDate") LocalDate dueDate);
+    @Query("SELECT COUNT(DISTINCT f.registrationNumber) FROM Fees f " +
+            "WHERE f.isDeleted = false AND LOWER(f.status) = 'pending' AND f.registrationNumber IN " +
+            "(SELECT a.registrationNumber FROM Admission a WHERE a.isDeleted = false AND a.admissionDate >= :fromDate AND a.admissionDate <= CURRENT_DATE)")
+    Long countPendingFeesForAdmissionsSince(@Param("fromDate") LocalDate fromDate);
 }

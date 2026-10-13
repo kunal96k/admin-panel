@@ -47,4 +47,14 @@ public class DashboardRestController {
         Map<String, Object> chartData = dashboardService.getCourseDistributionData();
         return ResponseEntity.ok(chartData);
     }
+
+    /**
+     * Get fees reminder stats for dashboard cards (Pending, Overdue, Upcoming, Last 6 Months)
+     */
+    @GetMapping("/fees-reminder-stats")
+    public ResponseEntity<Map<String, Object>> getFeesReminderStats() {
+        log.info("GET /api/dashboard/fees-reminder-stats");
+        Map<String, Object> stats = dashboardService.getFeesReminderStats();
+        return ResponseEntity.ok(stats);
+    }
 }

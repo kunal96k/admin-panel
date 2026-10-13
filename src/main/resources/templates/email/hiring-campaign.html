@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org"
+    xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<!--
+  ==============================================================================
+  TECHNOKRAFT TRAINING & SOLUTION PVT. LTD. - OFFICIAL RECRUITMENT CALL LETTER
+  Template: hiring-campaign.html (Enterprise IT MNC Edition)
+  Engine: Spring Boot + Thymeleaf
+  Layout: Hybrid Fluid Table (Outlook 2016-365, iOS Mail, Gmail Android/Web)
+  Design Standard: Top-tier IT MNC Recruitment Format (Clean, Elegant, Zero Emojis)
+  ==============================================================================
+-->
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    <title th:text="${hiringRole + ' Interview Call Letter | TechnoKraft Training &amp; Solution'}">Interview Call
+        Letter | TechnoKraft Training &amp; Solution</title>
+
+    <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+
+    <style type="text/css">
+        /* Base resets */
+        html,
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 100% !important;
+            width: 100% !important;
+            background-color: #f8fafc;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        * {
+            -ms-text-size-adjust: 100%;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        table,
+        td {
+            mso-table-lspace: 0pt !important;
+            mso-table-rspace: 0pt !important;
+            border-collapse: collapse !important;
+        }
+
+        img {
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        /* Client-specific overrides */
+        a[x-apple-data-detectors] {
+            color: inherit !important;
+            text-decoration: none !important;
+            font-size: inherit !important;
+            font-family: inherit !important;
+            font-weight: inherit !important;
+            line-height: inherit !important;
+        }
+
+        #MessageViewBody,
+        #MessageWebViewDiv {
+            width: 100% !important;
+        }
+
+        /* Dark Mode Support */
+        @media (prefers-color-scheme: dark) {
+            .dark-bg-body {
+                background-color: #0f172a !important;
+            }
+
+            .dark-bg-card {
+                background-color: #1e293b !important;
+            }
+
+            .dark-text-primary {
+                color: #f8fafc !important;
+            }
+
+            .dark-text-secondary {
+                color: #94a3b8 !important;
+            }
+
+            .dark-border {
+                border-color: #334155 !important;
+            }
+
+            .dark-detail-box {
+                background-color: #0f172a !important;
+                border-color: #334155 !important;
+            }
+        }
+
+        /* Mobile Responsive Rules */
+        @media only screen and (max-width: 620px) {
+            .fluid-container {
+                width: 100% !important;
+                max-width: 100% !important;
+                border-radius: 0px !important;
+                border-left: none !important;
+                border-right: none !important;
+            }
+
+            .header-pad {
+                padding: 32px 20px 24px 20px !important;
+            }
+
+            .logo-img {
+                width: 58px !important;
+                height: 58px !important;
+            }
+
+            .header-title {
+                font-size: 22px !important;
+                line-height: 28px !important;
+            }
+
+            .content-pad {
+                padding: 28px 20px !important;
+            }
+
+            .grid-col {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 0 0 10px 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            .cta-btn-cell {
+                display: block !important;
+                width: 100% !important;
+            }
+
+            .cta-btn-anchor {
+                display: block !important;
+                width: 100% !important;
+                padding: 14px 20px !important;
+                font-size: 15px !important;
+                box-sizing: border-box !important;
+                text-align: center !important;
+            }
+
+            .footer-pad {
+                padding: 28px 20px !important;
+            }
+        }
+    </style>
+</head>
+
+<body
+    style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+
+    <!-- HIDDEN PREHEADER TEXT (OPTIMIZED INBOX SNIPPET) -->
+    <div
+        style="display: none; font-size: 1px; color: #f8fafc; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all;">
+        Interview Call Letter for <span th:text="${hiringRole}">AI/ML Engineer</span> at TechnoKraft Training &amp;
+        Solution. Review your confirmed schedule, evaluation mode, and joining details.
+        &#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
+    </div>
+
+    <!-- OUTER SHELL TABLE -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+        style="background-color: #f8fafc; table-layout: fixed;">
+        <tr>
+            <td align="center" style="padding: 32px 12px;">
+
+                <!--[if (gte mso 9)|(IE)]>
+        <table role="presentation" width="620" align="center" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td>
+        <![endif]-->
+
+                <!-- MAIN CONTAINER (MAX-WIDTH 620px) -->
+                <table role="presentation" class="fluid-container dark-bg-card" width="100%" cellpadding="0"
+                    cellspacing="0" border="0"
+                    style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06); border: 1px solid #e2e8f0;">
+
+                    <!-- TOP ACCENT BAR -->
+                    <tr>
+                        <td height="4" style="background-color: #0f172a; font-size: 0px; line-height: 0px;">&nbsp;</td>
+                    </tr>
+
+                    <!-- ================= HEADER SECTION ================= -->
+                    <tr>
+                        <td class="header-pad"
+                            style="background-color: #ffffff; padding: 36px 40px 24px 40px; border-bottom: 1px solid #edf2f7;">
+
+                            <!-- TOP BAR: BRAND LOGO & METADATA -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td valign="middle" align="left">
+                                        <img class="logo-img"
+                                            src="https://powerbi.ttsnasik.com/assets/image/tts-logo-ev.png"
+                                            alt="TechnoKraft Training &amp; Solution" width="62" height="62"
+                                            style="display: block; width: 62px; height: auto;" />
+                                    </td>
+                                    <td valign="middle" align="right">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td
+                                                    style="background-color: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 12px;">
+                                                    <span
+                                                        style="font-size: 11px; font-weight: 700; color: #334155; letter-spacing: 0.8px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;"
+                                                        th:text="${opportunityType == 'JOB' ? 'Full-Time Position' : (opportunityType == 'INTERNSHIP' ? 'Internship Program' : (opportunityType == 'CAMPUS_DRIVE' ? 'Campus Recruitment' : (opportunityType == 'PART_TIME' ? 'Part-Time Position' : opportunityType)))}">
+                                                        Full-Time Position
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- NOTICE TITLE & SUBHEADER -->
+                            <div style="margin-top: 24px;">
+                                <div
+                                    style="font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #2563eb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin-bottom: 6px;">
+                                    Talent Acquisition &amp; Recruitment
+                                </div>
+                                <h1 class="header-title"
+                                    style="margin: 0; font-size: 24px; line-height: 32px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                    Interview Call Letter: <span th:text="${hiringRole}">AI/ML Engineer</span>
+                                </h1>
+                            </div>
+
+                        </td>
+                    </tr>
+
+                    <!-- ================= MAIN BODY CONTENT ================= -->
+                    <tr>
+                        <td class="content-pad" style="padding: 32px 40px 28px 40px; background-color: #ffffff;">
+
+                            <!-- SALUTATION & INVITATION STATEMENT -->
+                            <p
+                                style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; font-weight: 600; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                Dear Candidate,
+                            </p>
+
+                            <p
+                                style="margin: 0 0 24px 0; font-size: 14px; line-height: 23px; color: #334155; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                Thank you for your interest in career opportunities with <strong>TechnoKraft Training
+                                    &amp; Solution Pvt. Ltd.</strong> Following an assessment of your profile and
+                                technical background, we are pleased to invite you to the interview evaluation round for
+                                the position of <strong style="color: #0f172a;" th:text="${hiringRole}">AI/ML
+                                    Engineer</strong>.
+                            </p>
+
+                            <!-- SCHEDULE & ASSESSMENT DETAILS MATRIX -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                                style="margin: 0 0 24px 0; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
+                                <!-- ROW 1 -->
+                                <tr>
+                                    <td width="50%" valign="top"
+                                        style="padding: 14px 18px; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">
+                                        <div
+                                            style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; margin-bottom: 4px;">
+                                            Position / Designation
+                                        </div>
+                                        <div style="font-size: 14px; font-weight: 700; color: #0f172a;"
+                                            th:text="${hiringRole}">
+                                            AI/ML Engineer
+                                        </div>
+                                    </td>
+                                    <td width="50%" valign="top"
+                                        style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">
+                                        <div
+                                            style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; margin-bottom: 4px;">
+                                            Opportunity Category
+                                        </div>
+                                        <div style="font-size: 14px; font-weight: 700; color: #0f172a;"
+                                            th:text="${opportunityType == 'JOB' ? 'Full-Time Employment' : (opportunityType == 'INTERNSHIP' ? 'Industrial Internship' : (opportunityType == 'CAMPUS_DRIVE' ? 'Campus Recruitment Drive' : opportunityType))}">
+                                            Full-Time Employment
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- ROW 2 -->
+                                <tr>
+                                    <td width="50%" valign="top"
+                                        style="padding: 14px 18px; border-right: 1px solid #e2e8f0; background-color: #ffffff;">
+                                        <div
+                                            style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; margin-bottom: 4px;">
+                                            Scheduled Date
+                                        </div>
+                                        <div style="font-size: 14px; font-weight: 700; color: #0f172a;"
+                                            th:text="${eventDate != null and !#strings.isEmpty(eventDate) ? eventDate : 'To Be Announced'}">
+                                            Upcoming Monday
+                                        </div>
+                                    </td>
+                                    <td width="50%" valign="top" style="padding: 14px 18px; background-color: #ffffff;">
+                                        <div
+                                            style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; margin-bottom: 4px;">
+                                            Scheduled Time
+                                        </div>
+                                        <div style="font-size: 14px; font-weight: 700; color: #0f172a;"
+                                            th:text="${eventTime != null and !#strings.isEmpty(eventTime) ? eventTime : '10:30 AM IST'}">
+                                            10:30 AM IST
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- ================= CONDITIONAL: ONLINE INTERVIEW CARD ================= -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                                th:if="${conductMode == 'ONLINE'}"
+                                style="margin: 0 0 24px 0; background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0f172a; border-radius: 4px;">
+                                <tr>
+                                    <td style="padding: 18px 20px;">
+
+                                        <div
+                                            style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #0f172a; margin-bottom: 6px;">
+                                            Virtual Interview Access Details
+                                        </div>
+
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                                            border="0">
+                                            <tr>
+                                                <td style="padding: 4px 0; font-size: 13px; color: #334155;">
+                                                    <strong>Evaluation Mode:</strong> Virtual / Video Conference
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 4px 0; font-size: 13px; color: #334155;">
+                                                    <strong>Platform:</strong> <span
+                                                        th:text="${onlinePlatform != null ? #strings.replace(onlinePlatform, '_', ' ') : 'GOOGLE MEET'}">GOOGLE
+                                                        MEET</span>
+                                                </td>
+                                            </tr>
+
+                                            <!-- ACTIVE LINK -->
+                                            <tr th:if="${meetingLink != null and !#strings.isEmpty(meetingLink)}">
+                                                <td style="padding: 8px 0 0 0; font-size: 13px; color: #334155;">
+                                                    <strong>Direct Meeting Link:</strong><br />
+                                                    <a th:href="${meetingLink}" target="_blank"
+                                                        style="color: #2563eb; font-weight: 600; font-size: 13px; word-break: break-all; text-decoration: underline;"
+                                                        th:text="${meetingLink}">
+                                                        https://meet.google.com/xyz-recruitment
+                                                    </a>
+                                                </td>
+                                            </tr>
+
+                                            <!-- PENDING LINK NOTICE -->
+                                            <tr th:if="${meetingLink == null or #strings.isEmpty(meetingLink)}">
+                                                <td
+                                                    style="padding: 6px 0 0 0; font-size: 12px; color: #64748b; font-style: italic;">
+                                                    Your specific meeting room access link and passcodes will be
+                                                    delivered 30 minutes before your scheduled slot.
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- ================= CONDITIONAL: OFFLINE VENUE CARD ================= -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                                th:if="${conductMode == 'OFFLINE'}"
+                                style="margin: 0 0 24px 0; background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0f172a; border-radius: 4px;">
+                                <tr>
+                                    <td style="padding: 18px 20px;">
+
+                                        <div
+                                            style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #0f172a; margin-bottom: 6px;">
+                                            Physical Interview Venue &amp; Reporting
+                                        </div>
+
+                                        <div style="font-size: 13px; line-height: 20px; font-weight: 600; color: #0f172a; margin-bottom: 8px;"
+                                            th:text="${venueAddress != null and !#strings.isEmpty(venueAddress) ? venueAddress : 'TechnoKraft Training & Solution Pvt. Ltd., 1st Floor, Kanchwala Avenue, Above Viju\'s Dabeli, Thatte Nagar Marg, College Road, Nashik 422005'}">
+                                            TechnoKraft Training &amp; Solution Pvt. Ltd., 1st Floor, Kanchwala Avenue,
+                                            College Road, Nashik 422005
+                                        </div>
+
+                                        <div style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
+                                            Please report at the reception desk 15 minutes prior to the scheduled start
+                                            time.
+                                        </div>
+
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td>
+                                                    <a th:href="${'https://www.google.com/maps/search/?api=1&amp;query=' + (venueAddress != null and !#strings.isEmpty(venueAddress) ? #uris.escapeQueryParam(venueAddress) : 'TechnoKraft+Training+%26+Solution+Pvt+Ltd+Nashik')}"
+                                                        target="_blank"
+                                                        style="display: inline-block; font-size: 12px; font-weight: 600; color: #2563eb; text-decoration: underline;">
+                                                        View Venue Location on Google Maps &rarr;
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- PRIMARY CTA BUTTON (ONLINE MODE) -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                                th:if="${conductMode == 'ONLINE' and meetingLink != null and !#strings.isEmpty(meetingLink)}"
+                                style="margin: 0 0 28px 0;">
+                                <tr>
+                                    <td align="left">
+                                        <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" th:href="${meetingLink}" style="height:44px;v-text-anchor:middle;width:240px;" arcsize="8%" strokecolor="#0f172a" fillcolor="#0f172a">
+                      <w:anchorlock/>
+                      <center style="color:#ffffff;font-family:sans-serif;font-size:14px;font-weight:bold;">Join Virtual Interview</center>
+                    </v:roundrect>
+                    <![endif]-->
+                                        <!--[if !mso]><!-->
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td class="cta-btn-cell" align="center"
+                                                    style="background-color: #0f172a; border-radius: 4px;">
+                                                    <a class="cta-btn-anchor" th:href="${meetingLink}" target="_blank"
+                                                        style="display: inline-block; padding: 12px 28px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; letter-spacing: 0.2px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                                        Join Virtual Interview
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <!--<![endif]-->
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- CANDIDATE INSTRUCTIONS -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                                style="margin: 0 0 24px 0; border: 1px solid #e2e8f0; border-radius: 6px;">
+                                <tr>
+                                    <td style="padding: 20px 22px;">
+
+                                        <div
+                                            style="font-size: 12px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px;">
+                                            Candidate Guidelines &amp; Protocol
+                                        </div>
+
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                                            border="0">
+                                            <tr>
+                                                <td width="16" valign="top"
+                                                    style="font-size: 13px; line-height: 22px; color: #0f172a; padding-bottom: 8px;">
+                                                    &bull;</td>
+                                                <td
+                                                    style="font-size: 13px; line-height: 22px; color: #334155; padding-bottom: 8px;">
+                                                    <strong>Reporting Time:</strong> Please log in to the virtual
+                                                    platform or arrive at the physical venue at least <strong>10 minutes
+                                                        prior</strong> to your scheduled time slot.
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td width="16" valign="top"
+                                                    style="font-size: 13px; line-height: 22px; color: #0f172a; padding-bottom: 8px;">
+                                                    &bull;</td>
+                                                <td
+                                                    style="font-size: 13px; line-height: 22px; color: #334155; padding-bottom: 8px;">
+                                                    <strong>Portfolio &amp; Projects:</strong> Have active repository
+                                                    links, hosted projects, or relevant code samples accessible for live
+                                                    screen sharing or technical review.
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td width="16" valign="top"
+                                                    style="font-size: 13px; line-height: 22px; color: #0f172a;">&bull;
+                                                </td>
+                                                <td style="font-size: 13px; line-height: 22px; color: #334155;">
+                                                    <strong>Technical Environment (Virtual Mode):</strong> Ensure an
+                                                    uninterrupted high-speed internet connection, functional audio
+                                                    headset, and webcam in a quiet environment.
+                                                </td>
+                                            </tr>
+                                        </table>
+
+
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- SIGNATURE BLOCK -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                                style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #e2e8f0;">
+                                <tr>
+                                    <td>
+                                        <p
+                                            style="margin: 0 0 4px 0; font-size: 13px; color: #64748b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                            Regards,
+                                        </p>
+                                        <p
+                                            style="margin: 0 0 2px 0; font-size: 14px; font-weight: 700; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                            Talent Acquisition Team
+                                        </p>
+                                        <p
+                                            style="margin: 0; font-size: 13px; font-weight: 600; color: #334155; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                            TechnoKraft Training &amp; Solution Pvt. Ltd.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </td>
+                    </tr>
+
+                    <!-- ================= FOOTER SECTION ================= -->
+                    <tr>
+                        <td class="footer-pad"
+                            style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 28px 40px; text-align: left; color: #64748b; font-size: 12px; line-height: 19px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+
+                            <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">
+                                TechnoKraft Training &amp; Solution Pvt. Ltd.
+                            </div>
+
+                            <div style="margin-bottom: 12px; color: #64748b;">
+                                1st Floor, Kanchwala Avenue, Above Viju's Dabeli, Thatte Nagar Marg, College Road,
+                                Nashik, Maharashtra 422005, India
+                            </div>
+
+                            <!-- CONTACT LINKS -->
+                            <div style="margin-bottom: 14px;">
+                                <span style="display: inline-block; margin-right: 14px;">
+                                    Phone: <a href="tel:+918645628278"
+                                        style="color: #2563eb; text-decoration: none; font-weight: 600;">+91 86456
+                                        28278</a>
+                                </span>
+                                <span style="display: inline-block; margin-right: 14px;">
+                                    Email: <a href="mailto:info@tts.net.in"
+                                        style="color: #2563eb; text-decoration: none; font-weight: 600;">info@tts.net.in</a>
+                                </span>
+                                <span style="display: inline-block;">
+                                    Website: <a href="https://tts.net.in" target="_blank"
+                                        style="color: #2563eb; text-decoration: none; font-weight: 600;">www.tts.net.in</a>
+                                </span>
+                            </div>
+
+                            <div style="height: 1px; background-color: #e2e8f0; margin: 14px 0;"></div>
+
+                            <p style="margin: 0; font-size: 11px; line-height: 17px; color: #94a3b8;">
+                                &copy; <span th:text="${year != null ? year : '2026'}">2026</span> TechnoKraft Training
+                                &amp; Solution Pvt. Ltd. All rights reserved.<br />
+                                This message was dispatched to <strong style="color: #64748b;"
+                                    th:text="${recipientEmail}">candidate@example.com</strong>. This communication
+                                contains official and confidential recruitment details.
+                            </p>
+
+                        </td>
+                    </tr>
+
+                </table>
+
+                <!--[if (gte mso 9)|(IE)]>
+            </td>
+          </tr>
+        </table>
+        <![endif]-->
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+
+</html>

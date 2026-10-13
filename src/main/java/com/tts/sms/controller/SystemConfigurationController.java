@@ -20,6 +20,7 @@ public class SystemConfigurationController {
 
     private final SystemConfigurationService configService;
     private final StudentCategoryService categoryService;
+    private final com.tts.sms.scheduler.FeeDueReminderScheduler feeDueReminderScheduler;
 
     @GetMapping("/cutoff-date")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
@@ -57,29 +58,122 @@ public class SystemConfigurationController {
 
     @GetMapping("/fee-reminder-status")
     public ResponseEntity<Map<String, Object>> getFeeReminderStatus() {
-        boolean enabled = configService.isFeeReminderEmailEnabled();
+        boolean emailEnabled = configService.isFeeReminderEmailEnabled();
+        boolean whatsappEnabled = configService.isFeeReminderWhatsAppEnabled();
         return ResponseEntity.ok(Map.of(
-                "enabled", enabled,
-                "message", enabled ? "Fee reminder emails are currently ENABLED" : "Fee reminder emails are currently DISABLED"
+                "enabled", emailEnabled,
+                "emailEnabled", emailEnabled,
+                "whatsappEnabled", whatsappEnabled,
+                "message", String.format("Fee reminders: Email is %s, WhatsApp is %s",
+                        emailEnabled ? "ENABLED" : "DISABLED",
+                        whatsappEnabled ? "ENABLED" : "DISABLED")
         ));
     }
 
-    @PostMapping("/fee-reminder-status")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
-    public ResponseEntity<Map<String, Object>> setFeeReminderStatus(
+    @GetMapping("/whatsapp-features-status")
+    public ResponseEntity<Map<String, Object>> getWhatsAppFeaturesStatus(Authentication authentication) {
+        boolean isSuperAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SUPER_ADMIN".equalsIgnoreCase(a.getAuthority()) || "SUPER_ADMIN".equalsIgnoreCase(a.getAuthority()));
+
+        boolean courseInfoEnabled = configService.isCourseInfoWhatsAppEnabled();
+        boolean feeReminderEnabled = configService.isFeeReminderWhatsAppEnabled();
+        boolean emailReminderEnabled = configService.isFeeReminderEmailEnabled();
+
+        return ResponseEntity.ok(Map.of(
+                "isSuperAdmin", isSuperAdmin,
+                "courseInfoWhatsAppEnabled", courseInfoEnabled,
+                "feeReminderWhatsAppEnabled", feeReminderEnabled,
+                "feeReminderEmailEnabled", emailReminderEnabled
+        ));
+    }
+
+    @PostMapping("/course-info-whatsapp-status")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> setCourseInfoWhatsAppStatus(
             @RequestBody Map<String, Object> request,
             Authentication authentication) {
 
         boolean enabled = Boolean.parseBoolean(String.valueOf(request.get("enabled")));
         String username = authentication != null ? authentication.getName() : "system";
 
-        log.info("[NOTIF] User {} toggling fee reminder email enabled to: {}", username, enabled);
-        configService.setFeeReminderEmailEnabled(enabled, username);
+        log.info("[NOTIF] SUPER_ADMIN {} toggling course info WhatsApp enabled to: {}", username, enabled);
+        configService.setCourseInfoWhatsAppEnabled(enabled, username);
 
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "enabled", enabled,
-                "message", enabled ? "Fee reminder emails enabled successfully" : "Fee reminder emails disabled successfully"
+                "message", enabled ? "WhatsApp Course Information API enabled" : "WhatsApp Course Information API disabled"
         ));
+    }
+
+    @PostMapping("/fee-reminder-status")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> setFeeReminderStatus(
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
+
+        String username = authentication != null ? authentication.getName() : "system";
+
+        if (request.containsKey("enabled")) {
+            boolean enabled = Boolean.parseBoolean(String.valueOf(request.get("enabled")));
+            log.info("[NOTIF] SUPER_ADMIN {} toggling fee reminder email enabled to: {}", username, enabled);
+            configService.setFeeReminderEmailEnabled(enabled, username);
+        }
+
+        if (request.containsKey("whatsappEnabled")) {
+            boolean waEnabled = Boolean.parseBoolean(String.valueOf(request.get("whatsappEnabled")));
+            log.info("[NOTIF] SUPER_ADMIN {} toggling fee reminder WhatsApp enabled to: {}", username, waEnabled);
+            configService.setFeeReminderWhatsAppEnabled(waEnabled, username);
+        }
+
+        boolean emailEnabled = configService.isFeeReminderEmailEnabled();
+        boolean whatsappEnabled = configService.isFeeReminderWhatsAppEnabled();
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "enabled", emailEnabled,
+                "emailEnabled", emailEnabled,
+                "whatsappEnabled", whatsappEnabled,
+                "message", "Fee reminder status updated successfully"
+        ));
+    }
+
+    @GetMapping("/fee-reminder-whatsapp-status")
+    public ResponseEntity<Map<String, Object>> getFeeReminderWhatsAppStatus() {
+        boolean enabled = configService.isFeeReminderWhatsAppEnabled();
+        return ResponseEntity.ok(Map.of(
+                "enabled", enabled,
+                "message", enabled ? "Fee reminder WhatsApp messages are ENABLED" : "Fee reminder WhatsApp messages are DISABLED"
+        ));
+    }
+
+    @PostMapping("/fee-reminder-whatsapp-status")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> setFeeReminderWhatsAppStatus(
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
+
+        boolean enabled = Boolean.parseBoolean(String.valueOf(request.get("enabled")));
+        String username = authentication != null ? authentication.getName() : "system";
+
+        log.info("[NOTIF] SUPER_ADMIN {} toggling fee reminder WhatsApp enabled to: {}", username, enabled);
+        configService.setFeeReminderWhatsAppEnabled(enabled, username);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "enabled", enabled,
+                "message", enabled ? "Fee reminder WhatsApp messages enabled" : "Fee reminder WhatsApp messages disabled"
+        ));
+    }
+
+    /**
+     * Manually triggers the 5-day fee due countdown reminders (Email and/or WhatsApp) on demand.
+     */
+    @PostMapping("/fee-reminder/trigger-now")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> triggerFeeRemindersNow() {
+        log.info("[MANUAL TRIGGER] SUPER_ADMIN manually triggering 5-day fee countdown reminders");
+        Map<String, Object> result = feeDueReminderScheduler.sendDailyCountdownFeeDueReminders(LocalDate.now());
+        return ResponseEntity.ok(result);
     }
 }

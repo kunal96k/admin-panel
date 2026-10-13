@@ -7,6 +7,7 @@ import com.tts.sms.model.Admission;
 import com.tts.sms.model.FeeInstallment;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -162,14 +163,19 @@ public class AdmissionMapper {
     public FeeInstallmentDTO toInstallmentDTO(FeeInstallment installment) {
         if (installment == null) return null;
 
+        LocalDate displayDate = installment.getDueDate();
+        if ("Paid".equalsIgnoreCase(installment.getStatus())) {
+            displayDate = installment.getPaidDate() != null ? installment.getPaidDate() : installment.getDueDate();
+        }
+
         return FeeInstallmentDTO.builder()
                 .id(installment.getId())
                 .registrationNumber(installment.getRegistrationNumber())
                 .installmentNumber(installment.getInstallmentNumber())
-                .dueDate(installment.getDueDate())
+                .dueDate(displayDate)
                 .amount(installment.getAmount())
                 .paidAmount(installment.getPaidAmount())
-                .paidDate(installment.getPaidDate())
+                .paidDate(displayDate)
                 .paymentMode(installment.getPaymentMode())
                 .transactionId(installment.getTransactionId())
                 .status(installment.getStatus())

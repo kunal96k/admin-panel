@@ -103,9 +103,10 @@ public class CourseRestController {
     public ResponseEntity<?> createCourse(
             @RequestParam String courseName,
             @RequestParam BigDecimal courseFees,
-            @RequestParam(required = false) MultipartFile courseImage) {
+            @RequestParam(required = false) MultipartFile courseImage,
+            @RequestParam(required = false) MultipartFile courseBrochure) {
         try {
-            CourseDTO course = courseService.createCourse(courseName, courseFees, courseImage);
+            CourseDTO course = courseService.createCourse(courseName, courseFees, courseImage, courseBrochure);
             return ResponseEntity.status(HttpStatus.CREATED).body(course);
         } catch (RuntimeException e) {
             log.error("Error creating course", e);
@@ -126,9 +127,11 @@ public class CourseRestController {
             @PathVariable Long id,
             @RequestParam String courseName,
             @RequestParam BigDecimal courseFees,
-            @RequestParam(required = false) MultipartFile courseImage) {
+            @RequestParam(required = false) MultipartFile courseImage,
+            @RequestParam(required = false) MultipartFile courseBrochure,
+            @RequestParam(required = false, defaultValue = "false") Boolean removeBrochure) {
         try {
-            CourseDTO course = courseService.updateCourse(id, courseName, courseFees, courseImage);
+            CourseDTO course = courseService.updateCourse(id, courseName, courseFees, courseImage, courseBrochure, removeBrochure);
             return ResponseEntity.ok(course);
         } catch (RuntimeException e) {
             log.error("Error updating course", e);

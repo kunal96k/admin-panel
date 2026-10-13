@@ -11,9 +11,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,6 +32,9 @@ public class CourseService {
 
     private final CourseRepository courseRepository;
     private final FileStorageService fileStorageService;
+
+    @Value("${app.upload.courses.brochures-dir:./uploads/courses/brochures}")
+    private String brochuresDir;
 
     /**
      * Get all active courses
@@ -68,9 +78,16 @@ public class CourseService {
     }
 
     /**
-     * Create new course
+     * Create new course (backward-compatible overload)
      */
     public CourseDTO createCourse(String courseName, BigDecimal courseFees, MultipartFile imageFile) {
+        return createCourse(courseName, courseFees, imageFile, null);
+    }
+
+    /**
+     * Create new course with optional brochure
+     */
+    public CourseDTO createCourse(String courseName, BigDecimal courseFees, MultipartFile imageFile, MultipartFile brochureFile) {
         // Validate course name uniqueness
         if (courseRepository.existsByCourseNameIgnoreCaseAndIsActiveTrue(courseName)) {
             throw new RuntimeException("Course name already exists: " + courseName);
@@ -88,15 +105,28 @@ public class CourseService {
             course.setCourseImagePath(filename);
         }
 
+        // Handle brochure upload
+        if (brochureFile != null && !brochureFile.isEmpty()) {
+            String brochureFilename = storeBrochureFile(brochureFile, courseName);
+            course.setBrochurePath(brochureFilename);
+        }
+
         Course savedCourse = courseRepository.save(course);
         log.info("Course created successfully: {}", savedCourse.getCourseName());
         return convertToDTO(savedCourse);
     }
 
     /**
-     * Update course
+     * Update course (backward-compatible overload)
      */
     public CourseDTO updateCourse(Long id, String courseName, BigDecimal courseFees, MultipartFile imageFile) {
+        return updateCourse(id, courseName, courseFees, imageFile, null, false);
+    }
+
+    /**
+     * Update course with optional brochure and remove flag
+     */
+    public CourseDTO updateCourse(Long id, String courseName, BigDecimal courseFees, MultipartFile imageFile, MultipartFile brochureFile, Boolean removeBrochure) {
         Course course = courseRepository.findByIdAndIsActiveTrue(id)
                 .orElseThrow(() -> new RuntimeException("Course not found with id: " + id));
 
@@ -119,6 +149,25 @@ public class CourseService {
 
             String filename = fileStorageService.storeFile(imageFile, "courses");
             course.setCourseImagePath(filename);
+        }
+
+        // Handle brochure removal
+        if (Boolean.TRUE.equals(removeBrochure)) {
+            if (course.getBrochurePath() != null) {
+                deleteBrochureFile(course.getBrochurePath());
+                course.setBrochurePath(null);
+            }
+        }
+
+        // Handle new brochure upload
+        if (brochureFile != null && !brochureFile.isEmpty()) {
+            // Delete old brochure if present
+            if (course.getBrochurePath() != null) {
+                deleteBrochureFile(course.getBrochurePath());
+            }
+
+            String brochureFilename = storeBrochureFile(brochureFile, courseName);
+            course.setBrochurePath(brochureFilename);
         }
 
         Course updatedCourse = courseRepository.save(course);
@@ -169,6 +218,117 @@ public class CourseService {
     }
 
     /**
+     * Validate brochure file (PDF or ZIP, max 25MB)
+     */
+    private void validateBrochureFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return;
+        }
+        String originalName = file.getOriginalFilename();
+        if (originalName == null) {
+            throw new RuntimeException("Brochure file name is invalid.");
+        }
+        String lower = originalName.toLowerCase();
+        if (!lower.endsWith(".pdf") && !lower.endsWith(".zip")) {
+            throw new RuntimeException("Invalid brochure format. Only PDF or ZIP files are allowed.");
+        }
+        if (file.getSize() > 25 * 1024 * 1024) {
+            throw new RuntimeException("Brochure file size exceeds maximum limit of 25MB.");
+        }
+    }
+
+    /**
+     * Store brochure file to ./uploads/courses/brochures/
+     * Stored using clean CourseName_Brochure naming convention
+     */
+    private String storeBrochureFile(MultipartFile file, String courseName) {
+        validateBrochureFile(file);
+        try {
+            Path brochureDirPath = Paths.get(brochuresDir).toAbsolutePath();
+            if (!Files.exists(brochureDirPath)) {
+                Files.createDirectories(brochureDirPath);
+                log.info("[BROCHURE] Created brochures directory: {}", brochureDirPath);
+            }
+
+            String originalFilename = file.getOriginalFilename();
+            String extension = ".pdf";
+            if (originalFilename != null && originalFilename.lastIndexOf(".") != -1) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+            }
+
+            // Clean format: CourseName_Brochure.pdf
+            String filename = formatBrochureFileName(courseName, extension);
+            Path targetPath = brochureDirPath.resolve(filename);
+            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+            log.info("[BROCHURE] Saved brochure file: {}", targetPath);
+            return filename;
+        } catch (IOException e) {
+            log.error("[BROCHURE] Failed to store brochure file: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to store brochure file: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Format clean brochure filename: CourseName_Brochure.ext (e.g. Spring_Boot_Brochure.pdf)
+     */
+    public static String formatBrochureFileName(String courseName, String extension) {
+        if (courseName == null || courseName.isBlank()) {
+            return "Course_Brochure" + (extension != null ? extension : ".pdf");
+        }
+        String clean = courseName.trim().replaceAll("[,/\\\\&]+", " ");
+        String[] words = clean.split("[\\s_]+");
+        StringBuilder sb = new StringBuilder();
+        for (String w : words) {
+            String trimmed = w.replaceAll("[^a-zA-Z0-9]", "");
+            if (trimmed.isBlank()) continue;
+            if (sb.length() > 0) sb.append("_");
+            if (trimmed.length() == 1) {
+                sb.append(trimmed.toUpperCase());
+            } else if (trimmed.matches("[A-Z0-9]+")) {
+                sb.append(trimmed.substring(0, 1).toUpperCase()).append(trimmed.substring(1).toLowerCase());
+            } else {
+                sb.append(trimmed.substring(0, 1).toUpperCase()).append(trimmed.substring(1));
+            }
+        }
+        if (sb.length() == 0) {
+            sb.append("Course");
+        }
+        String base = sb.toString();
+        if (!base.toLowerCase().contains("course")) {
+            base += "_Course";
+        }
+        String ext = (extension != null && !extension.isBlank()) ? extension : ".pdf";
+        if (!ext.startsWith(".")) ext = "." + ext;
+        return base + "_Brochure" + ext;
+    }
+
+    private String getFileExtension(String fileName) {
+        if (fileName != null && fileName.lastIndexOf(".") != -1) {
+            return fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
+        }
+        return ".pdf";
+    }
+
+    /**
+     * Delete brochure file from ./uploads/courses/brochures/
+     */
+    private void deleteBrochureFile(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return;
+        }
+        try {
+            Path brochureDirPath = Paths.get(brochuresDir).toAbsolutePath();
+            Path targetPath = brochureDirPath.resolve(filename);
+            if (Files.exists(targetPath)) {
+                Files.delete(targetPath);
+                log.info("[BROCHURE] Deleted brochure file: {}", targetPath);
+            }
+        } catch (Exception e) {
+            log.warn("[BROCHURE] Could not delete brochure file {}: {}", filename, e.getMessage());
+        }
+    }
+
+    /**
      * Convert entity to DTO
      */
     private CourseDTO convertToDTO(Course course) {
@@ -180,6 +340,22 @@ public class CourseService {
         dto.setIsActive(course.getIsActive());
         dto.setCreatedAt(course.getCreatedAt());
         dto.setUpdatedAt(course.getUpdatedAt());
+
+        // Brochure metadata with clean CourseName_Brochure display format
+        dto.setBrochurePath(course.getBrochurePath());
+        if (course.getBrochurePath() != null && !course.getBrochurePath().isBlank()) {
+            Path brochureDirPath = Paths.get(brochuresDir).toAbsolutePath();
+            Path filePath = brochureDirPath.resolve(course.getBrochurePath());
+            boolean exists = Files.exists(filePath) && filePath.toFile().length() > 0;
+            dto.setHasBrochure(exists);
+            String ext = getFileExtension(course.getBrochurePath());
+            String displayFileName = formatBrochureFileName(course.getCourseName(), ext);
+            dto.setBrochureFileName(displayFileName);
+            dto.setBrochureUrl("/uploads/courses/brochures/" + course.getBrochurePath());
+        } else {
+            dto.setHasBrochure(false);
+            dto.setBrochureFileName(formatBrochureFileName(course.getCourseName(), ".pdf"));
+        }
 
         // Convert subjects
         if (course.getSubjects() != null) {

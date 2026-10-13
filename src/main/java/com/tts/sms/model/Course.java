@@ -31,6 +31,9 @@ public class Course {
     @Column(name = "course_image_path", length = 1000)
     private String courseImagePath;
 
+    @Column(name = "brochure_path", length = 500)
+    private String brochurePath;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 

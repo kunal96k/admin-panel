@@ -661,6 +661,22 @@
                 </div>
             </div>
 
+            <!-- API Services (SUPER_ADMIN ONLY) -->
+            <div class="menu-item"
+                th:if="${currentUser != null && ((currentUser.employee != null && currentUser.employee.role != null && currentUser.employee.role.roleTitle == 'SUPER_ADMIN') || (currentUser.role != null && currentUser.role.roleTitle == 'SUPER_ADMIN'))}">
+                <div class="menu-link" data-toggle="submenu">
+                    <i class="bi bi-cpu text-success"></i>
+                    <span class="menu-text">API Services</span>
+                </div>
+                <div class="submenu" th:classappend="${activePage == 'whatsapp-api-logs'} ? 'show' : ''">
+                    <a th:href="@{/reports/whatsapp-api-logs}" class="submenu-link"
+                        th:classappend="${activePage == 'whatsapp-api-logs'} ? 'active' : ''"
+                        data-page="whatsapp-api-logs">
+                        <i class="bi bi-whatsapp text-success me-1"></i> WhatsApp API Logs
+                    </a>
+                </div>
+            </div>
+
             <!-- Reports -->
             <div class="menu-item">
                 <div class="menu-link" data-toggle="submenu">
@@ -677,6 +693,17 @@
                         data-page="fees-collection">Fees Collection</a>
                 </div>
             </div>
+
+            <!-- Email Campaign (Commented out) -->
+            <!--
+            <div class="menu-item">
+                <a th:href="@{/email-campaign}" class="menu-link" data-menu-id="16"
+                    th:classappend="${activePage == 'email-campaign'} ? 'active' : ''" data-page="email-campaign">
+                    <i class="bi bi-envelope-paper-fill"></i>
+                    <span class="menu-text">Email Campaign</span>
+                </a>
+            </div>
+            -->
 
         </nav>
 
@@ -898,7 +925,7 @@
                 <div class="footer-bottom">
                     <p>
                         &copy; <span th:text="${#dates.year(#dates.createNow())}">2026</span>
-                        <a href="https://tts.net.in/" target="_blank">TechnoKraft Training &amp; Solution PVT LTD</a> <span class="ms-1 fw-bold">(v7.1)</span>.
+                        <a href="https://tts.net.in/" target="_blank">TechnoKraft Training &amp; Solution PVT LTD</a> <span class="ms-1 fw-bold">(v8.3)</span>.
                         All rights reserved. | Powered by <a href="https://www.technokraftservices.com/" target="_blank"
                             style="text-decoration: none; color: inherit; font-weight: 600;">TechnoKraft Services
                             LLP</a>.

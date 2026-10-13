@@ -22,6 +22,8 @@ public class EnquiryRequestDTO {
     private String lastName;
 
     // Contact
+    @NotBlank(message = "Primary Mobile (WhatsApp No.) is mandatory")
+    @Pattern(regexp = "^(\\+91|91)?[6-9]\\d{9}$", message = "Invalid mobile number. Must be a valid 10-digit Indian mobile number.")
     private String mobile;
     private String secondaryMobile;
     private String email;

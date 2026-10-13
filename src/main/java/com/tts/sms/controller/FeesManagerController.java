@@ -222,12 +222,15 @@ public class FeesManagerController {
             @RequestParam(required = false) Double maxTotalFees,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateTo,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateTo,
             @RequestParam(required = false) Boolean overdue,
+            @RequestParam(required = false) String dashFilter,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "DESC") String sortDirection) {
 
-        log.info("GET /api/fees-manager - page: {}, size: {}, searchTerm: {}, searchField: {}, status: {}, course: {}, minDue: {}, overdue: {}",
-                page, size, searchTerm, searchField, status, course, minFeesDue, overdue);
+        log.info("GET /api/fees-manager - page: {}, size: {}, searchTerm: {}, searchField: {}, status: {}, course: {}, minDue: {}, overdue: {}, dashFilter: {}, createdDateFrom: {}",
+                page, size, searchTerm, searchField, status, course, minFeesDue, overdue, dashFilter, createdDateFrom);
 
         FeesSearchDTO searchDTO = FeesSearchDTO.builder()
                 .page(page)
@@ -242,7 +245,10 @@ public class FeesManagerController {
                 .maxTotalFees(maxTotalFees)
                 .dueDateFrom(dueDateFrom)
                 .dueDateTo(dueDateTo)
+                .createdDateFrom(createdDateFrom)
+                .createdDateTo(createdDateTo)
                 .overdue(overdue)
+                .dashFilter(dashFilter)
                 .sortBy(sortBy)
                 .sortDirection(sortDirection)
                 .build();
@@ -266,12 +272,15 @@ public class FeesManagerController {
             @RequestParam(required = false) Double maxTotalFees,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateTo,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateTo,
             @RequestParam(required = false) Boolean overdue,
+            @RequestParam(required = false) String dashFilter,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "DESC") String sortDirection) {
 
-        log.info("GET /api/fees-manager/export - searchTerm: {}, searchField: {}, status: {}, course: {}",
-                searchTerm, searchField, status, course);
+        log.info("GET /api/fees-manager/export - searchTerm: {}, searchField: {}, status: {}, course: {}, dashFilter: {}",
+                searchTerm, searchField, status, course, dashFilter);
 
         FeesSearchDTO searchDTO = FeesSearchDTO.builder()
                 .searchTerm(searchTerm)
@@ -284,7 +293,10 @@ public class FeesManagerController {
                 .maxTotalFees(maxTotalFees)
                 .dueDateFrom(dueDateFrom)
                 .dueDateTo(dueDateTo)
+                .createdDateFrom(createdDateFrom)
+                .createdDateTo(createdDateTo)
                 .overdue(overdue)
+                .dashFilter(dashFilter)
                 .sortBy(sortBy)
                 .sortDirection(sortDirection)
                 .build();

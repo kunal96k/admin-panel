@@ -36,6 +36,18 @@ app:
 
   base-url: ${APP_BASE_URL:https://team.ttsnashik.com}
 
+  whatsapp:
+    enabled: ${WHATSAPP_ENABLED:true}
+    api-version: ${WHATSAPP_API_VERSION:v21.0}
+    phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+    access-token: ${WHATSAPP_ACCESS_TOKEN:}
+    course-template-name: ${WHATSAPP_COURSE_TEMPLATE_NAME:crm_course_information}
+    course-template-language: ${WHATSAPP_COURSE_TEMPLATE_LANGUAGE:en_US}
+    fee-template-name: ${WHATSAPP_FEE_TEMPLATE_NAME:crm_fee_reminder_utility}
+    fee-template-language: ${WHATSAPP_FEE_TEMPLATE_LANGUAGE:en_US}
+    business-name: ${WHATSAPP_BUSINESS_NAME:TechnoKraft Training & Solution Pvt. Ltd.}
+    test-endpoints-enabled: ${WHATSAPP_TEST_ENDPOINTS_ENABLED:false}
+
   upload:
     courses:
       dir: ${COURSES_UPLOAD_DIR:./uploads/courses}

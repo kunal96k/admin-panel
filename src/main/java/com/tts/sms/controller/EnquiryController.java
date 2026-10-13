@@ -1,6 +1,7 @@
 package com.tts.sms.controller;
 
 import com.tts.sms.dto.*;
+import com.tts.sms.service.CourseService;
 import com.tts.sms.service.EnquiryService;
 import com.tts.sms.service.FollowUpService;
 import jakarta.validation.Valid;
@@ -169,6 +170,120 @@ public class EnquiryController {
         log.info("PUT /api/enquiries/{} - mobile: {}", id, requestDTO.getMobile());
         EnquiryResponseDTO updated = enquiryService.updateEnquiry(id, requestDTO);
         return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/{id}/send-whatsapp")
+    public ResponseEntity<WhatsAppSendResult> sendWhatsAppCourseInformation(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> request) {
+        log.info("POST /api/enquiries/{}/send-whatsapp", id);
+        String documentUrl = request != null ? request.get("documentUrl") : null;
+        String courseName = request != null ? request.get("courseName") : null;
+        String documentFileName = request != null ? request.get("documentFileName") : null;
+        WhatsAppSendResult result = enquiryService.sendWhatsAppCourseInformation(id, documentUrl, courseName, documentFileName);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/upload-brochure")
+    public ResponseEntity<Map<String, Object>> uploadBrochure(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "courseName", required = false) String courseName) {
+        log.info("POST /api/enquiries/upload-brochure - file: {}, courseName: {}", 
+                file != null ? file.getOriginalFilename() : "null", courseName);
+
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "No document file was selected."
+            ));
+        }
+
+        String originalName = file.getOriginalFilename();
+        if (originalName == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Invalid file name."
+            ));
+        }
+
+        String lowerName = originalName.toLowerCase();
+        if (!lowerName.endsWith(".pdf") && !lowerName.endsWith(".zip")) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Only PDF documents (.pdf) or ZIP archives (.zip) are supported."
+            ));
+        }
+
+        if (file.getSize() > 25 * 1024 * 1024) { // 25 MB limit
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "File size exceeds 25MB limit."
+            ));
+        }
+
+        try {
+            String brochuresDir = "./uploads/courses/brochures";
+            java.nio.file.Path dirPath = java.nio.file.Paths.get(brochuresDir).toAbsolutePath().normalize();
+            if (!java.nio.file.Files.exists(dirPath)) {
+                java.nio.file.Files.createDirectories(dirPath);
+            }
+
+            // For manually uploaded zip files (and manual uploads), PRESERVE THE ORIGINAL FILENAME AS IS!
+            String cleanName = originalName.trim().replaceAll("[\\\\/:*?\"<>|]", "_");
+            String uniqueName = System.currentTimeMillis() + "_" + cleanName;
+            java.nio.file.Path targetFilePath = dirPath.resolve(uniqueName);
+            java.nio.file.Files.copy(file.getInputStream(), targetFilePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            String publicUrl = enquiryService.buildBrochurePublicUrl("brochures/" + uniqueName);
+
+            log.info("Uploaded brochure saved: {} -> URL: {}", targetFilePath.toAbsolutePath(), publicUrl);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "fileName", cleanName,
+                    "fileType", lowerName.endsWith(".zip") ? "ZIP" : "PDF",
+                    "documentUrl", publicUrl,
+                    "message", "Brochure uploaded successfully"
+            ));
+
+        } catch (Exception e) {
+            log.error("Failed to save uploaded brochure", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "success", false,
+                    "message", "Failed to upload document: " + e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/preview-brochure")
+    public ResponseEntity<?> previewBrochure(@RequestParam(value = "courses", required = false) String courses) {
+        if (courses == null || courses.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Course parameter is required"));
+        }
+        java.util.List<String> courseList = new java.util.ArrayList<>();
+        if (courses.contains(",")) {
+            for (String c : courses.split(",")) {
+                if (!c.trim().isEmpty()) {
+                    courseList.add(c.trim());
+                }
+            }
+        } else {
+            courseList.add(courses.trim());
+        }
+        if (courseList.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "No valid course found"));
+        }
+        String docUrl = enquiryService.getConsolidatedBrochureUrl(courseList);
+        String firstCourse = courseList.get(0);
+        String fileName = CourseService.formatBrochureFileName(firstCourse, ".pdf");
+        boolean hasBrochure = (docUrl != null && !docUrl.isBlank());
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "hasBrochure", hasBrochure,
+                "documentUrl", hasBrochure ? docUrl : "",
+                "fileName", fileName,
+                "firstCourse", firstCourse
+        ));
     }
 
     @PatchMapping("/{id}/status")

@@ -415,7 +415,7 @@
                             <form id="communicationForm">
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Primary Mobile No. <span class="required">*</span></label>
+                                        <label class="form-label">Primary Mobile (WhatsApp No.) <span class="required">*</span></label>
                                         <input type="tel" class="form-control" id="mobilePrimary" maxlength="10" required>
                                     </div>
                                     <div class="col-md-6 mb-3">
@@ -550,6 +550,217 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" id="btnSaveEnquiry">
                         <i class="bi bi-check-circle me-2"></i>Save Enquiry
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp Course Information Modal -->
+    <!-- WhatsApp Course Information Modal (Clean Focused Layout) -->
+    <div class="modal fade" id="whatsappCourseModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 640px;">
+            <div class="modal-content shadow-lg border-0 rounded-4 overflow-hidden">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #075E54 0%, #128C7E 50%, #25D366 100%);">
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0">
+                            <i class="bi bi-whatsapp me-2"></i>Send Course Information on WhatsApp
+                        </h5>
+                        <small class="text-white-50">Select course, verify brochure PDF, and send directly via Meta Cloud API</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Recipient Info Row -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold text-uppercase">WhatsApp No. <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-success-subtle text-success fw-bold"><i class="bi bi-whatsapp"></i></span>
+                                <input type="text" class="form-control fw-bold fs-6 text-dark bg-light" id="waRecipientMobile" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Student Name</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted"><i class="bi bi-person-fill"></i></span>
+                                <input type="text" class="form-control bg-light" id="waStudentName" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Course Selection (By default: all enquired courses comma-separated) -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label text-muted small fw-bold text-uppercase mb-0">Selected Course(s) <span class="text-danger">*</span></label>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle" id="waCourseDefaultBadge" style="font-size: 0.72rem;">Default: All Enquired Courses</span>
+                        </div>
+                        <select class="form-select form-select-lg fs-6" id="waCourseSelect">
+                            <!-- Populated dynamically -->
+                        </select>
+                        <small class="text-muted" style="font-size: 0.75rem;">Template variable <code class="text-success">{{course_list}}</code> will receive this value.</small>
+                    </div>
+
+                    <!-- Missing Brochure Warning Banner -->
+                    <div id="waBrochureAlert" class="alert alert-warning py-2 px-3 mb-3 d-none" style="font-size: 0.8rem; border-left: 4px solid #f59e0b;">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-exclamation-triangle-fill text-warning fs-5 me-2 mt-1"></i>
+                            <div>
+                                <strong>Brochure Not Found in Master:</strong> No brochure exists for <span id="waMissingCourseName" class="fw-bold"></span> in Course Master. You can upload a backup brochure below or update it in Course Master.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Brochure Document Preview Card (Mandatory Requirement 4) -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase mb-1">
+                            <i class="bi bi-file-earmark-check-fill text-success me-1"></i>Brochure Document Preview
+                        </label>
+                        <div id="waBrochurePreviewCard" class="p-3 border rounded-3 bg-light d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center">
+                                <i id="waDocPreviewIcon" class="bi bi-file-earmark-pdf-fill text-danger fs-1 me-3"></i>
+                                <div>
+                                    <div class="fw-bold text-dark text-break" id="waDocPreviewName">Course_Brochure.pdf</div>
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                        <span class="badge bg-white text-muted border" id="waDocPreviewType">DOCUMENT • PDF</span>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle" id="waDocPreviewBadge">Course Master Attached</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <a id="waBtnViewBrochure" href="#" target="_blank" class="btn btn-outline-primary btn-sm fw-semibold shadow-sm">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>View Document
+                                </a>
+                            </div>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.73rem;">Verify and inspect the exact brochure document before sending to the student.</small>
+                    </div>
+
+                    <!-- Brochure Attachment Options -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Attachment Source</label>
+                        <select class="form-select" id="waAttachmentSelect">
+                            <option value="AUTO">Course Master Brochure (Default / Merged)</option>
+                            <option value="UPLOAD">Upload Custom Brochure / ZIP (Backup)</option>
+                            <option value="NONE">None (Text-only Template Message)</option>
+                        </select>
+                    </div>
+
+                    <!-- Document Upload Box (visible when UPLOAD is chosen) -->
+                    <div id="waUploadSection" class="p-3 border rounded-3 bg-light mb-3 d-none">
+                        <label class="form-label small fw-bold mb-1">
+                            <i class="bi bi-cloud-arrow-up-fill text-success me-1"></i>Upload Course Brochure (PDF or ZIP)
+                        </label>
+                        <div class="input-group input-group-sm mb-2">
+                            <input type="file" class="form-control" id="waDocumentFileInput" accept=".pdf,application/pdf,.zip,application/zip">
+                            <button class="btn btn-outline-success" type="button" id="waBtnUploadFile">
+                                <i class="bi bi-upload me-1"></i>Upload
+                            </button>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted"><i class="bi bi-file-earmark-arrow-up text-primary me-1"></i>Max 25MB PDF/ZIP (Multi-brochure zip supported)</small>
+                            <span id="waUploadStatus" class="badge bg-secondary">No file uploaded</span>
+                        </div>
+                        <input type="hidden" id="waUploadedDocUrl" value="">
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer bg-light justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>Cancel
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-success fw-semibold" id="waBtnOpenPreview">
+                            <i class="bi bi-eye-fill me-1"></i>Preview WhatsApp Message
+                        </button>
+                        <button type="button" class="btn btn-success fw-bold px-4" id="waBtnConfirmSend">
+                            <i class="bi bi-whatsapp me-2"></i>Send on WhatsApp
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dedicated Live WhatsApp Message Preview Popup Modal (Mandatory Requirement 1) -->
+    <div class="modal fade" id="whatsappPreviewModal" tabindex="-1" style="z-index: 1065;">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+            <div class="modal-content shadow-lg border-0 rounded-4 overflow-hidden">
+                <div class="modal-header text-white py-2" style="background: #075E54;">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-white text-success d-flex align-items-center justify-content-center me-2 shadow-sm" style="width: 32px; height: 32px;">
+                            <i class="bi bi-whatsapp text-success fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="modal-title fw-bold mb-0">Live WhatsApp Preview</h6>
+                            <small class="text-white-50" style="font-size: 0.72rem;">Student Delivery Simulation</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3" style="background-color: #E5DDD5;">
+                    <!-- Phone frame simulation -->
+                    <div class="border rounded-3 shadow-sm overflow-hidden" style="background-color: #EFEAE2;">
+                        <!-- Chat Top Bar -->
+                        <div class="d-flex align-items-center p-2 text-white" style="background-color: #075E54;">
+                            <div class="rounded-circle bg-white text-success d-flex align-items-center justify-content-center me-2 shadow-sm" style="width: 34px; height: 34px; font-weight: bold;">
+                                <i class="bi bi-mortarboard-fill text-success"></i>
+                            </div>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="fw-bold small text-truncate">TechnoKraft Training</div>
+                                <div class="text-white-50" style="font-size: 0.68rem;">
+                                    <i class="bi bi-check-circle-fill text-info me-1"></i>Official Business Account
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chat Wallpaper Body -->
+                        <div class="p-3" style="min-height: 280px;">
+                            <!-- Message Bubble -->
+                            <div class="bg-white p-3 rounded-3 shadow-sm" style="border-radius: 12px !important; max-width: 95%;">
+                                <!-- Document Preview Header Card (conditional) -->
+                                <div id="waPreviewDocCard" class="p-2 mb-2 rounded border bg-light d-flex align-items-center">
+                                    <i id="waPreviewDocIcon" class="bi bi-file-earmark-pdf-fill text-danger fs-2 me-2"></i>
+                                    <div class="flex-grow-1 overflow-hidden">
+                                        <div class="fw-bold small text-truncate" id="waPreviewDocName">Course_Brochure.pdf</div>
+                                        <div class="text-muted" id="waPreviewDocType" style="font-size: 0.68rem;">DOCUMENT • PDF</div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success small" id="waPreviewDocBadge">Attached</span>
+                                </div>
+
+                                <!-- Message Body Text (Dynamic matching exact approved template) -->
+                                <div id="waMessagePreviewText" style="font-size: 0.82rem; line-height: 1.5; color: #111b21; white-space: pre-wrap;">
+                                </div>
+
+                                <!-- Message Meta / Timestamp -->
+                                <div class="text-end text-muted mt-2" style="font-size: 0.68rem;">
+                                    <span id="waPreviewTimestamp">11:00 AM</span>
+                                    <i class="bi bi-check2-all text-primary ms-1"></i>
+                                </div>
+
+                                <!-- WhatsApp Quick Action Buttons -->
+                                <div class="mt-2 pt-1 border-top" style="border-color: #e9edef !important;">
+                                    <div class="d-grid gap-1">
+                                        <div class="py-1 text-center d-flex align-items-center justify-content-center text-success fw-semibold" style="font-size: 0.8rem; cursor: default;">
+                                            <i class="bi bi-telephone-fill me-2"></i>Call Admissions
+                                        </div>
+                                        <div style="height: 1px; background-color: #e9edef;"></div>
+                                        <div class="py-1 text-center d-flex align-items-center justify-content-center text-success fw-semibold" style="font-size: 0.8rem; cursor: default;">
+                                            <i class="bi bi-box-arrow-up-right me-2"></i>Visit Website
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2 justify-content-between">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>Close
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm fw-bold px-3" id="waBtnConfirmSendFromPreview">
+                        <i class="bi bi-whatsapp me-1"></i>Send on WhatsApp
                     </button>
                 </div>
             </div>
@@ -1021,7 +1232,7 @@
     </div>
     </div>
 
-    <script th:src="@{/assets/js/enquiry.js}" src="/assets/js/enquiry.js" defer></script>
+    <script th:src="@{/assets/js/enquiry.js(v='20261013_v4')}" src="/assets/js/enquiry.js?v=20261013_v4" defer></script>
     <script layout:fragment="page-scripts" th:if="${requiresBootstrapInit}">
         if (typeof window.reinitBootstrapDropdowns === 'function') {
             window.reinitBootstrapDropdowns();

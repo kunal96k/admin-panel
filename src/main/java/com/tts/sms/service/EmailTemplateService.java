@@ -208,7 +208,7 @@ public class EmailTemplateService {
             context.setVariable("password", password);
             context.setVariable("loginUrl", baseUrl + "/login");
             context.setVariable("companyName", "TechnoKraft Training & Solution Pvt. Ltd.");
-            context.setVariable("supportEmail", "support@tts.net.in");
+            context.setVariable("supportEmail", "info@tts.net.in");
             context.setVariable("year", java.time.Year.now().getValue());
             context.setVariable("isUpdate", isUpdate);
 
@@ -242,7 +242,7 @@ public class EmailTemplateService {
             context.setVariable("username", username);
             context.setVariable("password", newPassword);
             context.setVariable("loginUrl", baseUrl + "/login");
-            context.setVariable("supportEmail", "support@tts.net.in");
+            context.setVariable("supportEmail", "info@tts.net.in");
             context.setVariable("year", java.time.Year.now().getValue());
 
             String htmlContent = templateEngine.process("email/password-changed", context);

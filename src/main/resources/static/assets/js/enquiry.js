@@ -14,6 +14,7 @@
     let selectedCourses = []; // Track selected courses
 
     let currentLoggedInUser = null;
+    let pendingEnquiryData = null;
 
     let currentPage = 0;
     let pageSize = 25;
@@ -432,6 +433,13 @@ async function loadCoursesForSearch() {
         document.getElementById('btnImportCSV')?.addEventListener('click', openImportModal);
         document.getElementById('btnExportCSV')?.addEventListener('click', exportCSV);
         document.getElementById('btnSaveEnquiry')?.addEventListener('click', saveEnquiry);
+        document.getElementById('waBtnConfirmSend')?.addEventListener('click', handleConfirmSendWhatsApp);
+        document.getElementById('waBtnOpenPreview')?.addEventListener('click', openWhatsAppPreviewModal);
+        document.getElementById('waBtnConfirmSendFromPreview')?.addEventListener('click', handleConfirmSendWhatsApp);
+        document.getElementById('waCourseSelect')?.addEventListener('change', updateWhatsAppPreview);
+        document.getElementById('waAttachmentSelect')?.addEventListener('change', handleAttachmentOptionChange);
+        document.getElementById('waBtnUploadFile')?.addEventListener('click', handleUploadBrochure);
+        document.getElementById('waDocumentFileInput')?.addEventListener('change', handleDocumentFileInputChange);
 
         // Tab progress
         document.querySelectorAll('#enquiryTabs .nav-link').forEach(tab => {
@@ -834,6 +842,8 @@ async function loadCoursesForSearch() {
         }
     }
 
+    let currentWhatsAppEnquiry = null;
+
     async function saveEnquiry() {
         const enquiryData = collectFormData();
 
@@ -849,7 +859,6 @@ async function loadCoursesForSearch() {
 
             const method = currentEnquiryId ? 'PUT' : 'POST';
 
-            // Get CSRF token
             const csrfToken = getCsrfToken();
             const csrfHeader = getCsrfHeader();
 
@@ -858,11 +867,11 @@ async function loadCoursesForSearch() {
                 'Accept': 'application/json'
             };
 
-            // Add CSRF token to headers
             if (csrfToken) {
                 headers[csrfHeader] = csrfToken;
             }
 
+            // Normal enquiry save execution (NO automatic WhatsApp sending)
             const response = await fetch(url, {
                 method: method,
                 headers: headers,
@@ -871,18 +880,797 @@ async function loadCoursesForSearch() {
             });
 
             if (!response.ok) {
-                const error = await response.json();
+                const error = await response.json().catch(() => ({}));
                 throw new Error(error.message || 'Failed to save enquiry');
             }
 
-            showSuccess(currentEnquiryId ? 'Enquiry updated successfully!' : 'Enquiry created successfully!');
+            const savedEnquiry = await response.json();
+            const enquiryId = savedEnquiry.id || currentEnquiryId;
+            const enquiryNo = savedEnquiry.enquiryNo || (enquiryId ? '#' + enquiryId : '');
+
+            // Close enquiry modal and refresh table list immediately
             closeModal('enquiryModal');
             loadEnquiries();
+
             currentEnquiryId = null;
+
+            // Prompt user: "Send course information on WhatsApp?"
+            Swal.fire({
+                title: 'Send course information on WhatsApp?',
+                html: `Enquiry <b>${enquiryNo}</b> saved successfully.<br><br>Would you like to send Course Information to <b>+91 ${savedEnquiry.mobile || enquiryData.mobile}</b> on WhatsApp?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '<i class="bi bi-whatsapp me-1"></i> Yes, Send on WhatsApp',
+                cancelButtonText: 'No, Save Only',
+                confirmButtonColor: '#25D366',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true,
+                focusConfirm: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Open Course Information WhatsApp modal
+                    // Merge enquiryData from form and savedEnquiry from server so all fields are available
+                    const fullData = Object.assign({}, enquiryData, savedEnquiry);
+                    if ((!fullData.coursesList || fullData.coursesList.length === 0) && Array.isArray(enquiryData.courses)) {
+                        fullData.coursesList = enquiryData.courses;
+                    }
+                    openWhatsAppCourseModal(fullData);
+                } else {
+                    showSuccess(`Enquiry ${enquiryNo} saved successfully!`);
+                }
+            });
 
         } catch (error) {
             console.error('Error saving enquiry:', error);
-            showError(error.message);
+            showError(error.message || 'Failed to save enquiry');
+        }
+    }
+
+    function getFileExtension(filename) {
+        if (!filename) return '.pdf';
+        const idx = filename.lastIndexOf('.');
+        return idx !== -1 ? filename.substring(idx).toLowerCase() : '.pdf';
+    }
+
+    function formatCourseBrochureName(courseName, extension = '.pdf') {
+        if (!courseName || !courseName.trim()) {
+            return 'Course_Brochure' + (extension || '.pdf');
+        }
+        const clean = courseName.trim().replace(/[,/\\&]+/g, ' ');
+        const words = clean.split(/[\s_]+/);
+        const formatted = words
+            .map(w => w.replace(/[^a-zA-Z0-9]/g, ''))
+            .filter(w => w.length > 0)
+            .map(w => {
+                if (w.length === 1) return w.toUpperCase();
+                if (/^[A-Z0-9]+$/.test(w)) return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+                return w.charAt(0).toUpperCase() + w.slice(1);
+            })
+            .join('_');
+        let base = formatted || 'Course';
+        if (!base.toLowerCase().includes('course')) {
+            base += '_Course';
+        }
+        const ext = (extension && extension.startsWith('.')) ? extension : ('.' + (extension || 'pdf'));
+        return base + '_Brochure' + ext;
+    }
+
+    function extractCoursesFromEnquiry(enquiryData) {
+        if (!enquiryData) return [];
+
+        let courses = [];
+
+        // 1. Check coursesList array (from EnquiryResponseDTO or form data)
+        if (Array.isArray(enquiryData.coursesList) && enquiryData.coursesList.length > 0) {
+            courses = enquiryData.coursesList.map(c => String(c).trim()).filter(Boolean);
+        }
+
+        // 2. Check courses field (can be Array of strings OR comma-separated string)
+        if (courses.length === 0 && enquiryData.courses) {
+            if (Array.isArray(enquiryData.courses)) {
+                courses = enquiryData.courses.map(c => String(c).trim()).filter(Boolean);
+            } else if (typeof enquiryData.courses === 'string') {
+                courses = enquiryData.courses
+                    .split(',')
+                    .map(c => c.trim())
+                    .filter(Boolean);
+            }
+        }
+
+        // 3. Filter out placeholder/empty values like 'n/a', 'not specified', 'none', '-'
+        courses = courses.filter(c => {
+            const lower = c.toLowerCase();
+            return lower !== 'n/a' && lower !== 'not specified' && lower !== 'none' && lower !== '-' && lower !== '';
+        });
+
+        // 4. If still no individual courses found, fall back to packageName
+        if (courses.length === 0 && enquiryData.packageName && enquiryData.packageName.trim()) {
+            const pkg = enquiryData.packageName.trim();
+            if (pkg.toLowerCase() !== 'n/a' && pkg.toLowerCase() !== 'not specified') {
+                courses = [pkg];
+            }
+        }
+
+        // 5. Ultimate fallback if absolutely nothing was enquired
+        if (courses.length === 0) {
+            courses = ['General Course Training'];
+        }
+
+        return courses;
+    }
+
+    function findCourseInCache(courseName, cache) {
+        if (!courseName || !Array.isArray(cache)) return null;
+        const cleanSearch = courseName.trim().toLowerCase();
+        const cleanAlphanumeric = cleanSearch.replace(/[^a-z0-9]/g, '');
+
+        // 1. Exact match (case-insensitive)
+        let match = cache.find(c => c.courseName && c.courseName.trim().toLowerCase() === cleanSearch);
+        if (match) return match;
+
+        // 2. Alphanumeric match (ignoring punctuation/spaces)
+        match = cache.find(c => {
+            if (!c.courseName) return false;
+            return c.courseName.trim().toLowerCase().replace(/[^a-z0-9]/g, '') === cleanAlphanumeric;
+        });
+        if (match) return match;
+
+        // 3. Substring match
+        match = cache.find(c => {
+            if (!c.courseName) return false;
+            const cLower = c.courseName.trim().toLowerCase();
+            return cLower.includes(cleanSearch) || cleanSearch.includes(cLower);
+        });
+
+        return match || null;
+    }
+
+    async function openWhatsAppCourseModal(enquiryData) {
+        if (!enquiryData) return;
+        currentWhatsAppEnquiry = enquiryData;
+
+        // Always refresh coursesCache to ensure we have the freshest master brochure metadata
+        try {
+            const res = await fetch('/api/courses/dropdown', {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'include'
+            });
+            if (res.ok) {
+                coursesCache = await res.json();
+            }
+        } catch (err) {
+            console.warn('Could not refresh courses for WhatsApp modal:', err);
+        }
+
+        // Recipient mobile
+        const recipientInput = document.getElementById('waRecipientMobile');
+        if (recipientInput) {
+            recipientInput.value = '+91 ' + (enquiryData.mobile || '');
+        }
+
+        // Student name
+        const studentNameInput = document.getElementById('waStudentName');
+        const studentFullName = enquiryData.name || [enquiryData.firstName, enquiryData.lastName].filter(Boolean).join(' ') || 'Student';
+        if (studentNameInput) {
+            studentNameInput.value = studentFullName;
+        }
+
+        // Extract enquired courses robustly
+        const courses = extractCoursesFromEnquiry(enquiryData);
+
+        // Course dropdown: Default to all courses comma-separated if multiple courses
+        const courseSelect = document.getElementById('waCourseSelect');
+        const defaultBadge = document.getElementById('waCourseDefaultBadge');
+        if (courseSelect) {
+            courseSelect.innerHTML = '';
+
+            if (courses.length > 1) {
+                if (defaultBadge) defaultBadge.textContent = 'Default: All Enquired Courses';
+
+                // Mandatory Requirement 2: Default to all courses comma-separated
+                const allCoursesJoined = courses.join(', ');
+                const allOpt = document.createElement('option');
+                allOpt.value = allCoursesJoined;
+                allOpt.textContent = `All Enquired Courses (${allCoursesJoined})`;
+                allOpt.dataset.isMultiple = 'true';
+                allOpt.selected = true; // SELECTED BY DEFAULT
+                courseSelect.appendChild(allOpt);
+
+                // Also list individual courses so user can select a single course if needed
+                courses.forEach((courseName) => {
+                    const opt = document.createElement('option');
+                    opt.value = courseName;
+
+                    const matchCourse = findCourseInCache(courseName, coursesCache);
+                    const hasBrochure = matchCourse && matchCourse.hasBrochure;
+                    const ext = getFileExtension(matchCourse?.brochurePath || matchCourse?.brochureFileName || '.pdf');
+                    const cleanBrochureName = formatCourseBrochureName(courseName, ext);
+
+                    opt.dataset.hasBrochure = hasBrochure ? 'true' : 'false';
+                    opt.dataset.brochureName = cleanBrochureName;
+                    opt.dataset.brochureUrl = (matchCourse && matchCourse.brochureUrl) ? matchCourse.brochureUrl : '';
+                    opt.textContent = courseName + (hasBrochure ? ' (Brochure Attached)' : ' (No Brochure in Master)');
+                    courseSelect.appendChild(opt);
+                });
+            } else {
+                if (defaultBadge) defaultBadge.textContent = 'Default: Enquired Course';
+                courses.forEach((courseName) => {
+                    const opt = document.createElement('option');
+                    opt.value = courseName;
+
+                    const matchCourse = findCourseInCache(courseName, coursesCache);
+                    const hasBrochure = matchCourse && matchCourse.hasBrochure;
+                    const ext = getFileExtension(matchCourse?.brochurePath || matchCourse?.brochureFileName || '.pdf');
+                    const cleanBrochureName = formatCourseBrochureName(courseName, ext);
+
+                    opt.dataset.hasBrochure = hasBrochure ? 'true' : 'false';
+                    opt.dataset.brochureName = cleanBrochureName;
+                    opt.dataset.brochureUrl = (matchCourse && matchCourse.brochureUrl) ? matchCourse.brochureUrl : '';
+                    opt.textContent = courseName + (hasBrochure ? ' (Brochure Attached)' : ' (No Brochure in Master)');
+                    opt.selected = true;
+                    courseSelect.appendChild(opt);
+                });
+            }
+        }
+
+        // Reset attachment options
+        const attachmentSelect = document.getElementById('waAttachmentSelect');
+        if (attachmentSelect) {
+            attachmentSelect.value = 'AUTO';
+        }
+
+        // Hide upload section & clear uploaded file
+        const uploadSection = document.getElementById('waUploadSection');
+        if (uploadSection) {
+            uploadSection.classList.add('d-none');
+        }
+
+        const uploadedDocUrlInput = document.getElementById('waUploadedDocUrl');
+        if (uploadedDocUrlInput) {
+            uploadedDocUrlInput.value = '';
+        }
+
+        const uploadStatus = document.getElementById('waUploadStatus');
+        if (uploadStatus) {
+            uploadStatus.textContent = 'No file uploaded';
+            uploadStatus.className = 'badge bg-secondary';
+        }
+
+        const fileInput = document.getElementById('waDocumentFileInput');
+        if (fileInput) {
+            fileInput.value = '';
+        }
+
+        // Update live preview & check brochure status
+        await updateWhatsAppPreview();
+
+        // Check if Course Info WhatsApp feature is globally enabled
+        try {
+            const checkRes = await fetch('/api/system-config/whatsapp-features-status', { headers: { 'Accept': 'application/json' } });
+            if (checkRes.ok) {
+                const checkData = await checkRes.json();
+                if (checkData.courseInfoWhatsAppEnabled === false) {
+                    Swal.fire({
+                        title: 'Feature Temporarily Disabled',
+                        html: `<div class="text-start">
+                            <p class="mb-2"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i><b>Notice:</b> This feature is temporarily disabled.</p>
+                            <p class="text-muted small mb-0">If you have any questions or need assistance, please contact the administrator.</p>
+                        </div>`,
+                        icon: 'warning',
+                        confirmButtonColor: '#f59e0b'
+                    });
+                    return;
+                }
+            }
+        } catch (e) {
+            // fallback to server validation on send
+        }
+
+        // Show modal
+        const modalEl = document.getElementById('whatsappCourseModal');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
+    }
+
+    async function updateWhatsAppPreview() {
+        const studentName = document.getElementById('waStudentName')?.value || 'Student';
+        const courseSelect = document.getElementById('waCourseSelect');
+        const selectedCourse = courseSelect?.value || 'our courses';
+        const selectedOption = courseSelect?.selectedOptions ? courseSelect.selectedOptions[0] : null;
+
+        const attachmentMode = document.getElementById('waAttachmentSelect')?.value || 'AUTO';
+        const uploadedDocUrl = document.getElementById('waUploadedDocUrl')?.value || '';
+
+        // Derive 1st course name dynamically for PDF filename (Mandatory Requirement 3)
+        const firstCourse = selectedCourse.includes(',') ? selectedCourse.split(',')[0].trim() : selectedCourse.trim();
+        const dynamicBrochureName = formatCourseBrochureName(firstCourse, '.pdf');
+
+        // Live text preview matching EXACT approved Meta template
+        const previewText = `Hello ${studentName},
+
+Thank you for your enquiry with TechnoKraft Training & Solution Pvt. Ltd.
+
+You enquired about the following course(s):
+
+${selectedCourse}
+
+Please find the course brochure attached for your reference.
+
+Please contact our admissions team if you need any additional information.
+
+Regards,
+Admissions Desk
+TechnoKraft Training & Solution Pvt. Ltd.`;
+
+        // Update preview text in preview popup
+        const previewTextEl = document.getElementById('waMessagePreviewText');
+        if (previewTextEl) {
+            previewTextEl.textContent = previewText;
+        }
+
+        // Elements in main modal
+        const docNameEl = document.getElementById('waDocPreviewName');
+        const docIconEl = document.getElementById('waDocPreviewIcon');
+        const docTypeEl = document.getElementById('waDocPreviewType');
+        const docBadgeEl = document.getElementById('waDocPreviewBadge');
+        const viewBrochureBtn = document.getElementById('waBtnViewBrochure');
+        const alertEl = document.getElementById('waBrochureAlert');
+        const missingCourseNameEl = document.getElementById('waMissingCourseName');
+
+        // Elements in preview popup modal
+        const previewDocCard = document.getElementById('waPreviewDocCard');
+        const previewDocName = document.getElementById('waPreviewDocName');
+        const previewDocIcon = document.getElementById('waPreviewDocIcon');
+        const previewDocType = document.getElementById('waPreviewDocType');
+        const previewDocBadge = document.getElementById('waPreviewDocBadge');
+
+        const hasMasterBrochure = selectedOption && selectedOption.dataset.hasBrochure === 'true';
+        const masterBrochureUrl = selectedOption ? selectedOption.dataset.brochureUrl : '';
+        const isMultiple = selectedOption && selectedOption.dataset.isMultiple === 'true';
+
+        if (attachmentMode === 'NONE') {
+            // Text-only mode
+            if (alertEl) alertEl.classList.add('d-none');
+            if (docNameEl) docNameEl.textContent = 'None (Text Only Template Message)';
+            if (docIconEl) docIconEl.className = 'bi bi-chat-text-fill text-muted fs-1 me-3';
+            if (docTypeEl) docTypeEl.textContent = 'TEXT ONLY';
+            if (docBadgeEl) {
+                docBadgeEl.className = 'badge bg-secondary-subtle text-secondary border';
+                docBadgeEl.textContent = 'No Document Attached';
+            }
+            if (viewBrochureBtn) {
+                viewBrochureBtn.classList.add('disabled');
+                viewBrochureBtn.removeAttribute('href');
+                viewBrochureBtn.style.pointerEvents = 'none';
+            }
+            if (previewDocCard) previewDocCard.classList.add('d-none');
+
+        } else if (attachmentMode === 'UPLOAD' && uploadedDocUrl) {
+            // Backup uploaded document (PDF or ZIP)
+            if (alertEl) alertEl.classList.add('d-none');
+            const fileInput = document.getElementById('waDocumentFileInput');
+            const file = (fileInput && fileInput.files[0]) ? fileInput.files[0] : null;
+            const ext = getFileExtension(file ? file.name : uploadedDocUrl);
+            const isZip = ext === '.zip';
+
+            // PRESERVE ORIGINAL FILENAME for manually uploaded files as requested!
+            const uploadedDocInput = document.getElementById('waUploadedDocUrl');
+            let fileName = uploadedDocInput?.dataset?.originalFileName || (file ? file.name : null);
+            if (!fileName) {
+                const urlPart = uploadedDocUrl.split('/').pop().split('?')[0];
+                fileName = urlPart.replace(/^\d+_/, '') || (isZip ? 'files.zip' : formatCourseBrochureName(firstCourse, ext));
+            }
+
+            if (docNameEl) docNameEl.textContent = fileName;
+            if (docIconEl) docIconEl.className = isZip ? 'bi bi-file-earmark-zip-fill text-warning fs-1 me-3' : 'bi bi-file-earmark-pdf-fill text-danger fs-1 me-3';
+            if (docTypeEl) docTypeEl.textContent = isZip ? 'ARCHIVE • ZIP' : 'DOCUMENT • PDF';
+            if (docBadgeEl) {
+                docBadgeEl.className = 'badge bg-success-subtle text-success border border-success-subtle';
+                docBadgeEl.textContent = isZip ? 'Uploaded ZIP Archive' : 'Uploaded Backup Document';
+            }
+            if (viewBrochureBtn) {
+                viewBrochureBtn.classList.remove('disabled');
+                viewBrochureBtn.href = uploadedDocUrl;
+                viewBrochureBtn.style.pointerEvents = 'auto';
+                viewBrochureBtn.innerHTML = '<i class="bi bi-box-arrow-up-right me-1"></i>View Document';
+            }
+
+            // Sync preview popup
+            if (previewDocCard) previewDocCard.classList.remove('d-none');
+            if (previewDocName) previewDocName.textContent = fileName;
+            if (previewDocIcon) previewDocIcon.className = isZip ? 'bi bi-file-earmark-zip-fill text-warning fs-2 me-2' : 'bi bi-file-earmark-pdf-fill text-danger fs-2 me-2';
+            if (previewDocType) previewDocType.textContent = isZip ? 'ARCHIVE • ZIP' : 'DOCUMENT • PDF';
+            if (previewDocBadge) {
+                previewDocBadge.className = 'badge bg-success-subtle text-success small';
+                previewDocBadge.textContent = 'Uploaded';
+            }
+
+        } else if (attachmentMode === 'UPLOAD' && !uploadedDocUrl) {
+            // Awaiting upload
+            if (alertEl) alertEl.classList.add('d-none');
+            if (docNameEl) docNameEl.textContent = 'Please choose a PDF or ZIP to upload below';
+            if (docIconEl) docIconEl.className = 'bi bi-cloud-arrow-up text-muted fs-1 me-3';
+            if (docTypeEl) docTypeEl.textContent = 'UPLOAD REQUIRED';
+            if (docBadgeEl) {
+                docBadgeEl.className = 'badge bg-warning-subtle text-warning border border-warning-subtle';
+                docBadgeEl.textContent = 'Awaiting File';
+            }
+            if (viewBrochureBtn) {
+                viewBrochureBtn.classList.add('disabled');
+                viewBrochureBtn.removeAttribute('href');
+                viewBrochureBtn.style.pointerEvents = 'none';
+            }
+            if (previewDocCard) previewDocCard.classList.add('d-none');
+
+        } else {
+            // AUTO / Course Master Mode
+            if (isMultiple) {
+                // All enquired courses
+                const coursesArray = selectedCourse.split(',').map(s => s.trim()).filter(Boolean);
+                const availableInCache = coursesArray.map(c => findCourseInCache(c, coursesCache)).filter(c => c && c.hasBrochure);
+
+                if (docNameEl) docNameEl.textContent = dynamicBrochureName;
+                if (docIconEl) docIconEl.className = 'bi bi-file-earmark-pdf-fill text-danger fs-1 me-3';
+                if (docTypeEl) docTypeEl.textContent = 'DOCUMENT • PDF';
+
+                if (previewDocCard) previewDocCard.classList.remove('d-none');
+                if (previewDocName) previewDocName.textContent = dynamicBrochureName;
+                if (previewDocIcon) previewDocIcon.className = 'bi bi-file-earmark-pdf-fill text-danger fs-2 me-2';
+                if (previewDocType) previewDocType.textContent = 'DOCUMENT • PDF';
+
+                if (availableInCache.length > 0) {
+                    if (alertEl) alertEl.classList.add('d-none');
+                    if (docBadgeEl) {
+                        docBadgeEl.className = 'badge bg-success-subtle text-success border border-success-subtle';
+                        docBadgeEl.textContent = `Master Brochure (${availableInCache.length}/${coursesArray.length} available)`;
+                    }
+                    if (previewDocBadge) {
+                        previewDocBadge.className = 'badge bg-success-subtle text-success small';
+                        previewDocBadge.textContent = 'Attached';
+                    }
+
+                    // Default view URL to first available brochure
+                    if (viewBrochureBtn) {
+                        viewBrochureBtn.classList.remove('disabled');
+                        viewBrochureBtn.href = availableInCache[0].brochureUrl || '#';
+                        viewBrochureBtn.style.pointerEvents = 'auto';
+                        viewBrochureBtn.innerHTML = '<i class="bi bi-box-arrow-up-right me-1"></i>View Document';
+                    }
+
+                    // Fetch consolidated brochure preview asynchronously to provide exact merged PDF URL
+                    try {
+                        const previewRes = await fetch(`/api/enquiries/preview-brochure?courses=${encodeURIComponent(selectedCourse)}`, {
+                            headers: { 'Accept': 'application/json' },
+                            credentials: 'include'
+                        });
+                        if (previewRes.ok) {
+                            const pData = await previewRes.json();
+                            if (pData.hasBrochure && pData.documentUrl && viewBrochureBtn) {
+                                viewBrochureBtn.href = pData.documentUrl;
+                            }
+                        }
+                    } catch (e) {
+                        // ignore prefetch error
+                    }
+
+                } else {
+                    // No brochure exists in Master for any enquired course
+                    if (alertEl) {
+                        alertEl.classList.remove('d-none');
+                        if (missingCourseNameEl) missingCourseNameEl.textContent = selectedCourse;
+                    }
+                    if (docBadgeEl) {
+                        docBadgeEl.className = 'badge bg-warning-subtle text-warning border border-warning-subtle';
+                        docBadgeEl.textContent = 'No Brochure in Master';
+                    }
+                    if (docNameEl) docNameEl.textContent = dynamicBrochureName + ' (Not in Master)';
+                    if (viewBrochureBtn) {
+                        viewBrochureBtn.classList.add('disabled');
+                        viewBrochureBtn.removeAttribute('href');
+                        viewBrochureBtn.style.pointerEvents = 'none';
+                    }
+                    if (previewDocBadge) {
+                        previewDocBadge.className = 'badge bg-warning-subtle text-warning small';
+                        previewDocBadge.textContent = 'Missing';
+                    }
+                }
+
+            } else {
+                // Single Course Mode
+                if (hasMasterBrochure && masterBrochureUrl) {
+                    if (alertEl) alertEl.classList.add('d-none');
+                    const brochureName = selectedOption.dataset.brochureName || dynamicBrochureName;
+                    if (docNameEl) docNameEl.textContent = brochureName;
+                    if (docIconEl) docIconEl.className = 'bi bi-file-earmark-pdf-fill text-danger fs-1 me-3';
+                    if (docTypeEl) docTypeEl.textContent = 'DOCUMENT • PDF';
+                    if (docBadgeEl) {
+                        docBadgeEl.className = 'badge bg-success-subtle text-success border border-success-subtle';
+                        docBadgeEl.textContent = 'Master Brochure Available';
+                    }
+                    if (viewBrochureBtn) {
+                        viewBrochureBtn.classList.remove('disabled');
+                        viewBrochureBtn.href = masterBrochureUrl;
+                        viewBrochureBtn.style.pointerEvents = 'auto';
+                        viewBrochureBtn.innerHTML = '<i class="bi bi-box-arrow-up-right me-1"></i>View Document';
+                    }
+
+                    if (previewDocCard) previewDocCard.classList.remove('d-none');
+                    if (previewDocName) previewDocName.textContent = brochureName;
+                    if (previewDocIcon) previewDocIcon.className = 'bi bi-file-earmark-pdf-fill text-danger fs-2 me-2';
+                    if (previewDocType) previewDocType.textContent = 'DOCUMENT • PDF';
+                    if (previewDocBadge) {
+                        previewDocBadge.className = 'badge bg-success-subtle text-success small';
+                        previewDocBadge.textContent = 'Attached';
+                    }
+
+                } else {
+                    // Missing in Course Master
+                    if (alertEl) {
+                        alertEl.classList.remove('d-none');
+                        if (missingCourseNameEl) missingCourseNameEl.textContent = selectedCourse;
+                    }
+                    if (docNameEl) docNameEl.textContent = dynamicBrochureName + ' (Not in Master)';
+                    if (docIconEl) docIconEl.className = 'bi bi-file-earmark-x-fill text-muted fs-1 me-3';
+                    if (docTypeEl) docTypeEl.textContent = 'NO BROCHURE IN MASTER';
+                    if (docBadgeEl) {
+                        docBadgeEl.className = 'badge bg-warning-subtle text-warning border border-warning-subtle';
+                        docBadgeEl.textContent = 'Missing in Master';
+                    }
+                    if (viewBrochureBtn) {
+                        viewBrochureBtn.classList.add('disabled');
+                        viewBrochureBtn.removeAttribute('href');
+                        viewBrochureBtn.style.pointerEvents = 'none';
+                    }
+
+                    if (previewDocCard) previewDocCard.classList.remove('d-none');
+                    if (previewDocName) previewDocName.textContent = dynamicBrochureName + ' (Not in Master)';
+                    if (previewDocIcon) previewDocIcon.className = 'bi bi-file-earmark-x-fill text-muted fs-2 me-2';
+                    if (previewDocType) previewDocType.textContent = 'NO BROCHURE IN MASTER';
+                    if (previewDocBadge) {
+                        previewDocBadge.className = 'badge bg-warning-subtle text-warning small';
+                        previewDocBadge.textContent = 'Missing';
+                    }
+                }
+            }
+        }
+
+        // Timestamp
+        const timeEl = document.getElementById('waPreviewTimestamp');
+        if (timeEl) {
+            timeEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+    }
+
+    function openWhatsAppPreviewModal() {
+        updateWhatsAppPreview();
+        const previewModalEl = document.getElementById('whatsappPreviewModal');
+        if (previewModalEl) {
+            const modal = bootstrap.Modal.getOrCreateInstance(previewModalEl);
+            modal.show();
+        }
+    }
+
+    function handleAttachmentOptionChange() {
+        const attachmentSelect = document.getElementById('waAttachmentSelect');
+        const uploadSection = document.getElementById('waUploadSection');
+
+        if (attachmentSelect && uploadSection) {
+            if (attachmentSelect.value === 'UPLOAD') {
+                uploadSection.classList.remove('d-none');
+            } else {
+                uploadSection.classList.add('d-none');
+            }
+        }
+
+        updateWhatsAppPreview();
+    }
+
+    function handleDocumentFileInputChange(e) {
+        const file = e.target.files[0];
+        if (file) {
+            uploadBrochureFile(file);
+        }
+    }
+
+    function handleUploadBrochure() {
+        const fileInput = document.getElementById('waDocumentFileInput');
+        if (!fileInput || !fileInput.files[0]) {
+            showError('Please select a PDF or ZIP document first.');
+            return;
+        }
+        uploadBrochureFile(fileInput.files[0]);
+    }
+
+    async function uploadBrochureFile(file) {
+        if (!file) return;
+
+        const lowerName = file.name.toLowerCase();
+        if (!lowerName.endsWith('.pdf') && !lowerName.endsWith('.zip')) {
+            showError('Only PDF documents (.pdf) or ZIP archives (.zip) are supported.');
+            return;
+        }
+
+        if (file.size > 25 * 1024 * 1024) {
+            showError('File size exceeds 25MB limit.');
+            return;
+        }
+
+        const uploadStatus = document.getElementById('waUploadStatus');
+        if (uploadStatus) {
+            uploadStatus.textContent = 'Uploading...';
+            uploadStatus.className = 'badge bg-warning text-dark';
+        }
+
+        const courseSelect = document.getElementById('waCourseSelect');
+        const selectedCourse = courseSelect ? courseSelect.value : '';
+
+        const formData = new FormData();
+        formData.append('file', file);
+        if (selectedCourse) {
+            formData.append('courseName', selectedCourse);
+        }
+
+        const csrfToken = getCsrfToken();
+        const csrfHeader = getCsrfHeader();
+        const headers = {};
+        if (csrfToken) {
+            headers[csrfHeader] = csrfToken;
+        }
+
+        try {
+            const response = await fetch('/api/enquiries/upload-brochure', {
+                method: 'POST',
+                headers: headers,
+                credentials: 'include',
+                body: formData
+            });
+
+            const result = await response.json().catch(() => ({}));
+
+            if (response.ok && result.success) {
+                const uploadedDocUrlInput = document.getElementById('waUploadedDocUrl');
+                if (uploadedDocUrlInput) {
+                    uploadedDocUrlInput.value = result.documentUrl;
+                    uploadedDocUrlInput.dataset.originalFileName = result.fileName || file.name;
+                }
+
+                if (uploadStatus) {
+                    uploadStatus.textContent = 'Uploaded: ' + (result.fileName || file.name);
+                    uploadStatus.className = 'badge bg-success';
+                }
+
+                // Switch attachment mode to UPLOAD to ensure it is used
+                const attachmentSelect = document.getElementById('waAttachmentSelect');
+                if (attachmentSelect) {
+                    attachmentSelect.value = 'UPLOAD';
+                }
+
+                showSuccess((result.fileType || 'Document') + ' brochure uploaded successfully!');
+                updateWhatsAppPreview();
+
+            } else {
+                throw new Error(result.message || 'Failed to upload document');
+            }
+
+        } catch (error) {
+            console.error('Upload brochure error:', error);
+            if (uploadStatus) {
+                uploadStatus.textContent = 'Upload failed';
+                uploadStatus.className = 'badge bg-danger';
+            }
+            showError(error.message || 'Upload failed');
+        }
+    }
+
+    async function handleConfirmSendWhatsApp() {
+        if (!currentWhatsAppEnquiry || !currentWhatsAppEnquiry.id) {
+            showError('No saved enquiry selected for WhatsApp');
+            return;
+        }
+
+        const confirmBtn = document.getElementById('waBtnConfirmSend');
+        const previewConfirmBtn = document.getElementById('waBtnConfirmSendFromPreview');
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending WhatsApp...';
+        }
+        if (previewConfirmBtn) {
+            previewConfirmBtn.disabled = true;
+            previewConfirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+        }
+
+        const enquiryId = currentWhatsAppEnquiry.id;
+        const selectedCourse = document.getElementById('waCourseSelect')?.value || null;
+        const attachmentMode = document.getElementById('waAttachmentSelect')?.value || 'AUTO';
+
+        let docUrl = null;
+        if (attachmentMode === 'UPLOAD') {
+            docUrl = document.getElementById('waUploadedDocUrl')?.value || null;
+            if (!docUrl) {
+                // If user selected upload mode but didn't upload yet
+                const fileInput = document.getElementById('waDocumentFileInput');
+                if (fileInput && fileInput.files[0]) {
+                    await uploadBrochureFile(fileInput.files[0]);
+                    docUrl = document.getElementById('waUploadedDocUrl')?.value || null;
+                }
+            }
+        } else if (attachmentMode === 'NONE') {
+            docUrl = ''; // explicit text-only
+        }
+
+        try {
+            const csrfToken = getCsrfToken();
+            const csrfHeader = getCsrfHeader();
+
+            const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            };
+            if (csrfToken) {
+                headers[csrfHeader] = csrfToken;
+            }
+
+            const uploadedDocInput = document.getElementById('waUploadedDocUrl');
+            const uploadedFileName = uploadedDocInput?.dataset?.originalFileName || null;
+
+            const response = await fetch(`/api/enquiries/${enquiryId}/send-whatsapp`, {
+                method: 'POST',
+                headers: headers,
+                credentials: 'include',
+                body: JSON.stringify({
+                    courseName: selectedCourse,
+                    documentUrl: docUrl,
+                    documentFileName: (attachmentMode === 'UPLOAD') ? uploadedFileName : null
+                })
+            });
+
+            const result = await response.json().catch(() => ({
+                success: false,
+                message: 'Failed to parse response'
+            }));
+
+            // Close modals
+            closeModal('whatsappPreviewModal');
+            closeModal('whatsappCourseModal');
+
+            if (result.success) {
+                Swal.fire({
+                    title: 'Course Information Sent!',
+                    html: `Course Information for <b>${selectedCourse || 'courses'}</b> was sent successfully to <b>+91 ${currentWhatsAppEnquiry.mobile}</b> on WhatsApp.`,
+                    icon: 'success',
+                    confirmButtonColor: '#25D366'
+                });
+            } else {
+                Swal.fire({
+                    title: 'WhatsApp Message Notice',
+                    html: `<div class="text-start">
+                        <p class="mb-2"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i><b>Notice:</b> ${result.message || 'This feature is temporarily disabled. If you have any questions or need assistance, please contact the administrator.'}</p>
+                        <small class="text-muted">The enquiry has been safely saved in the database.</small>
+                    </div>`,
+                    icon: 'warning',
+                    confirmButtonColor: '#f59e0b'
+                });
+            }
+
+        } catch (error) {
+            console.error('Error sending WhatsApp message:', error);
+            Swal.fire({
+                title: 'WhatsApp Error',
+                html: `Enquiry is <b>safely saved</b>, but error occurred while contacting WhatsApp service.<br><small class="text-muted">${error.message}</small>`,
+                icon: 'warning',
+                confirmButtonColor: '#f59e0b'
+            });
+        } finally {
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="bi bi-whatsapp me-2"></i>Send on WhatsApp';
+            }
+            if (previewConfirmBtn) {
+                previewConfirmBtn.disabled = false;
+                previewConfirmBtn.innerHTML = '<i class="bi bi-whatsapp me-1"></i>Send on WhatsApp';
+            }
         }
     }
 
@@ -956,10 +1744,16 @@ async function loadCoursesForSearch() {
             });
  
             return dto;
-        }).filter(dto => dto !== null);
- 
+        }).filter(dto => {
+            if (!dto) return false;
+            const hasValidMobile = dto.mobile && dto.mobile.trim() !== '' && dto.mobile.trim().toUpperCase() !== 'N/A';
+            const hasValidName = (dto.name && dto.name.trim() !== '' && dto.name.trim().toUpperCase() !== 'N/A') ||
+                                 (dto.firstName && dto.firstName.trim() !== '' && dto.firstName.trim().toUpperCase() !== 'N/A');
+            return hasValidMobile || hasValidName;
+        });
+
         if (dtoList.length === 0) {
-            showError('No valid records to import. All records are missing required fields (courses).');
+            showError('No valid records to import. All rows appear to be empty or missing required details.');
             return;
         }
  
@@ -1200,6 +1994,9 @@ function updateEntriesInfo() {
                                  <i class="bi bi-three-dots-vertical"></i>
                              </button>
                             <div class="action-menu">
+                                <button class="action-menu-item text-success fw-semibold" data-action="whatsapp" data-id="${enq.id}">
+                                    <i class="bi bi-whatsapp"></i><span>Send on WhatsApp</span>
+                                </button>
                                 <button class="action-menu-item" data-action="update" data-id="${enq.id}">
                                     <i class="bi bi-pencil-square"></i><span>Update</span>
                                 </button>
@@ -1232,6 +2029,9 @@ function updateEntriesInfo() {
     // Handle Actions
     async function handleAction(action, enquiryId) {
         switch(action) {
+            case 'whatsapp':
+                await openWhatsAppForEnquiry(enquiryId);
+                break;
             case 'update':
                 await loadEnquiryForEdit(enquiryId);
                 break;
@@ -1251,6 +2051,23 @@ function updateEntriesInfo() {
             case 'remove':
                 await deleteEnquiry(enquiryId);
                 break;
+        }
+    }
+
+    async function openWhatsAppForEnquiry(enquiryId) {
+        showLoading('Loading enquiry details...');
+        try {
+            const response = await fetch(`/api/enquiries/${enquiryId}`, { credentials: 'include' });
+            hideLoading();
+            if (!response.ok) {
+                showError('Could not load enquiry details');
+                return;
+            }
+            const enq = await response.json();
+            openWhatsAppCourseModal(enq);
+        } catch (e) {
+            hideLoading();
+            showError('Failed to open WhatsApp modal: ' + e.message);
         }
     }
 
@@ -1918,89 +2735,118 @@ async function deleteFollowUp(followUpId, enquiryId) {
        }
 
        for (let i = 1; i < lines.length; i++) {
-           const row = parseCSVLine(lines[i]).map(v => v.replace(/^"|"$/g, '').trim());
-   
+           const rawRow = parseCSVLine(lines[i]);
+           const row = rawRow.map(v => v.replace(/^"|"$/g, '').trim());
+
+           // Skip completely empty lines or lines with only commas/empty strings
+           const hasActualData = row.some(cell => cell && cell.length > 0 && cell.toUpperCase() !== 'N/A');
+           if (!hasActualData) {
+               continue;
+           }
+
            if (row.length > 0) {
                let record;
-   
+
                if (importType === 'old') {
-                   const nameParts = (row[1] || '').split(' ').filter(Boolean);
+                   const studentNameStr = row[1] || '';
+                   const nameParts = studentNameStr.split(' ').filter(Boolean);
                    const coursesStr = row[3] || '';
                    const rawCourses = coursesStr
                        .split(/[,\n]/)
                        .map(c => c.trim())
                        .filter(Boolean);
-   
-                   if (rawCourses.length === 0) {
-                       console.warn(`Row ${i}: No courses found, skipping`);
+
+                   const mobileVal = row[2] && row[2].trim() ? row[2].trim() : 'N/A';
+                   const hasValidName = nameParts.length > 0 && nameParts[0] !== 'N/A';
+                   const hasValidMobile = mobileVal !== 'N/A';
+
+                   if (!hasValidName && !hasValidMobile) {
+                       console.warn(`Row ${i}: Missing both student name and mobile, skipping row`);
                        continue;
                    }
-   
+
                    record = {
                        enquiryNo: row[0] && row[0].trim() ? row[0].trim() : null,
                        firstName: nameParts[0] || 'N/A',
                        middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : 'N/A',
                        lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : 'N/A',
-                       mobilePrimary: row[2] || 'N/A',
-                       courses: rawCourses,
+                       mobilePrimary: mobileVal,
+                       courses: rawCourses.length > 0 ? rawCourses : ['Not Specified'],
                        leadSource: row[4] || 'Unknown',
                        enquiryDate: validateDate(row[5]) || getTodayDate(),
                        assignTo: row[6] || null,
                        status: row[7] || 'New'
                    };
                } else if (importType === 'counselor') {
-                   const nameParts = (row[1] || '').split(/\s+/).filter(Boolean);
+                   const studentNameStr = row[1] || '';
+                   const nameParts = studentNameStr.split(/\s+/).filter(Boolean);
                    const coursesStr = row[4] || '';
                    const rawCourses = coursesStr
                        .split(/[,\n]/)
                        .map(c => c.trim())
                        .filter(Boolean);
 
+                   const mobileVal = row[3] && row[3].trim() ? row[3].trim() : 'N/A';
+                   const hasValidName = nameParts.length > 0 && nameParts[0] !== 'N/A';
+                   const hasValidMobile = mobileVal !== 'N/A';
+
+                   if (!hasValidName && !hasValidMobile) {
+                       console.warn(`Row ${i}: Missing both student name and mobile, skipping row`);
+                       continue;
+                   }
+
                    record = {
                        enquiryNo: null,
                        firstName: nameParts[0] || 'N/A',
                        middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : 'N/A',
                        lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : 'N/A',
-                       mobilePrimary: row[3] || 'N/A',
-                       courses: rawCourses.length > 0 ? rawCourses : ['N/A'],
+                       mobilePrimary: mobileVal,
+                       courses: rawCourses.length > 0 ? rawCourses : ['Not Specified'],
                        leadSource: row[2] || 'Unknown',
                        enquiryDate: validateDate(row[0]) || getTodayDate(),
                        assignTo: row[5] || 'Unassigned',
                        status: 'New'
                    };
                } else {
+                   const firstName = row[1] && row[1].trim() ? row[1].trim() : 'N/A';
+                   const lastName = row[3] && row[3].trim() ? row[3].trim() : 'N/A';
+                   const mobileVal = row[4] && row[4].trim() ? row[4].trim() : 'N/A';
+
+                   const hasValidName = (firstName !== 'N/A') || (lastName !== 'N/A');
+                   const hasValidMobile = mobileVal !== 'N/A';
+
+                   if (!hasValidName && !hasValidMobile) {
+                       console.warn(`Row ${i}: Missing both student name and mobile, skipping row`);
+                       continue;
+                   }
+
                    const coursesStr = row[13] || '';
                    const rawCourses = coursesStr
                        .split(/[,\n]/)
                        .map(c => c.trim())
                        .filter(Boolean);
-   
+
                    record = {
                        enquiryNo: row[0] && row[0].trim() ? row[0].trim() : null,
-                       firstName: row[1] || 'N/A',
+                       firstName: firstName,
                        middleName: row[2] || 'N/A',
-                       lastName: row[3] || 'N/A',
-                       mobilePrimary: row[4] || 'N/A',
+                       lastName: lastName,
+                       mobilePrimary: mobileVal,
                        mobileSecondary: row[5] || 'N/A',
                        emailPrimary: row[6] || 'N/A',
                        currentAddress: row[7] || 'N/A',
                        permanentAddress: row[8] || 'N/A',
                        college: row[9] || 'N/A',
-                       enquiryDate: validateDate(row[10]) || getTodayDate(), //  Validate date
+                       enquiryDate: validateDate(row[10]) || getTodayDate(),
                        followupDate: validateDate(row[11]) || null,
                        note: row[12] || 'N/A',
-                       courses: rawCourses.length > 0 ? rawCourses : ['N/A'],
+                       courses: rawCourses.length > 0 ? rawCourses : ['Not Specified'],
                        leadSource: row[14] || 'Unknown'
                    };
                }
-   
-               // Validate required fields
-               if (record.mobilePrimary && record.courses.length > 0) {
-                   importedData.push(record);
-                   if (previewData.length < 5) previewData.push(record);
-               } else {
-                   console.warn(`Row ${i}: Missing mobile or courses, skipping`);
-               }
+
+               importedData.push(record);
+               if (previewData.length < 5) previewData.push(record);
            }
        }
    
@@ -2693,7 +3539,7 @@ async function deleteFollowUp(followUpId, enquiryId) {
                 errors.push('Last Name is required');
             }
             if (!data.mobile || !/^[6-9]\d{9}$/.test(data.mobile)) {
-                errors.push('Valid 10-digit Mobile Number is required (must start with 6-9)');
+                errors.push('Valid 10-digit Primary Mobile (WhatsApp No.) is required (must start with 6-9)');
             }
             if (!data.courses || data.courses.length === 0) {
                 errors.push('At least one Course must be selected');
@@ -2742,11 +3588,17 @@ async function deleteFollowUp(followUpId, enquiryId) {
             // Get selected course names
             const courseNames = selectedCourses.map(c => c.courseName);
 
+            let rawMobile = getValue('mobilePrimary')?.trim() || '';
+            let cleanMobile = rawMobile.replace(/[^0-9]/g, '');
+            if (cleanMobile.length === 12 && cleanMobile.startsWith('91')) {
+                cleanMobile = cleanMobile.substring(2);
+            }
+
             return {
                 firstName: getValue('firstName')?.trim(),
                 middleName: getValue('middleName')?.trim(),
                 lastName: getValue('lastName')?.trim(),
-                mobile: getValue('mobilePrimary')?.trim(),
+                mobile: cleanMobile || rawMobile,
                 secondaryMobile: getValue('mobileSecondary')?.trim(),
                 email: getValue('emailPrimary')?.trim(),
                 secondaryEmail: getValue('emailSecondary')?.trim(),

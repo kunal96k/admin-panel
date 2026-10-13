@@ -30,6 +30,8 @@ public class EnquiryService {
     private final EnquiryRepository enquiryRepository;
     private final EnquiryMapper enquiryMapper;
     private final CSVService csvService;
+    private final WhatsAppService whatsAppService;
+    private final CourseBrochureService courseBrochureService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -240,6 +242,20 @@ public class EnquiryService {
         for (int i = 0; i < dtos.size(); i++) {
             final int rowNumber = i + 2;
             EnquiryRequestDTO dto = dtos.get(i);
+            if (dto == null) {
+                continue;
+            }
+
+            // Skip empty / dummy rows where both name and mobile are missing or "N/A"
+            boolean isMobileEmpty = dto.getMobile() == null || dto.getMobile().trim().isEmpty() || dto.getMobile().trim().equalsIgnoreCase("N/A");
+            boolean isFirstNameEmpty = dto.getFirstName() == null || dto.getFirstName().trim().isEmpty() || dto.getFirstName().trim().equalsIgnoreCase("N/A");
+            boolean isLastNameEmpty = dto.getLastName() == null || dto.getLastName().trim().isEmpty() || dto.getLastName().trim().equalsIgnoreCase("N/A");
+            boolean isFullNameEmpty = dto.getName() == null || dto.getName().trim().isEmpty() || dto.getName().trim().equalsIgnoreCase("N/A");
+
+            if (isMobileEmpty && isFirstNameEmpty && isLastNameEmpty && isFullNameEmpty) {
+                log.warn("[SKIP] Row {}: Skipping empty record (no valid name or mobile)", rowNumber);
+                continue;
+            }
 
             try {
                 String originalMobile = dto.getMobile();
@@ -406,6 +422,93 @@ public class EnquiryService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveEnquiryInNewTransaction(Enquiry enquiry) {
         enquiryRepository.save(enquiry);
+    }
+
+    @Transactional(readOnly = true)
+    public WhatsAppSendResult sendWhatsAppCourseInformation(Long enquiryId, String documentUrl) {
+        return sendWhatsAppCourseInformation(enquiryId, documentUrl, null);
+    }
+
+    @Transactional(readOnly = true)
+    public WhatsAppSendResult sendWhatsAppCourseInformation(Long enquiryId, String documentUrl, String selectedCourse, String documentFileName) {
+        log.info("Processing WhatsApp Course Information request for enquiry id: {}, selectedCourse: {}, customDocFileName: {}",
+                enquiryId, selectedCourse, documentFileName);
+        Enquiry enquiry = enquiryRepository.findById(enquiryId)
+                .filter(e -> !e.getIsDeleted())
+                .orElseThrow(() -> new ResourceNotFoundException("Enquiry not found with id: " + enquiryId));
+
+        String finalDocUrl = (documentUrl != null && !documentUrl.isBlank()) ? documentUrl.trim() : null;
+        if (finalDocUrl == null) {
+            List<String> coursesToSearch = new ArrayList<>();
+            if (selectedCourse != null && !selectedCourse.isBlank()) {
+                if (selectedCourse.contains(",")) {
+                    for (String part : selectedCourse.split(",")) {
+                        if (part != null && !part.trim().isEmpty()) {
+                            coursesToSearch.add(part.trim());
+                        }
+                    }
+                } else {
+                    coursesToSearch.add(selectedCourse.trim());
+                }
+            } else if (enquiry.getCourses() != null && !enquiry.getCourses().isEmpty()) {
+                coursesToSearch.addAll(enquiry.getCourses());
+            } else if (enquiry.getPackageName() != null && !enquiry.getPackageName().isBlank()) {
+                coursesToSearch.add(enquiry.getPackageName().trim());
+            }
+            finalDocUrl = courseBrochureService.getConsolidatedBrochureUrl(coursesToSearch);
+        }
+
+        String courseListToUse = (selectedCourse != null && !selectedCourse.isBlank())
+                ? selectedCourse.trim()
+                : ((enquiry.getCourses() != null && !enquiry.getCourses().isEmpty())
+                        ? String.join(", ", enquiry.getCourses())
+                        : (enquiry.getPackageName() != null ? enquiry.getPackageName().trim() : "our courses"));
+
+        // Build caller audit context
+        String currentUsername = null;
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
+                currentUsername = auth.getName();
+            }
+        } catch (Exception ignored) {}
+
+        WhatsAppAuditContext auditContext = WhatsAppAuditContext.builder()
+                .moduleType("COURSE_INFORMATION")
+                .templateName("crm_course_information")
+                .billingCategory("MARKETING")
+                .triggerType("MANUAL")
+                .triggeredByUsername(currentUsername)
+                .referenceId(enquiry.getId())
+                .referenceNumber(enquiry.getEnquiryNo() != null ? enquiry.getEnquiryNo() : ("ENQ-" + enquiry.getId()))
+                .studentName(enquiry.getDisplayName())
+                .recipientMobile(enquiry.getMobile())
+                .courseName(courseListToUse)
+                .attachmentName(documentFileName)
+                .build();
+
+        return whatsAppService.sendCourseInformationDirect(
+                enquiry.getMobile(),
+                enquiry.getDisplayName(),
+                courseListToUse,
+                finalDocUrl,
+                enquiry.getId(),
+                documentFileName,
+                auditContext
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public WhatsAppSendResult sendWhatsAppCourseInformation(Long enquiryId, String documentUrl, String selectedCourse) {
+        return sendWhatsAppCourseInformation(enquiryId, documentUrl, selectedCourse, null);
+    }
+
+    public String buildBrochurePublicUrl(String relativePath) {
+        return courseBrochureService.buildPublicUrl(relativePath);
+    }
+
+    public String getConsolidatedBrochureUrl(List<String> courses) {
+        return courseBrochureService.getConsolidatedBrochureUrl(courses);
     }
 
     private String getCurrentLoggedInUser() {

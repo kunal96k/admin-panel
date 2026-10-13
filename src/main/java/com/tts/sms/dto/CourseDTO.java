@@ -16,6 +16,10 @@ public class CourseDTO {
     private String courseName;
     private BigDecimal courseFees;
     private String courseImagePath;
+    private String brochurePath;
+    private String brochureUrl;
+    private String brochureFileName;
+    private Boolean hasBrochure;
     private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -338,8 +338,25 @@
         tr.dataset.updatedTime = updatedTimeStr;
         tr.style.cursor = 'pointer';
 
+        let dateInputVal = '';
+        if (date) {
+            if (typeof date === 'string') {
+                dateInputVal = date.split('T')[0].trim();
+            } else if (Array.isArray(date) && date.length >= 3) {
+                dateInputVal = `${date[0]}-${String(date[1]).padStart(2, '0')}-${String(date[2]).padStart(2, '0')}`;
+            } else {
+                const d = new Date(date);
+                if (!isNaN(d.getTime())) {
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const year = d.getFullYear();
+                    dateInputVal = `${year}-${month}-${day}`;
+                }
+            }
+        }
+
         tr.innerHTML = `
-            <td data-label="DATE"><input type="date" class="form-control form-control-sm fee-inst-date" value="${date || ''}"></td>
+            <td data-label="DATE"><input type="date" class="form-control form-control-sm fee-inst-date" value="${dateInputVal}"></td>
             <td data-label="AMOUNT (₹)"><input type="number" class="form-control form-control-sm fee-inst-amount" value="${amount || ''}" step="0.01" min="0" placeholder="0.00"></td>
             <td data-label="STATUS">
                 <select class="form-select form-select-sm fee-inst-status">
@@ -792,7 +809,7 @@
             // Format student name with category badge
             const isReminderEnabled = adm.feeReminderEmailEnabled !== false;
             const reminderBadge = !isReminderEnabled
-                ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 0.65rem;" title="Fee reminder emails disabled for this student"><i class="bi bi-bell-slash me-1"></i>Reminder Off</span>'
+                ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 0.7rem; padding: 0.2em 0.4em;" title="Reminder Off"><i class="bi bi-bell-slash"></i></span>'
                 : '';
 
             const studentNameWithBadge = `
@@ -3028,7 +3045,7 @@
 
                     return `
                         <tr>
-                            <td data-label="Date">${new Date(inst.dueDate).toLocaleDateString('en-GB')}</td>
+                            <td data-label="Date">${formatDisplayDate(inst.paidDate || inst.dueDate)}</td>
                             <td data-label="Amount">₹${parseFloat(inst.amount).toFixed(2)}</td>
                             <td data-label="Status">
                                 <span class="badge bg-${inst.status === 'Paid' ? 'success' : inst.status === 'Overdue' ? 'danger' : 'warning'}">
@@ -3113,6 +3130,30 @@
         hours = hours % 12;
         hours = hours ? hours : 12;
         return `${hours}:${String(minutes).padStart(2, '0')} ${ampm}`;
+    }
+
+    function formatDisplayDate(dateValue) {
+        if (!dateValue) return '-';
+        try {
+            if (typeof dateValue === 'string') {
+                const clean = dateValue.split('T')[0].trim();
+                if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+                    const [y, m, d] = clean.split('-');
+                    return `${d}/${m}/${y}`;
+                }
+            }
+            if (Array.isArray(dateValue) && dateValue.length >= 3) {
+                return `${String(dateValue[2]).padStart(2, '0')}/${String(dateValue[1]).padStart(2, '0')}/${dateValue[0]}`;
+            }
+            const date = new Date(dateValue);
+            if (isNaN(date.getTime())) return String(dateValue);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        } catch (e) {
+            return String(dateValue);
+        }
     }
 
     function formatDisplayDateTime(dateTimeValue) {
@@ -3373,7 +3414,7 @@
                 tbody.innerHTML = '';
                 installments.forEach(inst => {
                     tbody.appendChild(buildFeeInstallmentRow(
-                        inst.dueDate || '',
+                        inst.paidDate || inst.dueDate || '',
                         inst.amount != null ? parseFloat(inst.amount).toFixed(2) : '',
                         inst.status || 'Pending',
                         inst.notes || '',
@@ -3533,7 +3574,7 @@
                             tbody.innerHTML = '';
                             updatedList.forEach(inst => {
                                 tbody.appendChild(buildFeeInstallmentRow(
-                                    inst.dueDate || '',
+                                    inst.paidDate || inst.dueDate || '',
                                     inst.amount != null ? parseFloat(inst.amount).toFixed(2) : '',
                                     inst.status || 'Pending',
                                     inst.notes || '',

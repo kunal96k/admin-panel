@@ -49,6 +49,7 @@ public class LayoutController {
         PAGE_MENU_ID_MAP.put("online-payment", 13L);
         PAGE_MENU_ID_MAP.put("course-wise-sales", 14L);
         PAGE_MENU_ID_MAP.put("fees-collection", 15L);
+        PAGE_MENU_ID_MAP.put("email-campaign", 16L);
     }
 
     /**
@@ -251,5 +252,26 @@ public class LayoutController {
     public String feesCollection(Model model) {
         addBaseAttributes(model, "Fees Collection Report", "fees-collection");
         return "reports/fees-collection";
+    }
+
+    // ========================================
+    // WHATSAPP API AUDIT LOGS (SUPER ADMIN ONLY)
+    // ========================================
+
+    @GetMapping("/reports/whatsapp-api-logs")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('SUPER_ADMIN')")
+    public String whatsappApiLogs(Model model) {
+        addBaseAttributes(model, "WhatsApp API Audit Logs", "whatsapp-api-logs");
+        return "reports/whatsapp-api-logs";
+    }
+
+    // ========================================
+    // EMAIL CAMPAIGN
+    // ========================================
+
+    @GetMapping("/email-campaign")
+    public String emailCampaign(Model model) {
+        addBaseAttributes(model, "Email Campaign", "email-campaign");
+        return "email-campaign/email-campaign";
     }
 }

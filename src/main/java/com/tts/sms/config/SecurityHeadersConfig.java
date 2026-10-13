@@ -68,7 +68,9 @@ public class SecurityHeadersConfig implements WebMvcConfigurer {
                                 "https://cdnjs.cloudflare.com " +
                                 "https://cdn.datatables.net " +
                                 "https://www.googletagmanager.com " +
+                                "https://*.googletagmanager.com " +
                                 "https://www.google-analytics.com " +
+                                "https://*.google-analytics.com " +
                                 "https://ssl.google-analytics.com; " +
 
                                 // Styles
@@ -87,14 +89,24 @@ public class SecurityHeadersConfig implements WebMvcConfigurer {
                                 // Images: Allow data URIs and HTTPS for GA
                                 "img-src 'self' data: https: " +
                                 "https://www.google-analytics.com " +
-                                "https://ssl.google-analytics.com; " +
+                                "https://*.google-analytics.com " +
+                                "https://www.googletagmanager.com " +
+                                "https://*.googletagmanager.com " +
+                                "https://ssl.google-analytics.com " +
+                                "https://www.google.com " +
+                                "https://*.google.com; " +
 
                                 // Connect: Allow XHR/Fetch to GA AND CDNs (for .map files)
                                 "connect-src 'self' " +
                                 "https://www.google-analytics.com " +
+                                "https://*.google-analytics.com " +
                                 "https://ssl.google-analytics.com " +
                                 "https://www.googletagmanager.com " +
+                                "https://*.googletagmanager.com " +
                                 "https://stats.g.doubleclick.net " +
+                                "https://www.google.com " +
+                                "https://*.google.com " +
+                                "https://analytics.google.com " +
                                 "https://cdn.jsdelivr.net " +
                                 "https://cdnjs.cloudflare.com " +
                                 "https://cdn.datatables.net; " +

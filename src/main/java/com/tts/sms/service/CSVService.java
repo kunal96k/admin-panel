@@ -60,8 +60,12 @@ public class CSVService {
 
             // Process ALL rows (skip only header)
             for (int i = 1; i < records.size(); i++) {
-                totalRows++;
                 String[] row = records.get(i);
+                if (isRowEmpty(row)) {
+                    continue;
+                }
+
+                totalRows++;
 
                 try {
                     // Column 0: Enquiry No.
@@ -73,6 +77,10 @@ public class CSVService {
 
                     // Column 2: Mobile
                     String mobile = getOriginalValue(row, 2);
+
+                    if (fullName.equalsIgnoreCase("N/A") && mobile.equalsIgnoreCase("N/A")) {
+                        continue;
+                    }
 
                     // Column 3: Courses
                     String coursesStr = getOriginalValue(row, 3);
@@ -141,16 +149,28 @@ public class CSVService {
             }
 
             for (int i = 1; i < records.size(); i++) {
-                totalRows++;
                 String[] row = records.get(i);
+                if (isRowEmpty(row)) {
+                    continue;
+                }
+
+                totalRows++;
 
                 try {
+                    String firstName = getOriginalValue(row, 1);
+                    String lastName = getOriginalValue(row, 3);
+                    String mobile = getOriginalValue(row, 4);
+
+                    if (firstName.equalsIgnoreCase("N/A") && lastName.equalsIgnoreCase("N/A") && mobile.equalsIgnoreCase("N/A")) {
+                        continue;
+                    }
+
                     EnquiryRequestDTO dto = EnquiryRequestDTO.builder()
                             .enquiryNo(getOriginalValue(row, 0))
-                            .firstName(getOriginalValue(row, 1))
+                            .firstName(firstName)
                             .middleName(getOriginalValue(row, 2))
-                            .lastName(getOriginalValue(row, 3))
-                            .mobile(getOriginalValue(row, 4))
+                            .lastName(lastName)
+                            .mobile(mobile)
                             .secondaryMobile(getOriginalValue(row, 5))
                             .email(getOriginalValue(row, 6))
                             .currentAddress(getOriginalValue(row, 7))
@@ -201,8 +221,12 @@ public class CSVService {
             log.debug("CSV Header: {}", Arrays.toString(records.get(0)));
 
             for (int i = 1; i < records.size(); i++) {
-                totalRows++;
                 String[] row = records.get(i);
+                if (isRowEmpty(row)) {
+                    continue;
+                }
+
+                totalRows++;
 
                 try {
                     // Column 0: DATE
@@ -225,6 +249,11 @@ public class CSVService {
                     String mobile = getOriginalValue(row, 3);
                     if (mobile == null || mobile.equals("N/A")) {
                         mobile = "";
+                    }
+
+                    // Skip row if both name and mobile are completely empty
+                    if (studentName.isEmpty() && mobile.isEmpty()) {
+                        continue;
                     }
 
                     // Column 4: COURSE
@@ -285,8 +314,12 @@ public class CSVService {
             log.debug("CSV Header: {}", Arrays.toString(records.get(0)));
 
             for (int i = 1; i < records.size(); i++) {
-                totalRows++;
                 String[] row = records.get(i);
+                if (isRowEmpty(row)) {
+                    continue;
+                }
+
+                totalRows++;
 
                 try {
                     // Column 0: Registration No
@@ -298,6 +331,10 @@ public class CSVService {
 
                     // Column 2: Mobile
                     String mobile = getOriginalValue(row, 2);
+
+                    if (fullName.equalsIgnoreCase("N/A") && mobile.equalsIgnoreCase("N/A")) {
+                        continue;
+                    }
 
                     // Column 3: Courses
                     String coursesStr = getOriginalValue(row, 3);
@@ -533,6 +570,9 @@ public class CSVService {
             // Process ALL rows (skip only header)
             for (int i = 1; i < records.size(); i++) {
                 String[] row = records.get(i);
+                if (isRowEmpty(row)) {
+                    continue;
+                }
 
                 try {
                     FeesCSVImportDTO dto = FeesCSVImportDTO.builder()
@@ -565,6 +605,19 @@ public class CSVService {
     }
 
     // ==================== HELPER METHODS - NULL SAFE ====================
+
+    /**
+     * Check if a CSV row is completely empty, whitespace, or only contains "N/A"
+     */
+    private boolean isRowEmpty(String[] row) {
+        if (row == null || row.length == 0) return true;
+        for (String cell : row) {
+            if (cell != null && !cell.trim().isEmpty() && !cell.trim().equalsIgnoreCase("N/A")) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     /**
      * Get string value or null (NOT "N/A")

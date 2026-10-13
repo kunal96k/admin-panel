@@ -15,5 +15,8 @@ public class CourseDropdownDTO {
     private Long id;
     private String courseName;
     private BigDecimal courseFees;
-
+    private String brochurePath;
+    private String brochureFileName;
+    private String brochureUrl;
+    private Boolean hasBrochure;
 }

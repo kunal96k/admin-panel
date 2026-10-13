@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}"
+      lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp API Audit Logs & Billing</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.min.css" rel="stylesheet">
+
+    <style>
+        .page-header-box {
+            background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
+            border-radius: 12px;
+            padding: 24px;
+            color: #ffffff;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 14px rgba(7, 94, 84, 0.15);
+        }
+        .page-header-box h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .super-admin-pill {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .kpi-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e9ecef;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            height: 100%;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        }
+        .kpi-icon-wrap {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            margin-bottom: 12px;
+        }
+        .kpi-val {
+            font-size: 1.65rem;
+            font-weight: 700;
+            color: #212529;
+            line-height: 1.2;
+        }
+        .kpi-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .kpi-subtext {
+            font-size: 0.75rem;
+            color: #adb5bd;
+            margin-top: 4px;
+        }
+
+        .filter-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e9ecef;
+            margin-bottom: 24px;
+        }
+
+        .data-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e9ecef;
+            margin-bottom: 30px;
+        }
+
+        .table-logs {
+            font-size: 0.88rem;
+            margin-bottom: 0;
+            vertical-align: middle;
+        }
+        .table-logs thead th {
+            background-color: #f8f9fa;
+            color: #495057;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+            white-space: nowrap;
+            padding: 12px 10px;
+        }
+        .table-logs tbody td {
+            padding: 12px 10px;
+        }
+        .badge-utility {
+            background-color: #e3f2fd;
+            color: #0d47a1;
+            font-weight: 600;
+            border: 1px solid #bbdefb;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .badge-marketing {
+            background-color: #f3e5f5;
+            color: #4a148c;
+            font-weight: 600;
+            border: 1px solid #e1bee7;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .badge-status-success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            font-weight: 600;
+            border: 1px solid #c8e6c9;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .badge-status-failed {
+            background-color: #ffebee;
+            color: #c62828;
+            font-weight: 600;
+            border: 1px solid #ffcdd2;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .badge-status-blocked {
+            background-color: #fff3e0;
+            color: #e65100;
+            font-weight: 600;
+            border: 1px solid #ffe0b2;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .wamid-code {
+            font-family: monospace;
+            font-size: 0.8rem;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            max-width: 140px;
+            display: inline-block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: middle;
+            color: #495057;
+        }
+        .json-viewer {
+            background-color: #212529;
+            color: #00e676;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.82rem;
+            padding: 14px;
+            border-radius: 8px;
+            max-height: 280px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+<main layout:fragment="content">
+    <div class="container-fluid px-3 px-md-4 py-3">
+
+        <!-- Top Header Banner -->
+        <div class="page-header-box d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <h2><i class="bi bi-whatsapp me-2"></i>WhatsApp API Audit Logs</h2>
+                    <span class="super-admin-pill"><i class="bi bi-shield-lock-fill"></i> SUPER ADMIN ONLY</span>
+                </div>
+                <p class="mb-0 text-white-50">
+                    Audit trail for Meta Cloud API calls, cost reconciliation (Utility vs Marketing), and message delivery receipts.
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-light shadow-sm" id="btnRefreshLogs">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                </button>
+                <button type="button" class="btn btn-warning shadow-sm fw-semibold" id="btnExportCsv">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Meta Tally CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- KPI Reconciliation Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-xl-2 col-md-4 col-sm-6">
+                <div class="kpi-card">
+                    <div class="kpi-icon-wrap bg-primary-subtle text-primary">
+                        <i class="bi bi-send-fill"></i>
+                    </div>
+                    <div class="kpi-val" id="kpiTotalCalls">0</div>
+                    <div class="kpi-title">Total Dispatches</div>
+                    <div class="kpi-subtext">All API calls attempted</div>
+                </div>
+            </div>
+            <div class="col-xl-2 col-md-4 col-sm-6">
+                <div class="kpi-card">
+                    <div class="kpi-icon-wrap bg-success-subtle text-success">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    <div class="kpi-val text-success" id="kpiSuccessCount">0</div>
+                    <div class="kpi-title">Delivered (Meta)</div>
+                    <div class="kpi-subtext" id="kpiSuccessRate">100% success rate</div>
+                </div>
+            </div>
+            <div class="col-xl-2 col-md-4 col-sm-6">
+                <div class="kpi-card">
+                    <div class="kpi-icon-wrap bg-danger-subtle text-danger">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </div>
+                    <div class="kpi-val text-danger" id="kpiFailedCount">0</div>
+                    <div class="kpi-title">Failed / Errors</div>
+                    <div class="kpi-subtext" id="kpiBlockedCount">0 blocked by config</div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 col-sm-6">
+                <div class="kpi-card">
+                    <div class="kpi-icon-wrap bg-info-subtle text-info">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div class="kpi-val text-primary" id="kpiUtilityCount">0</div>
+                    <div class="kpi-title">Utility Conversations</div>
+                    <div class="kpi-subtext">Fee Reminders (Lower Meta Rate)</div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 col-sm-6">
+                <div class="kpi-card">
+                    <div class="kpi-icon-wrap" style="background-color: #f3e5f5; color: #7b1fa2;">
+                        <i class="bi bi-megaphone-fill"></i>
+                    </div>
+                    <div class="kpi-val text-purple" style="color: #7b1fa2;" id="kpiMarketingCount">0</div>
+                    <div class="kpi-title">Marketing Conversations</div>
+                    <div class="kpi-subtext">Course Info Brochures (Standard Rate)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="filter-card">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3 col-lg-2">
+                    <label class="form-label small fw-semibold text-secondary">Start Date</label>
+                    <input type="date" class="form-control form-control-sm" id="filterStartDate">
+                </div>
+                <div class="col-md-3 col-lg-2">
+                    <label class="form-label small fw-semibold text-secondary">End Date</label>
+                    <input type="date" class="form-control form-control-sm" id="filterEndDate">
+                </div>
+                <div class="col-md-3 col-lg-2">
+                    <label class="form-label small fw-semibold text-secondary">Module / Template</label>
+                    <select class="form-select form-select-sm" id="filterModule">
+                        <option value="">All Modules</option>
+                        <option value="COURSE_INFORMATION">Course Information</option>
+                        <option value="FEE_REMINDER">Fee Due Reminder</option>
+                        <option value="TEST">Diagnostic Test</option>
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg-2">
+                    <label class="form-label small fw-semibold text-secondary">Status</label>
+                    <select class="form-select form-select-sm" id="filterStatus">
+                        <option value="">All Statuses</option>
+                        <option value="SUCCESS">SUCCESS</option>
+                        <option value="FAILED">FAILED</option>
+                        <option value="BLOCKED">BLOCKED</option>
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg-2">
+                    <label class="form-label small fw-semibold text-secondary">Trigger Source</label>
+                    <select class="form-select form-select-sm" id="filterTrigger">
+                        <option value="">All Sources</option>
+                        <option value="MANUAL">MANUAL (Staff)</option>
+                        <option value="AUTOMATED_SCHEDULER">System Scheduler</option>
+                    </select>
+                </div>
+                <div class="col-md-9 col-lg-2">
+                    <label class="form-label small fw-semibold text-secondary">Search Keyword</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="filterSearch" placeholder="Mobile / Name / Ref / wamid">
+                        <button class="btn btn-outline-secondary" type="button" id="btnClearSearch" title="Clear search">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary btn-quick-date" data-range="today">Today</button>
+                    <button type="button" class="btn btn-outline-secondary btn-quick-date" data-range="yesterday">Yesterday</button>
+                    <button type="button" class="btn btn-outline-secondary btn-quick-date" data-range="this-month">This Month</button>
+                    <button type="button" class="btn btn-outline-secondary btn-quick-date" data-range="last-month">Last Month</button>
+                    <button type="button" class="btn btn-outline-secondary btn-quick-date" data-range="all">All Time</button>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnResetFilters">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" id="btnApplyFilters">
+                        <i class="bi bi-funnel-fill me-1"></i> Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Logs Data Table -->
+        <div class="data-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-list-columns me-2"></i>API Invocation Records</h5>
+                    <span class="badge bg-secondary" id="badgeTotalRecords">0 records</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <label class="small text-muted me-1">Show</label>
+                    <select class="form-select form-select-sm" id="selectPageSize" style="width: 80px;">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover table-logs" id="logsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">ID</th>
+                            <th>Timestamp</th>
+                            <th>Module & Template</th>
+                            <th>Category</th>
+                            <th>Triggered By</th>
+                            <th>Recipient Student</th>
+                            <th>Ref #</th>
+                            <th>Meta Message ID</th>
+                            <th>Status</th>
+                            <th class="text-center" style="width: 80px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody">
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                Loading WhatsApp API audit logs...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Bar -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top">
+                <div class="small text-muted" id="paginationInfo">
+                    Showing 0 to 0 of 0 entries
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm mb-0" id="paginationUl">
+                        <!-- Populated dynamically via JS -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Details & Raw Payloads Modal -->
+    <div class="modal fade" id="modalLogDetails" tabindex="-1" aria-labelledby="modalLogDetailsTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="modalLogDetailsTitle">
+                        <i class="bi bi-info-circle-fill text-primary me-2"></i>Audit Log Details #<span id="detailLogId">-</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Top Summary Grid -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <h6 class="fw-bold text-secondary mb-2 small text-uppercase">Dispatch Context</h6>
+                                <div class="row g-1 small">
+                                    <div class="col-5 text-muted">Created At:</div>
+                                    <div class="col-7 fw-semibold" id="detailCreatedAt">-</div>
+                                    <div class="col-5 text-muted">Module Type:</div>
+                                    <div class="col-7 fw-semibold" id="detailModuleType">-</div>
+                                    <div class="col-5 text-muted">Template:</div>
+                                    <div class="col-7 fw-semibold font-monospace" id="detailTemplateName">-</div>
+                                    <div class="col-5 text-muted">Billing Category:</div>
+                                    <div class="col-7 fw-semibold" id="detailBillingCategory">-</div>
+                                    <div class="col-5 text-muted">Trigger Source:</div>
+                                    <div class="col-7 fw-semibold" id="detailTriggerType">-</div>
+                                    <div class="col-5 text-muted">Triggered By:</div>
+                                    <div class="col-7 fw-semibold" id="detailTriggeredBy">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <h6 class="fw-bold text-secondary mb-2 small text-uppercase">Recipient & Entity Reference</h6>
+                                <div class="row g-1 small">
+                                    <div class="col-5 text-muted">Student Name:</div>
+                                    <div class="col-7 fw-semibold" id="detailStudentName">-</div>
+                                    <div class="col-5 text-muted">Recipient Mobile:</div>
+                                    <div class="col-7 fw-semibold font-monospace" id="detailRecipientMobile">-</div>
+                                    <div class="col-5 text-muted">Reference #:</div>
+                                    <div class="col-7 fw-semibold" id="detailReferenceNumber">-</div>
+                                    <div class="col-5 text-muted">Course / Package:</div>
+                                    <div class="col-7 fw-semibold" id="detailCourseName">-</div>
+                                    <div class="col-5 text-muted">Attachment:</div>
+                                    <div class="col-7 fw-semibold text-truncate" id="detailAttachmentName">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Meta API Outcome Banner -->
+                    <div class="p-3 rounded-3 mb-4 border" id="detailStatusBanner">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold" id="detailStatusText">Status</span>
+                            <span class="badge bg-dark" id="detailHttpCode">HTTP -</span>
+                        </div>
+                        <div class="small font-monospace mb-1" id="detailMetaMessageId">Meta Message ID: -</div>
+                        <div class="small text-danger" id="detailFailureReason" style="display: none;"></div>
+                    </div>
+
+                    <!-- Raw JSON Request Payload -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-bold text-secondary mb-0">Outgoing JSON Request Payload (Meta Cloud API)</label>
+                            <button class="btn btn-sm btn-link p-0 text-decoration-none copy-btn" data-target="detailRequestPayload">
+                                <i class="bi bi-clipboard me-1"></i> Copy JSON
+                            </button>
+                        </div>
+                        <pre class="json-viewer mb-0" id="detailRequestPayload">// No payload recorded</pre>
+                    </div>
+
+                    <!-- Raw JSON Response Payload -->
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-bold text-secondary mb-0">Incoming JSON Response / Error Body</label>
+                            <button class="btn btn-sm btn-link p-0 text-decoration-none copy-btn" data-target="detailResponsePayload">
+                                <i class="bi bi-clipboard me-1"></i> Copy JSON
+                            </button>
+                        </div>
+                        <pre class="json-viewer mb-0" id="detailResponsePayload">// No response recorded</pre>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.1/sweetalert2.all.min.js"></script>
+    <!-- Custom Module JS -->
+    <script th:src="@{/assets/js/whatsapp-logs.js}" src="/assets/js/whatsapp-logs.js" defer></script>
+
+</main>
+
+</body>
+</html>

@@ -22,6 +22,7 @@ public class DashboardService {
     private final FeeReceiptRepository feeReceiptRepository;
     private final FeeRefundRepository feeRefundRepository;
     private final FeeCollectionRepository feeCollectionRepository;
+    private final FeeInstallmentRepository feeInstallmentRepository;
     private final SystemConfigurationService systemConfigurationService;
 
     /**
@@ -47,79 +48,27 @@ public class DashboardService {
         stats.put("totalEnquiries", totalEnquiries != null ? totalEnquiries : 0L);
         log.info("[INFO] Total Enquiries: {}", totalEnquiries);
 
-        // ==========  FEES CALCULATIONS (FROM CUTOFF DATE - BASED ON ADMISSION DATE) ==========
+        // ==========  FEES CALCULATIONS — DIRECT SQL AGGREGATES (10k+ record safe) ==========
 
-        // Step 1: Get ALL admissions FROM cutoff date onwards (using admission_date)
-        List<Admission> admissionsFromCutoff = admissionRepository.findByIsDeletedFalse()
-                .stream()
-                .filter(a -> a.getAdmissionDate() != null &&
-                        !a.getAdmissionDate().isBefore(cutoffDate))
-                .collect(Collectors.toList());
+        // Net collected = total paid - total refunds (for admissions >= cutoffDate)
+        Double grossTotalPaid  = feesRepository.getTotalPaidForAdmissionsFromCutoff(cutoffDate);
+        Double totalRefunds    = feeRefundRepository.getTotalRefundsForAdmissionsFromCutoff(cutoffDate);
+        Double netCollected    = (grossTotalPaid  != null ? grossTotalPaid  : 0.0)
+                              - (totalRefunds    != null ? totalRefunds    : 0.0);
 
-        log.info("[STATS] Found {} admissions from cutoff date {} (based on admission_date)",
-                admissionsFromCutoff.size(), cutoffDate);
-
-        // Step 2: Get registration numbers for these admissions
-        Set<String> regNosFromCutoff = admissionsFromCutoff.stream()
-                .map(Admission::getRegistrationNumber)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        log.info("[STATS] Processing fees for {} registration numbers", regNosFromCutoff.size());
-
-        // Step 3: Get ONLY fees records for these admissions
-        List<Fees> feesFromCutoff = feesRepository.findByIsDeletedFalse()
-                .stream()
-                .filter(f -> regNosFromCutoff.contains(f.getRegistrationNumber()))
-                .collect(Collectors.toList());
-
-        log.info("[STATS] Found {} fees records for admissions from cutoff date", feesFromCutoff.size());
-
-        // Step 4: Calculate GROSS total paid (sum of totalPaid from fees table)
-        Double grossTotalPaid = feesFromCutoff.stream()
-                .mapToDouble(f -> f.getTotalPaid() != null ? f.getTotalPaid() : 0.0)
-                .sum();
-
-        // Step 5: Get ALL refunds for these registration numbers
-        List<FeeRefund> refundsFromCutoff = feeRefundRepository.findByIsDeletedFalse(null)
-                .stream()
-                .filter(r -> regNosFromCutoff.contains(r.getRegistrationNumber()))
-                .collect(Collectors.toList());
-
-        log.info("[STATS] Found {} refund records for admissions from cutoff date",
-                refundsFromCutoff.size());
-
-        // Step 6: Calculate total refunds
-        Double totalRefunds = refundsFromCutoff.stream()
-                .mapToDouble(r -> r.getRefundAmount() != null ? r.getRefundAmount() : 0.0)
-                .sum();
-
-        // Step 7: CORRECT FORMULA: Net Collected = Gross Paid - Refunds
-        Double netCollected = grossTotalPaid - totalRefunds;
-
-        // Step 8: Calculate total pending (sum of feesDue)
-        Double totalPending = feesFromCutoff.stream()
-                .mapToDouble(f -> f.getFeesDue() != null ? f.getFeesDue() : 0.0)
-                .sum();
+        // Pending = sum of feesDue for those admissions
+        Double totalPending    = feesRepository.getTotalPendingForAdmissionsFromCutoff(cutoffDate);
 
         // Store results
-        stats.put("totalFeesCollected", Math.max(0, netCollected));
+        stats.put("totalFeesCollected",          Math.max(0, netCollected));
         stats.put("totalFeesCollectedFormatted", formatCurrency(Math.max(0, netCollected)));
-        stats.put("cutoffDate", cutoffDate.toString());
-        stats.put("cutoffDateFormatted", cutoffDate.format(DateTimeFormatter.ofPattern("dd-MMM-yyyy")));
+        stats.put("cutoffDate",                  cutoffDate.toString());
+        stats.put("cutoffDateFormatted",         cutoffDate.format(DateTimeFormatter.ofPattern("dd-MMM-yyyy")));
+        stats.put("pendingFees",                 Math.max(0, totalPending != null ? totalPending : 0.0));
+        stats.put("pendingFeesFormatted",        formatCurrency(Math.max(0, totalPending != null ? totalPending : 0.0)));
 
-        stats.put("pendingFees", Math.max(0, totalPending));
-        stats.put("pendingFeesFormatted", formatCurrency(Math.max(0, totalPending)));
-
-        // Debug logging
-        log.info(" FINAL CALCULATIONS:");
-        log.info("   - Admissions from cutoff: {} (based on admission_date >= {})",
-                admissionsFromCutoff.size(), cutoffDate);
-        log.info("   - Gross Paid: ₹{} (from {} fees records)", grossTotalPaid, feesFromCutoff.size());
-        log.info("   - Total Refunds: ₹{} (from {} refund records)", totalRefunds, refundsFromCutoff.size());
-        log.info("   - NET Collected: ₹{}", netCollected);
-        log.info("   - Pending Fees: ₹{}", totalPending);
-        log.info("   - Cutoff Date: {}", cutoffDate);
+        log.info("[STATS] SQL aggregates — Gross Paid: ₹{}, Refunds: ₹{}, Net: ₹{}, Pending: ₹{} (cutoff: {})",
+                grossTotalPaid, totalRefunds, netCollected, totalPending, cutoffDate);
 
         return stats;
     }
@@ -344,5 +293,42 @@ public class DashboardService {
         } else {
             return String.format("₹%.2f", amount);
         }
+    }
+
+    /**
+     * Dashboard Fees Reminder Cards Stats
+     * Returns counts for 4 reminder card types shown on the dashboard.
+     */
+    public Map<String, Object> getFeesReminderStats() {
+        Map<String, Object> stats = new HashMap<>();
+        LocalDate today = LocalDate.now();
+
+        // ── CARD 1: All Pending fees (status = 'Pending') ──
+        Long pendingCount = feesRepository.countPendingFees();
+        stats.put("pendingCount", pendingCount != null ? pendingCount : 0L);
+        log.info("[REMINDER] Pending fees count: {}", pendingCount);
+
+        // ── CARD 2: Overdue installments (Pending installment with dueDate < today) ──
+        Long overdueCount = feeInstallmentRepository.countDistinctOverdueStudents();
+        stats.put("overdueCount", overdueCount != null ? overdueCount : 0L);
+        log.info("[REMINDER] Overdue students count: {}", overdueCount);
+
+        // ── CARD 3: Upcoming due in next 5 days (Pending installment, dueDate between today and today+5) ──
+        Long upcomingCount = feeInstallmentRepository.countDistinctStudentsWithUpcomingDue(today, today.plusDays(5));
+        stats.put("upcomingDueCount", upcomingCount != null ? upcomingCount : 0L);
+        log.info("[REMINDER] Upcoming due (5 days) students count: {}", upcomingCount);
+
+        // ── CARD 4: Pending fees – admissions from last 6 months (SQL aggregate) ──
+        LocalDate sixMonthsAgo = today.minusMonths(6);
+        Long last6MonthsCount = feesRepository.countPendingFeesForAdmissionsSince(sixMonthsAgo);
+        stats.put("pendingLast6MonthsCount", last6MonthsCount != null ? last6MonthsCount : 0L);
+        log.info("[REMINDER] Pending last 6 months count: {}", last6MonthsCount);
+
+        // ── Metadata ──
+        stats.put("today", today.toString());
+        stats.put("sixMonthsAgo", sixMonthsAgo.toString());
+        stats.put("upcomingDueEnd", today.plusDays(5).toString());
+
+        return stats;
     }
 }

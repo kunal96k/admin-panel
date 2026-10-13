@@ -2,50 +2,81 @@
  * Global API Interceptor & Session Management
  * Handles server restarts, network errors, and session expirations gracefully.
  */
-(function() {
+(function () {
     const originalFetch = window.fetch;
     let isSessionAlertOpen = false;
 
+    // Helper to determine if a fetch request target is an internal app / CRM request
+    function isInternalAppUrl(target) {
+        if (!target) return false;
+        let urlStr = '';
+        if (typeof target === 'string') {
+            urlStr = target;
+        } else if (target && typeof target.url === 'string') {
+            urlStr = target.url;
+        }
+        if (!urlStr) return false;
+
+        // Relative paths (/api/..., ./..., etc.)
+        if (urlStr.startsWith('/') && !urlStr.startsWith('//')) return true;
+        if (urlStr.startsWith('./') || urlStr.startsWith('../')) return true;
+
+        // Compare origin for full URLs
+        try {
+            if (typeof window !== 'undefined' && window.location && window.location.origin) {
+                const parsed = new URL(urlStr, window.location.origin);
+                return parsed.origin === window.location.origin;
+            }
+        } catch (e) {
+            // If URL parsing fails, ignore external assumption
+        }
+        return false;
+    }
+
     window.fetch = async (...args) => {
+        const isInternal = isInternalAppUrl(args[0]);
+
         try {
             const response = await originalFetch(...args);
 
-            // 1. Handle Session Expiration / Redirect to Login
-            // If the response URL points to the login page but the original request wasn't for login,
-            // or if the status is 401 Unauthorized with an HTML response (Spring Security redirect).
-            const isLoginPage = response.url && (response.url.includes('/login') || response.url.endsWith('/login'));
-            const isApiRequest = args[0] && (typeof args[0] === 'string' ? args[0].includes('/api/') : args[0].url.includes('/api/'));
-            
-            const contentType = response.headers.get('content-type');
-            const isHtml = contentType && contentType.includes('text/html');
+            // 1. Handle Session Expiration / Redirect to Login (Only for internal app requests)
+            if (isInternal) {
+                const rawUrl = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url ? args[0].url : '');
+                const isLoginPage = response.url && (response.url.includes('/login') || response.url.endsWith('/login'));
+                const isApiRequest = rawUrl.includes('/api/');
 
-            if (isLoginPage && isHtml && isApiRequest && !isSessionAlertOpen) {
-                isSessionAlertOpen = true;
-                Swal.fire({
-                    title: 'Session Expired',
-                    text: 'Your session has timed out. Please login again to continue your work.',
-                    icon: 'warning',
-                    showCancelButton: false,
-                    confirmButtonText: 'Login Now',
-                    confirmButtonColor: '#3b82f6',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false
-                }).then(() => {
-                    window.location.href = '/login?expired=true';
-                });
-                
-                // Return a rejected promise to stop downstream data processing
-                return Promise.reject(new Error('Session expired'));
+                const contentType = response.headers.get('content-type');
+                const isHtml = contentType && contentType.includes('text/html');
+
+                if (isLoginPage && isHtml && isApiRequest && !isSessionAlertOpen) {
+                    isSessionAlertOpen = true;
+                    Swal.fire({
+                        title: 'Session Expired',
+                        text: 'Your session has timed out. Please login again to continue your work.',
+                        icon: 'warning',
+                        showCancelButton: false,
+                        confirmButtonText: 'Login Now',
+                        confirmButtonColor: '#3b82f6',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false
+                    }).then(() => {
+                        window.location.href = '/login?expired=true';
+                    });
+
+                    // Return a rejected promise to stop downstream data processing
+                    return Promise.reject(new Error('Session expired'));
+                }
             }
 
             return response;
         } catch (error) {
             // 2. Handle Server Down / Restart (Network Error)
-            // TypeError usually indicates a network failure in fetch
-            const isNetworkError = error instanceof TypeError || 
-                                  (error.message && error.message.toLowerCase().includes('network'));
-            
-            if (isNetworkError && !isSessionAlertOpen) {
+            // CRITICAL: Only trigger "Server Connection Lost" if an INTERNAL app request failed!
+            // External requests (Google Analytics, CDNs, AdBlock blocks, etc.) must NEVER trigger server-down popups.
+            const isNetworkError = error instanceof TypeError ||
+                (error.message && error.message.toLowerCase().includes('network'));
+
+            if (isInternal && isNetworkError && !isSessionAlertOpen) {
                 isSessionAlertOpen = true;
                 Swal.fire({
                     title: 'Server Connection Lost',
@@ -62,7 +93,7 @@
                         window.location.reload();
                     }
                 });
-                
+
                 return Promise.reject(new Error('Server unreachable'));
             }
             throw error;
@@ -70,7 +101,7 @@
     };
 })();
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
 
     // ========================================
     // VARIABLES
@@ -134,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const protectedLinks = document.querySelectorAll('[data-menu-id]');
 
     protectedLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
+        link.addEventListener('click', function (e) {
             const menuId = this.getAttribute('data-menu-id');
 
             if (menuId) {
@@ -185,386 +216,386 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-       // ========================================
-       // MOBILE SIDEBAR TOGGLE
-       //========================================
-                 function toggleSidebar() {
-              const isActive = sidebar.classList.toggle('active');
-              sidebarOverlay.classList.toggle('active');
-              document.body.style.overflow = isActive ? 'hidden' : '';
+    // ========================================
+    // MOBILE SIDEBAR TOGGLE
+    //========================================
+    function toggleSidebar() {
+        const isActive = sidebar.classList.toggle('active');
+        sidebarOverlay.classList.toggle('active');
+        document.body.style.overflow = isActive ? 'hidden' : '';
 
-              // Toggle chevron icon direction on mobile
-              const hamburgerIcon = hamburger ? hamburger.querySelector('i') : null;
-              if (hamburgerIcon) {
-                  if (isActive) {
-                      hamburgerIcon.className = 'bi bi-chevron-left';
-                  } else {
-                      hamburgerIcon.className = 'bi bi-chevron-right';
-                  }
-              }
-          }
+        // Toggle chevron icon direction on mobile
+        const hamburgerIcon = hamburger ? hamburger.querySelector('i') : null;
+        if (hamburgerIcon) {
+            if (isActive) {
+                hamburgerIcon.className = 'bi bi-chevron-left';
+            } else {
+                hamburgerIcon.className = 'bi bi-chevron-right';
+            }
+        }
+    }
 
-         if (hamburger) {
-             hamburger.addEventListener('click', toggleSidebar);
-         }
+    if (hamburger) {
+        hamburger.addEventListener('click', toggleSidebar);
+    }
 
-         if (sidebarOverlay) {
-             sidebarOverlay.addEventListener('click', toggleSidebar);
-         }
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+    }
 
-         // Restore collapsed state on page load (desktop only)
-         if (window.innerWidth >= 992) {
-             const collapsedState = localStorage.getItem('sidebarCollapsed');
-             if (collapsedState === 'false') {
-                 sidebar.classList.remove('collapsed');
-                 mainWrapper.classList.remove('collapsed');
-             } else if (collapsedState === null) {
-                 localStorage.setItem('sidebarCollapsed', 'true');
-                 sidebar.classList.add('collapsed');
-                 mainWrapper.classList.add('collapsed');
-             } else if (collapsedState === 'true') {
-                 sidebar.classList.add('collapsed');
-                 mainWrapper.classList.add('collapsed');
-             }
-         }
+    // Restore collapsed state on page load (desktop only)
+    if (window.innerWidth >= 992) {
+        const collapsedState = localStorage.getItem('sidebarCollapsed');
+        if (collapsedState === 'false') {
+            sidebar.classList.remove('collapsed');
+            mainWrapper.classList.remove('collapsed');
+        } else if (collapsedState === null) {
+            localStorage.setItem('sidebarCollapsed', 'true');
+            sidebar.classList.add('collapsed');
+            mainWrapper.classList.add('collapsed');
+        } else if (collapsedState === 'true') {
+            sidebar.classList.add('collapsed');
+            mainWrapper.classList.add('collapsed');
+        }
+    }
 
-         // ========================================
-         // WINDOW RESIZE HANDLER
-         // ========================================
+    // ========================================
+    // WINDOW RESIZE HANDLER
+    // ========================================
 
-         window.addEventListener('resize', function() {
-             // Close mobile sidebar when resizing to desktop
-             if (window.innerWidth >= 992 && sidebar.classList.contains('active')) {
-                 sidebar.classList.remove('active');
-                 sidebarOverlay.classList.remove('active');
-                 document.body.style.overflow = '';
-             }
+    window.addEventListener('resize', function () {
+        // Close mobile sidebar when resizing to desktop
+        if (window.innerWidth >= 992 && sidebar.classList.contains('active')) {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
 
-             // Remove collapsed state on mobile/tablet
-             if (window.innerWidth < 992) {
-                 sidebar.classList.remove('collapsed');
-                 mainWrapper.classList.remove('collapsed');
-             } else {
-                 // Restore collapsed state on desktop
-                 const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-                 if (isCollapsed) {
-                     sidebar.classList.add('collapsed');
-                     mainWrapper.classList.add('collapsed');
-                 }
-             }
-         });
+        // Remove collapsed state on mobile/tablet
+        if (window.innerWidth < 992) {
+            sidebar.classList.remove('collapsed');
+            mainWrapper.classList.remove('collapsed');
+        } else {
+            // Restore collapsed state on desktop
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed) {
+                sidebar.classList.add('collapsed');
+                mainWrapper.classList.add('collapsed');
+            }
+        }
+    });
 
-         // ========================================
-         // SUBMENU TOGGLE
-         // ========================================
+    // ========================================
+    // SUBMENU TOGGLE
+    // ========================================
 
-         const menuToggles = document.querySelectorAll('[data-toggle="submenu"]');
+    const menuToggles = document.querySelectorAll('[data-toggle="submenu"]');
 
-         menuToggles.forEach(toggle => {
-             toggle.addEventListener('click', function(e) {
-                 e.preventDefault();
-                 e.stopPropagation();
+    menuToggles.forEach(toggle => {
+        toggle.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
 
-                 // Don't allow submenu toggle when sidebar is collapsed on desktop
-                 // unless sidebar is being hovered
-                 if (window.innerWidth >= 992 &&
-                     sidebar.classList.contains('collapsed') &&
-                     !sidebar.matches(':hover')) {
-                     return;
-                 }
+            // Don't allow submenu toggle when sidebar is collapsed on desktop
+            // unless sidebar is being hovered
+            if (window.innerWidth >= 992 &&
+                sidebar.classList.contains('collapsed') &&
+                !sidebar.matches(':hover')) {
+                return;
+            }
 
-                 const submenu = this.nextElementSibling;
-                 const isOpen = submenu.classList.contains('open');
+            const submenu = this.nextElementSibling;
+            const isOpen = submenu.classList.contains('open');
 
-                 // Close all other submenus
-                 document.querySelectorAll('.submenu').forEach(sub => {
-                     if (sub !== submenu) {
-                         sub.classList.remove('open');
-                     }
-                 });
+            // Close all other submenus
+            document.querySelectorAll('.submenu').forEach(sub => {
+                if (sub !== submenu) {
+                    sub.classList.remove('open');
+                }
+            });
 
-                 document.querySelectorAll('.menu-link[data-toggle="submenu"]').forEach(link => {
-                     if (link !== this) {
-                         link.classList.remove('expanded');
-                     }
-                 });
+            document.querySelectorAll('.menu-link[data-toggle="submenu"]').forEach(link => {
+                if (link !== this) {
+                    link.classList.remove('expanded');
+                }
+            });
 
-                 // Toggle current submenu
-                 if (!isOpen) {
-                     submenu.classList.add('open');
-                     this.classList.add('expanded');
-                 } else {
-                     submenu.classList.remove('open');
-                     this.classList.remove('expanded');
-                 }
-             });
-         });
+            // Toggle current submenu
+            if (!isOpen) {
+                submenu.classList.add('open');
+                this.classList.add('expanded');
+            } else {
+                submenu.classList.remove('open');
+                this.classList.remove('expanded');
+            }
+        });
+    });
 
-         // Handle submenu expansion when hovering over collapsed sidebar
-         let hoverTimeout;
+    // Handle submenu expansion when hovering over collapsed sidebar
+    let hoverTimeout;
 
-         sidebar.addEventListener('mouseenter', function() {
-             if (window.innerWidth >= 992 && this.classList.contains('collapsed')) {
-                 clearTimeout(hoverTimeout);
-                 hoverTimeout = setTimeout(() => {
-                     // Allow interactions when hovering
-                 }, 100);
-             }
-         });
+    sidebar.addEventListener('mouseenter', function () {
+        if (window.innerWidth >= 992 && this.classList.contains('collapsed')) {
+            clearTimeout(hoverTimeout);
+            hoverTimeout = setTimeout(() => {
+                // Allow interactions when hovering
+            }, 100);
+        }
+    });
 
-         sidebar.addEventListener('mouseleave', function() {
-             if (window.innerWidth >= 992 && this.classList.contains('collapsed')) {
-                 clearTimeout(hoverTimeout);
-                 // Close submenus when mouse leaves
-                 document.querySelectorAll('.submenu').forEach(sub => {
-                     sub.classList.remove('open');
-                 });
-                 document.querySelectorAll('.menu-link[data-toggle="submenu"]').forEach(link => {
-                     link.classList.remove('expanded');
-                 });
-             }
-         });
+    sidebar.addEventListener('mouseleave', function () {
+        if (window.innerWidth >= 992 && this.classList.contains('collapsed')) {
+            clearTimeout(hoverTimeout);
+            // Close submenus when mouse leaves
+            document.querySelectorAll('.submenu').forEach(sub => {
+                sub.classList.remove('open');
+            });
+            document.querySelectorAll('.menu-link[data-toggle="submenu"]').forEach(link => {
+                link.classList.remove('expanded');
+            });
+        }
+    });
 
-         // ========================================
-         // MENU NAVIGATION
-         // ========================================
+    // ========================================
+    // MENU NAVIGATION
+    // ========================================
 
-         const allMenuLinks = document.querySelectorAll('.menu-link:not([data-toggle]), .submenu-link');
+    const allMenuLinks = document.querySelectorAll('.menu-link:not([data-toggle]), .submenu-link');
 
-         const pageTitles = {
-             'dashboard': 'Dashboard',
-             'enquiry': 'Student Enquiry',
-             'admission': 'Student Admission',
-             'fees-manager': 'Fees Manager',
-             'certificate': 'Certificate Management',
-             'course': 'Course Master',
-             'batch': 'Batch Master',
-             'employee': 'Employee Master',
-             'role': 'Role Management',
-             'bank': 'Bank Master',
-             'lead-source': 'Lead Source',
-             'create-package': 'Create Package',
-             'online-payment': 'Online Payment Mode',
-             'course-wise-sales': 'Course-wise Sales Report',
-             'fees-collection': 'Fees Collection Report'
-         };
+    const pageTitles = {
+        'dashboard': 'Dashboard',
+        'enquiry': 'Student Enquiry',
+        'admission': 'Student Admission',
+        'fees-manager': 'Fees Manager',
+        'certificate': 'Certificate Management',
+        'course': 'Course Master',
+        'batch': 'Batch Master',
+        'employee': 'Employee Master',
+        'role': 'Role Management',
+        'bank': 'Bank Master',
+        'lead-source': 'Lead Source',
+        'create-package': 'Create Package',
+        'online-payment': 'Online Payment Mode',
+        'course-wise-sales': 'Course-wise Sales Report',
+        'fees-collection': 'Fees Collection Report'
+    };
 
-         allMenuLinks.forEach(link => {
-             link.addEventListener('click', function(e) {
+    allMenuLinks.forEach(link => {
+        link.addEventListener('click', function (e) {
 
-                 const page = this.getAttribute('data-page');
+            const page = this.getAttribute('data-page');
 
-                 // Remove active from all links
-                 document.querySelectorAll('.menu-link').forEach(l => {
-                     if (!l.hasAttribute('data-toggle')) {
-                         l.classList.remove('active');
-                     }
-                 });
-                 document.querySelectorAll('.submenu-link').forEach(l => {
-                     l.classList.remove('active');
-                 });
+            // Remove active from all links
+            document.querySelectorAll('.menu-link').forEach(l => {
+                if (!l.hasAttribute('data-toggle')) {
+                    l.classList.remove('active');
+                }
+            });
+            document.querySelectorAll('.submenu-link').forEach(l => {
+                l.classList.remove('active');
+            });
 
-                 // Add active to clicked link
-                 this.classList.add('active');
+            // Add active to clicked link
+            this.classList.add('active');
 
-                 // Expand parent submenu if needed
-                 if (this.classList.contains('submenu-link')) {
-                     const parentSubmenu = this.closest('.submenu');
-                     const parentToggle = parentSubmenu.previousElementSibling;
+            // Expand parent submenu if needed
+            if (this.classList.contains('submenu-link')) {
+                const parentSubmenu = this.closest('.submenu');
+                const parentToggle = parentSubmenu.previousElementSibling;
 
-                     if (parentToggle && !parentSubmenu.classList.contains('open')) {
-                         parentToggle.click();
-                     }
-                 }
+                if (parentToggle && !parentSubmenu.classList.contains('open')) {
+                    parentToggle.click();
+                }
+            }
 
-                 // Update page title
-                 if (page && pageTitles[page]) {
-                     pageTitle.textContent = pageTitles[page];
-                 }
+            // Update page title
+            if (page && pageTitles[page]) {
+                pageTitle.textContent = pageTitles[page];
+            }
 
-                 // Close mobile sidebar after navigation
-                 if (window.innerWidth < 992 && sidebar.classList.contains('active')) {
-                     toggleSidebar();
-                 }
-             });
-         });
+            // Close mobile sidebar after navigation
+            if (window.innerWidth < 992 && sidebar.classList.contains('active')) {
+                toggleSidebar();
+            }
+        });
+    });
 
-         // ========================================
-         // CHARTS
-         // ========================================
+    // ========================================
+    // CHARTS
+    // ========================================
 
-         const lineCtx = document.getElementById('lineChart');
-         if (lineCtx) {
-             new Chart(lineCtx, {
-                 type: 'line',
-                 data: {
-                     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                     datasets: [{
-                         label: 'Revenue (₹ in Lakhs)',
-                         data: [3.2, 3.8, 4.1, 3.9, 4.5, 4.8, 5.2, 4.9, 5.1, 5.5, 5.8, 6.2],
-                         borderColor: 'rgb(59, 130, 246)',
-                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                         tension: 0.4,
-                         fill: true,
-                         pointBackgroundColor: 'rgb(59, 130, 246)',
-                         pointBorderColor: '#fff',
-                         pointBorderWidth: 2,
-                         pointRadius: 4,
-                         pointHoverRadius: 6
-                     }]
-                 },
-                 options: {
-                     responsive: true,
-                     maintainAspectRatio: false,
-                     plugins: {
-                         legend: {
-                             display: true,
-                             position: 'top',
-                         },
-                         tooltip: {
-                             mode: 'index',
-                             intersect: false,
-                         }
-                     },
-                     scales: {
-                         y: {
-                             beginAtZero: true,
-                             ticks: {
-                                 callback: function(value) {
-                                     return '₹' + value + 'L';
-                                 }
-                             }
-                         }
-                     }
-                 }
-             });
-         }
+    const lineCtx = document.getElementById('lineChart');
+    if (lineCtx) {
+        new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [{
+                    label: 'Revenue (₹ in Lakhs)',
+                    data: [3.2, 3.8, 4.1, 3.9, 4.5, 4.8, 5.2, 4.9, 5.1, 5.5, 5.8, 6.2],
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: 'rgb(59, 130, 246)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function (value) {
+                                return '₹' + value + 'L';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 
-         const pieCtx = document.getElementById('pieChart');
-         if (pieCtx) {
-             new Chart(pieCtx, {
-                 type: 'pie',
-                 data: {
-                     labels: ['Web Development', 'Data Science', 'Digital Marketing', 'App Development', 'Graphic Design', 'Others'],
-                     datasets: [{
-                         data: [30, 25, 15, 12, 10, 8],
-                         backgroundColor: [
-                             'rgba(59, 130, 246, 0.8)',
-                             'rgba(16, 185, 129, 0.8)',
-                             'rgba(245, 158, 11, 0.8)',
-                             'rgba(139, 92, 246, 0.8)',
-                             'rgba(236, 72, 153, 0.8)',
-                             'rgba(107, 114, 128, 0.8)'
-                         ],
-                         borderColor: '#fff',
-                         borderWidth: 2
-                     }]
-                 },
-                 options: {
-                     responsive: true,
-                     maintainAspectRatio: false,
-                     plugins: {
-                         legend: {
-                             position: 'bottom',
-                             labels: {
-                                 padding: 15,
-                                 usePointStyle: true
-                             }
-                         },
-                         tooltip: {
-                             callbacks: {
-                                 label: function(context) {
-                                     const label = context.label || '';
-                                     const value = context.parsed || 0;
-                                     return label + ': ' + value + '%';
-                                 }
-                             }
-                         }
-                     }
-                 }
-             });
-         }
+    const pieCtx = document.getElementById('pieChart');
+    if (pieCtx) {
+        new Chart(pieCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Web Development', 'Data Science', 'Digital Marketing', 'App Development', 'Graphic Design', 'Others'],
+                datasets: [{
+                    data: [30, 25, 15, 12, 10, 8],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(236, 72, 153, 0.8)',
+                        'rgba(107, 114, 128, 0.8)'
+                    ],
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                return label + ': ' + value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 
-         // ========================================
-         // LOGOUT FUNCTIONALITY
-         // ========================================
+    // ========================================
+    // LOGOUT FUNCTIONALITY
+    // ========================================
 
-         const logoutBtn = document.getElementById('logoutBtn');
-         const sidebarLogout = document.getElementById('sidebarLogout');
-         const logoutForm = document.getElementById('logoutForm');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const sidebarLogout = document.getElementById('sidebarLogout');
+    const logoutForm = document.getElementById('logoutForm');
 
-         function handleLogout(e) {
-             e.preventDefault();
+    function handleLogout(e) {
+        e.preventDefault();
 
-             Swal.fire({
-                 title: 'Logout Confirmation',
-                 text: 'Are you sure you want to logout?',
-                 icon: 'question',
-                 showCancelButton: true,
-                 confirmButtonColor: '#2563eb',
-                 cancelButtonColor: '#64748b',
-                 confirmButtonText: 'Yes, logout',
-                 cancelButtonText: 'Cancel'
-             }).then((result) => {
-                 if (result.isConfirmed) {
-                     Swal.fire({
-                         title: 'Logging out...',
-                         allowOutsideClick: false,
-                         showConfirmButton: false,
-                         didOpen: () => {
-                             Swal.showLoading();
-                         }
-                     });
+        Swal.fire({
+            title: 'Logout Confirmation',
+            text: 'Are you sure you want to logout?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#2563eb',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, logout',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Logging out...',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
-                     setTimeout(() => {
-                         if (logoutForm) {
-                             logoutForm.submit();
-                         } else {
-                             window.location.href = '/logout';
-                         }
-                     }, 500);
-                 }
-             });
-         }
+                setTimeout(() => {
+                    if (logoutForm) {
+                        logoutForm.submit();
+                    } else {
+                        window.location.href = '/logout';
+                    }
+                }, 500);
+            }
+        });
+    }
 
-         if (logoutBtn) {
-             logoutBtn.addEventListener('click', handleLogout);
-         }
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
 
-         if (sidebarLogout) {
-             sidebarLogout.addEventListener('click', handleLogout);
-         }
+    if (sidebarLogout) {
+        sidebarLogout.addEventListener('click', handleLogout);
+    }
 
-         // ========================================
-         // NOTIFICATION SYSTEM
-         // ========================================
+    // ========================================
+    // NOTIFICATION SYSTEM
+    // ========================================
 
-         function showNotification(message, type = 'success') {
-             const Toast = Swal.mixin({
-                 toast: true,
-                 position: 'top-end',
-                 showConfirmButton: false,
-                 timer: 3000,
-                 timerProgressBar: true,
-                 didOpen: (toast) => {
-                     toast.addEventListener('mouseenter', Swal.stopTimer);
-                     toast.addEventListener('mouseleave', Swal.resumeTimer);
-                 }
-             });
+    function showNotification(message, type = 'success') {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
+            }
+        });
 
-             Toast.fire({
-                 icon: type,
-                 title: message
-             });
-         }
+        Toast.fire({
+            icon: type,
+            title: message
+        });
+    }
 
-         const notificationBtn = document.querySelector('.notification-btn');
+    const notificationBtn = document.querySelector('.notification-btn');
 
-         if (notificationBtn) {
-             notificationBtn.addEventListener('click', function() {
-                 Swal.fire({
-                     title: 'Notifications',
-                     html: `
+    if (notificationBtn) {
+        notificationBtn.addEventListener('click', function () {
+            Swal.fire({
+                title: 'Notifications',
+                html: `
                          <div class="text-start">
                              <div class="border-bottom pb-3 mb-3">
                                  <h6 class="mb-1">New Enquiry Received</h6>
@@ -593,114 +624,114 @@ document.addEventListener('DOMContentLoaded', function() {
                              </div>
                          </div>
                      `,
-                     confirmButtonText: 'Close',
-                     confirmButtonColor: '#2563eb',
-                     customClass: {
-                         popup: 'rounded-3',
-                         confirmButton: 'rounded-2'
-                     },
-                     width: '500px'
-                 });
-             });
-         }
+                confirmButtonText: 'Close',
+                confirmButtonColor: '#2563eb',
+                customClass: {
+                    popup: 'rounded-3',
+                    confirmButton: 'rounded-2'
+                },
+                width: '500px'
+            });
+        });
+    }
 });
 
-         // ========================================
-         // LOGOUT FUNCTIONALITY
-         // ========================================
+// ========================================
+// LOGOUT FUNCTIONALITY
+// ========================================
 
-         (function() {
-             'use strict';
+(function () {
+    'use strict';
 
-             function initializeDropdowns() {
-                 const dropdowns = document.querySelectorAll('[data-bs-toggle="dropdown"]');
+    function initializeDropdowns() {
+        const dropdowns = document.querySelectorAll('[data-bs-toggle="dropdown"]');
 
-                 dropdowns.forEach(element => {
-                     const existingDropdown = bootstrap.Dropdown.getInstance(element);
-                     if (existingDropdown) {
-                         existingDropdown.dispose();
-                     }
+        dropdowns.forEach(element => {
+            const existingDropdown = bootstrap.Dropdown.getInstance(element);
+            if (existingDropdown) {
+                existingDropdown.dispose();
+            }
 
-                     new bootstrap.Dropdown(element, {
-                         boundary: 'window',
-                         popperConfig: {
-                             strategy: 'fixed'
-                         }
-                     });
-                 });
-             }
+            new bootstrap.Dropdown(element, {
+                boundary: 'window',
+                popperConfig: {
+                    strategy: 'fixed'
+                }
+            });
+        });
+    }
 
-             initializeDropdowns();
+    initializeDropdowns();
 
-             function observeContentChanges() {
-                 const mainContent = document.getElementById('mainContent');
+    function observeContentChanges() {
+        const mainContent = document.getElementById('mainContent');
 
-                 if (!mainContent) {
-                     return;
-                 }
+        if (!mainContent) {
+            return;
+        }
 
-                 const observer = new MutationObserver(function(mutations) {
-                     let shouldReinit = false;
+        const observer = new MutationObserver(function (mutations) {
+            let shouldReinit = false;
 
-                     mutations.forEach(function(mutation) {
-                         if (mutation.addedNodes.length > 0) {
-                             mutation.addedNodes.forEach(function(node) {
-                                 if (node.nodeType === 1) {
-                                     const hasDropdown = node.querySelector?.('[data-bs-toggle="dropdown"]') ||
-                                         node.matches?.('[data-bs-toggle="dropdown"]');
-                                     if (hasDropdown) {
-                                         shouldReinit = true;
-                                     }
-                                 }
-                             });
-                         }
-                     });
+            mutations.forEach(function (mutation) {
+                if (mutation.addedNodes.length > 0) {
+                    mutation.addedNodes.forEach(function (node) {
+                        if (node.nodeType === 1) {
+                            const hasDropdown = node.querySelector?.('[data-bs-toggle="dropdown"]') ||
+                                node.matches?.('[data-bs-toggle="dropdown"]');
+                            if (hasDropdown) {
+                                shouldReinit = true;
+                            }
+                        }
+                    });
+                }
+            });
 
-                     if (shouldReinit) {
-                         setTimeout(initializeDropdowns, 50);
-                     }
-                 });
+            if (shouldReinit) {
+                setTimeout(initializeDropdowns, 50);
+            }
+        });
 
-                 observer.observe(mainContent, {
-                     childList: true,
-                     subtree: true
-                 });
-             }
+        observer.observe(mainContent, {
+            childList: true,
+            subtree: true
+        });
+    }
 
-             observeContentChanges();
+    observeContentChanges();
 
-             function handleNavigation() {
-                 const menuLinks = document.querySelectorAll('.menu-link, .submenu-link');
+    function handleNavigation() {
+        const menuLinks = document.querySelectorAll('.menu-link, .submenu-link');
 
-                 menuLinks.forEach(link => {
-                     link.addEventListener('click', function() {
-                         setTimeout(initializeDropdowns, 200);
-                     });
-                 });
-             }
+        menuLinks.forEach(link => {
+            link.addEventListener('click', function () {
+                setTimeout(initializeDropdowns, 200);
+            });
+        });
+    }
 
-             handleNavigation();
+    handleNavigation();
 
-             window.reinitBootstrapDropdowns = function() {
-                 initializeDropdowns();
-             };
+    window.reinitBootstrapDropdowns = function () {
+        initializeDropdowns();
+    };
 
-             document.addEventListener('click', function(e) {
-                 if (!e.target.closest('.dropdown')) {
-                     document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                         menu.classList.remove('show');
-                     });
-                 }
-             });
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.dropdown')) {
+            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+    });
 
-         })();
+})();
 
 // ========================================
 // USER MENU DROPDOWN
 // ========================================
 
 
-(function() {
+(function () {
     'use strict';
     // Wait for DOM to be fully loaded
     function initUserDropdown() {
@@ -726,7 +757,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Step 3: Add our custom click handler
-        userMenu.addEventListener('click', function(e) {
+        userMenu.addEventListener('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
 
@@ -750,7 +781,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Step 4: Close dropdown when clicking outside
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             if (!dropdown.contains(e.target)) {
                 dropdownMenu.classList.remove('show');
                 userMenu.setAttribute('aria-expanded', 'false');
@@ -758,7 +789,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Step 5: Prevent dropdown from closing when clicking inside menu
-        dropdownMenu.addEventListener('click', function(e) {
+        dropdownMenu.addEventListener('click', function (e) {
             // Only prevent default if not clicking logout
             if (!e.target.closest('#logoutBtn')) {
                 e.stopPropagation();
@@ -779,7 +810,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // PROFILE & SETTINGS MODALS
 // ========================================
 
-(function() {
+(function () {
     'use strict';
 
     const API_BASE_URL = '/api/employees';
@@ -821,13 +852,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (icon && icon.classList.contains('bi-person')) {
                     // My Profile
-                    item.addEventListener('click', function(e) {
+                    item.addEventListener('click', function (e) {
                         e.preventDefault();
                         openProfileModal();
                     });
                 } else if (icon && icon.classList.contains('bi-gear')) {
                     // Settings
-                    item.addEventListener('click', function(e) {
+                    item.addEventListener('click', function (e) {
                         e.preventDefault();
                         openSettingsModal();
                     });
@@ -883,7 +914,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (modalEl) {
             modalEl.addEventListener('hidden.bs.modal', cleanupModalBackdrop);
             modalEl.querySelectorAll('[data-bs-dismiss="modal"]').forEach(btn => {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', function () {
                     const inst = bootstrap.Modal.getInstance(modalEl);
                     if (inst) inst.hide();
                     cleanupModalBackdrop();
@@ -928,6 +959,79 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <span class="badge bg-success me-2" id="globalFeeReminderBadge">Active</span>
                                             <span class="text-muted" id="globalFeeReminderStatusText">Automated daily countdown reminders (5 days to due date) are currently enabled globally.</span>
                                             <span id="globalFeeReminderSpinner" class="spinner-border spinner-border-sm text-primary ms-2 d-none" role="status"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Super Admin Only: WhatsApp API Master Controls -->
+                                <div id="superAdminWhatsAppSection" class="d-none">
+                                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-danger me-2"><i class="bi bi-shield-lock-fill me-1"></i>SUPER ADMIN ONLY</span>
+                                            <span class="fw-bold text-dark">WhatsApp API Integration Master Controls</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- 1. Course Information WhatsApp API (crm_course_information) -->
+                                    <div class="card mb-3 border-0 shadow-sm" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-left: 4px solid #16a34a !important;">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="pe-3">
+                                                    <h6 class="text-success fw-bold mb-1 d-flex align-items-center">
+                                                        <i class="bi bi-whatsapp me-2 text-success"></i>Course Information WhatsApp API
+                                                        <span class="badge bg-dark ms-2 text-light font-monospace small">crm_course_information</span>
+                                                    </h6>
+                                                    <p class="text-muted small mb-0">
+                                                        Controls enquiry course brochure delivery on WhatsApp. If disabled, WhatsApp message sending is blocked and a friendly warning notice is displayed to users.
+                                                    </p>
+                                                </div>
+                                                <div class="form-check form-switch fs-4 mb-0">
+                                                    <input class="form-check-input" type="checkbox" role="switch" id="globalCourseInfoWhatsAppToggle" style="cursor: pointer;">
+                                                </div>
+                                            </div>
+                                            <div class="mt-2 pt-2 border-top d-flex align-items-center small">
+                                                <span class="badge bg-success me-2" id="globalCourseInfoWhatsAppBadge">Active</span>
+                                                <span class="text-muted" id="globalCourseInfoWhatsAppStatusText">WhatsApp Course Information API is enabled.</span>
+                                                <span id="globalCourseInfoWhatsAppSpinner" class="spinner-border spinner-border-sm text-success ms-2 d-none" role="status"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 2. Fee Payment Reminder WhatsApp API (crm_fee_reminder_utility) -->
+                                    <div class="card mb-3 border-0 shadow-sm" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-left: 4px solid #16a34a !important;">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="pe-3">
+                                                    <h6 class="text-success fw-bold mb-1 d-flex align-items-center">
+                                                        <i class="bi bi-whatsapp me-2 text-success"></i>Fee Payment Reminder WhatsApp API
+                                                        <span class="badge bg-dark ms-2 text-light font-monospace small">crm_fee_reminder_utility</span>
+                                                    </h6>
+                                                    <p class="text-muted small mb-0">
+                                                        Controls daily countdown WhatsApp fee due reminders (5, 4, 3, 2, 1 days before &amp; on due date). If disabled, WhatsApp fee reminders are blocked.
+                                                    </p>
+                                                </div>
+                                                <div class="form-check form-switch fs-4 mb-0">
+                                                    <input class="form-check-input" type="checkbox" role="switch" id="globalFeeReminderWhatsAppToggle" style="cursor: pointer;">
+                                                </div>
+                                            </div>
+                                            <div class="mt-2 pt-2 border-top d-flex align-items-center small">
+                                                <span class="badge bg-secondary me-2" id="globalFeeReminderWhatsAppBadge">Disabled</span>
+                                                <span class="text-muted" id="globalFeeReminderWhatsAppStatusText">Automated fee reminder WhatsApp messages are disabled.</span>
+                                                <span id="globalFeeReminderWhatsAppSpinner" class="spinner-border spinner-border-sm text-success ms-2 d-none" role="status"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Manual Execution Trigger -->
+                                    <div class="card mb-4 border-0 shadow-sm bg-light">
+                                        <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-bold small text-dark"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> Run 5-Day Fee Reminder Countdown Now</div>
+                                                <div class="text-muted small">Execute today's 5-day fee countdown immediately (sends enabled Email &amp; WhatsApp reminders).</div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" id="triggerFeeRemindersNowBtn">
+                                                <i class="bi bi-play-fill me-1"></i>Run Now
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -1022,7 +1126,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <i class="bi bi-c-circle me-1"></i>
                                         ${currentYear} TechnoKraft Training & Solution PVT LTD
                                     </p>
-                                    <p class="text-muted small">Version 7.1</p>
+                                    <p class="text-muted small">Version 8.3</p>
                                 </div>
                             </div>
                         </div>
@@ -1039,7 +1143,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (modalEl) {
             modalEl.addEventListener('hidden.bs.modal', cleanupModalBackdrop);
             modalEl.querySelectorAll('[data-bs-dismiss="modal"]').forEach(btn => {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', function () {
                     const inst = bootstrap.Modal.getInstance(modalEl);
                     if (inst) inst.hide();
                     cleanupModalBackdrop();
@@ -1047,10 +1151,22 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Attach listener for global fee reminder toggle
+        // Attach listener for global fee reminder toggles
         const toggle = document.getElementById('globalFeeReminderToggle');
         if (toggle) {
             toggle.addEventListener('change', handleFeeReminderToggle);
+        }
+        const courseInfoToggle = document.getElementById('globalCourseInfoWhatsAppToggle');
+        if (courseInfoToggle) {
+            courseInfoToggle.addEventListener('change', handleCourseInfoWhatsAppToggle);
+        }
+        const waToggle = document.getElementById('globalFeeReminderWhatsAppToggle');
+        if (waToggle) {
+            waToggle.addEventListener('change', handleFeeReminderWhatsAppToggle);
+        }
+        const triggerBtn = document.getElementById('triggerFeeRemindersNowBtn');
+        if (triggerBtn) {
+            triggerBtn.addEventListener('click', handleTriggerFeeRemindersNow);
         }
     }
 
@@ -1195,34 +1311,80 @@ document.addEventListener('DOMContentLoaded', function() {
         return genderMap[gender] || 'N/A';
     }
 
-    // Load Fee Reminder Status from System Configuration API
+    // Load Fee Reminder & WhatsApp Status from System Configuration API
     async function loadFeeReminderStatus() {
         const toggle = document.getElementById('globalFeeReminderToggle');
         const spinner = document.getElementById('globalFeeReminderSpinner');
-        if (!toggle) return;
+        const waSection = document.getElementById('superAdminWhatsAppSection');
+        const courseInfoToggle = document.getElementById('globalCourseInfoWhatsAppToggle');
+        const waToggle = document.getElementById('globalFeeReminderWhatsAppToggle');
 
         try {
             if (spinner) spinner.classList.remove('d-none');
-            const response = await fetch('/api/system-config/fee-reminder-status', {
+
+            // 1. Load Email Fee Reminder Status
+            const emailRes = await fetch('/api/system-config/fee-reminder-status', {
                 headers: {
                     'Accept': 'application/json',
                     ...getCsrfHeaders()
                 }
             });
+            if (emailRes.ok) {
+                const emailData = await emailRes.json();
+                if (toggle) {
+                    toggle.checked = (emailData.emailEnabled !== undefined ? emailData.emailEnabled : emailData.enabled) === true;
+                    updateFeeReminderBadge(toggle.checked);
+                }
+            }
 
-            if (response.ok) {
-                const data = await response.json();
-                toggle.checked = data.enabled === true;
-                updateFeeReminderBadge(toggle.checked);
+            // 2. Load WhatsApp Features Status & Role Permission (SUPER_ADMIN check)
+            const waRes = await fetch('/api/system-config/whatsapp-features-status', {
+                headers: {
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                }
+            });
+            if (waRes.ok) {
+                const waData = await waRes.json();
+                if (waData.isSuperAdmin) {
+                    if (waSection) waSection.classList.remove('d-none');
+                    if (courseInfoToggle) {
+                        courseInfoToggle.checked = waData.courseInfoWhatsAppEnabled === true;
+                        updateCourseInfoWhatsAppBadge(courseInfoToggle.checked);
+                    }
+                    if (waToggle) {
+                        waToggle.checked = waData.feeReminderWhatsAppEnabled === true;
+                        updateFeeReminderWhatsAppBadge(waToggle.checked);
+                    }
+                } else {
+                    if (waSection) waSection.classList.add('d-none');
+                }
             }
         } catch (error) {
-            console.error('Failed to load fee reminder status:', error);
+            console.error('Failed to load system config status:', error);
         } finally {
             if (spinner) spinner.classList.add('d-none');
         }
     }
 
-    // Update the visual status badge and message in Settings modal
+    // Update the visual status badge and message in Settings modal for Course Info WhatsApp
+    function updateCourseInfoWhatsAppBadge(enabled) {
+        const badge = document.getElementById('globalCourseInfoWhatsAppBadge');
+        const statusText = document.getElementById('globalCourseInfoWhatsAppStatusText');
+        if (!badge || !statusText) return;
+
+        if (enabled) {
+            badge.className = 'badge bg-success me-2';
+            badge.textContent = 'Active';
+            statusText.textContent = 'WhatsApp Course Information API (crm_course_information) is enabled.';
+        } else {
+            badge.className = 'badge bg-danger me-2';
+            badge.textContent = 'Disabled';
+            statusText.textContent = 'WhatsApp Course Information API is temporarily disabled.';
+        }
+    }
+
+    // Update the visual status badge and message in Settings modal for Email
     function updateFeeReminderBadge(enabled) {
         const badge = document.getElementById('globalFeeReminderBadge');
         const statusText = document.getElementById('globalFeeReminderStatusText');
@@ -1231,7 +1393,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (enabled) {
             badge.className = 'badge bg-success me-2';
             badge.textContent = 'Active';
-            statusText.textContent = 'Automated daily countdown reminders (5 days to due date) are currently enabled globally.';
+            statusText.textContent = 'Automated daily countdown reminder emails (5 days to due date) are enabled globally.';
         } else {
             badge.className = 'badge bg-danger me-2';
             badge.textContent = 'Disabled';
@@ -1239,7 +1401,65 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Toggle Fee Reminder Status via API
+    // Update the visual status badge and message in Settings modal for WhatsApp Fee Reminders
+    function updateFeeReminderWhatsAppBadge(enabled) {
+        const badge = document.getElementById('globalFeeReminderWhatsAppBadge');
+        const statusText = document.getElementById('globalFeeReminderWhatsAppStatusText');
+        if (!badge || !statusText) return;
+
+        if (enabled) {
+            badge.className = 'badge bg-success me-2';
+            badge.textContent = 'Active';
+            statusText.textContent = 'Automated daily countdown reminder WhatsApp messages are enabled globally.';
+        } else {
+            badge.className = 'badge bg-secondary me-2';
+            badge.textContent = 'Disabled';
+            statusText.textContent = 'Automated fee reminder WhatsApp messages are stopped.';
+        }
+    }
+
+    // Toggle Course Information WhatsApp Status via API (SUPER_ADMIN only)
+    async function handleCourseInfoWhatsAppToggle(e) {
+        const toggle = e.target;
+        const newStatus = toggle.checked;
+        const spinner = document.getElementById('globalCourseInfoWhatsAppSpinner');
+
+        try {
+            toggle.disabled = true;
+            if (spinner) spinner.classList.remove('d-none');
+
+            const response = await fetch('/api/system-config/course-info-whatsapp-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                },
+                body: JSON.stringify({ enabled: newStatus })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update Course Information WhatsApp status');
+            }
+
+            const data = await response.json();
+            updateCourseInfoWhatsAppBadge(data.enabled);
+
+            if (typeof showToast === 'function') {
+                showToast(data.message || (newStatus ? 'Course Info WhatsApp API enabled' : 'Course Info WhatsApp API disabled'), 'success');
+            }
+        } catch (err) {
+            console.error('Error saving course info WhatsApp status:', err);
+            toggle.checked = !newStatus;
+            updateCourseInfoWhatsAppBadge(toggle.checked);
+            alert('Failed to update status. Only SUPER_ADMIN can modify WhatsApp API controls.');
+        } finally {
+            toggle.disabled = false;
+            if (spinner) spinner.classList.add('d-none');
+        }
+    }
+
+    // Toggle Fee Reminder Email Status via API
     async function handleFeeReminderToggle(e) {
         const toggle = e.target;
         const newStatus = toggle.checked;
@@ -1266,18 +1486,96 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             updateFeeReminderBadge(data.enabled);
 
-            // Optional toast message if available
             if (typeof showToast === 'function') {
-                showToast(data.message || (newStatus ? 'Fee reminders enabled' : 'Fee reminders disabled'), 'success');
+                showToast(data.message || (newStatus ? 'Fee reminder emails enabled' : 'Fee reminder emails disabled'), 'success');
             }
         } catch (err) {
-            console.error('Error saving fee reminder status:', err);
-            toggle.checked = !newStatus; // Revert switch state
+            console.error('Error saving fee reminder email status:', err);
+            toggle.checked = !newStatus;
             updateFeeReminderBadge(toggle.checked);
-            alert('Failed to update fee reminder status. Please check your permissions.');
+            alert('Failed to update fee reminder email status. Please check your permissions.');
         } finally {
             toggle.disabled = false;
             if (spinner) spinner.classList.add('d-none');
+        }
+    }
+
+    // Toggle Fee Reminder WhatsApp Status via API
+    async function handleFeeReminderWhatsAppToggle(e) {
+        const toggle = e.target;
+        const newStatus = toggle.checked;
+        const spinner = document.getElementById('globalFeeReminderWhatsAppSpinner');
+
+        try {
+            toggle.disabled = true;
+            if (spinner) spinner.classList.remove('d-none');
+
+            const response = await fetch('/api/system-config/fee-reminder-whatsapp-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                },
+                body: JSON.stringify({ enabled: newStatus })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update WhatsApp status on server');
+            }
+
+            const data = await response.json();
+            updateFeeReminderWhatsAppBadge(data.enabled);
+
+            if (typeof showToast === 'function') {
+                showToast(data.message || (newStatus ? 'WhatsApp fee reminders enabled' : 'WhatsApp fee reminders disabled'), 'success');
+            }
+        } catch (err) {
+            console.error('Error saving WhatsApp fee reminder status:', err);
+            toggle.checked = !newStatus;
+            updateFeeReminderWhatsAppBadge(toggle.checked);
+            alert('Failed to update WhatsApp fee reminder status. Please check your permissions.');
+        } finally {
+            toggle.disabled = false;
+            if (spinner) spinner.classList.add('d-none');
+        }
+    }
+
+    // Manually trigger 5-day fee reminders on demand
+    async function handleTriggerFeeRemindersNow() {
+        const btn = document.getElementById('triggerFeeRemindersNowBtn');
+        if (!btn) return;
+        if (!confirm('Run the 5-day fee reminder countdown now? This will immediately send notifications via all enabled channels (Email/WhatsApp).')) {
+            return;
+        }
+
+        const originalHtml = btn.innerHTML;
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Running...';
+
+            const response = await fetch('/api/system-config/fee-reminder/trigger-now', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    ...getCsrfHeaders()
+                }
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                const totalEmails = data.totalEmailsSent !== undefined ? data.totalEmailsSent : (data.totalSent || 0);
+                const totalWa = data.totalWhatsAppSent || 0;
+                alert(`Fee reminder countdown run completed!\n\nEmails queued: ${totalEmails}\nWhatsApp messages sent: ${totalWa}\nStatus: ${data.status}`);
+            } else {
+                alert(`Trigger failed: ${data.message || 'Unknown error'}`);
+            }
+        } catch (err) {
+            console.error('Error triggering fee reminders:', err);
+            alert('Failed to trigger fee reminder execution.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
         }
     }
 
@@ -1308,7 +1606,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // RESET PASSWORD MODULE
 // ========================================
 
-(function() {
+(function () {
     'use strict';
 
     // Wait for DOM to be fully loaded
@@ -1324,7 +1622,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Open modal
-        resetPasswordBtn.addEventListener('click', function(e) {
+        resetPasswordBtn.addEventListener('click', function (e) {
             e.preventDefault();
 
             const modal = new bootstrap.Modal(document.getElementById('resetPasswordModal'));
@@ -1336,7 +1634,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Real-time password strength check
         if (newPasswordInput) {
-            newPasswordInput.addEventListener('input', function() {
+            newPasswordInput.addEventListener('input', function () {
                 checkPasswordStrength(this.value);
                 validatePasswordMatch();
             });
@@ -1354,7 +1652,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Toggle password visibility
-    window.togglePassword = function(fieldId) {
+    window.togglePassword = function (fieldId) {
         const field = document.getElementById(fieldId);
         const icon = document.getElementById(fieldId + '-icon');
 
@@ -1626,7 +1924,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // SUPER ADMIN: CUTOFF DATE CONFIGURATION
 // ========================================
 
-(function() {
+(function () {
     'use strict';
 
     const btnConfigureCutoffDate = document.getElementById('btnConfigureCutoffDate');
@@ -1639,7 +1937,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Open modal and load current cutoff date
-    btnConfigureCutoffDate.addEventListener('click', async function(e) {
+    btnConfigureCutoffDate.addEventListener('click', async function (e) {
         e.preventDefault();
 
         try {
@@ -1682,7 +1980,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     //  Direct click handler on input
     if (cutoffDateInput) {
-        cutoffDateInput.addEventListener('click', function(e) {
+        cutoffDateInput.addEventListener('click', function (e) {
             e.stopPropagation();
 
             try {
@@ -1691,16 +1989,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        cutoffDateInput.addEventListener('focus', function() {
+        cutoffDateInput.addEventListener('focus', function () {
             this.style.backgroundColor = '#fff';
         });
 
-        cutoffDateInput.addEventListener('change', function() {
+        cutoffDateInput.addEventListener('change', function () {
         });
     }
 
     // Save cutoff date
-    btnSaveCutoffDate.addEventListener('click', async function() {
+    btnSaveCutoffDate.addEventListener('click', async function () {
         const cutoffDate = cutoffDateInput.value;
 
         if (!cutoffDate) {
@@ -1814,7 +2112,7 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 
 /* Global Smart Position Listener with Body Teleportation for Action Dropdown Menus */
-window.closeAllActionMenus = function() {
+window.closeAllActionMenus = function () {
     document.querySelectorAll('.action-menu').forEach(m => {
         m.classList.remove('show');
         m.style.display = '';
@@ -1833,7 +2131,7 @@ window.closeAllActionMenus = function() {
     });
 };
 
-window.openActionMenuFixed = function(triggerBtn) {
+window.openActionMenuFixed = function (triggerBtn) {
     const dropdown = triggerBtn.closest('.action-dropdown');
     let menu = triggerBtn._teleportedMenu || (dropdown ? dropdown.querySelector('.action-menu') : null);
     if (!menu) return;
@@ -1895,7 +2193,7 @@ window.openActionMenuFixed = function(triggerBtn) {
 };
 
 // Global click event delegation for action menu triggers and items
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     const trigger = e.target.closest('.action-menu-trigger');
     if (trigger) {
         e.stopPropagation();
@@ -1918,18 +2216,18 @@ document.addEventListener('click', function(e) {
 });
 
 // Close open action menus when scrolling
-window.addEventListener('scroll', function() {
+window.addEventListener('scroll', function () {
     closeAllActionMenus();
 }, { passive: true });
 
 // Close action menu immediately whenever any Bootstrap modal starts to open
-document.addEventListener('show.bs.modal', function() {
+document.addEventListener('show.bs.modal', function () {
     closeAllActionMenus();
 });
 
 // Clean up any dangling backdrop or body scroll lock whenever any Bootstrap modal is closed
-document.addEventListener('hidden.bs.modal', function() {
-    setTimeout(function() {
+document.addEventListener('hidden.bs.modal', function () {
+    setTimeout(function () {
         const visibleModals = document.querySelectorAll('.modal.show');
         if (visibleModals.length === 0) {
             document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
@@ -1944,7 +2242,7 @@ document.addEventListener('hidden.bs.modal', function() {
 (function patchSwal() {
     if (typeof Swal !== 'undefined' && Swal.mixin) {
         const origFire = Swal.fire.bind(Swal);
-        Swal.fire = function() {
+        Swal.fire = function () {
             closeAllActionMenus();
             return origFire.apply(this, arguments);
         };
@@ -1957,17 +2255,17 @@ document.addEventListener('hidden.bs.modal', function() {
 // ====================================================================
 // Globally disable mouse wheel increment/decrement on all number inputs
 // ====================================================================
-document.addEventListener('wheel', function(e) {
+document.addEventListener('wheel', function (e) {
     if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'number') {
         e.target.blur();
     }
 }, { passive: true });
 
-document.addEventListener('focus', function(e) {
+document.addEventListener('focus', function (e) {
     if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'number') {
         if (!e.target._wheelDisabled) {
             e.target._wheelDisabled = true;
-            e.target.addEventListener('wheel', function(wheelEvent) {
+            e.target.addEventListener('wheel', function (wheelEvent) {
                 wheelEvent.preventDefault();
             }, { passive: false });
         }

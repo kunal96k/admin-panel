@@ -769,12 +769,15 @@ public class FeesManagerService {
         // CRITICAL FIX: Update installment BEFORE updating fees
         if (requestDTO.getInstallmentId() != null) {
             try {
+                // AUTO-SYNC: pass the receipt date so installment dueDate+paidDate are updated to match
+                LocalDate receiptDate = requestDTO.getReceiptDate() != null ? requestDTO.getReceiptDate() : LocalDate.now();
                 updateInstallmentStatus(
                         requestDTO.getInstallmentId(),
                         requestDTO.getAmountReceived(),
-                        currentUser // Pass current user
+                        currentUser,
+                        receiptDate
                 );
-                log.info(" Updated installment: {}", requestDTO.getInstallmentId());
+                log.info(" Updated installment: {} with receiptDate: {}", requestDTO.getInstallmentId(), receiptDate);
             } catch (Exception e) {
                 log.error("[FAIL] Failed to update installment: {}", requestDTO.getInstallmentId(), e);
                 // Don't throw - receipt is already saved
@@ -805,20 +808,31 @@ public class FeesManagerService {
      * Update installment status after payment
      */
     private void updateInstallmentStatus(Long installmentId, Double amountReceived, String updatedBy) {
-        log.info(" Updating installment {} with amount: ₹{}", installmentId, amountReceived);
+        updateInstallmentStatus(installmentId, amountReceived, updatedBy, LocalDate.now());
+    }
+
+    /**
+     * Update installment status after payment, syncing dueDate and paidDate to the actual receipt date.
+     */
+    private void updateInstallmentStatus(Long installmentId, Double amountReceived, String updatedBy, LocalDate receiptDate) {
+        LocalDate effectiveDate = (receiptDate != null) ? receiptDate : LocalDate.now();
+        log.info(" Updating installment {} with amount: ₹{}, receiptDate: {}", installmentId, amountReceived, effectiveDate);
 
         feeInstallmentRepository.findById(installmentId)
                 .ifPresent(installment -> {
                     installment.setPaidAmount(amountReceived);
-                    installment.setPaidDate(LocalDate.now());
+                    // AUTO-SYNC: set both paidDate AND dueDate to the receipt payment date
+                    installment.setPaidDate(effectiveDate);
+                    installment.setDueDate(effectiveDate);
+                    installment.setRemainingAmount(0.0);
                     installment.setStatus("Paid");
-                    installment.setUpdatedBy(updatedBy); // Set updater
+                    installment.setUpdatedBy(updatedBy);
 
                     // CRITICAL: Save and flush immediately
                     FeeInstallment saved = feeInstallmentRepository.saveAndFlush(installment);
 
                     log.info(" Installment {} marked as Paid (Amount: ₹{}, Date: {}, UpdatedBy: {})",
-                            installmentId, amountReceived, LocalDate.now(), updatedBy);
+                            installmentId, amountReceived, effectiveDate, updatedBy);
 
                     // Verify save
                     if (saved.getStatus().equals("Paid")) {
@@ -916,16 +930,7 @@ public class FeesManagerService {
      * Update installment status after payment
      */
     private void updateInstallmentStatus(Long installmentId, Double amountReceived) {
-        feeInstallmentRepository.findById(installmentId)
-                .ifPresent(installment -> {
-                    installment.setPaidAmount(amountReceived);
-                    installment.setPaidDate(LocalDate.now());
-                    installment.setStatus("Paid");
-                    installment.setUpdatedBy("SYSTEM");
-
-                    feeInstallmentRepository.save(installment);
-                    log.info(" Updated installment {} to Paid", installmentId);
-                });
+        updateInstallmentStatus(installmentId, amountReceived, "SYSTEM", LocalDate.now());
     }
 
     @Transactional(readOnly = true)
@@ -1234,6 +1239,7 @@ public class FeesManagerService {
                             installment.setStatus("Pending");
                             installment.setPaidAmount(null);
                             installment.setPaidDate(null);
+                            installment.setRemainingAmount(installment.getAmount());
                             installment.setUpdatedBy("SYSTEM");
                             feeInstallmentRepository.saveAndFlush(installment);
                         });
@@ -1388,7 +1394,7 @@ public class FeesManagerService {
 
     // ==================== INSTALLMENTS - USE REG NO ====================
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<FeeInstallmentDTO> getInstallmentsByRegNo(String regNo) {
         log.debug("Fetching installments for regNo: {}", regNo);
 
@@ -1397,9 +1403,36 @@ public class FeesManagerService {
             throw new ResourceNotFoundException("Admission not found: " + regNo);
         }
 
-        return feeInstallmentRepository
-                .findByRegistrationNumberOrderByDueDateAsc(regNo) // CHANGED
-                .stream()
+        List<FeeInstallment> installments = feeInstallmentRepository
+                .findByRegistrationNumberOrderByDueDateAsc(regNo);
+
+        // Retroactive auto-sync for Paid installments to match receipt payment date
+        for (FeeInstallment inst : installments) {
+            if ("Paid".equalsIgnoreCase(inst.getStatus())) {
+                if (inst.getPaidDate() == null) {
+                    List<FeeReceipt> receipts = feeReceiptRepository.findByInstallmentIdAndIsDeletedFalse(inst.getId());
+                    if (!receipts.isEmpty() && receipts.get(0).getReceiptDate() != null) {
+                        LocalDate receiptDate = receipts.get(0).getReceiptDate();
+                        inst.setPaidDate(receiptDate);
+                        inst.setDueDate(receiptDate);
+                        try {
+                            feeInstallmentRepository.save(inst);
+                        } catch (Exception e) {
+                            log.warn("Could not backfill installment {}: {}", inst.getId(), e.getMessage());
+                        }
+                    }
+                } else if (!inst.getPaidDate().equals(inst.getDueDate())) {
+                    inst.setDueDate(inst.getPaidDate());
+                    try {
+                        feeInstallmentRepository.save(inst);
+                    } catch (Exception e) {
+                        log.warn("Could not sync dueDate for installment {}: {}", inst.getId(), e.getMessage());
+                    }
+                }
+            }
+        }
+
+        return installments.stream()
                 .map(this::toInstallmentDTO)
                 .toList();
     }
@@ -1428,15 +1461,20 @@ public class FeesManagerService {
     }
 
     private FeeInstallmentDTO toInstallmentDTO(FeeInstallment installment) {
+        LocalDate displayDate = installment.getDueDate();
+        if ("Paid".equalsIgnoreCase(installment.getStatus())) {
+            displayDate = installment.getPaidDate() != null ? installment.getPaidDate() : installment.getDueDate();
+        }
+
         return FeeInstallmentDTO.builder()
                 .id(installment.getId())
                 .registrationNumber(installment.getRegistrationNumber()) // CHANGED
                 .installmentNumber(installment.getInstallmentNumber())
-                .dueDate(installment.getDueDate())
+                .dueDate(displayDate)
                 .amount(installment.getAmount())
                 .status(installment.getStatus())
                 .paidAmount(installment.getPaidAmount())
-                .paidDate(installment.getPaidDate())
+                .paidDate(displayDate)
                 .paymentMode(installment.getPaymentMode())
                 .transactionId(installment.getTransactionId())
                 .notes(installment.getNotes())
@@ -1566,6 +1604,7 @@ public class FeesManagerService {
                             installment.setStatus("Pending");
                             installment.setPaidAmount(null);
                             installment.setPaidDate(null);
+                            installment.setRemainingAmount(installment.getAmount());
                             installment.setUpdatedBy(finalCurrentUser);
                             feeInstallmentRepository.saveAndFlush(installment);
                             log.info(" Reverted old installment: {} to Pending", oldInstallmentId);
@@ -1577,8 +1616,10 @@ public class FeesManagerService {
 
         if (newInstallmentId != null) {
             try {
-                updateInstallmentStatus(newInstallmentId, requestDTO.getAmountReceived(), currentUser);
-                log.info(" Updated new/existing installment: {}", newInstallmentId);
+                // AUTO-SYNC: pass receipt date so installment dueDate+paidDate match the payment date
+                LocalDate receiptDate = requestDTO.getReceiptDate() != null ? requestDTO.getReceiptDate() : LocalDate.now();
+                updateInstallmentStatus(newInstallmentId, requestDTO.getAmountReceived(), currentUser, receiptDate);
+                log.info(" Updated new/existing installment: {} with receiptDate: {}", newInstallmentId, receiptDate);
             } catch (Exception e) {
                 log.error("Failed to update new installment: {}", newInstallmentId, e);
             }
@@ -1635,9 +1676,26 @@ public class FeesManagerService {
 
         fees.setStatus(status);
 
-        // If status is "Clear", set feesDue to 0
+        // If status is "Clear", set feesDue to 0 and mark pending installments as Paid
         if ("Clear".equalsIgnoreCase(status)) {
             fees.setFeesDue(0.0);
+            try {
+                List<FeeInstallment> installments = feeInstallmentRepository.findByRegistrationNumberOrderByDueDateAsc(regNo);
+                for (FeeInstallment inst : installments) {
+                    if ("Pending".equalsIgnoreCase(inst.getStatus())) {
+                        inst.setStatus("Paid");
+                        if (inst.getPaidAmount() == null || inst.getPaidAmount() == 0.0) {
+                            inst.setPaidAmount(inst.getAmount());
+                        }
+                        if (inst.getPaidDate() == null) {
+                            inst.setPaidDate(java.time.LocalDate.now());
+                        }
+                        feeInstallmentRepository.save(inst);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to auto-sync installments for {}: {}", regNo, e.getMessage());
+            }
         }
 
         fees.setUpdatedBy("SYSTEM");
@@ -1808,6 +1866,9 @@ public class FeesManagerService {
             throw new ResourceNotFoundException("Admission not found: " + regNo);
         }
 
+        // AUTO-SYNC: use receipt payment date for installment date sync
+        LocalDate receiptDate = requestDTO.getReceiptDate() != null ? requestDTO.getReceiptDate() : LocalDate.now();
+
         // CASE 1: Payment linked to specific installment
         if (installmentId != null) {
             FeeInstallment installment = feeInstallmentRepository.findById(installmentId)
@@ -1821,45 +1882,46 @@ public class FeesManagerService {
             // EDGE CASE A: Exact payment
             if (Math.abs(amountReceived - remainingAmount) < 0.01) {
                 log.info(" Exact payment for installment {}", installmentId);
-                markInstallmentAsPaid(installment, amountReceived, currentUser);
+                markInstallmentAsPaid(installment, amountReceived, currentUser, receiptDate);
 
                 // EDGE CASE B: Overpayment
             } else if (amountReceived > remainingAmount) {
                 log.warn("[WARN] OVERPAYMENT: Received ₹{}, Expected ₹{}", amountReceived, remainingAmount);
 
                 // Mark this installment as paid
-                markInstallmentAsPaid(installment, remainingAmount, currentUser);
+                markInstallmentAsPaid(installment, remainingAmount, currentUser, receiptDate);
 
                 // Calculate excess
                 Double excess = amountReceived - remainingAmount;
 
                 // Apply excess to next pending installments
-                handleOverpayment(regNo, excess, currentUser);
+                handleOverpayment(regNo, excess, currentUser, receiptDate);
 
                 // EDGE CASE C: Partial payment
             } else if (amountReceived < remainingAmount) {
                 log.info("[STATS] PARTIAL PAYMENT: Received ₹{}, Remaining ₹{}",
                         amountReceived, remainingAmount - amountReceived);
 
-                // Update installment with partial payment
+                // Update installment with partial payment and sync paidDate to receipt date
                 installment.setPaidAmount(
                         (installment.getPaidAmount() != null ? installment.getPaidAmount() : 0.0) + amountReceived);
                 installment.setRemainingAmount(remainingAmount - amountReceived);
                 installment.setPaymentCount(
                         (installment.getPaymentCount() != null ? installment.getPaymentCount() : 0) + 1);
                 installment.setStatus("Partial");
+                installment.setPaidDate(receiptDate); // AUTO-SYNC partial payment date
                 installment.setUpdatedBy(currentUser);
 
                 feeInstallmentRepository.saveAndFlush(installment);
 
-                log.info(" Installment {} marked as PARTIAL (Paid: ₹{}, Remaining: ₹{})",
-                        installmentId, installment.getPaidAmount(), installment.getRemainingAmount());
+                log.info(" Installment {} marked as PARTIAL (Paid: ₹{}, Remaining: ₹{}, date: {})",
+                        installmentId, installment.getPaidAmount(), installment.getRemainingAmount(), receiptDate);
             }
         }
         // CASE 2: Payment WITHOUT installment link (old students or lump sum)
         else {
             log.info("[FEES] Lump sum payment (no installment link)");
-            handleLumpSumPayment(regNo, amountReceived, currentUser);
+            handleLumpSumPayment(regNo, amountReceived, currentUser, receiptDate);
         }
 
         // Create receipt using existing method
@@ -1888,7 +1950,12 @@ public class FeesManagerService {
      * Handle overpayment - apply to next installments
      */
     private void handleOverpayment(String regNo, Double excessAmount, String updatedBy) {
-        log.info(" Handling overpayment: ₹{} for regNo: {}", excessAmount, regNo);
+        handleOverpayment(regNo, excessAmount, updatedBy, LocalDate.now());
+    }
+
+    private void handleOverpayment(String regNo, Double excessAmount, String updatedBy, LocalDate receiptDate) {
+        LocalDate effectiveDate = (receiptDate != null) ? receiptDate : LocalDate.now();
+        log.info(" Handling overpayment: ₹{} for regNo: {}, date: {}", excessAmount, regNo, effectiveDate);
 
         List<FeeInstallment> pendingInstallments = feeInstallmentRepository
                 .findByRegistrationNumberOrderByDueDateAsc(regNo)
@@ -1910,18 +1977,19 @@ public class FeesManagerService {
 
             if (remaining >= installmentRemaining) {
                 // Fully pay this installment
-                markInstallmentAsPaid(inst, installmentRemaining, updatedBy);
+                markInstallmentAsPaid(inst, installmentRemaining, updatedBy, effectiveDate);
                 remaining -= installmentRemaining;
-                log.info(" Auto-paid installment {} with excess (₹{})", inst.getId(), installmentRemaining);
+                log.info(" Auto-paid installment {} with excess (₹{}) on date {}", inst.getId(), installmentRemaining, effectiveDate);
             } else {
                 // Partial payment on this installment
                 inst.setPaidAmount((inst.getPaidAmount() != null ? inst.getPaidAmount() : 0.0) + remaining);
                 inst.setRemainingAmount(installmentRemaining - remaining);
                 inst.setStatus("Partial");
+                inst.setPaidDate(effectiveDate);
                 inst.setUpdatedBy(updatedBy);
                 feeInstallmentRepository.saveAndFlush(inst);
 
-                log.info(" Applied ₹{} excess to installment {}", remaining, inst.getId());
+                log.info(" Applied ₹{} excess to installment {} on date {}", remaining, inst.getId(), effectiveDate);
                 remaining = 0.0;
             }
         }
@@ -1936,18 +2004,32 @@ public class FeesManagerService {
      * Handle lump sum payment (no installment)
      */
     private void handleLumpSumPayment(String regNo, Double amount, String updatedBy) {
-        log.info("[FEES] Processing lump sum payment: ₹{} for regNo: {}", amount, regNo);
+        handleLumpSumPayment(regNo, amount, updatedBy, LocalDate.now());
+    }
+
+    private void handleLumpSumPayment(String regNo, Double amount, String updatedBy, LocalDate receiptDate) {
+        log.info("[FEES] Processing lump sum payment: ₹{} for regNo: {}, date: {}", amount, regNo, receiptDate);
 
         // Apply to pending installments in order
-        handleOverpayment(regNo, amount, updatedBy);
+        handleOverpayment(regNo, amount, updatedBy, receiptDate);
     }
 
     /**
      * Mark installment as fully paid
      */
     private void markInstallmentAsPaid(FeeInstallment installment, Double amount, String updatedBy) {
+        markInstallmentAsPaid(installment, amount, updatedBy, LocalDate.now());
+    }
+
+    /**
+     * Mark installment as fully paid, syncing dueDate and paidDate to the receipt payment date.
+     */
+    private void markInstallmentAsPaid(FeeInstallment installment, Double amount, String updatedBy, LocalDate receiptDate) {
+        LocalDate effectiveDate = (receiptDate != null) ? receiptDate : LocalDate.now();
         installment.setPaidAmount(amount);
-        installment.setPaidDate(LocalDate.now());
+        // AUTO-SYNC: set both paidDate AND dueDate to the receipt payment date
+        installment.setPaidDate(effectiveDate);
+        installment.setDueDate(effectiveDate);
         installment.setRemainingAmount(0.0);
         installment.setStatus("Paid");
         installment.setPaymentCount((installment.getPaymentCount() != null ? installment.getPaymentCount() : 0) + 1);
@@ -1955,7 +2037,7 @@ public class FeesManagerService {
 
         feeInstallmentRepository.saveAndFlush(installment);
 
-        log.info(" Installment {} marked as PAID", installment.getId());
+        log.info(" Installment {} marked as PAID (date: {})", installment.getId(), effectiveDate);
     }
 
     /**
@@ -2009,9 +2091,9 @@ public class FeesManagerService {
                     installment.setPaidAmount(installment.getAmount());
                 }
                 installment.setRemainingAmount(0.0);
-                if (installment.getPaidDate() == null) {
-                    installment.setPaidDate(LocalDate.now());
-                }
+                LocalDate effPaidDate = updateDTO.getDueDate() != null ? updateDTO.getDueDate() : (installment.getPaidDate() != null ? installment.getPaidDate() : LocalDate.now());
+                installment.setPaidDate(effPaidDate);
+                installment.setDueDate(effPaidDate);
             } else if ("Pending".equalsIgnoreCase(updateDTO.getStatus())) {
                 installment.setPaidAmount(0.0);
                 installment.setRemainingAmount(installment.getAmount());

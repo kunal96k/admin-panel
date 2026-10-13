@@ -29,6 +29,8 @@
     let editingSubjectId = null;
     let selectedCourseId = null;
     let currentImageFile = null;
+    let currentBrochureFile = null;
+    let removeBrochureFlag = false;
 
     // Initialize on DOM Load
     document.addEventListener('DOMContentLoaded', function() {
@@ -48,6 +50,31 @@
     function getCsrfHeaders() {
         const token = getCsrfToken();
         return token ? { 'X-CSRF-TOKEN': token } : {};
+    }
+
+    function getFileExtension(filename) {
+        if (!filename) return '.pdf';
+        const idx = filename.lastIndexOf('.');
+        return idx !== -1 ? filename.substring(idx).toLowerCase() : '.pdf';
+    }
+
+    function formatCourseBrochureName(courseName, extension = '.pdf') {
+        if (!courseName || !courseName.trim()) {
+            return 'Course_Brochure' + (extension || '.pdf');
+        }
+        const clean = courseName.trim().replace(/[,/\\&]+/g, ' ');
+        const words = clean.split(/[\s_]+/);
+        const formatted = words
+            .map(w => w.replace(/[^a-zA-Z0-9]/g, ''))
+            .filter(w => w.length > 0)
+            .map(w => {
+                if (w.length === 1) return w.toUpperCase();
+                if (/^[A-Z0-9]+$/.test(w)) return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+                return w.charAt(0).toUpperCase() + w.slice(1);
+            })
+            .join('_');
+        const ext = (extension && extension.startsWith('.')) ? extension : ('.' + (extension || 'pdf'));
+        return (formatted || 'Course') + '_Brochure' + ext;
     }
 
     // ==================== EVENT LISTENERS ====================
@@ -84,6 +111,8 @@
 
         // Image dropzone
         initializeImageUpload();
+        // Brochure upload
+        initializeBrochureUpload();
 
         // Image modal
         const imageModalClose = document.getElementById('imageModalClose');
@@ -136,6 +165,67 @@
         });
 
         removeImageBtn.addEventListener('click', removeImage);
+    }
+
+    function initializeBrochureUpload() {
+        const fileInput = document.getElementById('courseBrochureInput');
+        const clearBtn = document.getElementById('clearBrochureBtn');
+        const removeExistingBtn = document.getElementById('removeExistingBrochureBtn');
+
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    const file = this.files[0];
+                    if (file.size > 25 * 1024 * 1024) {
+                        showError('Brochure file size exceeds 25MB limit.');
+                        this.value = '';
+                        return;
+                    }
+                    const lower = file.name.toLowerCase();
+                    if (!lower.endsWith('.pdf') && !lower.endsWith('.zip')) {
+                        showError('Only PDF documents or ZIP archives are supported.');
+                        this.value = '';
+                        return;
+                    }
+                    currentBrochureFile = file;
+                    removeBrochureFlag = false;
+                    const courseNameInput = document.getElementById('courseName');
+                    const targetName = formatCourseBrochureName(courseNameInput ? courseNameInput.value : '', getFileExtension(file.name));
+                    const badge = document.getElementById('brochureStatusBadge');
+                    if (badge) {
+                        badge.className = 'badge bg-success';
+                        badge.textContent = `Selected: ${targetName}`;
+                    }
+                    if (clearBtn) clearBtn.style.display = 'block';
+                }
+            });
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                if (fileInput) fileInput.value = '';
+                currentBrochureFile = null;
+                this.style.display = 'none';
+                const badge = document.getElementById('brochureStatusBadge');
+                if (badge) {
+                    badge.className = 'badge bg-secondary';
+                    badge.textContent = 'No brochure attached';
+                }
+            });
+        }
+
+        if (removeExistingBtn) {
+            removeExistingBtn.addEventListener('click', function() {
+                removeBrochureFlag = true;
+                const container = document.getElementById('existingBrochureContainer');
+                if (container) container.style.display = 'none';
+                const badge = document.getElementById('brochureStatusBadge');
+                if (badge) {
+                    badge.className = 'badge bg-warning text-dark';
+                    badge.textContent = 'Brochure will be removed on save';
+                }
+            });
+        }
     }
 
     // ==================== DATA LOADING ====================
@@ -227,12 +317,26 @@
                         onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'no-image-placeholder\\'>No Image</div>';">`
                 : `<div class="no-image-placeholder">No Image</div>`;
 
+            const ext = getFileExtension(course.brochurePath || course.brochureFileName);
+            const cleanBrochureName = formatCourseBrochureName(course.courseName, ext);
+            const brochureHref = course.brochureUrl || (course.brochurePath ? `/uploads/courses/brochures/${course.brochurePath}` : `/uploads/courses/brochures/${cleanBrochureName}`);
+
+            const brochureHtml = course.hasBrochure
+                ? `<a href="${brochureHref}" target="_blank" class="badge bg-success-subtle text-success text-decoration-none border border-success-subtle p-2 d-inline-flex align-items-center" title="${cleanBrochureName}">
+                    <i class="bi bi-file-earmark-pdf-fill me-1 text-danger"></i>
+                    <span class="text-truncate" style="max-width: 120px;">${cleanBrochureName}</span>
+                   </a>`
+                : `<span class="badge bg-light text-muted border p-2" title="No brochure uploaded">
+                    <i class="bi bi-dash-circle me-1"></i>None
+                   </span>`;
+
             return `
                 <tr>
                     <td><strong>${srNo}</strong></td>
                     <td>${imageHtml}</td>
                     <td><strong>${course.courseName}</strong></td>
                     <td><strong>₹${Number(course.courseFees).toLocaleString()}</strong></td>
+                    <td>${brochureHtml}</td>
                     <td>
                         <button class="action-btn" onclick="editCourse(${course.id})" title="Edit Course">
                             <i class="bi bi-pencil-square"></i>
@@ -258,7 +362,7 @@
 
         tbody.innerHTML = `
             <tr>
-                <td colspan="5" class="text-center py-5">
+                <td colspan="6" class="text-center py-5">
                     <i class="bi bi-inbox" style="font-size: 3rem; color: #94a3b8;"></i>
                     <p class="mt-3 mb-0 text-muted">No courses found</p>
                 </td>
@@ -367,6 +471,21 @@
 
         removeImage();
 
+        // Reset brochure fields
+        currentBrochureFile = null;
+        removeBrochureFlag = false;
+        const brochureInput = document.getElementById('courseBrochureInput');
+        if (brochureInput) brochureInput.value = '';
+        const clearBrochureBtn = document.getElementById('clearBrochureBtn');
+        if (clearBrochureBtn) clearBrochureBtn.style.display = 'none';
+        const existingBrochureContainer = document.getElementById('existingBrochureContainer');
+        if (existingBrochureContainer) existingBrochureContainer.style.display = 'none';
+        const brochureStatusBadge = document.getElementById('brochureStatusBadge');
+        if (brochureStatusBadge) {
+            brochureStatusBadge.className = 'badge bg-secondary';
+            brochureStatusBadge.textContent = 'No brochure attached';
+        }
+
         const courseModalElem = document.getElementById('courseModal');
         if (courseModalElem && typeof bootstrap !== 'undefined') {
             const modal = new bootstrap.Modal(courseModalElem);
@@ -413,6 +532,39 @@
                 removeImage();
             }
 
+            // Populate brochure details
+            currentBrochureFile = null;
+            removeBrochureFlag = false;
+            const brochureInput = document.getElementById('courseBrochureInput');
+            if (brochureInput) brochureInput.value = '';
+            const clearBrochureBtn = document.getElementById('clearBrochureBtn');
+            if (clearBrochureBtn) clearBrochureBtn.style.display = 'none';
+
+            const existingBrochureContainer = document.getElementById('existingBrochureContainer');
+            const existingBrochureName = document.getElementById('existingBrochureName');
+            const viewBrochureLink = document.getElementById('viewBrochureLink');
+            const brochureStatusBadge = document.getElementById('brochureStatusBadge');
+
+            if (course.hasBrochure || course.brochurePath || course.brochureFileName) {
+                const ext = getFileExtension(course.brochurePath || course.brochureFileName);
+                const cleanBrochureName = formatCourseBrochureName(course.courseName, ext);
+                const brochureHref = course.brochureUrl || (course.brochurePath ? `/uploads/courses/brochures/${course.brochurePath}` : `/uploads/courses/brochures/${cleanBrochureName}`);
+
+                if (existingBrochureContainer) existingBrochureContainer.style.display = 'flex';
+                if (existingBrochureName) existingBrochureName.textContent = cleanBrochureName;
+                if (viewBrochureLink) viewBrochureLink.href = brochureHref;
+                if (brochureStatusBadge) {
+                    brochureStatusBadge.className = 'badge bg-success';
+                    brochureStatusBadge.textContent = 'Brochure attached';
+                }
+            } else {
+                if (existingBrochureContainer) existingBrochureContainer.style.display = 'none';
+                if (brochureStatusBadge) {
+                    brochureStatusBadge.className = 'badge bg-secondary';
+                    brochureStatusBadge.textContent = 'No brochure attached';
+                }
+            }
+
             const courseModalElem = document.getElementById('courseModal');
             if (courseModalElem && typeof bootstrap !== 'undefined') {
                 const modal = new bootstrap.Modal(courseModalElem);
@@ -445,6 +597,14 @@
 
         if (currentImageFile) {
             formData.append('courseImage', currentImageFile);
+        }
+
+        if (currentBrochureFile) {
+            formData.append('courseBrochure', currentBrochureFile);
+        }
+
+        if (removeBrochureFlag) {
+            formData.append('removeBrochure', 'true');
         }
 
         try {

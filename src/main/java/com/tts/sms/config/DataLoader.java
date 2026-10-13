@@ -27,6 +27,7 @@ public class DataLoader implements CommandLineRunner {
     private final RoleMenuPermissionRepository roleMenuPermissionRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailTemplateService emailTemplateService;
+    private final EmailTemplateRepository emailTemplateRepository;
 
     @Value("${app.superadmin.email:kunalpatil192001@gmail.com}")
     private String superAdminEmail;
@@ -43,6 +44,7 @@ public class DataLoader implements CommandLineRunner {
         loadRoles();
         loadMenus();
         loadSuperAdmin();
+        loadDefaultEmailTemplates();
     }
 
     private void loadRoles() {
@@ -78,7 +80,7 @@ public class DataLoader implements CommandLineRunner {
 
                     // MASTER SECTION
                     createMenu("Master", "Course", "/master/course", 6),
-                    createMenu("Master", "Batch", "/master/batch", 7),  
+                    createMenu("Master", "Batch", "/master/batch", 7),
                     createMenu("Master", "Employee", "/master/employee", 8),
                     createMenu("Master", "Role", "/master/role", 9),
                     createMenu("Master", "Bank", "/master/bank", 10),
@@ -88,11 +90,35 @@ public class DataLoader implements CommandLineRunner {
 
                     // REPORTS
                     createMenu("Reports", "Course-wise Sales", "/reports/course-wise-sales", 14),
-                    createMenu("Reports", "Fees Collection", "/reports/fees-collection", 15)
-            );
+                    createMenu("Reports", "Fees Collection", "/reports/fees-collection", 15),
+
+                    // EMAIL CAMPAIGN
+                    createMenu("Email Campaign", "Email Campaign", "/email-campaign", 16));
 
             menuRepository.saveAll(menus);
             log.info(" Loaded {} menus", menus.size());
+        }
+
+        // Ensure Email Campaign menu exists (for existing databases)
+        Menu emailCampaignMenu = menuRepository.findByMenuUrl("/email-campaign")
+                .orElseGet(() -> {
+                    Menu menu = createMenu("Email Campaign", "Email Campaign", "/email-campaign", 16);
+                    Menu saved = menuRepository.save(menu);
+                    log.info(" Loaded Email Campaign menu (ID: {})", saved.getId());
+                    return saved;
+                });
+
+        // Grant Email Campaign module access to all roles (does NOT touch any other menu permissions)
+        List<Role> allRoles = roleRepository.findAll();
+        for (Role role : allRoles) {
+            if (roleMenuPermissionRepository.findByRoleAndMenu(role, emailCampaignMenu).isEmpty()) {
+                RoleMenuPermission permission = new RoleMenuPermission();
+                permission.setRole(role);
+                permission.setMenu(emailCampaignMenu);
+                permission.setHasAccess(true);
+                roleMenuPermissionRepository.save(permission);
+                log.info(" Granted Email Campaign module access to role: {}", role.getRoleTitle());
+            }
         }
     }
 
@@ -185,8 +211,7 @@ public class DataLoader implements CommandLineRunner {
                         superAdminEmail,
                         "Super Administrator",
                         superAdminUsername,
-                        superAdminPassword
-                );
+                        superAdminPassword);
                 log.info(" Credentials email sent to: {}", superAdminEmail);
             } catch (Exception e) {
                 log.warn("[WARN] Failed to send credentials email: {}", e.getMessage());
@@ -203,6 +228,42 @@ public class DataLoader implements CommandLineRunner {
 
         } catch (Exception e) {
             log.error("[FAIL] Error creating super admin user: {}", e.getMessage(), e);
+        }
+    }
+
+    private void loadDefaultEmailTemplates() {
+        if (emailTemplateRepository.count() == 0) {
+            EmailTemplate t1 = EmailTemplate.builder()
+                    .templateName("AI/ML Engineer - Virtual Interview")
+                    .emailSubject("Exclusive Career Opportunity: AI/ML Engineer Position at TechnoKraft")
+                    .hiringRole("AI/ML Engineer")
+                    .opportunityType("JOB")
+                    .conductMode("ONLINE")
+                    .onlinePlatform("GOOGLE_MEET")
+                    .meetingLink("https://meet.google.com/xyz-abcd-efg")
+                    .eventDate("Upcoming Monday")
+                    .eventTime("10:30 AM IST")
+                    .customNotes("Round 1: Problem Solving & Python Assessment. Round 2: Machine Learning Architecture & Projects. Please have your IDE ready.")
+                    .isActive(true)
+                    .createdBy("SYSTEM")
+                    .build();
+
+            EmailTemplate t2 = EmailTemplate.builder()
+                    .templateName("Full Stack Java Developer - Campus Drive")
+                    .emailSubject("Invitation for Full Stack Java Developer Hiring Drive at TechnoKraft")
+                    .hiringRole("Full Stack Java Developer")
+                    .opportunityType("JOB")
+                    .conductMode("OFFLINE")
+                    .venueAddress("TechnoKraft Training & Solution Pvt. Ltd., 1st Floor, Kanchwala Avenue, College Road, Nashik 422005")
+                    .eventDate("Upcoming Wednesday")
+                    .eventTime("11:00 AM IST")
+                    .customNotes("Round 1: Technical Assessment & Coding. Round 2: Architecture & Project Review. Please keep your portfolio and code repositories accessible.")
+                    .isActive(true)
+                    .createdBy("SYSTEM")
+                    .build();
+
+            emailTemplateRepository.saveAll(Arrays.asList(t1, t2));
+            log.info(" Loaded {} default email templates", 2);
         }
     }
 

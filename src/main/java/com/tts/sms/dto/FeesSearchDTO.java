@@ -41,6 +41,10 @@ public class FeesSearchDTO {
 
     private LocalDate dueDateTo;
 
+    private LocalDate createdDateFrom;
+
+    private LocalDate createdDateTo;
+
     private Double minTotalFees;
 
     private Double maxTotalFees;
@@ -50,4 +54,6 @@ public class FeesSearchDTO {
     private Double maxFeesDue;
 
     private Boolean overdue;
+ 
+    private String dashFilter;
 }

@@ -56,4 +56,20 @@ public interface FeeInstallmentRepository extends JpaRepository<FeeInstallment, 
     @Query("SELECT f FROM FeeInstallment f WHERE LOWER(f.status) NOT IN ('paid', 'refund', 'cancelled') " +
             "AND f.dueDate = :dueDate ORDER BY f.dueDate ASC")
     List<FeeInstallment> findPendingInstallmentsDueOnDate(@Param("dueDate") LocalDate dueDate);
+
+    // Count distinct students (by regNo) whose installments are overdue (Pending & dueDate < today), excluding deleted and clear/paid-off students
+    @Query("SELECT COUNT(DISTINCT f.registrationNumber) FROM FeeInstallment f " +
+            "WHERE LOWER(f.status) = 'pending' AND f.dueDate < CURRENT_DATE " +
+            "AND f.registrationNumber IN (SELECT fees.registrationNumber FROM Fees fees " +
+            "WHERE fees.isDeleted = false AND LOWER(fees.status) != 'clear' AND fees.feesDue > 0.01)")
+    Long countDistinctOverdueStudents();
+
+    // Count distinct students (by regNo) with upcoming pending installments in date range, excluding deleted and clear/paid-off students
+    @Query("SELECT COUNT(DISTINCT f.registrationNumber) FROM FeeInstallment f " +
+            "WHERE LOWER(f.status) = 'pending' AND f.dueDate BETWEEN :startDate AND :endDate " +
+            "AND f.registrationNumber IN (SELECT fees.registrationNumber FROM Fees fees " +
+            "WHERE fees.isDeleted = false AND LOWER(fees.status) != 'clear' AND fees.feesDue > 0.01)")
+    Long countDistinctStudentsWithUpcomingDue(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 }
