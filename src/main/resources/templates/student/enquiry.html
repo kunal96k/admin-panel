@@ -648,8 +648,19 @@
 
                     <!-- Document Upload Box (visible when UPLOAD is chosen) -->
                     <div id="waUploadSection" class="p-3 border rounded-3 bg-light mb-3 d-none">
+                        <!-- Select from Custom Uploaded Folder -->
+                        <div id="waCustomFolderContainer" class="mb-2 d-none">
+                            <label class="form-label small fw-bold mb-1 text-primary">
+                                <i class="bi bi-folder2-open me-1"></i>Select from Custom Uploaded Folder
+                            </label>
+                            <select class="form-select form-select-sm mb-2" id="waCustomFolderSelect">
+                                <option value="">-- Choose from previously uploaded custom files --</option>
+                            </select>
+                            <div class="text-center small text-muted my-1">— OR UPLOAD A NEW FILE TO CUSTOM FOLDER —</div>
+                        </div>
+
                         <label class="form-label small fw-bold mb-1">
-                            <i class="bi bi-cloud-arrow-up-fill text-success me-1"></i>Upload Course Brochure (PDF or ZIP)
+                            <i class="bi bi-cloud-arrow-up-fill text-success me-1"></i>Upload Brochure / Package to Custom Folder
                         </label>
                         <div class="input-group input-group-sm mb-2">
                             <input type="file" class="form-control" id="waDocumentFileInput" accept=".pdf,application/pdf,.zip,application/zip">
@@ -658,7 +669,7 @@
                             </button>
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted"><i class="bi bi-file-earmark-arrow-up text-primary me-1"></i>Max 25MB PDF/ZIP (Multi-brochure zip supported)</small>
+                            <small class="text-muted"><i class="bi bi-folder-check text-success me-1"></i>Saves to <code>./uploads/courses/brochures/custom/</code></small>
                             <span id="waUploadStatus" class="badge bg-secondary">No file uploaded</span>
                         </div>
                         <input type="hidden" id="waUploadedDocUrl" value="">

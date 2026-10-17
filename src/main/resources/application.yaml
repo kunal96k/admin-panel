@@ -43,6 +43,7 @@ app:
     access-token: ${WHATSAPP_ACCESS_TOKEN:}
     course-template-name: ${WHATSAPP_COURSE_TEMPLATE_NAME:crm_course_information}
     course-template-language: ${WHATSAPP_COURSE_TEMPLATE_LANGUAGE:en_US}
+    course-template-header-type: ${WHATSAPP_COURSE_TEMPLATE_HEADER_TYPE:DOCUMENT}
     fee-template-name: ${WHATSAPP_FEE_TEMPLATE_NAME:crm_fee_reminder_utility}
     fee-template-language: ${WHATSAPP_FEE_TEMPLATE_LANGUAGE:en_US}
     business-name: ${WHATSAPP_BUSINESS_NAME:TechnoKraft Training & Solution Pvt. Ltd.}

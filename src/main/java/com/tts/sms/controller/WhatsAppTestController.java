@@ -36,6 +36,7 @@ public class WhatsAppTestController {
 
     private final WhatsAppService whatsAppService;
     private final FeeDueReminderScheduler feeDueReminderScheduler;
+    private final com.tts.sms.service.CourseBrochureService courseBrochureService;
 
     @Value("${app.whatsapp.test-endpoints-enabled:false}")
     private boolean testEndpointsEnabled;
@@ -68,7 +69,7 @@ public class WhatsAppTestController {
      * Parameters:
      * 1: student_name
      * 2: course_list
-     * Header: Document (optional/provided via documentUrl)
+     * Header: Document (optional/provided via documentUrl, or auto-merged from multiple courses)
      */
     @PostMapping("/course-information")
     public ResponseEntity<WhatsAppSendResult> testCourseInformation(@RequestBody CourseInfoTestRequest request) {
@@ -80,11 +81,21 @@ public class WhatsAppTestController {
         log.info("[TEST-WHATSAPP] Testing course-information template for mobile: {}",
                 WhatsAppService.maskPhoneNumber(request.getMobile()));
 
+        String docUrl = request.getDocumentUrl();
+        if ((docUrl == null || docUrl.isBlank()) && request.getCourseList() != null && !request.getCourseList().isBlank()) {
+            java.util.List<String> courses = java.util.Arrays.stream(request.getCourseList().split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+            docUrl = courseBrochureService.getConsolidatedBrochureUrl(courses);
+            log.info("[TEST-WHATSAPP] Auto-resolved brochure URL for courses '{}': {}", request.getCourseList(), docUrl);
+        }
+
         WhatsAppSendResult result = whatsAppService.sendCourseInformationDirect(
                 request.getMobile(),
                 request.getStudentName(),
                 request.getCourseList(),
-                request.getDocumentUrl()
+                docUrl
         );
 
         return ResponseEntity.ok(result);

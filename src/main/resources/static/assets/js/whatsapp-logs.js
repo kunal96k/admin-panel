@@ -376,7 +376,7 @@
         logs.forEach(log => {
             const statusBadge = getStatusBadge(log.status, log.failureReason);
             const categoryBadge = getCategoryBadge(log.billingCategory);
-            const wamidSnippet = log.metaMessageId 
+            const wamidSnippet = log.metaMessageId
                 ? `<span class="wamid-code" title="${escapeHtml(log.metaMessageId)}">${escapeHtml(log.metaMessageId)}</span>`
                 : `<span class="text-muted small">-</span>`;
 
@@ -419,7 +419,7 @@
                     <td data-label="ACTIONS" class="text-center">
                         <button type="button" class="btn btn-sm btn-outline-primary py-1 px-3 btn-view-log" 
                                 data-id="${log.id}" title="Inspect API Call & Raw Payloads">
-                            <i class="bi bi-eye me-1"></i> Inspect
+                            Inspect
                         </button>
                     </td>
                 </tr>

@@ -222,28 +222,28 @@ public class EnquiryController {
         }
 
         try {
-            String brochuresDir = "./uploads/courses/brochures";
-            java.nio.file.Path dirPath = java.nio.file.Paths.get(brochuresDir).toAbsolutePath().normalize();
+            String customBrochuresDir = "./uploads/courses/brochures/custom";
+            java.nio.file.Path dirPath = java.nio.file.Paths.get(customBrochuresDir).toAbsolutePath().normalize();
             if (!java.nio.file.Files.exists(dirPath)) {
                 java.nio.file.Files.createDirectories(dirPath);
             }
 
-            // For manually uploaded zip files (and manual uploads), PRESERVE THE ORIGINAL FILENAME AS IS!
+            // For custom uploaded files, preserve the original filename cleaned of unsafe characters
             String cleanName = originalName.trim().replaceAll("[\\\\/:*?\"<>|]", "_");
             String uniqueName = System.currentTimeMillis() + "_" + cleanName;
             java.nio.file.Path targetFilePath = dirPath.resolve(uniqueName);
             java.nio.file.Files.copy(file.getInputStream(), targetFilePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
-            String publicUrl = enquiryService.buildBrochurePublicUrl("brochures/" + uniqueName);
+            String publicUrl = enquiryService.buildBrochurePublicUrl("brochures/custom/" + uniqueName);
 
-            log.info("Uploaded brochure saved: {} -> URL: {}", targetFilePath.toAbsolutePath(), publicUrl);
+            log.info("Uploaded brochure saved in custom folder: {} -> URL: {}", targetFilePath.toAbsolutePath(), publicUrl);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "fileName", cleanName,
                     "fileType", lowerName.endsWith(".zip") ? "ZIP" : "PDF",
                     "documentUrl", publicUrl,
-                    "message", "Brochure uploaded successfully"
+                    "message", "Brochure uploaded successfully to custom folder"
             ));
 
         } catch (Exception e) {
@@ -252,6 +252,42 @@ public class EnquiryController {
                     "success", false,
                     "message", "Failed to upload document: " + e.getMessage()
             ));
+        }
+    }
+
+    /**
+     * Get list of custom uploaded brochures and packages from ./uploads/courses/brochures/custom/
+     */
+    @GetMapping("/custom-brochures")
+    public ResponseEntity<?> getCustomBrochures() {
+        try {
+            java.io.File dir = new java.io.File("./uploads/courses/brochures/custom");
+            if (!dir.exists() || !dir.isDirectory()) {
+                return ResponseEntity.ok(java.util.Collections.emptyList());
+            }
+            java.io.File[] files = dir.listFiles((d, name) -> {
+                String l = name.toLowerCase();
+                return l.endsWith(".pdf") || l.endsWith(".zip");
+            });
+            if (files == null || files.length == 0) {
+                return ResponseEntity.ok(java.util.Collections.emptyList());
+            }
+            java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
+            for (java.io.File f : files) {
+                String cleanName = f.getName().replaceFirst("^\\d+_", "");
+                String url = enquiryService.buildBrochurePublicUrl("brochures/custom/" + f.getName());
+                result.add(Map.of(
+                        "fileName", cleanName,
+                        "storedName", f.getName(),
+                        "documentUrl", url,
+                        "fileType", f.getName().toLowerCase().endsWith(".zip") ? "ZIP" : "PDF",
+                        "sizeBytes", f.length()
+                ));
+            }
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Failed to list custom brochures", e);
+            return ResponseEntity.ok(java.util.Collections.emptyList());
         }
     }
 

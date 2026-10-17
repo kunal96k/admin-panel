@@ -50,6 +50,9 @@ public class WhatsAppService {
     @Value("${app.whatsapp.course-template-language:en_US}")
     private String courseTemplateLanguage;
 
+    @Value("${app.whatsapp.course-template-header-type:DOCUMENT}")
+    private String courseTemplateHeaderType;
+
     @Value("${app.whatsapp.fee-template-name:crm_fee_reminder_utility}")
     private String feeTemplateName;
 
@@ -228,8 +231,8 @@ public class WhatsAppService {
 
         List<Map<String, Object>> components = new ArrayList<>();
 
-        // Optional Document Header (single document only, per Meta Cloud API spec)
-        if (documentUrl != null && !documentUrl.isBlank()) {
+        // Optional Document Header (only if configured as DOCUMENT header on Meta)
+        if ("DOCUMENT".equalsIgnoreCase(courseTemplateHeaderType != null ? courseTemplateHeaderType.trim() : "") && documentUrl != null && !documentUrl.isBlank()) {
             Map<String, Object> headerComponent = new LinkedHashMap<>();
             headerComponent.put("type", "header");
 
@@ -266,7 +269,33 @@ public class WhatsAppService {
             auditContext.setAttachmentName(docFileName);
 
             Map<String, String> docObj = new LinkedHashMap<>();
-            docObj.put("link", documentUrl.trim());
+
+            // If running on localhost or dev environment, Meta cannot reach private IP addresses like 127.0.0.1.
+            // Automatically stream the local file directly to Meta Cloud Media API and use the generated Media ID!
+            String mediaId = null;
+            boolean isLocalUrl = documentUrl.contains("localhost") || documentUrl.contains("127.0.0.1")
+                    || documentUrl.startsWith("/uploads/") || documentUrl.startsWith("./uploads/");
+
+            if (isLocalUrl && documentUrl.contains("/uploads/")) {
+                try {
+                    String relativeUploadPath = documentUrl.substring(documentUrl.indexOf("/uploads/"));
+                    java.io.File localFile = new java.io.File("." + relativeUploadPath);
+                    if (localFile.exists() && localFile.canRead()) {
+                        // Meta Media endpoint accepts 'application/pdf' container type for all document payloads
+                        String mimeType = "application/pdf";
+                        mediaId = uploadMediaToMeta(localFile, mimeType);
+                    }
+                } catch (Exception e) {
+                    log.warn("[WHATSAPP] Failed to resolve local media file for upload: {}", e.getMessage());
+                }
+            }
+
+            if (mediaId != null && !mediaId.isBlank()) {
+                docObj.put("id", mediaId);
+            } else {
+                docObj.put("link", documentUrl.trim());
+            }
+
             docObj.put("filename", docFileName);
             docParam.put("document", docObj);
 
@@ -281,8 +310,8 @@ public class WhatsAppService {
         bodyComponent.put("type", "body");
 
         List<Map<String, Object>> bodyParams = new ArrayList<>();
-        bodyParams.add(Map.of("type", "text", "text", finalStudentName));
-        bodyParams.add(Map.of("type", "text", "text", finalCourseList));
+        bodyParams.add(Map.of("type", "text", "parameter_name", "student_name", "text", finalStudentName));
+        bodyParams.add(Map.of("type", "text", "parameter_name", "course_list", "text", finalCourseList));
         bodyComponent.put("parameters", bodyParams);
         components.add(bodyComponent);
 
@@ -416,14 +445,14 @@ public class WhatsAppService {
         bodyComponent.put("type", "body");
 
         List<Map<String, Object>> bodyParams = new ArrayList<>();
-        bodyParams.add(Map.of("type", "text", "text", studentName != null ? studentName.trim() : "Student"));
-        bodyParams.add(Map.of("type", "text", "text", courseName != null ? courseName.trim() : "-"));
-        bodyParams.add(Map.of("type", "text", "text", paymentDueStatus != null ? paymentDueStatus.trim() : "is due soon."));
-        bodyParams.add(Map.of("type", "text", "text", registrationNumber != null ? registrationNumber.trim() : "-"));
-        bodyParams.add(Map.of("type", "text", "text", installment != null ? installment.trim() : "Installment"));
-        bodyParams.add(Map.of("type", "text", "text", installmentAmount != null ? installmentAmount.trim() : "0.00"));
-        bodyParams.add(Map.of("type", "text", "text", dueDate != null ? dueDate.trim() : "-"));
-        bodyParams.add(Map.of("type", "text", "text", outstandingBalance != null ? outstandingBalance.trim() : "0.00"));
+        bodyParams.add(Map.of("type", "text", "parameter_name", "student_name", "text", studentName != null ? studentName.trim() : "Student"));
+        bodyParams.add(Map.of("type", "text", "parameter_name", "course_name", "text", courseName != null ? courseName.trim() : "-"));
+        bodyParams.add(Map.of("type", "text", "parameter_name", "payment_due_status", "text", paymentDueStatus != null ? paymentDueStatus.trim() : "is due soon."));
+        bodyParams.add(Map.of("type", "text", "parameter_name", "registration_number", "text", registrationNumber != null ? registrationNumber.trim() : "-"));
+        bodyParams.add(Map.of("type", "text", "parameter_name", "installment", "text", installment != null ? installment.trim() : "Installment"));
+        bodyParams.add(Map.of("type", "text", "parameter_name", "installment_amount", "text", installmentAmount != null ? installmentAmount.trim() : "0.00"));
+        bodyParams.add(Map.of("type", "text", "parameter_name", "due_date", "text", dueDate != null ? dueDate.trim() : "-"));
+        bodyParams.add(Map.of("type", "text", "parameter_name", "outstanding_balance", "text", outstandingBalance != null ? outstandingBalance.trim() : "0.00"));
         bodyComponent.put("parameters", bodyParams);
 
         List<Map<String, Object>> components = List.of(bodyComponent);
@@ -554,6 +583,10 @@ public class WhatsAppService {
                     if (!details.isBlank()) {
                         return details;
                     }
+                    String dataDetails = errorNode.path("error_data").path("details").asText();
+                    if (!dataDetails.isBlank()) {
+                        return dataDetails;
+                    }
                     if (!msg.isBlank()) {
                         return msg;
                     }
@@ -597,5 +630,47 @@ public class WhatsAppService {
             return first2 + "******" + last4;
         }
         return "******" + (clean.length() >= 2 ? clean.substring(clean.length() - 2) : "");
+    }
+
+    /**
+     * Uploads a local file directly to Meta's WhatsApp Media API and returns the generated media ID.
+     * Prevents "localhost 127.0.0.1 is private" download errors when running in local development environments.
+     */
+    public String uploadMediaToMeta(java.io.File file, String mimeType) {
+        if (file == null || !file.exists() || !file.canRead()) {
+            log.warn("[WHATSAPP] Local media file does not exist or cannot be read: {}", file);
+            return null;
+        }
+
+        String url = String.format("https://graph.facebook.com/%s/%s/media", apiVersion, phoneNumberId);
+
+        try {
+            org.springframework.util.MultiValueMap<String, Object> body = new org.springframework.util.LinkedMultiValueMap<>();
+            body.add("messaging_product", "whatsapp");
+            body.add("type", mimeType != null ? mimeType : "application/pdf");
+            body.add("file", new org.springframework.core.io.FileSystemResource(file));
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+            headers.setBearerAuth(accessToken.trim());
+
+            HttpEntity<org.springframework.util.MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+            log.info("[WHATSAPP] Uploading local file '{}' ({} bytes) directly to Meta Media API...", file.getName(), file.length());
+
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                if (root.has("id")) {
+                    String mediaId = root.get("id").asText();
+                    log.info("[WHATSAPP] Successfully uploaded media to Meta. Media ID: {}", mediaId);
+                    return mediaId;
+                }
+            }
+            log.warn("[WHATSAPP] Meta media upload failed with response: {}", response.getBody());
+        } catch (Exception ex) {
+            log.error("[WHATSAPP] Failed to upload local file to Meta Media API: {}", ex.getMessage());
+        }
+        return null;
     }
 }

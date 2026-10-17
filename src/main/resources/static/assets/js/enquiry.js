@@ -438,6 +438,7 @@ async function loadCoursesForSearch() {
         document.getElementById('waBtnConfirmSendFromPreview')?.addEventListener('click', handleConfirmSendWhatsApp);
         document.getElementById('waCourseSelect')?.addEventListener('change', updateWhatsAppPreview);
         document.getElementById('waAttachmentSelect')?.addEventListener('change', handleAttachmentOptionChange);
+        document.getElementById('waCustomFolderSelect')?.addEventListener('change', handleCustomFolderSelectChange);
         document.getElementById('waBtnUploadFile')?.addEventListener('click', handleUploadBrochure);
         document.getElementById('waDocumentFileInput')?.addEventListener('change', handleDocumentFileInputChange);
 
@@ -1459,9 +1460,66 @@ TechnoKraft Training & Solution Pvt. Ltd.`;
         if (attachmentSelect && uploadSection) {
             if (attachmentSelect.value === 'UPLOAD') {
                 uploadSection.classList.remove('d-none');
+                loadCustomBrochuresFolder();
             } else {
                 uploadSection.classList.add('d-none');
             }
+        }
+
+        updateWhatsAppPreview();
+    }
+
+    async function loadCustomBrochuresFolder() {
+        const container = document.getElementById('waCustomFolderContainer');
+        const select = document.getElementById('waCustomFolderSelect');
+        if (!container || !select) return;
+
+        try {
+            const response = await fetch('/api/enquiries/custom-brochures', {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'include'
+            });
+            if (response.ok) {
+                const list = await response.json();
+                if (list && list.length > 0) {
+                    container.classList.remove('d-none');
+                    select.innerHTML = `<option value="">-- Choose from previously uploaded custom files (${list.length} available) --</option>`;
+                    list.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.documentUrl;
+                        opt.dataset.fileName = item.fileName;
+                        opt.dataset.fileType = item.fileType;
+                        const sizeKb = item.sizeBytes ? ' (' + Math.round(item.sizeBytes / 1024) + ' KB)' : '';
+                        opt.textContent = `[${item.fileType}] ${item.fileName}${sizeKb}`;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    container.classList.add('d-none');
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to fetch custom brochures folder:', e);
+        }
+    }
+
+    function handleCustomFolderSelectChange() {
+        const select = document.getElementById('waCustomFolderSelect');
+        if (!select || !select.value) return;
+
+        const selectedOption = select.options[select.selectedIndex];
+        const docUrl = select.value;
+        const fileName = selectedOption ? selectedOption.dataset.fileName : 'Custom_File';
+
+        const uploadedDocInput = document.getElementById('waUploadedDocUrl');
+        if (uploadedDocInput) {
+            uploadedDocInput.value = docUrl;
+            uploadedDocInput.dataset.originalFileName = fileName;
+        }
+
+        const uploadStatus = document.getElementById('waUploadStatus');
+        if (uploadStatus) {
+            uploadStatus.textContent = 'Selected: ' + fileName;
+            uploadStatus.className = 'badge bg-success';
         }
 
         updateWhatsAppPreview();
@@ -1547,7 +1605,8 @@ TechnoKraft Training & Solution Pvt. Ltd.`;
                     attachmentSelect.value = 'UPLOAD';
                 }
 
-                showSuccess((result.fileType || 'Document') + ' brochure uploaded successfully!');
+                showSuccess((result.fileType || 'Document') + ' brochure uploaded to custom folder successfully!');
+                loadCustomBrochuresFolder();
                 updateWhatsAppPreview();
 
             } else {
