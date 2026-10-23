@@ -99,4 +99,14 @@ public class AdmissionResponseDTO {
     private String createdBy;
     private String updatedBy;
     private Boolean feeReminderEmailEnabled;
+
+    // Admission Fee Receipt details
+    private Double admissionFeePaid;
+    private String admissionReceiptNumber;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate admissionReceiptDate;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime admissionReceiptCreatedAt;
+    private String admissionPaymentMode;
+    private String admissionReceiptNotes;
 }

@@ -167,6 +167,29 @@ public class SystemConfigurationController {
     }
 
     /**
+     * Manually triggers a full student recategorization NOW.
+     * Fixes all stale NEW_STUDENT badges in the DB immediately.
+     * Useful after deploying the 7-day window logic for the first time.
+     */
+    @PostMapping("/recategorize-now")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> triggerRecategorizeNow(Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : "system";
+        log.info("[MANUAL TRIGGER] SUPER_ADMIN {} manually triggering student recategorization", username);
+
+        long startMs = System.currentTimeMillis();
+        categoryService.recategorizeAllStudents();
+        long elapsedMs = System.currentTimeMillis() - startMs;
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Student recategorization completed. All stale NEW_STUDENT badges are now fixed.",
+                "triggeredBy", username,
+                "elapsedMs", elapsedMs
+        ));
+    }
+
+    /**
      * Manually triggers the 5-day fee due countdown reminders (Email and/or WhatsApp) on demand.
      */
     @PostMapping("/fee-reminder/trigger-now")

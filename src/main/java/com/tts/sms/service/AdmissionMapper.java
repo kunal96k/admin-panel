@@ -47,6 +47,7 @@ public class AdmissionMapper {
                 .totalReceivableFees(dto.getTotalReceivableFees())
                 .discountPercent(dto.getDiscountPercent())
                 .discountAmount(dto.getDiscountAmount())
+                .admissionFeePaid(dto.getAdmissionFeePaid())
                 .batches(dto.getBatches() != null ? dto.getBatches() : new ArrayList<>())
                 .subjects(dto.getSubjects() != null ? dto.getSubjects() : new ArrayList<>())
                 .academicYear(dto.getAcademicYear())
@@ -101,6 +102,7 @@ public class AdmissionMapper {
                 .totalReceivableFees(admission.getTotalReceivableFees())
                 .discountPercent(admission.getDiscountPercent())
                 .discountAmount(admission.getDiscountAmount())
+                .admissionFeePaid(admission.getAdmissionFeePaid())
                 .batches(listToString(normalizeList(admission.getBatches())))
                 .batchesList(normalizeList(admission.getBatches()))
                 .subjects(listToString(normalizeList(admission.getSubjects())))
@@ -149,6 +151,7 @@ public class AdmissionMapper {
         if (dto.getTotalReceivableFees() != null) admission.setTotalReceivableFees(dto.getTotalReceivableFees());
         if (dto.getDiscountPercent() != null) admission.setDiscountPercent(dto.getDiscountPercent());
         if (dto.getDiscountAmount() != null) admission.setDiscountAmount(dto.getDiscountAmount());
+        if (dto.getAdmissionFeePaid() != null) admission.setAdmissionFeePaid(dto.getAdmissionFeePaid());
         if (dto.getBatches() != null) admission.setBatches(dto.getBatches());
         if (dto.getSubjects() != null) admission.setSubjects(dto.getSubjects());
         if (dto.getAcademicYear() != null) admission.setAcademicYear(dto.getAcademicYear());

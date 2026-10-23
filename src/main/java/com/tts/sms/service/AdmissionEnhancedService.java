@@ -232,7 +232,7 @@ public class AdmissionEnhancedService {
                 .feesRefund(0.0)
                 .status("Pending")
                 .course(courseName)
-                .createdBy("SYSTEM")
+                .createdBy(getCurrentLoggedInUser())
                 .build();
     }
 
@@ -250,7 +250,7 @@ public class AdmissionEnhancedService {
                     .dueDate(currentDate)
                     .amount(amountPerInstallment)
                     .status("Pending")
-                    .createdBy("SYSTEM")
+                    .createdBy(getCurrentLoggedInUser())
                     .build();
 
             installments.add(installment);
@@ -293,5 +293,30 @@ public class AdmissionEnhancedService {
         // Simple counter-based generation
         long count = admissionRepository.count();
         return String.format("REG%04d", count + 8001);
+    }
+
+    private String getCurrentLoggedInUser() {
+        try {
+            org.springframework.security.core.Authentication authentication =
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() &&
+                    !(authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof com.tts.sms.model.User) {
+                    com.tts.sms.model.User user = (com.tts.sms.model.User) principal;
+                    if (user.getEmployee() != null && user.getEmployee().getEmployeeName() != null && !user.getEmployee().getEmployeeName().isBlank()) {
+                        return user.getEmployee().getEmployeeName();
+                    }
+                    if (user.getUsername() != null && !user.getUsername().isBlank()) {
+                        return user.getUsername();
+                    }
+                } else if (principal != null) {
+                    return principal.toString();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get current logged in user: {}", e.getMessage());
+        }
+        return "Admin";
     }
 }

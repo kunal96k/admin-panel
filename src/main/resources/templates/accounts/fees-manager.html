@@ -31,6 +31,7 @@
 <!-- Dashboard Content Fragment -->
 <main layout:fragment="content">
     <input type="hidden" id="currentUserRole" th:value="${currentUser != null ? (currentUser.employee != null && currentUser.employee.role != null ? currentUser.employee.role.roleTitle : (currentUser.role != null ? currentUser.role.roleTitle : '')) : ''}">
+    <input type="hidden" id="currentUserName" th:value="${currentUser != null ? (currentUser.employee != null && currentUser.employee.employeeName != null ? currentUser.employee.employeeName : (currentUser.username != null ? currentUser.username : 'Admin')) : 'Admin'}">
 
     <!-- Page Header -->
     <div class="container-fluid">
@@ -291,9 +292,43 @@
                                         <label class="form-label">Bank <span class="required">*</span></label>
                                         <select class="form-select" id="bankName">
                                             <option value="">-- Select Bank --</option>
-                                            <option value="SBI">SBI</option>
-                                            <option value="HDFC">HDFC</option>
-                                            <option value="ICICI">ICICI</option>
+                                            <option value="ABU DHABI COMMERCIAL BANK">ABU DHABI COMMERCIAL BANK</option>
+                                            <option value="ALLAHABAD BANK">ALLAHABAD BANK</option>
+                                            <option value="ANDHRA BANK">ANDHRA BANK</option>
+                                            <option value="AT Solutions">AT Solutions</option>
+                                            <option value="AU BANK">AU BANK</option>
+                                            <option value="AXIS BANK">AXIS BANK</option>
+                                            <option value="BANK OF AMERICA">BANK OF AMERICA</option>
+                                            <option value="BANK OF BAHRAIN AND KUWAIT">BANK OF BAHRAIN AND KUWAIT</option>
+                                            <option value="BANK OF BARODA">BANK OF BARODA</option>
+                                            <option value="BANK OF MAHARASHTRA">BANK OF MAHARASHTRA</option>
+                                            <option value="BANK OF TOKYO-MITSUBISHI UFJ LTD.">BANK OF TOKYO-MITSUBISHI UFJ LTD.</option>
+                                            <option value="BARCLAYS BANK PLC">BARCLAYS BANK PLC</option>
+                                            <option value="BNP PARIBAS">BNP PARIBAS</option>
+                                            <option value="CALYON BANK">CALYON BANK</option>
+                                            <option value="CANARA BANK">CANARA BANK</option>
+                                            <option value="CATHOLIC SYRIAN BANK LTD.">CATHOLIC SYRIAN BANK LTD.</option>
+                                            <option value="CHARU MA'AM QR">CHARU MA'AM QR</option>
+                                            <option value="CHINATRUST COMMERCIAL BANK">CHINATRUST COMMERCIAL BANK</option>
+                                            <option value="CITIBANK NA">CITIBANK NA</option>
+                                            <option value="CITIZENCREDIT CO-OPERATIVE BANK LTD">CITIZENCREDIT CO-OPERATIVE BANK LTD</option>
+                                            <option value="CITY UNION BANK LTD">CITY UNION BANK LTD</option>
+                                            <option value="CORPORATION BANK">CORPORATION BANK</option>
+                                            <option value="HIMANSHU SIR QR">HIMANSHU SIR QR</option>
+                                            <option value="NEW INDIA CO-OPERATIVE BANK LTD.">NEW INDIA CO-OPERATIVE BANK LTD.</option>
+                                            <option value="NUTAN NAGARIK SAHAKARI BANK LTD">NUTAN NAGARIK SAHAKARI BANK LTD</option>
+                                            <option value="RM Solutions">RM Solutions</option>
+                                            <option value="SD Solutions">SD Solutions</option>
+                                            <option value="SONIYA MA'AM QR">SONIYA MA'AM QR</option>
+                                            <option value="ST Solutions">ST Solutions</option>
+                                            <option value="STATE BANK OF TRAVANCORE">STATE BANK OF TRAVANCORE</option>
+                                            <option value="THE AHMEDABAD MERCANTILE CO-OPERATIVE BANK LTD">THE AHMEDABAD MERCANTILE CO-OPERATIVE BANK LTD</option>
+                                            <option value="THE RATNAKAR BANK LTD">THE RATNAKAR BANK LTD</option>
+                                            <option value="TTS Pvt. Ltd. (HDFC)">TTS Pvt. Ltd. (HDFC)</option>
+                                            <option value="TTS Pvt. Ltd. (IDFC)">TTS Pvt. Ltd. (IDFC)</option>
+                                            <option value="TTS Training LLP (1st IDFC Bank)">TTS Training LLP (1st IDFC Bank)</option>
+                                            <option value="TTS Training LLP (2nd IDFC Bank)">TTS Training LLP (2nd IDFC Bank)</option>
+                                            <option value="TTS Training LLP (YES Bank)">TTS Training LLP (YES Bank)</option>
                                         </select>
                                     </div>
                                     <div class="mb-3" id="chequeDateField" style="display:none;">
@@ -353,9 +388,15 @@
                                         <label class="form-label">Online Payment Mode <span class="required">*</span></label>
                                         <select class="form-select" id="onlinePaymentMode">
                                             <option value="">-- Select Mode --</option>
-                                            <option value="UPI">UPI</option>
-                                            <option value="NEFT">NEFT</option>
-                                            <option value="RTGS">RTGS</option>
+                                            <option value="Amazon Pay">Amazon Pay</option>
+                                            <option value="Bank Transfer">Bank Transfer</option>
+                                            <option value="Cash">Cash</option>
+                                            <option value="Cheque">Cheque</option>
+                                            <option value="CRED app">CRED app</option>
+                                            <option value="Google Pay">Google Pay</option>
+                                            <option value="Other">Other</option>
+                                            <option value="Paytm">Paytm</option>
+                                            <option value="PhonePe">PhonePe</option>
                                         </select>
                                     </div>
                                 </div>
@@ -561,9 +602,43 @@
                                         <label class="form-label">Bank <span class="required">*</span></label>
                                         <select class="form-select" id="refundBankName">
                                             <option value="">-- Select Bank --</option>
-                                            <option value="SBI">SBI</option>
-                                            <option value="HDFC">HDFC</option>
-                                            <option value="ICICI">ICICI</option>
+                                            <option value="ABU DHABI COMMERCIAL BANK">ABU DHABI COMMERCIAL BANK</option>
+                                            <option value="ALLAHABAD BANK">ALLAHABAD BANK</option>
+                                            <option value="ANDHRA BANK">ANDHRA BANK</option>
+                                            <option value="AT Solutions">AT Solutions</option>
+                                            <option value="AU BANK">AU BANK</option>
+                                            <option value="AXIS BANK">AXIS BANK</option>
+                                            <option value="BANK OF AMERICA">BANK OF AMERICA</option>
+                                            <option value="BANK OF BAHRAIN AND KUWAIT">BANK OF BAHRAIN AND KUWAIT</option>
+                                            <option value="BANK OF BARODA">BANK OF BARODA</option>
+                                            <option value="BANK OF MAHARASHTRA">BANK OF MAHARASHTRA</option>
+                                            <option value="BANK OF TOKYO-MITSUBISHI UFJ LTD.">BANK OF TOKYO-MITSUBISHI UFJ LTD.</option>
+                                            <option value="BARCLAYS BANK PLC">BARCLAYS BANK PLC</option>
+                                            <option value="BNP PARIBAS">BNP PARIBAS</option>
+                                            <option value="CALYON BANK">CALYON BANK</option>
+                                            <option value="CANARA BANK">CANARA BANK</option>
+                                            <option value="CATHOLIC SYRIAN BANK LTD.">CATHOLIC SYRIAN BANK LTD.</option>
+                                            <option value="CHARU MA'AM QR">CHARU MA'AM QR</option>
+                                            <option value="CHINATRUST COMMERCIAL BANK">CHINATRUST COMMERCIAL BANK</option>
+                                            <option value="CITIBANK NA">CITIBANK NA</option>
+                                            <option value="CITIZENCREDIT CO-OPERATIVE BANK LTD">CITIZENCREDIT CO-OPERATIVE BANK LTD</option>
+                                            <option value="CITY UNION BANK LTD">CITY UNION BANK LTD</option>
+                                            <option value="CORPORATION BANK">CORPORATION BANK</option>
+                                            <option value="HIMANSHU SIR QR">HIMANSHU SIR QR</option>
+                                            <option value="NEW INDIA CO-OPERATIVE BANK LTD.">NEW INDIA CO-OPERATIVE BANK LTD.</option>
+                                            <option value="NUTAN NAGARIK SAHAKARI BANK LTD">NUTAN NAGARIK SAHAKARI BANK LTD</option>
+                                            <option value="RM Solutions">RM Solutions</option>
+                                            <option value="SD Solutions">SD Solutions</option>
+                                            <option value="SONIYA MA'AM QR">SONIYA MA'AM QR</option>
+                                            <option value="ST Solutions">ST Solutions</option>
+                                            <option value="STATE BANK OF TRAVANCORE">STATE BANK OF TRAVANCORE</option>
+                                            <option value="THE AHMEDABAD MERCANTILE CO-OPERATIVE BANK LTD">THE AHMEDABAD MERCANTILE CO-OPERATIVE BANK LTD</option>
+                                            <option value="THE RATNAKAR BANK LTD">THE RATNAKAR BANK LTD</option>
+                                            <option value="TTS Pvt. Ltd. (HDFC)">TTS Pvt. Ltd. (HDFC)</option>
+                                            <option value="TTS Pvt. Ltd. (IDFC)">TTS Pvt. Ltd. (IDFC)</option>
+                                            <option value="TTS Training LLP (1st IDFC Bank)">TTS Training LLP (1st IDFC Bank)</option>
+                                            <option value="TTS Training LLP (2nd IDFC Bank)">TTS Training LLP (2nd IDFC Bank)</option>
+                                            <option value="TTS Training LLP (YES Bank)">TTS Training LLP (YES Bank)</option>
                                         </select>
                                     </div>
                                     <div class="mb-3" id="refundChequeDateField" style="display:none;">
@@ -607,9 +682,15 @@
                                         <label class="form-label">Online Payment Mode <span class="required">*</span></label>
                                         <select class="form-select" id="refundOnlinePaymentMode">
                                             <option value="">-- Select Mode --</option>
-                                            <option value="UPI">UPI</option>
-                                            <option value="NEFT">NEFT</option>
-                                            <option value="RTGS">RTGS</option>
+                                            <option value="Amazon Pay">Amazon Pay</option>
+                                            <option value="Bank Transfer">Bank Transfer</option>
+                                            <option value="Cash">Cash</option>
+                                            <option value="Cheque">Cheque</option>
+                                            <option value="CRED app">CRED app</option>
+                                            <option value="Google Pay">Google Pay</option>
+                                            <option value="Other">Other</option>
+                                            <option value="Paytm">Paytm</option>
+                                            <option value="PhonePe">PhonePe</option>
                                         </select>
                                     </div>
                                     <div class="mb-3">
@@ -678,6 +759,28 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
+                        <!-- Admission Fee Notice Banner -->
+                        <div id="feeInstAdmissionNotice" class="alert alert-info py-2 px-3 mb-3 rounded-3 border-0 shadow-sm" style="display: none; background: linear-gradient(135deg, #e0f2fe 0%, #ede9fe 100%); border-left: 4px solid #6366f1 !important;">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-patch-check-fill text-primary fs-5"></i>
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 0.9rem;">
+                                            Admission Fee: <span id="feeInstAdmFeeAmount" class="text-primary fw-bold">₹0.00</span>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle ms-2">Paid Upfront</span>
+                                        </div>
+                                        <div class="small text-muted" id="feeInstAdmFeeDetails">
+                                            REC0920 • Online • 15/10/2026
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="badge bg-white text-dark border px-3 py-2 text-end shadow-sm">
+                                    <small class="text-muted d-block" style="font-size: 0.75rem;">Excluded from Installments</small>
+                                    <span class="fw-semibold text-primary" style="font-size: 0.85rem;">Installments Target: <span id="feeInstBaseAfterAdmFee" class="fw-bold">₹0.00</span></span>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <label class="form-label">Total Amount</label>

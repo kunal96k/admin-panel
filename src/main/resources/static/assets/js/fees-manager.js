@@ -92,9 +92,15 @@ function showError(message) {
 // Load banks from API
 async function loadBanks() {
     try {
-        const response = await fetch('/bank/list?page=0&size=100', {
+        let response = await fetch('/bank/active', {
             headers: getCsrfHeaders()
         });
+
+        if (!response.ok) {
+            response = await fetch('/bank/list?page=0&size=1000', {
+                headers: getCsrfHeaders()
+            });
+        }
 
         if (response.ok) {
             const result = await response.json();
@@ -114,14 +120,6 @@ async function loadBanks() {
         }
     } catch (error) {
         console.error('Error loading banks:', error);
-        banks = [];
-        // Set default banks if API fails
-        banks = [
-            { id: 1, bankName: 'SBI', isActive: true },
-            { id: 2, bankName: 'HDFC', isActive: true },
-            { id: 3, bankName: 'ICICI', isActive: true },
-            { id: 4, bankName: 'Axis Bank', isActive: true }
-        ];
         populateBankDropdowns();
     }
 }
@@ -141,14 +139,6 @@ async function loadPaymentModes() {
         }
     } catch (error) {
         console.error('Error loading payment modes:', error);
-        paymentModes = [];
-        // Set default payment modes if API fails
-        paymentModes = [
-            { id: 1, paymentModeTitle: 'UPI', isActive: true },
-            { id: 2, paymentModeTitle: 'NEFT', isActive: true },
-            { id: 3, paymentModeTitle: 'RTGS', isActive: true },
-            { id: 4, paymentModeTitle: 'IMPS', isActive: true }
-        ];
         populatePaymentModeDropdowns();
     }
 }
@@ -160,13 +150,36 @@ function populateBankDropdowns() {
     bankSelects.forEach(selectId => {
         const select = document.getElementById(selectId);
         if (select) {
+            const currentVal = select.value;
+            const bankSet = new Set();
+
+            // Existing options from HTML
+            Array.from(select.options).forEach(opt => {
+                if (opt.value && opt.value.trim() !== '') {
+                    bankSet.add(opt.value.trim());
+                }
+            });
+
+            // Master data from API
+            if (Array.isArray(banks)) {
+                banks.forEach(b => {
+                    const name = typeof b === 'string' ? b : (b.bankName || b.name);
+                    if (name && name.trim() !== '') bankSet.add(name.trim());
+                });
+            }
+
+            // Sort ASC (A, B, C, D...)
+            const sortedBanks = Array.from(bankSet).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
             select.innerHTML = '<option value="">-- Select Bank --</option>';
-            banks.forEach(bank => {
+            sortedBanks.forEach(b => {
                 const option = document.createElement('option');
-                option.value = bank.bankName;
-                option.textContent = bank.bankName;
+                option.value = b;
+                option.textContent = b;
                 select.appendChild(option);
             });
+
+            if (currentVal) select.value = currentVal;
         }
     });
 }
@@ -179,15 +192,34 @@ function populatePaymentModeDropdowns() {
         const select = document.getElementById(selectId);
         if (select) {
             const currentValue = select.value;
-            select.innerHTML = '<option value="">-- Select Mode --</option>';
+            const modeSet = new Set();
 
-            paymentModes.forEach(mode => {
-                if (mode.isActive !== false) {
-                    const option = document.createElement('option');
-                    option.value = mode.paymentModeTitle;
-                    option.textContent = mode.paymentModeTitle;
-                    select.appendChild(option);
+            // Existing options from HTML
+            Array.from(select.options).forEach(opt => {
+                if (opt.value && opt.value.trim() !== '') {
+                    modeSet.add(opt.value.trim());
                 }
+            });
+
+            // Master data from API
+            if (Array.isArray(paymentModes)) {
+                paymentModes.forEach(m => {
+                    if (m && m.isActive !== false) {
+                        const title = typeof m === 'string' ? m : (m.paymentModeTitle || m.name || m.title);
+                        if (title && title.trim() !== '') modeSet.add(title.trim());
+                    }
+                });
+            }
+
+            // Sort ASC (A, B, C, D...)
+            const sortedModes = Array.from(modeSet).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+            select.innerHTML = '<option value="">-- Select Mode --</option>';
+            sortedModes.forEach(m => {
+                const option = document.createElement('option');
+                option.value = m;
+                option.textContent = m;
+                select.appendChild(option);
             });
 
             // Restore previous selection if it exists
@@ -996,6 +1028,51 @@ async function changeFeesStatus(regNo) {
     }, 300);
 }
 
+// ── Current Logged-in User Helper ──
+function getCurrentUser() {
+    const fromInput = document.getElementById('currentUserName')?.value;
+    if (fromInput && fromInput.trim() && fromInput.trim() !== 'null') return fromInput.trim();
+    const fromNav = document.querySelector('.user-name')?.textContent?.trim();
+    if (fromNav && fromNav !== 'null') return fromNav;
+    return 'Admin';
+}
+
+// ── Format Display Date-Time Helper ──
+function formatDisplayDateTime(dateTimeValue) {
+    if (!dateTimeValue) return '-';
+    try {
+        let date;
+        if (Array.isArray(dateTimeValue)) {
+            const [year, month, day, hours = 0, minutes = 0, seconds = 0] = dateTimeValue;
+            date = new Date(year, month - 1, day, hours, minutes, seconds);
+        } else {
+            const str = String(dateTimeValue).trim();
+            if (str.includes(',')) {
+                const parts = str.split(',').map(Number);
+                if (parts.length >= 3 && parts.every(p => !isNaN(p))) {
+                    const [year, month, day, hours = 0, minutes = 0, seconds = 0] = parts;
+                    date = new Date(year, month - 1, day, hours, minutes, seconds);
+                }
+            }
+            if (!date || isNaN(date.getTime())) {
+                date = new Date(str);
+            }
+        }
+
+        if (isNaN(date.getTime())) return String(dateTimeValue);
+
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    } catch (e) {
+        return String(dateTimeValue);
+    }
+}
+
 async function openFeeInstallments(regNo) {
     if (!regNo) {
         showError('Registration number is missing');
@@ -1013,6 +1090,28 @@ async function openFeeInstallments(regNo) {
     try {
         showLoading('Loading installments...');
 
+        // Fetch admission details to retrieve admissionFeePaid, admissionReceiptNumber, etc.
+        let admissionData = null;
+        try {
+            const admRes = await fetch(`/api/admissions/by-regno/${regNo}`, {
+                credentials: 'include',
+                headers: getCsrfHeaders()
+            });
+            if (admRes.ok) {
+                admissionData = await admRes.json();
+            }
+        } catch (e) {
+            console.warn('Could not fetch admission for regNo:', regNo, e);
+        }
+
+        const totalReceivable = admissionData
+            ? (parseFloat(admissionData.totalReceivableFees) || student.totalFees || 0)
+            : (student.totalFees || 0);
+        const admFeePaid = admissionData ? (parseFloat(admissionData.admissionFeePaid) || 0) : 0;
+        const targetInstAmount = (admissionData && admissionData.totalInstallmentAmount != null && admissionData.totalInstallmentAmount > 0)
+            ? parseFloat(admissionData.totalInstallmentAmount)
+            : Math.max(0, totalReceivable - admFeePaid);
+
         //  STEP 1: Fetch installment config from backend
         const configResponse = await fetch(`${API_BASE}/installment-config/${regNo}`, {
             headers: getCsrfHeaders()
@@ -1022,20 +1121,18 @@ async function openFeeInstallments(regNo) {
             startDate: null,
             numberOfInstallments: null,
             daysBetween: null,
-            totalAmount: student.totalFees || 0
+            totalAmount: targetInstAmount
         };
 
         if (configResponse.ok) {
             const config = await configResponse.json();
-
             if (config.hasExisting) {
                 installmentConfig = {
                     startDate: config.startDate,
                     numberOfInstallments: config.numberOfInstallments,
                     daysBetween: config.daysBetween,
-                    totalAmount: config.totalAmount || student.totalFees
+                    totalAmount: config.totalAmount || targetInstAmount
                 };
-
             }
         }
 
@@ -1050,9 +1147,36 @@ async function openFeeInstallments(regNo) {
         Swal.close();
 
         // Populate form
-        document.getElementById('feeInstStudentName').textContent = student.studentName;
-        document.getElementById('feeInstTotalAmount').value = installmentConfig.totalAmount;
-        document.getElementById('feeInstTotalInstAmount').value = installmentConfig.totalAmount;
+        const nameEl = document.getElementById('feeInstStudentName');
+        nameEl.textContent = student.studentName;
+        nameEl.dataset.regNo = regNo;
+        nameEl.dataset.admissionFeePaid = admFeePaid;
+        nameEl.dataset.admissionCreatedBy = admissionData?.createdBy || '';
+        nameEl.dataset.admissionCreatedAt = admissionData?.createdAt || '';
+
+        document.getElementById('feeInstTotalAmount').value = totalReceivable.toFixed(2);
+        document.getElementById('feeInstTotalInstAmount').value = targetInstAmount.toFixed(2);
+
+        // Render Admission Fee Notice Banner
+        const admNoticeEl = document.getElementById('feeInstAdmissionNotice');
+        if (admNoticeEl) {
+            if (admFeePaid > 0) {
+                admNoticeEl.style.display = 'block';
+                const admAmountEl = document.getElementById('feeInstAdmFeeAmount');
+                const admDetailsEl = document.getElementById('feeInstAdmFeeDetails');
+                const admBaseEl = document.getElementById('feeInstBaseAfterAdmFee');
+                if (admAmountEl) admAmountEl.textContent = `₹${admFeePaid.toFixed(2)}`;
+                if (admDetailsEl) {
+                    const recNo = admissionData?.admissionReceiptNumber || 'Paid';
+                    const recMode = admissionData?.admissionPaymentMode || 'Direct';
+                    const recDate = admissionData?.admissionReceiptDate ? formatDate(admissionData.admissionReceiptDate) : '';
+                    admDetailsEl.textContent = `${recNo}${recMode ? ' • ' + recMode : ''}${recDate ? ' • ' + recDate : ''}`;
+                }
+                if (admBaseEl) admBaseEl.textContent = `₹${targetInstAmount.toFixed(2)}`;
+            } else {
+                admNoticeEl.style.display = 'none';
+            }
+        }
 
         //  Pre-fill config fields
         if (installmentConfig.startDate) {
@@ -1093,16 +1217,23 @@ async function openFeeInstallments(regNo) {
                     ? '<span class="badge bg-danger">Refund</span>'
                     : `<span class="badge bg-${inst.status === 'Paid' ? 'success' : (inst.status === 'Partial' ? 'info' : 'warning')}">${inst.status}</span>`;
 
-                const createdTimeStr = inst.createdAt ? formatDateTime(inst.createdAt) : 'N/A';
-                const updatedTimeStr = inst.updatedAt ? formatDateTime(inst.updatedAt) : 'N/A';
+                const effectiveCreatedBy = (inst.createdBy && inst.createdBy !== 'SYSTEM' && inst.createdBy !== 'null')
+                    ? inst.createdBy
+                    : (admissionData?.createdBy || getCurrentUser());
+                const createdTimeStr = inst.createdAt
+                    ? formatDisplayDateTime(inst.createdAt)
+                    : (admissionData?.createdAt ? formatDisplayDateTime(admissionData.createdAt) : formatDisplayDateTime(new Date()));
+                const effectiveUpdatedBy = (inst.updatedBy && inst.updatedBy !== '-' && inst.updatedBy !== 'null') ? inst.updatedBy : '-';
+                const updatedTimeStr = (inst.updatedAt && inst.updatedAt !== 'N/A' && inst.updatedAt !== 'null') ? formatDisplayDateTime(inst.updatedAt) : '-';
+
                 const effectiveDate = inst.paidDate || inst.dueDate || '';
                 const formattedDate = formatDate(effectiveDate);
 
                 return `
                 <tr data-installment-id="${inst.id}" 
-                    data-created-by="${inst.createdBy || 'SYSTEM'}" 
+                    data-created-by="${effectiveCreatedBy}" 
                     data-created-time="${createdTimeStr}"
-                    data-updated-by="${inst.updatedBy || '-'}" 
+                    data-updated-by="${effectiveUpdatedBy}" 
                     data-updated-time="${updatedTimeStr}"
                     style="cursor: pointer;">
                     <td data-label="DUE DATE">${formattedDate}</td>
@@ -1135,10 +1266,10 @@ async function openFeeInstallments(regNo) {
                         rows.forEach(r => r.classList.remove('table-active'));
                         this.classList.add('table-active');
                         
-                        document.getElementById('feeInstCreatedBy').textContent = this.dataset.createdBy;
-                        document.getElementById('feeInstCreatedTime').textContent = this.dataset.createdTime;
-                        document.getElementById('feeInstUpdatedBy').textContent = this.dataset.updatedBy;
-                        document.getElementById('feeInstUpdatedTime').textContent = this.dataset.updatedTime;
+                        document.getElementById('feeInstCreatedBy').textContent = this.dataset.createdBy || getCurrentUser();
+                        document.getElementById('feeInstCreatedTime').textContent = this.dataset.createdTime || formatDisplayDateTime(new Date());
+                        document.getElementById('feeInstUpdatedBy').textContent = this.dataset.updatedBy || '-';
+                        document.getElementById('feeInstUpdatedTime').textContent = this.dataset.updatedTime || '-';
                     });
                 });
 
@@ -1146,10 +1277,10 @@ async function openFeeInstallments(regNo) {
                 if (rows.length > 0) {
                     const firstRow = rows[0];
                     firstRow.classList.add('table-active');
-                    document.getElementById('feeInstCreatedBy').textContent = firstRow.dataset.createdBy;
-                    document.getElementById('feeInstCreatedTime').textContent = firstRow.dataset.createdTime;
-                    document.getElementById('feeInstUpdatedBy').textContent = firstRow.dataset.updatedBy;
-                    document.getElementById('feeInstUpdatedTime').textContent = firstRow.dataset.updatedTime;
+                    document.getElementById('feeInstCreatedBy').textContent = firstRow.dataset.createdBy || getCurrentUser();
+                    document.getElementById('feeInstCreatedTime').textContent = firstRow.dataset.createdTime || formatDisplayDateTime(new Date());
+                    document.getElementById('feeInstUpdatedBy').textContent = firstRow.dataset.updatedBy || '-';
+                    document.getElementById('feeInstUpdatedTime').textContent = firstRow.dataset.updatedTime || '-';
                 }
             }
         }
@@ -1510,13 +1641,17 @@ async function viewReceipts(regNo) {
             tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No receipts found</td></tr>';
         } else {
             tbody.innerHTML = receipts.map(receipt => {
-                //  Check data source to determine if it's old imported data
+                //  Check data source to determine if it's old imported data or admission fee
                 const isOldData = receipt.dataSource === 'IMPORTED_OLD_DATA' ||
                     receipt.receiptType === 'Old Imported';
+                const isAdmissionFee = receipt.receiptType === 'Admission Fee' || 
+                    (receipt.notes && receipt.notes.toLowerCase().includes('admission fees paid'));
 
-                const receiptTypeBadge = isOldData
-                    ? '<span class="badge bg-secondary">Old Import</span>'
-                    : '<span class="badge bg-success">Regular</span>';
+                const receiptTypeBadge = isAdmissionFee
+                    ? '<span class="badge border" style="background-color: #f3e8ff; color: #7e22ce; border-color: #d8b4fe !important;"><i class="bi bi-star-fill me-1" style="font-size: 0.7rem;"></i>Admission Fee</span>'
+                    : isOldData
+                        ? '<span class="badge bg-secondary">Old Import</span>'
+                        : '<span class="badge bg-success">Regular</span>';
 
                 return `
                 <tr>
@@ -1681,6 +1816,9 @@ function generateReceiptHTML(data) {
         return date.toLocaleDateString('en-GB');
     };
 
+    const isAdmFee = (data.receiptType && data.receiptType.toLowerCase().includes('admission')) ||
+                     (data.installmentId == null && data.notes && data.notes.toLowerCase().includes('admission fee'));
+
     return `
         <div class="receipt-container" id="receiptContent">
             <div class="receipt-header">
@@ -1694,7 +1832,7 @@ function generateReceiptHTML(data) {
                 </div>
 
                 <div style="border-top: 3px solid #667eea; border-bottom: 3px solid #667eea; padding: 10px 0; margin: 20px 0;">
-                    <h4 class="text-center mb-0" style="color: #1e293b; font-weight: 600;">FEE RECEIPT</h4>
+                    <h4 class="text-center mb-0" style="color: #1e293b; font-weight: 600;">${isAdmFee ? 'ADMISSION FEE RECEIPT' : 'FEE RECEIPT'}</h4>
                 </div>
             </div>
 
@@ -1727,6 +1865,12 @@ function generateReceiptHTML(data) {
                     <h6 style="color: #667eea; margin-bottom: 15px; font-weight: 600;">Payment Details</h6>
                     <table class="table table-sm mb-0">
                         <tbody>
+                            ${isAdmFee ? `
+                            <tr>
+                                <td><strong>Receipt Type:</strong></td>
+                                <td class="text-end"><span class="badge border" style="background-color: #f3e8ff; color: #7e22ce; border-color: #d8b4fe !important; font-size: 0.85rem;"><i class="bi bi-star-fill me-1" style="font-size: 0.75rem;"></i>Admission Fee</span></td>
+                            </tr>
+                            ` : ''}
                             <tr>
                                 <td><strong>Amount Paid:</strong></td>
                                 <td class="text-end"><strong style="font-size: 1.1rem; color: #10b981;">₹${(data.amountReceived || 0).toLocaleString()}</strong></td>
@@ -2102,27 +2246,46 @@ async function saveReceipt() {
 }
 
 function generateFeeInstallments() {
-    const totalAmount = parseFloat(document.getElementById('feeInstTotalAmount').value);
+    const totalReceivable = parseFloat(document.getElementById('feeInstTotalAmount').value) || 0;
+    const admFeePaid = parseFloat(document.getElementById('feeInstStudentName')?.dataset?.admissionFeePaid) || 0;
+    const targetAmount = (parseFloat(document.getElementById('feeInstTotalInstAmount')?.value) > 0)
+        ? parseFloat(document.getElementById('feeInstTotalInstAmount').value)
+        : Math.max(0, totalReceivable - admFeePaid);
+
     const noOfInstallments = parseInt(document.getElementById('feeInstNoOfInstallments').value);
-    const daysBetween = parseInt(document.getElementById('feeInstDays').value);
+    const daysBetween = parseInt(document.getElementById('feeInstDays').value) || 30;
     const startDate = document.getElementById('feeInstStartDate').value;
 
-    if (!totalAmount || !noOfInstallments || !startDate) {
+    if (!targetAmount && totalReceivable <= 0) {
+        showError('Please fill Total Amount');
+        return;
+    }
+
+    if (!noOfInstallments || !startDate) {
         showError('Please fill all required fields');
         return;
     }
 
-    const amountPerInstallment = totalAmount / noOfInstallments;
+    const amountPerInstallment = targetAmount / noOfInstallments;
     const tbody = document.getElementById('feeInstallmentsBody');
     let currentDate = new Date(startDate);
 
     tbody.innerHTML = '';
+
+    const creator = getCurrentUser();
+    const nowFormatted = formatDisplayDateTime(new Date());
 
     for (let i = 1; i <= noOfInstallments; i++) {
         const dueDate = new Date(currentDate);
         const formattedDate = dueDate.toISOString().split('T')[0];
 
         const row = document.createElement('tr');
+        row.dataset.createdBy = creator;
+        row.dataset.createdTime = nowFormatted;
+        row.dataset.updatedBy = '-';
+        row.dataset.updatedTime = '-';
+        row.style.cursor = 'pointer';
+
         row.innerHTML = `
             <td>
                 <input type="date" class="form-control form-control-sm"
@@ -2155,7 +2318,7 @@ function generateFeeInstallments() {
         currentDate.setDate(currentDate.getDate() + daysBetween);
     }
 
-    document.getElementById('feeInstTotalInstAmount').value = totalAmount.toFixed(2);
+    document.getElementById('feeInstTotalInstAmount').value = targetAmount.toFixed(2);
     showSuccess(`Generated ${noOfInstallments} installments`);
 }
 
@@ -2190,6 +2353,75 @@ async function saveFeeInstallments() {
 
     if (!hasInputs) {
         showError('No new installments found. Use the "Generate" button first if you want to replace current installments.');
+        return;
+    }
+
+    // Amount-match validation (deducting Admission Fee paid upfront)
+    const totalReceivable = parseFloat(document.getElementById('feeInstTotalAmount')?.value) || 0;
+    const admissionFeePaid = parseFloat(document.getElementById('feeInstStudentName')?.dataset?.admissionFeePaid) || 0;
+    const expectedTotalInst = parseFloat(document.getElementById('feeInstTotalInstAmount')?.value)
+        || Math.max(0, totalReceivable - admissionFeePaid)
+        || totalReceivable;
+
+    const feeInstSum = installments.reduce((s, i) => s + i.amount, 0);
+    const feeInstDiff = Math.round((feeInstSum - expectedTotalInst) * 100) / 100;
+
+    if (feeInstDiff > 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Amount Mismatch',
+            html: `
+                <div class="text-start">
+                    <p class="mb-2">The total of all installment amounts <strong class="text-danger">cannot be greater than</strong> the Target Installment Amount.</p>
+                    <div class="row g-2" style="font-size:0.88rem;">
+                        <div class="col-6 text-muted">Total Receivable:</div>
+                        <div class="col-6 fw-bold text-dark">&#8377;${totalReceivable.toFixed(2)}</div>
+                        ${admissionFeePaid > 0 ? `
+                        <div class="col-6 text-muted">Admission Fee (Deducted):</div>
+                        <div class="col-6 fw-bold text-success">- &#8377;${admissionFeePaid.toFixed(2)}</div>
+                        <div class="col-6 text-muted">Installments Target:</div>
+                        <div class="col-6 fw-bold text-primary">&#8377;${expectedTotalInst.toFixed(2)}</div>
+                        ` : ''}
+                        <div class="col-6 text-muted">Installments Sum:</div>
+                        <div class="col-6 fw-bold text-danger">&#8377;${feeInstSum.toFixed(2)}</div>
+                        <div class="col-6 text-muted">Excess:</div>
+                        <div class="col-6 fw-bold text-danger">+ &#8377;${feeInstDiff.toFixed(2)}</div>
+                    </div>
+                    <p class="mt-2 mb-0 text-muted" style="font-size:0.82rem;">Please reduce the installment amounts by &#8377;${feeInstDiff.toFixed(2)} before saving.</p>
+                </div>`,
+            confirmButtonColor: '#dc2626',
+            confirmButtonText: 'Fix Amounts'
+        });
+        return;
+    }
+
+    if (feeInstDiff < 0) {
+        const short = Math.abs(feeInstDiff);
+        Swal.fire({
+            icon: 'warning',
+            title: 'Amount Mismatch',
+            html: `
+                <div class="text-start">
+                    <p class="mb-2">The total of all installment amounts <strong class="text-warning">cannot be less than</strong> the Target Installment Amount.</p>
+                    <div class="row g-2" style="font-size:0.88rem;">
+                        <div class="col-6 text-muted">Total Receivable:</div>
+                        <div class="col-6 fw-bold text-dark">&#8377;${totalReceivable.toFixed(2)}</div>
+                        ${admissionFeePaid > 0 ? `
+                        <div class="col-6 text-muted">Admission Fee (Deducted):</div>
+                        <div class="col-6 fw-bold text-success">- &#8377;${admissionFeePaid.toFixed(2)}</div>
+                        <div class="col-6 text-muted">Installments Target:</div>
+                        <div class="col-6 fw-bold text-primary">&#8377;${expectedTotalInst.toFixed(2)}</div>
+                        ` : ''}
+                        <div class="col-6 text-muted">Installments Sum:</div>
+                        <div class="col-6 fw-bold text-warning">&#8377;${feeInstSum.toFixed(2)}</div>
+                        <div class="col-6 text-muted">Shortfall:</div>
+                        <div class="col-6 fw-bold text-warning">- &#8377;${short.toFixed(2)}</div>
+                    </div>
+                    <p class="mt-2 mb-0 text-muted" style="font-size:0.82rem;">Please add &#8377;${short.toFixed(2)} more across the installment rows before saving.</p>
+                </div>`,
+            confirmButtonColor: '#d97706',
+            confirmButtonText: 'Fix Amounts'
+        });
         return;
     }
 

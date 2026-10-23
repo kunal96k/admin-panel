@@ -846,7 +846,8 @@
                                         <ul class="mt-2 mb-0">
                                             <li><strong>Before cutoff:</strong> OLD_STUDENT</li>
                                             <li><strong>After cutoff:</strong> PURSUING</li>
-                                            <li><strong>REG* numbers:</strong> NEW_STUDENT</li>
+                                            <li><strong>REG* numbers (within 7 days of admission):</strong> NEW_STUDENT</li>
+                                            <li><strong>REG* numbers (older than 7 days):</strong> PURSUING (auto-promoted)</li>
                                             <li><strong>All certificates issued:</strong> COMPLETED</li>
                                             <li><strong>Has refund:</strong> CANCELLED</li>
                                         </ul>
@@ -875,7 +876,7 @@
                                     <button type="button" class="btn btn-secondary"
                                         data-bs-dismiss="modal">Cancel</button>
                                     <button type="button" class="btn btn-primary" id="btnSaveCutoffDate">
-                                        <i class="bi bi-check-circle me-1"></i> Save & Recategorize
+                                        <i class="bi bi-check-circle me-1"></i> Save &amp; Recategorize
                                     </button>
                                 </div>
                             </div>
@@ -925,7 +926,7 @@
                 <div class="footer-bottom">
                     <p>
                         &copy; <span th:text="${#dates.year(#dates.createNow())}">2026</span>
-                        <a href="https://tts.net.in/" target="_blank">TechnoKraft Training &amp; Solution PVT LTD</a> <span class="ms-1 fw-bold">(v8.3)</span>.
+                        <a href="https://tts.net.in/" target="_blank">TechnoKraft Training &amp; Solution PVT LTD</a> <span class="ms-1 fw-bold">(v9.1)</span>.
                         All rights reserved. | Powered by <a href="https://www.technokraftservices.com/" target="_blank"
                             style="text-decoration: none; color: inherit; font-weight: 600;">TechnoKraft Services
                             LLP</a>.

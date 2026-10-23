@@ -24,4 +24,6 @@ public class FeeInstallmentCreateDTO {
 
     @NotNull
     private String status;
+
+    private String notes;
 }

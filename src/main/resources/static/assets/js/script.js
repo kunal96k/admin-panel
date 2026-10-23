@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Note: Direct URL-based access control is now handled by the
     // blur overlay in layout.html via currentMenuId + userPermissions check.
-    // No redirect needed here — the page blurs itself automatically.
+    // No redirect needed here â€” the page blurs itself automatically.
 
     // ========================================
     // SIDEBAR COLLAPSE (DESKTOP ONLY)
@@ -431,7 +431,7 @@ document.addEventListener('DOMContentLoaded', function () {
             data: {
                 labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
                 datasets: [{
-                    label: 'Revenue (₹ in Lakhs)',
+                    label: 'Revenue (â‚¹ in Lakhs)',
                     data: [3.2, 3.8, 4.1, 3.9, 4.5, 4.8, 5.2, 4.9, 5.1, 5.5, 5.8, 6.2],
                     borderColor: 'rgb(59, 130, 246)',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -462,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         beginAtZero: true,
                         ticks: {
                             callback: function (value) {
-                                return '₹' + value + 'L';
+                                return 'â‚¹' + value + 'L';
                             }
                         }
                     }
@@ -2023,7 +2023,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     <ul class="mt-2 text-muted small">
                         <li>Before cutoff: <strong>OLD_STUDENT</strong></li>
                         <li>After cutoff: <strong>PURSUING</strong></li>
-                        <li>REG* numbers: <strong>NEW_STUDENT</strong></li>
+                        <li>REG* (within 7 days of admission): <strong>NEW_STUDENT</strong></li>
+                        <li>REG* (older than 7 days): <strong>PURSUING</strong></li>
                         <li>All certificates issued: <strong>COMPLETED</strong></li>
                         <li>Has refund: <strong>CANCELLED</strong></li>
                     </ul>
@@ -2204,7 +2205,7 @@ document.addEventListener('click', function (e) {
 
     const menuItem = e.target.closest('.action-menu-item');
     if (menuItem) {
-        // Close immediately — do not wait, so modal can open cleanly on top
+        // Close immediately â€” do not wait, so modal can open cleanly on top
         closeAllActionMenus();
         return;
     }
@@ -2238,7 +2239,7 @@ document.addEventListener('hidden.bs.modal', function () {
     }, 150);
 });
 
-// Also handle SweetAlert2 — close action menu when Swal fires
+// Also handle SweetAlert2 â€” close action menu when Swal fires
 (function patchSwal() {
     if (typeof Swal !== 'undefined' && Swal.mixin) {
         const origFire = Swal.fire.bind(Swal);
@@ -2247,7 +2248,7 @@ document.addEventListener('hidden.bs.modal', function () {
             return origFire.apply(this, arguments);
         };
     } else {
-        // Swal not loaded yet — retry after DOM ready
+        // Swal not loaded yet â€” retry after DOM ready
         document.addEventListener('DOMContentLoaded', patchSwal);
     }
 })();

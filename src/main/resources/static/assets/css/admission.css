@@ -1398,6 +1398,26 @@ body {
     }
 }
 
+/* Base Table Empty State */
+#admissionsTable tbody tr.empty-state-row td.empty-state-cell,
+#admissionsTable tbody td.empty-state-cell {
+    text-align: center;
+    vertical-align: middle;
+}
+
+#admissionsTable tbody td.empty-state-cell .empty-state-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+#admissionsTable tbody td.empty-state-cell .btn {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+}
+
 /* ==========================================================================
    MOBILE & TABLET CARDS LAYOUT STRUCTURE (< 992px)
    Port for Mobile Devices & MD Devices - ZERO changes to lg screens (>= 992px)
@@ -1571,15 +1591,83 @@ body {
     }
 
     /* Empty state table rows (colspan) */
-    .table-responsive .table:not(.no-mobile-cards) tbody tr td[colspan] {
+    .table-responsive .table:not(.no-mobile-cards) tbody tr.empty-state-row,
+    #admissionsTable tbody tr.empty-state-row,
+    #admissionsTable tbody tr:has(td[colspan]) {
         display: block !important;
+        width: 100% !important;
+        background: #f8fafc !important;
+        border: 1.5px dashed #cbd5e1 !important;
+        border-radius: 16px !important;
+        padding: 2rem 1.5rem !important;
+        margin: 1rem 0 !important;
+        box-shadow: none !important;
         text-align: center !important;
-        border-bottom: none !important;
-        padding: 2rem 1rem !important;
     }
 
-    .table-responsive .table:not(.no-mobile-cards) tbody tr td[colspan]::before {
+    .table-responsive .table:not(.no-mobile-cards) tbody tr td[colspan],
+    #admissionsTable tbody td[colspan],
+    #admissionsTable tbody td.empty-state-cell,
+    #admissionsTable tbody td:nth-child(1)[colspan],
+    #admissionsTable tbody tr.empty-state-row td,
+    #admissionsTable tbody tr.empty-state-row td:nth-child(1) {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border: none !important;
+        border-bottom: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        white-space: normal !important;
+        word-break: normal !important;
+        word-wrap: normal !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody tr td[colspan]::before,
+    #admissionsTable tbody td[colspan]::before,
+    #admissionsTable tbody td.empty-state-cell::before,
+    #admissionsTable tbody td:nth-child(1)[colspan]::before,
+    #admissionsTable tbody tr.empty-state-row td::before {
         content: none !important;
+        display: none !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody tr td[colspan] .empty-state-content,
+    #admissionsTable tbody td.empty-state-cell .empty-state-content,
+    #admissionsTable tbody td[colspan] .empty-state-content,
+    #admissionsTable tbody tr.empty-state-row td .empty-state-content {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        text-align: center !important;
+        margin: 0 auto !important;
+    }
+
+    .table-responsive .table:not(.no-mobile-cards) tbody tr td[colspan] .btn,
+    #admissionsTable tbody td[colspan] .btn,
+    #admissionsTable tbody td.empty-state-cell .btn,
+    #admissionsTable tbody td:nth-child(1)[colspan] .btn,
+    #admissionsTable tbody tr.empty-state-row td .btn {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        word-wrap: normal !important;
+        width: auto !important;
+        min-width: 180px !important;
+        max-width: 100% !important;
+        margin: 0.75rem auto 0 auto !important;
+        font-size: 0.875rem !important;
+        padding: 0.5rem 1.25rem !important;
+        border-radius: 8px !important;
+        flex-shrink: 0 !important;
     }
 
     /* --- Action Menu Dropdown Fix --- */
@@ -1875,5 +1963,29 @@ body {
     #admissionTabs.nav-pills .nav-item {
         flex: 1 1 calc(50% - 6px) !important;
     }
+}
+
+/* ==========================================================================
+   NESTED & STACKED MODAL CONTROLS (Collect Admission Fee Modal)
+   Ensures the receipt modal and SweetAlert popups are always rendered ABOVE admissionModal
+   ========================================================================== */
+
+#admFeeReceiptModal {
+    z-index: 1070 !important;
+}
+
+#admFeeReceiptModal .modal-dialog {
+    z-index: 1071 !important;
+}
+
+/* Ensure backdrop for secondary stacked modal sits above admissionModal (1055) */
+.modal-backdrop.adm-receipt-backdrop,
+.modal-backdrop:nth-of-type(2) {
+    z-index: 1065 !important;
+}
+
+/* Ensure SweetAlert popups are always in the foreground above all modals */
+.swal2-container {
+    z-index: 999999 !important;
 }
 

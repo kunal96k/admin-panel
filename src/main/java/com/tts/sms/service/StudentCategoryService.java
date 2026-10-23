@@ -81,6 +81,13 @@ public class StudentCategoryService {
             for (Admission admission : batch) {
                 String oldCategory = admission.getStudentCategory();
 
+                // GUARD: CANCELLED and COMPLETED are terminal states — never overwrite them
+                if ("CANCELLED".equals(oldCategory) || "COMPLETED".equals(oldCategory)) {
+                    if ("CANCELLED".equals(oldCategory)) cancelled++;
+                    else completed++;
+                    continue;
+                }
+
                 //  Use OPTIMIZED method (no database queries)
                 String newCategory = determineCategoryOptimized(
                         admission, cutoffDate, refundsByRegNo, certsByRegNo);
@@ -151,12 +158,22 @@ public class StudentCategoryService {
             return "COMPLETED";
         }
 
-        // PRIORITY 3: Check if NEW_STUDENT (REG* number)
+        // PRIORITY 3: NEW_STUDENT = REG* number + admitted within last 7 days
+        // After 7 days, a REG* student automatically graduates to PURSUING
         if (regNo != null && regNo.trim().toUpperCase().startsWith("REG")) {
-            if (log.isDebugEnabled()) {
-                log.debug(" {} -> NEW_STUDENT (REG number)", regNo);
+            LocalDate today = LocalDate.now();
+            boolean withinNewStudentWindow = admissionDate != null &&
+                    !admissionDate.isBefore(today.minusDays(7));
+            if (withinNewStudentWindow) {
+                if (log.isDebugEnabled()) {
+                    log.debug(" {} -> NEW_STUDENT (REG number, admitted {})", regNo, admissionDate);
+                }
+                return "NEW_STUDENT";
             }
-            return "NEW_STUDENT";
+            // REG* but older than 7 days — falls through to PURSUING
+            if (log.isDebugEnabled()) {
+                log.debug(" {} -> PURSUING (REG number but >7 days old, admitted {})", regNo, admissionDate);
+            }
         }
 
         // PRIORITY 4 & 5: Use ADMISSION DATE
@@ -268,10 +285,18 @@ public class StudentCategoryService {
             return "COMPLETED";
         }
 
-        // PRIORITY 3: Check if NEW_STUDENT (REG* number)
+        // PRIORITY 3: NEW_STUDENT = REG* number + admitted within last 7 days
+        // After 7 days, a REG* student automatically graduates to PURSUING
         if (regNo != null && regNo.trim().toUpperCase().startsWith("REG")) {
-            log.debug(" {} -> NEW_STUDENT (REG number)", regNo);
-            return "NEW_STUDENT";
+            LocalDate today = LocalDate.now();
+            boolean withinNewStudentWindow = admissionDate != null &&
+                    !admissionDate.isBefore(today.minusDays(7));
+            if (withinNewStudentWindow) {
+                log.debug(" {} -> NEW_STUDENT (REG number, admitted {})", regNo, admissionDate);
+                return "NEW_STUDENT";
+            }
+            // REG* but older than 7 days — falls through to PURSUING
+            log.debug(" {} -> PURSUING (REG number but >7 days old, admitted {})", regNo, admissionDate);
         }
 
         // PRIORITY 4 & 5: Use ADMISSION DATE (not created/updated dates)

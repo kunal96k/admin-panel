@@ -138,6 +138,9 @@ public class Admission {
     @Column(name = "discount_amount")
     private Double discountAmount;
 
+    @Column(name = "admission_fee_paid")
+    private Double admissionFeePaid;
+
     // Batch Details - **CRITICAL FIX: Use List<String> type**
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "batches", columnDefinition = "json")

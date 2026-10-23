@@ -10,6 +10,7 @@
     let videoStream = null;
 
     let selectedCourses = [];
+    let currentAdmissionReceiptData = null; // Holds the admission fee receipt until admission is saved
 
     let allCoursesForFilter = [];
 
@@ -147,6 +148,49 @@
         //  Add Installment Row buttons 
         document.getElementById('btnAddInstallment')?.addEventListener('click', addInstallmentRow);
         document.getElementById('btnFeeAddInstallment')?.addEventListener('click', addFeeInstallmentRow);
+
+        //  Admission Fee Receipt Modal Listeners 
+        document.getElementById('btnOpenAdmReceiptModal')?.addEventListener('click', openAdmissionFeeReceiptModal);
+        document.getElementById('btnClearAdmFeeReceipt')?.addEventListener('click', clearAdmissionFeeReceipt);
+        document.getElementById('btnApplyAdmReceipt')?.addEventListener('click', applyAdmissionFeeReceipt);
+        document.getElementById('admEnableGst')?.addEventListener('change', toggleAdmGstFields);
+        document.getElementById('admPaymentMode')?.addEventListener('change', toggleAdmPaymentFields);
+        document.getElementById('admNowReceiving')?.addEventListener('input', updateAdmPendingFeesAndGst);
+
+        // Stacked Modal Management for Collect Admission Fee Receipt Modal
+        const admFeeReceiptModalEl = document.getElementById('admFeeReceiptModal');
+        if (admFeeReceiptModalEl) {
+            admFeeReceiptModalEl.addEventListener('show.bs.modal', function () {
+                this.style.zIndex = '1070';
+                setTimeout(() => {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    if (backdrops.length > 1) {
+                        const topBackdrop = backdrops[backdrops.length - 1];
+                        topBackdrop.style.zIndex = '1065';
+                        topBackdrop.classList.add('adm-receipt-backdrop');
+                    }
+                }, 10);
+            });
+
+            admFeeReceiptModalEl.addEventListener('shown.bs.modal', function () {
+                this.style.zIndex = '1070';
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                if (backdrops.length > 1) {
+                    backdrops[backdrops.length - 1].style.zIndex = '1065';
+                }
+                document.getElementById('admNowReceiving')?.focus();
+            });
+
+            admFeeReceiptModalEl.addEventListener('hidden.bs.modal', function () {
+                // Restore modal-open on body so admissionModal remains interactive & scrollable
+                const admissionModalEl = document.getElementById('admissionModal');
+                if (admissionModalEl && (admissionModalEl.classList.contains('show') || admissionModalEl.style.display === 'block')) {
+                    document.body.classList.add('modal-open');
+                    document.body.style.overflow = 'hidden';
+                    admissionModalEl.focus();
+                }
+            });
+        }
 
         // Search
         document.getElementById('searchInput')?.addEventListener('input', debounce(searchAdmissions, 800));
@@ -324,17 +368,28 @@
         }
     };
 
+    // ── Get Current Logged-in User Helper ──
+    function getCurrentUser() {
+        const fromInput = document.getElementById('currentUserName')?.value;
+        if (fromInput && fromInput.trim() && fromInput.trim() !== 'null') return fromInput.trim();
+        const fromNav = document.querySelector('.user-name')?.textContent?.trim();
+        if (fromNav && fromNav !== 'null') return fromNav;
+        return 'Admin';
+    }
+
     // ── Build a new editable fee installment row for Fee Modal ──
     function buildFeeInstallmentRow(date, amount, status, notes, instId, createdBy, createdAt, updatedBy, updatedAt) {
         const tr = document.createElement('tr');
         tr.dataset.installmentId = instId || '';
 
-        const createdTimeStr = createdAt ? formatDisplayDateTime(createdAt) : 'N/A';
-        const updatedTimeStr = updatedAt ? formatDisplayDateTime(updatedAt) : 'N/A';
+        const effectiveCreatedBy = (createdBy && createdBy !== 'SYSTEM' && createdBy.trim() !== '' && createdBy !== 'null') ? createdBy : getCurrentUser();
+        const createdTimeStr = createdAt ? formatDisplayDateTime(createdAt) : formatDisplayDateTime(new Date());
+        const effectiveUpdatedBy = (updatedBy && updatedBy !== '-' && updatedBy !== 'null') ? updatedBy : '-';
+        const updatedTimeStr = (updatedAt && updatedAt !== 'N/A' && updatedAt !== 'null') ? formatDisplayDateTime(updatedAt) : '-';
 
-        tr.dataset.createdBy = createdBy || 'SYSTEM';
+        tr.dataset.createdBy = effectiveCreatedBy;
         tr.dataset.createdTime = createdTimeStr;
-        tr.dataset.updatedBy = updatedBy || '-';
+        tr.dataset.updatedBy = effectiveUpdatedBy;
         tr.dataset.updatedTime = updatedTimeStr;
         tr.style.cursor = 'pointer';
 
@@ -412,10 +467,15 @@
                 rows.forEach(r => r.classList.remove('table-active'));
                 this.classList.add('table-active');
 
-                document.getElementById('feeInstCreatedBy').textContent = this.dataset.createdBy || '-';
-                document.getElementById('feeInstCreatedTime').textContent = this.dataset.createdTime || '-';
-                document.getElementById('feeInstUpdatedBy').textContent = this.dataset.updatedBy || '-';
-                document.getElementById('feeInstUpdatedTime').textContent = this.dataset.updatedTime || '-';
+                const rowCreatedBy = (this.dataset.createdBy && this.dataset.createdBy !== 'SYSTEM' && this.dataset.createdBy !== 'null') ? this.dataset.createdBy : getCurrentUser();
+                const rowCreatedTime = (this.dataset.createdTime && this.dataset.createdTime !== 'N/A' && this.dataset.createdTime !== 'null') ? this.dataset.createdTime : formatDisplayDateTime(new Date());
+                const rowUpdatedBy = (this.dataset.updatedBy && this.dataset.updatedBy !== 'null') ? this.dataset.updatedBy : '-';
+                const rowUpdatedTime = (this.dataset.updatedTime && this.dataset.updatedTime !== 'N/A' && this.dataset.updatedTime !== 'null') ? this.dataset.updatedTime : '-';
+
+                document.getElementById('feeInstCreatedBy').textContent = rowCreatedBy;
+                document.getElementById('feeInstCreatedTime').textContent = rowCreatedTime;
+                document.getElementById('feeInstUpdatedBy').textContent = rowUpdatedBy;
+                document.getElementById('feeInstUpdatedTime').textContent = rowUpdatedTime;
             });
         });
 
@@ -423,10 +483,15 @@
         if (rows.length > 0) {
             const firstRow = rows[0];
             firstRow.classList.add('table-active');
-            document.getElementById('feeInstCreatedBy').textContent = firstRow.dataset.createdBy || '-';
-            document.getElementById('feeInstCreatedTime').textContent = firstRow.dataset.createdTime || '-';
-            document.getElementById('feeInstUpdatedBy').textContent = firstRow.dataset.updatedBy || '-';
-            document.getElementById('feeInstUpdatedTime').textContent = firstRow.dataset.updatedTime || '-';
+            const rowCreatedBy = (firstRow.dataset.createdBy && firstRow.dataset.createdBy !== 'SYSTEM' && firstRow.dataset.createdBy !== 'null') ? firstRow.dataset.createdBy : getCurrentUser();
+            const rowCreatedTime = (firstRow.dataset.createdTime && firstRow.dataset.createdTime !== 'N/A' && firstRow.dataset.createdTime !== 'null') ? firstRow.dataset.createdTime : formatDisplayDateTime(new Date());
+            const rowUpdatedBy = (firstRow.dataset.updatedBy && firstRow.dataset.updatedBy !== 'null') ? firstRow.dataset.updatedBy : '-';
+            const rowUpdatedTime = (firstRow.dataset.updatedTime && firstRow.dataset.updatedTime !== 'N/A' && firstRow.dataset.updatedTime !== 'null') ? firstRow.dataset.updatedTime : '-';
+
+            document.getElementById('feeInstCreatedBy').textContent = rowCreatedBy;
+            document.getElementById('feeInstCreatedTime').textContent = rowCreatedTime;
+            document.getElementById('feeInstUpdatedBy').textContent = rowUpdatedBy;
+            document.getElementById('feeInstUpdatedTime').textContent = rowUpdatedTime;
         }
     }
 
@@ -436,7 +501,7 @@
         if (!tbody) return;
         const placeholder = tbody.querySelector('tr td[colspan]');
         if (placeholder) placeholder.closest('tr').remove();
-        tbody.appendChild(buildFeeInstallmentRow('', '', 'Pending', ''));
+        tbody.appendChild(buildFeeInstallmentRow('', '', 'Pending', '', '', getCurrentUser(), new Date().toISOString(), '-', null));
         recalculateFeeInstallmentTotal();
         setupFeeInstallmentsAuditLogic();
     }
@@ -781,13 +846,15 @@
 
         if (!admissions || admissions.length === 0) {
             tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center py-5">
-                    <i class="bi bi-inbox" style="font-size: 3rem; color: #94a3b8;"></i>
-                    <p class="mt-3 mb-0 text-muted">No admissions found</p>
-                    <button class="btn btn-sm btn-primary mt-2" onclick="document.getElementById('btnNewAdmission').click()">
-                        <i class="bi bi-plus-circle me-1"></i>Add First Admission
-                    </button>
+            <tr class="empty-state-row">
+                <td colspan="6" class="empty-state-cell text-center py-5">
+                    <div class="empty-state-content d-flex flex-column align-items-center justify-content-center">
+                        <i class="bi bi-inbox" style="font-size: 3rem; color: #94a3b8;"></i>
+                        <p class="mt-3 mb-0 text-muted">No admissions found</p>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="document.getElementById('btnNewAdmission').click()">
+                            <i class="bi bi-plus-circle me-1"></i>Add First Admission
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -1195,7 +1262,8 @@
                 }
             }
 
-            setValue('instTotalAmount', admission.totalReceivableFees || 0);
+            const admFeePaid = parseFloat(admission.admissionFeePaid) || 0;
+            setValue('instTotalAmount', Math.max(0, (admission.totalReceivableFees || 0) - admFeePaid));
 
             currentTab = 1;
             updateNavigationButtons();
@@ -1625,6 +1693,21 @@
             setValue('instTotalInstAmount', data.totalInstallmentAmount);
         }
 
+        // Tab 5: Admission Fee Pre-fill
+        const admFeePaid = parseFloat(data.admissionFeePaid) || 0;
+        if (admFeePaid > 0) {
+            currentAdmissionReceiptData = {
+                amountReceived: admFeePaid,
+                paymentMode: data.admissionPaymentMode || 'Cash',
+                receiptDate: data.admissionReceiptDate || new Date().toISOString().split('T')[0],
+                receiptType: 'Admission Fee',
+                notes: data.admissionReceiptNotes || ''
+            };
+            updateAdmissionFeeBannerUI(admFeePaid, data.admissionPaymentMode || 'Cash', isUpdate);
+        } else {
+            clearAdmissionFeeReceipt();
+        }
+
         // Tab 6: Load photo if available
         if (data.photoPath && data.photoPath.trim() !== '') {
             loadStudentPhoto(data.photoPath);
@@ -1661,7 +1744,9 @@
         await Promise.all([
             loadPackages(),
             loadBatches(),
-            loadLeadSources()
+            loadLeadSources(),
+            loadAdmMasterBanks(),
+            loadAdmMasterPaymentModes()
         ]);
     }
 
@@ -1672,6 +1757,11 @@
 
             const packages = await response.json();
             const select = document.getElementById('admPackage');
+
+            // Sort packages alphabetically ASC by packageName
+            if (Array.isArray(packages)) {
+                packages.sort((a, b) => (a.packageName || '').localeCompare(b.packageName || '', undefined, { sensitivity: 'base' }));
+            }
 
             select.innerHTML = '<option value="">-- Select Package --</option>';
             packages.forEach(pkg => {
@@ -1695,8 +1785,12 @@
             const data = await response.json();
             const select = document.getElementById('admBatch');
 
+            const batches = Array.isArray(data.batches) ? data.batches : (Array.isArray(data) ? data : []);
+            // Sort batches alphabetically ASC by batchName
+            batches.sort((a, b) => (a.batchName || '').localeCompare(b.batchName || '', undefined, { sensitivity: 'base' }));
+
             select.innerHTML = '';
-            data.batches.forEach(batch => {
+            batches.forEach(batch => {
                 const option = document.createElement('option');
                 option.value = batch.batchNo;
                 option.textContent = `${batch.batchName} (${batch.startTime} - ${batch.endTime})`;
@@ -1715,8 +1809,12 @@
             const result = await response.json();
             const select = document.getElementById('admLeadSource');
 
+            const sources = Array.isArray(result.data) ? result.data : (Array.isArray(result) ? result : []);
+            // Sort lead sources alphabetically ASC by sourceTitle
+            sources.sort((a, b) => (a.sourceTitle || '').localeCompare(b.sourceTitle || '', undefined, { sensitivity: 'base' }));
+
             select.innerHTML = '<option value="">-- Select Source --</option>';
-            result.data.forEach(source => {
+            sources.forEach(source => {
                 const option = document.createElement('option');
                 option.value = source.sourceTitle;
                 option.textContent = source.sourceTitle;
@@ -1725,6 +1823,114 @@
         } catch (error) {
             console.error('Error loading lead sources:', error);
         }
+    }
+
+    // ==================== MASTER DATA: BANKS & PAYMENT MODES ====================
+    let admMasterBanks = [];
+    let admMasterPaymentModes = [];
+
+    async function loadAdmMasterBanks() {
+        try {
+            let list = [];
+            const res = await fetch('/bank/active');
+            if (res.ok) {
+                list = await res.json();
+            } else {
+                const fallbackRes = await fetch('/bank/list?page=0&size=1000');
+                if (fallbackRes.ok) {
+                    const data = await fallbackRes.json();
+                    list = data.data || data.content || data || [];
+                }
+            }
+            if (Array.isArray(list) && list.length > 0) {
+                admMasterBanks = list.map(b => (typeof b === 'string' ? b : (b.bankName || b.name))).filter(Boolean);
+                admMasterBanks.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+                populateAdmBankDropdown(admMasterBanks);
+            }
+        } catch (err) {
+            console.warn('Could not dynamically fetch master banks, keeping preset master list:', err);
+        }
+    }
+
+    function populateAdmBankDropdown(bankNames) {
+        const select = document.getElementById('admBankName');
+        if (!select) return;
+        const currentVal = select.value;
+
+        const bankSet = new Set();
+        Array.from(select.options).forEach(opt => {
+            if (opt.value && opt.value.trim() !== '') {
+                bankSet.add(opt.value.trim());
+            }
+        });
+
+        if (Array.isArray(bankNames)) {
+            bankNames.forEach(name => {
+                if (name && name.trim() !== '') bankSet.add(name.trim());
+            });
+        }
+
+        // Sort alphabetically ASC (A, B, C, D...)
+        const sortedBanks = Array.from(bankSet).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+        select.innerHTML = '<option value="">-- Select Bank --</option>';
+        sortedBanks.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b;
+            opt.textContent = b;
+            select.appendChild(opt);
+        });
+
+        if (currentVal) select.value = currentVal;
+    }
+
+    async function loadAdmMasterPaymentModes() {
+        try {
+            let list = [];
+            const res = await fetch('/api/payment-modes/active');
+            if (res.ok) {
+                list = await res.json();
+            }
+            if (Array.isArray(list) && list.length > 0) {
+                admMasterPaymentModes = list.map(m => (typeof m === 'string' ? m : (m.paymentModeTitle || m.name || m.title))).filter(Boolean);
+                admMasterPaymentModes.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+                populateAdmPaymentModeDropdown(admMasterPaymentModes);
+            }
+        } catch (err) {
+            console.warn('Could not dynamically fetch master payment modes, keeping preset master list:', err);
+        }
+    }
+
+    function populateAdmPaymentModeDropdown(modeNames) {
+        const select = document.getElementById('admOnlinePaymentMode');
+        if (!select) return;
+        const currentVal = select.value;
+
+        const modeSet = new Set();
+        Array.from(select.options).forEach(opt => {
+            if (opt.value && opt.value.trim() !== '') {
+                modeSet.add(opt.value.trim());
+            }
+        });
+
+        if (Array.isArray(modeNames)) {
+            modeNames.forEach(mode => {
+                if (mode && mode.trim() !== '') modeSet.add(mode.trim());
+            });
+        }
+
+        // Sort alphabetically ASC (A, B, C, D...)
+        const sortedModes = Array.from(modeSet).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+        select.innerHTML = '<option value="">-- Select Mode --</option>';
+        sortedModes.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            select.appendChild(opt);
+        });
+
+        if (currentVal) select.value = currentVal;
     }
 
     // ==================== PACKAGE & COURSE HANDLING ====================
@@ -1859,6 +2065,21 @@
 
     // ==================== FEE CALCULATIONS ====================
 
+    function syncInstallmentBaseAmount(receivable) {
+        if (receivable == null) {
+            receivable = parseFloat(document.getElementById('admReceivableFees')?.value) || 0;
+        }
+        const admFee = (currentAdmissionReceiptData && currentAdmissionReceiptData.amountReceived) ? currentAdmissionReceiptData.amountReceived : 0;
+        const remainingForInst = Math.max(0, receivable - admFee);
+
+        setValue('instTotalAmount', remainingForInst.toFixed(2));
+        setValue('feeInstTotalAmount', remainingForInst.toFixed(2));
+
+        if (admFee > 0) {
+            updateAdmissionFeeBannerUI(admFee, currentAdmissionReceiptData.paymentMode || 'Cash', false);
+        }
+    }
+
     function calculateDiscount() {
         const totalPayable = parseFloat(document.getElementById('admTotalFees').value) || 0;
         const discountPercent = parseFloat(document.getElementById('admDiscountPercent').value) || 0;
@@ -1869,9 +2090,7 @@
         document.getElementById('admDiscountAmount').value = discountAmount.toFixed(2);
         document.getElementById('admReceivableFees').value = receivable.toFixed(2);
 
-        // : Auto-update installment totals
-        setValue('instTotalAmount', receivable.toFixed(2));
-        setValue('feeInstTotalAmount', receivable.toFixed(2));
+        syncInstallmentBaseAmount(receivable);
     }
 
     function calculateDiscountFromAmount() {
@@ -1884,14 +2103,11 @@
         document.getElementById('admDiscountPercent').value = discountPercent.toFixed(2);
         document.getElementById('admReceivableFees').value = receivable.toFixed(2);
 
-        // : Auto-update installment totals
-        setValue('instTotalAmount', receivable.toFixed(2));
-        setValue('feeInstTotalAmount', receivable.toFixed(2));
+        syncInstallmentBaseAmount(receivable);
     }
 
     function updateInstallmentTotals(amount) {
-        document.getElementById('instTotalAmount').value = amount.toFixed(2);
-        document.getElementById('feeInstTotalAmount').value = amount.toFixed(2);
+        syncInstallmentBaseAmount(amount);
     }
 
 
@@ -1916,7 +2132,7 @@
         recalculateInstallmentTotal();
     }
 
-    // ==================== FEE CALCULATIONS ====================
+    // ==================== TOTAL FEES CALCULATION ====================
 
     function calculateTotalFees() {
         const totalPayable = selectedCourses.reduce((sum, course) => sum + course.price, 0);
@@ -1931,38 +2147,7 @@
         document.getElementById('admDiscountAmount').value = discountAmount.toFixed(2);
         document.getElementById('admReceivableFees').value = receivable.toFixed(2);
 
-        setValue('instTotalAmount', receivable.toFixed(2));
-        setValue('feeInstTotalAmount', receivable.toFixed(2));
-    }
-
-    function calculateDiscount() {
-        const totalPayable = parseFloat(document.getElementById('admTotalFees').value) || 0;
-        const discountPercent = parseFloat(document.getElementById('admDiscountPercent').value) || 0;
-
-        const discountAmount = (totalPayable * discountPercent) / 100;
-        const receivable = totalPayable - discountAmount;
-
-        document.getElementById('admDiscountAmount').value = discountAmount.toFixed(2);
-        document.getElementById('admReceivableFees').value = receivable.toFixed(2);
-
-        //  Auto-update installment totals
-        setValue('instTotalAmount', receivable.toFixed(2));
-        setValue('feeInstTotalAmount', receivable.toFixed(2));
-    }
-
-    function calculateDiscountFromAmount() {
-        const totalPayable = parseFloat(document.getElementById('admTotalFees').value) || 0;
-        const discountAmount = parseFloat(document.getElementById('admDiscountAmount').value) || 0;
-
-        const discountPercent = totalPayable > 0 ? (discountAmount / totalPayable) * 100 : 0;
-        const receivable = totalPayable - discountAmount;
-
-        document.getElementById('admDiscountPercent').value = discountPercent.toFixed(2);
-        document.getElementById('admReceivableFees').value = receivable.toFixed(2);
-
-        //  Auto-update installment totals
-        setValue('instTotalAmount', receivable.toFixed(2));
-        setValue('feeInstTotalAmount', receivable.toFixed(2));
+        syncInstallmentBaseAmount(receivable);
     }
 
     // ==================== SAVE/UPDATE ADMISSION ====================
@@ -2070,22 +2255,28 @@
                     ${installmentsListHtml}
 
                     <div class="row g-2 mt-2 mb-2 text-center" style="font-size: 0.82rem;">
-                        <div class="col-4">
+                        <div class="col-3">
                             <div class="p-2 bg-primary-subtle rounded-3">
-                                <div class="text-muted fw-semibold" style="font-size: 0.72rem;">COURSE FEES</div>
+                                <div class="text-muted fw-semibold" style="font-size: 0.7rem;">COURSE FEES</div>
                                 <div class="fw-bold text-primary">₹${(admissionData.totalPayableFees || admissionData.totalReceivableFees || 0).toFixed(2)}</div>
                             </div>
                         </div>
-                        <div class="col-4">
+                        <div class="col-3">
                             <div class="p-2 bg-warning-subtle rounded-3">
-                                <div class="text-muted fw-semibold" style="font-size: 0.72rem;">DISCOUNT ${admissionData.discountPercent > 0 ? '(' + admissionData.discountPercent + '%)' : ''}</div>
+                                <div class="text-muted fw-semibold" style="font-size: 0.7rem;">DISCOUNT</div>
                                 <div class="fw-bold text-warning">- ₹${(admissionData.discountAmount || 0).toFixed(2)}</div>
                             </div>
                         </div>
-                        <div class="col-4">
+                        <div class="col-3">
+                            <div class="p-2 bg-info-subtle rounded-3">
+                                <div class="text-muted fw-semibold" style="font-size: 0.7rem;">ADM. FEE</div>
+                                <div class="fw-bold text-info">₹${(admissionData.admissionFeePaid || 0).toFixed(2)}</div>
+                            </div>
+                        </div>
+                        <div class="col-3">
                             <div class="p-2 bg-success-subtle rounded-3">
-                                <div class="text-muted fw-semibold" style="font-size: 0.72rem;">NET RECEIVABLE</div>
-                                <div class="fw-bold text-success">₹${(admissionData.totalReceivableFees || 0).toFixed(2)}</div>
+                                <div class="text-muted fw-semibold" style="font-size: 0.7rem;">INST. BASE</div>
+                                <div class="fw-bold text-success">₹${Math.max(0, (admissionData.totalReceivableFees || 0) - (admissionData.admissionFeePaid || 0)).toFixed(2)}</div>
                             </div>
                         </div>
                     </div>
@@ -2115,8 +2306,10 @@
             //  Custom-installment amount-match validation 
             if (admissionData.customInstallments && admissionData.customInstallments.length > 0) {
                 const admTotal = admissionData.totalReceivableFees || 0;
+                const admFeePaid = admissionData.admissionFeePaid || 0;
+                const expectedInstallmentsSum = Math.max(0, admTotal - admFeePaid);
                 const admSum = admissionData.customInstallments.reduce((s, i) => s + i.amount, 0);
-                const admDiff = Math.round((admSum - admTotal) * 100) / 100;
+                const admDiff = Math.round((admSum - expectedInstallmentsSum) * 100) / 100;
 
                 if (admDiff > 0) {
                     await Swal.fire({
@@ -2124,10 +2317,14 @@
                         title: 'Installment Amount Mismatch',
                         html: `
                             <div class="text-start">
-                                <p class="mb-2">The total of all installment amounts <strong class="text-danger">cannot be greater than</strong> the Net Receivable Amount.</p>
+                                <p class="mb-2">The total of all installment amounts <strong class="text-danger">cannot be greater than</strong> the remaining installment balance.</p>
                                 <div class="row g-2" style="font-size:0.88rem;">
                                     <div class="col-6 text-muted">Net Receivable:</div>
                                     <div class="col-6 fw-bold text-primary">&#8377;${admTotal.toFixed(2)}</div>
+                                    <div class="col-6 text-muted">Admission Fee Paid:</div>
+                                    <div class="col-6 fw-bold text-info">&#8377;${admFeePaid.toFixed(2)}</div>
+                                    <div class="col-6 text-muted">Installments Base:</div>
+                                    <div class="col-6 fw-bold text-success">&#8377;${expectedInstallmentsSum.toFixed(2)}</div>
                                     <div class="col-6 text-muted">Installments Sum:</div>
                                     <div class="col-6 fw-bold text-danger">&#8377;${admSum.toFixed(2)}</div>
                                     <div class="col-6 text-muted">Excess:</div>
@@ -2148,10 +2345,14 @@
                         title: 'Installment Amount Mismatch',
                         html: `
                             <div class="text-start">
-                                <p class="mb-2">The total of all installment amounts <strong class="text-warning">cannot be less than</strong> the Net Receivable Amount.</p>
+                                <p class="mb-2">The total of all installment amounts <strong class="text-warning">cannot be less than</strong> the remaining installment balance.</p>
                                 <div class="row g-2" style="font-size:0.88rem;">
                                     <div class="col-6 text-muted">Net Receivable:</div>
                                     <div class="col-6 fw-bold text-primary">&#8377;${admTotal.toFixed(2)}</div>
+                                    <div class="col-6 text-muted">Admission Fee Paid:</div>
+                                    <div class="col-6 fw-bold text-info">&#8377;${admFeePaid.toFixed(2)}</div>
+                                    <div class="col-6 text-muted">Installments Base:</div>
+                                    <div class="col-6 fw-bold text-success">&#8377;${expectedInstallmentsSum.toFixed(2)}</div>
                                     <div class="col-6 text-muted">Installments Sum:</div>
                                     <div class="col-6 fw-bold text-warning">&#8377;${admSum.toFixed(2)}</div>
                                     <div class="col-6 text-muted">Shortfall:</div>
@@ -2164,6 +2365,20 @@
                     });
                     return;
                 }
+            }
+        }
+
+        // Installment amount match validation for new admissions as well
+        if (!isUpdate && admissionData.customInstallments && admissionData.customInstallments.length > 0) {
+            const admTotal = admissionData.totalReceivableFees || 0;
+            const admFeePaid = admissionData.admissionFeePaid || 0;
+            const expectedInstallmentsSum = Math.max(0, admTotal - admFeePaid);
+            const admSum = admissionData.customInstallments.reduce((s, i) => s + i.amount, 0);
+            const admDiff = Math.round((admSum - expectedInstallmentsSum) * 100) / 100;
+
+            if (admDiff !== 0) {
+                showError(`Installment total (₹${admSum.toFixed(2)}) must equal the remaining installment balance (₹${expectedInstallmentsSum.toFixed(2)} = ₹${admTotal.toFixed(2)} total - ₹${admFeePaid.toFixed(2)} admission fee).`);
+                return;
             }
         }
 
@@ -2376,6 +2591,8 @@
             totalReceivableFees: parseFloat(getValue('admReceivableFees')) || 0,
             discountPercent: parseFloat(getValue('admDiscountPercent')) || 0,
             discountAmount: parseFloat(getValue('admDiscountAmount')) || 0,
+            admissionFeePaid: currentAdmissionReceiptData ? (currentAdmissionReceiptData.amountReceived || 0) : 0,
+            admissionReceipt: currentAdmissionReceiptData,
             installmentConfig: installmentConfig,
             customInstallments: customInstallments.length > 0 ? customInstallments : null,
             studentPhoto: document.getElementById('admCanvas').toDataURL('image/jpeg', 0.8)
@@ -3032,13 +3249,22 @@
 
             if (admission.installments && admission.installments.length > 0) {
                 instBody.innerHTML = admission.installments.map(inst => {
+                    const instCreatedBy = (inst.createdBy && inst.createdBy !== 'SYSTEM' && inst.createdBy !== 'null') 
+                        ? inst.createdBy 
+                        : (admission.createdBy || getCurrentUser());
+                    const instCreatedTime = inst.createdAt 
+                        ? formatDisplayDateTime(inst.createdAt) 
+                        : (admission.createdAt ? formatDisplayDateTime(admission.createdAt) : formatDisplayDateTime(new Date()));
+                    const instUpdatedBy = (inst.updatedBy && inst.updatedBy !== '-' && inst.updatedBy !== 'null') ? inst.updatedBy : '-';
+                    const instUpdatedTime = (inst.updatedAt && inst.updatedAt !== 'N/A' && inst.updatedAt !== 'null') ? formatDisplayDateTime(inst.updatedAt) : '-';
+
                     const auditTd = isSuperAdmin ? `
                         <td data-label="Audit" style="font-size: 0.8rem; line-height: 1.2;">
-                            <div><strong>Created By:</strong> ${inst.createdBy || 'SYSTEM'}</div>
-                            <div class="text-muted">${inst.createdAt ? formatDisplayDateTime(inst.createdAt) : 'N/A'}</div>
-                            ${inst.updatedBy ? `
-                                <div class="mt-1"><strong>Updated By:</strong> ${inst.updatedBy}</div>
-                                <div class="text-muted">${inst.updatedAt ? formatDisplayDateTime(inst.updatedAt) : 'N/A'}</div>
+                            <div><strong>Created By:</strong> ${instCreatedBy}</div>
+                            <div class="text-muted">${instCreatedTime}</div>
+                            ${instUpdatedBy !== '-' ? `
+                                <div class="mt-1"><strong>Updated By:</strong> ${instUpdatedBy}</div>
+                                <div class="text-muted">${instUpdatedTime}</div>
                             ` : ''}
                         </td>
                     ` : '';
@@ -3062,6 +3288,39 @@
                 instBody.innerHTML = `<tr><td colspan="${colspanVal}" class="text-center text-muted">No installments found</td></tr>`;
             }
 
+            // Admission Fee Header Badge
+            const admFeeBadge = document.getElementById('viewAdmFeeBadge');
+            const admFeePaidText = document.getElementById('viewAdmFeePaidText');
+            let admFeePaid = parseFloat(admission.admissionFeePaid) || 0;
+            if (admFeeBadge && admFeePaidText) {
+                if (admFeePaid > 0) {
+                    admFeePaidText.textContent = admFeePaid.toFixed(2);
+                    admFeeBadge.style.display = 'inline-flex';
+                } else {
+                    admFeeBadge.style.display = 'none';
+                }
+            }
+
+            // Finance Tab - Admission Fee Card
+            const viewAdmFeePaidEl = document.getElementById('viewAdmFeePaid');
+            const viewAdmFeeMetaEl = document.getElementById('viewAdmFeeMeta');
+            if (viewAdmFeePaidEl) {
+                viewAdmFeePaidEl.textContent = `₹${admFeePaid.toFixed(2)}`;
+            }
+            if (viewAdmFeeMetaEl) {
+                if (admFeePaid > 0) {
+                    const parts = [];
+                    if (admission.admissionReceiptNumber) {
+                        parts.push(`<a href="javascript:void(0)" onclick="previewAdmissionReceipt('${admission.admissionReceiptNumber}', '${admission.registrationNumber}')" class="text-decoration-underline fw-bold" style="color: #7e22ce;" title="Click to view/print receipt"><i class="bi bi-printer me-1"></i>${admission.admissionReceiptNumber}</a>`);
+                    }
+                    if (admission.admissionPaymentMode) parts.push(admission.admissionPaymentMode);
+                    if (admission.admissionReceiptDate) parts.push(formatDisplayDate(admission.admissionReceiptDate));
+                    viewAdmFeeMetaEl.innerHTML = parts.join(' • ') || 'Recorded';
+                } else {
+                    viewAdmFeeMetaEl.textContent = 'Not Paid';
+                }
+            }
+
             // Fetch Receipts
             try {
                 const receiptResponse = await fetch(`/api/fees-manager/receipts/${admission.registrationNumber}`);
@@ -3069,16 +3328,45 @@
                     const receipts = await receiptResponse.json();
                     const receiptBody = document.getElementById('viewAdmReceiptsBody');
                     if (receipts && receipts.length > 0) {
-                        receiptBody.innerHTML = receipts.map(r => `
-                            <tr>
-                                <td data-label="Receipt No.">${r.receiptNumber}</td>
-                                <td data-label="Date">${new Date(r.receiptDate).toLocaleDateString('en-GB')}</td>
-                                <td data-label="Amount">₹${parseFloat(r.amountReceived || 0).toFixed(2)}</td>
-                                <td data-label="Mode">${r.paymentMode}</td>
-                            </tr>
-                        `).join('');
+                        // Check if any receipt is an Admission Fee receipt to update meta card if needed
+                        const admReceipt = receipts.find(r => (r.receiptType && r.receiptType.toLowerCase().includes('admission')) || (r.notes && r.notes.toLowerCase().includes('admission fee')));
+                        if (admReceipt && admFeePaid <= 0) {
+                            admFeePaid = parseFloat(admReceipt.amountReceived) || 0;
+                            if (viewAdmFeePaidEl) viewAdmFeePaidEl.textContent = `₹${admFeePaid.toFixed(2)}`;
+                            if (viewAdmFeeMetaEl) {
+                                viewAdmFeeMetaEl.innerHTML = `<a href="javascript:void(0)" onclick="previewAdmissionReceipt('${admReceipt.receiptNumber}', '${admission.registrationNumber}')" class="text-decoration-underline fw-bold" style="color: #7e22ce;" title="Click to view/print receipt"><i class="bi bi-printer me-1"></i>${admReceipt.receiptNumber}</a> • ${admReceipt.paymentMode} • ${new Date(admReceipt.receiptDate).toLocaleDateString('en-GB')}`;
+                            }
+                            if (admFeeBadge && admFeePaidText) {
+                                admFeePaidText.textContent = admFeePaid.toFixed(2);
+                                admFeeBadge.style.display = 'inline-flex';
+                            }
+                        }
+
+                        receiptBody.innerHTML = receipts.map(r => {
+                            const isAdmFee = (r.receiptType && r.receiptType.toLowerCase().includes('admission')) || (r.installmentId == null && r.notes && r.notes.toLowerCase().includes('admission fee'));
+                            const typeBadge = isAdmFee
+                                ? `<span class="badge border" style="background-color: #f3e8ff; color: #7e22ce; border-color: #d8b4fe !important;"><i class="bi bi-star-fill me-1" style="font-size: 0.7rem;"></i>Admission Fee</span>`
+                                : `<span class="badge bg-secondary-subtle text-secondary border">Regular</span>`;
+
+                            return `
+                                <tr class="${isAdmFee ? 'table-light' : ''}">
+                                    <td data-label="Receipt No."><strong>${r.receiptNumber}</strong></td>
+                                    <td data-label="Date">${new Date(r.receiptDate).toLocaleDateString('en-GB')}</td>
+                                    <td data-label="Amount" class="fw-semibold text-dark">₹${parseFloat(r.amountReceived || 0).toFixed(2)}</td>
+                                    <td data-label="Mode">${r.paymentMode}</td>
+                                    <td data-label="Type">${typeBadge}</td>
+                                    <td data-label="Action" class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-2"
+                                            onclick="previewAdmissionReceipt('${r.receiptNumber}', '${admission.registrationNumber}')"
+                                            title="Print / View Receipt">
+                                            <i class="bi bi-printer"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('');
                     } else {
-                        receiptBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No receipts found</td></tr>';
+                        receiptBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No receipts found</td></tr>';
                     }
                 }
             } catch (receiptError) {
@@ -3372,8 +3660,14 @@
             const admission = await response.json();
             Swal.close();
 
-            setValue('feeInstTotalAmount', admission.totalReceivableFees || 0);
-            setValue('feeInstTotalInstAmount', admission.totalInstallmentAmount || admission.totalReceivableFees || 0);
+            const totalReceivable = parseFloat(admission.totalReceivableFees) || 0;
+            const admFeePaid = parseFloat(admission.admissionFeePaid) || 0;
+            const targetInstAmount = (admission.totalInstallmentAmount != null && admission.totalInstallmentAmount > 0)
+                ? parseFloat(admission.totalInstallmentAmount)
+                : Math.max(0, totalReceivable - admFeePaid);
+
+            setValue('feeInstTotalAmount', totalReceivable.toFixed(2));
+            setValue('feeInstTotalInstAmount', targetInstAmount.toFixed(2));
 
             if (admission.installmentStartDate) {
                 setValue('feeInstStartDate', admission.installmentStartDate);
@@ -3387,11 +3681,38 @@
                 setValue('feeInstDays', admission.daysBetweenInstallments);
             }
 
-            // Store regNo for save
+            // Store regNo and admission fee details on student name element for easy access
             const nameEl = document.getElementById('feeInstStudentName');
             if (nameEl) {
                 nameEl.textContent = admission.studentName;
                 nameEl.dataset.regNo = admission.registrationNumber;
+                nameEl.dataset.admissionFeePaid = admFeePaid;
+                nameEl.dataset.admReceiptNo = admission.admissionReceiptNumber || '';
+                nameEl.dataset.admReceiptMode = admission.admissionPaymentMode || '';
+                nameEl.dataset.admReceiptDate = admission.admissionReceiptDate || '';
+                nameEl.dataset.admissionCreatedBy = admission.createdBy || '';
+                nameEl.dataset.admissionCreatedAt = admission.createdAt || '';
+            }
+
+            // Render Admission Fee Notice Banner
+            const admNoticeEl = document.getElementById('feeInstAdmissionNotice');
+            if (admNoticeEl) {
+                if (admFeePaid > 0) {
+                    admNoticeEl.style.display = 'block';
+                    const admAmountEl = document.getElementById('feeInstAdmFeeAmount');
+                    const admDetailsEl = document.getElementById('feeInstAdmFeeDetails');
+                    const admBaseEl = document.getElementById('feeInstBaseAfterAdmFee');
+                    if (admAmountEl) admAmountEl.textContent = `₹${admFeePaid.toFixed(2)}`;
+                    if (admDetailsEl) {
+                        const recNo = admission.admissionReceiptNumber || 'Paid';
+                        const recMode = admission.admissionPaymentMode || 'Direct';
+                        const recDate = admission.admissionReceiptDate ? formatDisplayDate(admission.admissionReceiptDate) : '';
+                        admDetailsEl.textContent = `${recNo}${recMode ? ' • ' + recMode : ''}${recDate ? ' • ' + recDate : ''}`;
+                    }
+                    if (admBaseEl) admBaseEl.textContent = `₹${targetInstAmount.toFixed(2)}`;
+                } else {
+                    admNoticeEl.style.display = 'none';
+                }
             }
 
             const instResponse = await fetch(`/api/admissions/${id}/installments`, {
@@ -3413,14 +3734,18 @@
             } else {
                 tbody.innerHTML = '';
                 installments.forEach(inst => {
+                    const rowCreatedBy = (inst.createdBy && inst.createdBy !== 'SYSTEM' && inst.createdBy !== 'null')
+                        ? inst.createdBy
+                        : (admission.createdBy || getCurrentUser());
+                    const rowCreatedAt = inst.createdAt || admission.createdAt || null;
                     tbody.appendChild(buildFeeInstallmentRow(
                         inst.paidDate || inst.dueDate || '',
                         inst.amount != null ? parseFloat(inst.amount).toFixed(2) : '',
                         inst.status || 'Pending',
                         inst.notes || '',
                         inst.id,
-                        inst.createdBy,
-                        inst.createdAt,
+                        rowCreatedBy,
+                        rowCreatedAt,
                         inst.updatedBy,
                         inst.updatedAt
                     ));
@@ -4490,6 +4815,309 @@
         reader.readAsDataURL(file);
     }
 
+    // ==================== ADMISSION FEE RECEIPT & INSTALLMENT SKIP ====================
+
+    function openAdmissionFeeReceiptModal() {
+        const first = getValue('admFirstName') || '';
+        const middle = getValue('admMiddleName') || '';
+        const last = getValue('admLastName') || '';
+        const studentName = [first, middle, last].filter(Boolean).join(' ') || 'New Student';
+
+        const totalFees = parseFloat(getValue('admReceivableFees')) || parseFloat(getValue('admTotalFees')) || 0;
+
+        if (totalFees <= 0) {
+            showError('Please select at least one course with fees before collecting admission fee');
+            return;
+        }
+
+        const modalEl = document.getElementById('admFeeReceiptModal');
+        if (!modalEl) return;
+
+        // Prefill student name & total fees
+        document.getElementById('admReceiptStudentName').value = studentName;
+        document.getElementById('admReceiptTotalFees').value = totalFees.toFixed(2);
+
+        const receivedFeesInput = document.getElementById('admReceivedFees');
+        if (receivedFeesInput) {
+            receivedFeesInput.value = (currentAdmissionReceiptData && currentAdmissionReceiptData.amountReceived)
+                ? parseFloat(currentAdmissionReceiptData.amountReceived).toFixed(2)
+                : '0.00';
+        }
+
+        // Date defaults to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('admReceiptDate').value = today;
+
+        // Ensure dynamic master data is populated
+        if (admMasterBanks.length > 0) populateAdmBankDropdown(admMasterBanks);
+        if (admMasterPaymentModes.length > 0) populateAdmPaymentModeDropdown(admMasterPaymentModes);
+
+        // Next due date defaults to installment start date or today + 30 (if field exists)
+        const instStartDate = getValue('instStartDate') || today;
+        const nextDueDateEl = document.getElementById('admNextDueDate');
+        if (nextDueDateEl) nextDueDateEl.value = instStartDate;
+
+        // Check if there is already receipt data
+        if (currentAdmissionReceiptData && currentAdmissionReceiptData.amountReceived > 0) {
+            const data = currentAdmissionReceiptData;
+            document.getElementById('admNowReceiving').value = data.amountReceived;
+            document.getElementById('admPaymentMode').value = data.paymentMode || 'Cash';
+            document.getElementById('admReceiptDate').value = data.receiptDate || today;
+            if (nextDueDateEl) nextDueDateEl.value = data.nextDueDate || instStartDate;
+            document.getElementById('admEnableGst').checked = !!data.gstEnabled;
+            document.getElementById('admGstStatus').textContent = data.gstEnabled ? 'GST Enabled' : 'GST Off';
+            document.getElementById('admSgstPercent').value = data.sgstPercent != null ? data.sgstPercent : 9;
+            document.getElementById('admCgstPercent').value = data.cgstPercent != null ? data.cgstPercent : 9;
+            document.getElementById('admInvoiceValue').value = data.invoiceValue != null ? data.invoiceValue.toFixed(2) : '';
+            document.getElementById('admBankName').value = data.bankName || '';
+            document.getElementById('admChequeNo').value = data.chequeNumber || '';
+            document.getElementById('admChequeDate').value = data.chequeDate || '';
+            document.getElementById('admTransactionNo').value = data.transactionNumber || '';
+            document.getElementById('admIfscCode').value = data.ifscCode || '';
+            document.getElementById('admOnlinePaymentMode').value = data.onlinePaymentMode || '';
+            document.getElementById('admReceiptNotes').value = data.notes || '';
+        } else {
+            document.getElementById('admNowReceiving').value = '';
+            document.getElementById('admPaymentMode').value = 'Cash';
+            document.getElementById('admEnableGst').checked = false;
+            document.getElementById('admGstStatus').textContent = 'GST Off';
+            document.getElementById('admSgstPercent').value = 9;
+            document.getElementById('admCgstPercent').value = 9;
+            document.getElementById('admInvoiceValue').value = '';
+            document.getElementById('admBankName').value = '';
+            document.getElementById('admChequeNo').value = '';
+            document.getElementById('admChequeDate').value = '';
+            document.getElementById('admTransactionNo').value = '';
+            document.getElementById('admIfscCode').value = '';
+            document.getElementById('admOnlinePaymentMode').value = '';
+
+            const currentUser = document.querySelector('.user-name')?.textContent?.trim() || 'Admin';
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString();
+            document.getElementById('admReceiptNotes').value = `Admission fees paid on ${dateStr} by ${currentUser}`;
+        }
+
+        toggleAdmPaymentFields();
+        toggleAdmGstFields();
+        updateAdmPendingFeesAndGst();
+
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+
+    function toggleAdmGstFields() {
+        const isChecked = document.getElementById('admEnableGst')?.checked || false;
+        const statusLabel = document.getElementById('admGstStatus');
+        if (statusLabel) statusLabel.textContent = isChecked ? 'GST Enabled' : 'GST Off';
+
+        ['admSgstField', 'admCgstField', 'admInvoiceValueField'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = isChecked ? 'block' : 'none';
+        });
+
+        updateAdmPendingFeesAndGst();
+    }
+
+    function toggleAdmPaymentFields() {
+        const mode = document.getElementById('admPaymentMode')?.value || 'Cash';
+
+        const bankField = document.getElementById('admBankField');
+        const chequeDateField = document.getElementById('admChequeDateField');
+        const chequeNoField = document.getElementById('admChequeNoField');
+        const ifscField = document.getElementById('admIfscField');
+        const transactionField = document.getElementById('admTransactionField');
+        const onlinePaymentField = document.getElementById('admOnlinePaymentField');
+
+        if (bankField) bankField.style.display = (mode !== 'Cash') ? 'block' : 'none';
+        if (chequeDateField) chequeDateField.style.display = (mode === 'Cheque') ? 'block' : 'none';
+        if (chequeNoField) chequeNoField.style.display = (mode === 'Cheque') ? 'block' : 'none';
+        if (ifscField) ifscField.style.display = (mode === 'Online') ? 'block' : 'none';
+        if (transactionField) transactionField.style.display = (mode === 'Online') ? 'block' : 'none';
+        if (onlinePaymentField) onlinePaymentField.style.display = (mode === 'Online') ? 'block' : 'none';
+    }
+
+    function updateAdmPendingFeesAndGst() {
+        const totalFees = parseFloat(document.getElementById('admReceiptTotalFees')?.value) || 0;
+        const nowReceiving = parseFloat(document.getElementById('admNowReceiving')?.value) || 0;
+        const pendingFees = Math.max(0, totalFees - nowReceiving);
+
+        const pendingFeesInput = document.getElementById('admReceiptPendingFees');
+        if (pendingFeesInput) pendingFeesInput.value = pendingFees.toFixed(2);
+
+        // Update GST invoice value
+        const gstEnabled = document.getElementById('admEnableGst')?.checked || false;
+        const invoiceInput = document.getElementById('admInvoiceValue');
+        if (invoiceInput) {
+            if (gstEnabled && nowReceiving > 0) {
+                const sgst = (nowReceiving * 0.09);
+                const cgst = (nowReceiving * 0.09);
+                invoiceInput.value = (nowReceiving + sgst + cgst).toFixed(2);
+            } else {
+                invoiceInput.value = '';
+            }
+        }
+    }
+
+    function applyAdmissionFeeReceipt() {
+        const totalFees = parseFloat(document.getElementById('admReceiptTotalFees')?.value) || 0;
+        const nowReceiving = parseFloat(document.getElementById('admNowReceiving')?.value);
+        const mode = document.getElementById('admPaymentMode')?.value || 'Cash';
+
+        if (isNaN(nowReceiving) || nowReceiving <= 0) {
+            showError('Please enter a valid admission fee amount (greater than ₹0.00)');
+            return;
+        }
+
+        if (nowReceiving > totalFees) {
+            showError(`Admission fee (₹${nowReceiving.toFixed(2)}) cannot exceed total receivable fees (₹${totalFees.toFixed(2)})`);
+            return;
+        }
+
+        // Mode specific validation
+        if (mode === 'Cheque') {
+            const chkNo = document.getElementById('admChequeNo')?.value.trim();
+            const chkDate = document.getElementById('admChequeDate')?.value;
+            const bank = document.getElementById('admBankName')?.value;
+            if (!chkNo || !chkDate || !bank) {
+                showError('Please fill Bank Name, Cheque Number, and Cheque Date for Cheque payments');
+                return;
+            }
+        } else if (mode === 'Online') {
+            const txnNo = document.getElementById('admTransactionNo')?.value.trim();
+            const onlineMode = document.getElementById('admOnlinePaymentMode')?.value;
+            if (!txnNo || !onlineMode) {
+                showError('Please enter Transaction No. and Online Payment Mode for Online payments');
+                return;
+            }
+        }
+
+        const gstEnabled = document.getElementById('admEnableGst')?.checked || false;
+        const sgstPercent = gstEnabled ? parseFloat(document.getElementById('admSgstPercent')?.value) || 9 : null;
+        const cgstPercent = gstEnabled ? parseFloat(document.getElementById('admCgstPercent')?.value) || 9 : null;
+        const invoiceValue = gstEnabled ? parseFloat(document.getElementById('admInvoiceValue')?.value) || null : null;
+
+        // Auto format explanatory note
+        const currentUser = document.querySelector('.user-name')?.textContent?.trim() || 'Admin';
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString();
+        let notes = document.getElementById('admReceiptNotes')?.value.trim();
+        if (!notes) {
+            notes = `Admission fees paid: ₹${nowReceiving.toFixed(2)} via ${mode} on ${dateStr} by ${currentUser}`;
+        }
+
+        currentAdmissionReceiptData = {
+            amountReceived: nowReceiving,
+            paymentMode: mode,
+            receiptDate: document.getElementById('admReceiptDate')?.value || new Date().toISOString().split('T')[0],
+            gstEnabled: gstEnabled,
+            sgstPercent: sgstPercent,
+            cgstPercent: cgstPercent,
+            invoiceValue: invoiceValue,
+            bankName: document.getElementById('admBankName')?.value || null,
+            chequeNumber: document.getElementById('admChequeNo')?.value.trim() || null,
+            chequeDate: document.getElementById('admChequeDate')?.value || null,
+            transactionNumber: document.getElementById('admTransactionNo')?.value.trim() || null,
+            ifscCode: document.getElementById('admIfscCode')?.value.trim() || null,
+            onlinePaymentMode: document.getElementById('admOnlinePaymentMode')?.value || null,
+            nextDueDate: document.getElementById('admNextDueDate')?.value || getValue('instStartDate') || document.getElementById('admReceiptDate')?.value || null,
+            receiptType: 'Admission Fee',
+            notes: notes
+        };
+
+        // Update Tab 5 UI Banner
+        updateAdmissionFeeBannerUI(nowReceiving, mode, false);
+
+        // Update installments base amount (Total - Admission Fee Paid)
+        const remainingForInstallments = Math.max(0, totalFees - nowReceiving);
+        setValue('instTotalAmount', remainingForInstallments.toFixed(2));
+        setValue('instTotalInstAmount', remainingForInstallments.toFixed(2));
+
+        // If 100% full fee paid upfront
+        const fullPaidAlert = document.getElementById('admFeeFullPaidAlert');
+        const instBody = document.getElementById('installmentsBody');
+        if (remainingForInstallments <= 0) {
+            if (fullPaidAlert) fullPaidAlert.classList.remove('d-none');
+            if (instBody) {
+                instBody.innerHTML = '<tr><td colspan="4" class="text-center text-success py-3 fw-semibold"><i class="bi bi-check-circle-fill me-1"></i> Full course fee paid upfront. No installments needed.</td></tr>';
+            }
+            setValue('instNoOfInstallments', '0');
+        } else {
+            if (fullPaidAlert) fullPaidAlert.classList.add('d-none');
+        }
+
+        // Close modal
+        const modalEl = document.getElementById('admFeeReceiptModal');
+        if (modalEl) {
+            bootstrap.Modal.getInstance(modalEl)?.hide();
+        }
+
+        showSuccess(`Admission fee of ₹${nowReceiving.toFixed(2)} recorded! Remaining ₹${remainingForInstallments.toFixed(2)} configured for installments.`);
+    }
+
+    function updateAdmissionFeeBannerUI(amount, mode, isEditMode) {
+        const badge = document.getElementById('admFeeStatusBadge');
+        const desc = document.getElementById('admFeeStatusDescription');
+        const btnOpen = document.getElementById('btnOpenAdmReceiptModal');
+        const btnClear = document.getElementById('btnClearAdmFeeReceipt');
+        const totalFees = parseFloat(getValue('admReceivableFees')) || parseFloat(getValue('admTotalFees')) || 0;
+        const remaining = Math.max(0, totalFees - amount);
+
+        if (badge) {
+            badge.className = 'badge bg-success-subtle text-success border border-success px-2.5 py-1';
+            badge.innerHTML = `<i class="bi bi-check-circle me-1"></i>₹${amount.toFixed(2)} Paid`;
+        }
+
+        if (desc) {
+            desc.innerHTML = `<strong>₹${amount.toFixed(2)}</strong> paid via <strong>${mode}</strong> as Admission Fee. Remaining <strong>₹${remaining.toFixed(2)}</strong> goes to installments.`;
+        }
+
+        if (btnOpen) {
+            btnOpen.innerHTML = isEditMode
+                ? '<i class="bi bi-pencil-square me-1"></i>View / Edit Admission Fee'
+                : '<i class="bi bi-pencil-square me-1"></i>Edit Admission Fee';
+        }
+
+        if (btnClear) {
+            btnClear.style.display = isEditMode ? 'none' : 'inline-block';
+        }
+    }
+
+    function clearAdmissionFeeReceipt() {
+        currentAdmissionReceiptData = null;
+
+        const badge = document.getElementById('admFeeStatusBadge');
+        const desc = document.getElementById('admFeeStatusDescription');
+        const btnOpen = document.getElementById('btnOpenAdmReceiptModal');
+        const btnClear = document.getElementById('btnClearAdmFeeReceipt');
+        const fullPaidAlert = document.getElementById('admFeeFullPaidAlert');
+
+        if (badge) {
+            badge.className = 'badge bg-secondary-subtle text-secondary border px-2.5 py-1';
+            badge.textContent = 'Not Paid (₹0.00)';
+        }
+
+        if (desc) {
+            desc.textContent = 'No admission fee collected upfront. The entire course fee will be divided across installments.';
+        }
+
+        if (btnOpen) {
+            btnOpen.innerHTML = '<i class="bi bi-receipt me-1"></i>Collect Admission Fee';
+        }
+
+        if (btnClear) {
+            btnClear.style.display = 'none';
+        }
+
+        if (fullPaidAlert) {
+            fullPaidAlert.classList.add('d-none');
+        }
+
+        // Reset installment base amount back to full receivable fees
+        const receivable = parseFloat(getValue('admReceivableFees')) || parseFloat(getValue('admTotalFees')) || 0;
+        setValue('instTotalAmount', receivable.toFixed(2));
+        setValue('instTotalInstAmount', receivable.toFixed(2));
+    }
+
     // ==================== INSTALLMENT GENERATION ====================
 
     function generateInstallments() {
@@ -4497,6 +5125,11 @@
         const noOfInstallments = parseInt(getValue('instNoOfInstallments')) || 0;
         const daysBetween = parseInt(getValue('instDays')) || 30;
         const startDate = getValue('instStartDate');
+
+        if (currentAdmissionReceiptData && currentAdmissionReceiptData.amountReceived > 0 && totalAmount <= 0) {
+            showInfo('100% full course fee has been paid upfront via Admission Fee. No installments are needed.');
+            return;
+        }
 
         if (!totalAmount || !noOfInstallments || !startDate) {
             showError('Please fill Total Amount, No. of Installments and Start Date');
@@ -4532,28 +5165,43 @@
     };
 
     function generateFeeInstallments() {
-        const totalAmount = parseFloat(getValue('feeInstTotalAmount')) || 0;
+        const totalReceivable = parseFloat(getValue('feeInstTotalAmount')) || 0;
+        const admFeePaid = parseFloat(document.getElementById('feeInstStudentName')?.dataset?.admissionFeePaid) || 0;
+        // Total amount for installments is Total Receivable minus Admission Fee Paid
+        const targetAmount = (parseFloat(getValue('feeInstTotalInstAmount')) > 0)
+            ? parseFloat(getValue('feeInstTotalInstAmount'))
+            : Math.max(0, totalReceivable - admFeePaid);
+
         const noOfInstallments = parseInt(getValue('feeInstNoOfInstallments')) || 0;
         const daysBetween = parseInt(getValue('feeInstDays')) || 30;
         const startDate = getValue('feeInstStartDate');
 
-        if (!totalAmount || !noOfInstallments || !startDate) {
-            showError('Please fill Total Amount, No. of Installments and Start Date');
+        if (!targetAmount && totalReceivable <= 0) {
+            showError('Please fill Total Amount');
             return;
         }
 
-        const amountPerInstallment = totalAmount / noOfInstallments;
+        if (!noOfInstallments || !startDate) {
+            showError('Please fill No. of Installments and Start Date');
+            return;
+        }
+
+        const amountPerInstallment = targetAmount / noOfInstallments;
         const tbody = document.getElementById('feeInstallmentsBody');
         let currentDate = new Date(startDate);
 
         tbody.innerHTML = '';
 
+        const creator = getCurrentUser();
+        const nowIso = new Date().toISOString();
+
         for (let i = 1; i <= noOfInstallments; i++) {
             const formattedDate = currentDate.toISOString().split('T')[0];
-            tbody.appendChild(buildFeeInstallmentRow(formattedDate, amountPerInstallment.toFixed(2), 'Pending', ''));
+            tbody.appendChild(buildFeeInstallmentRow(formattedDate, amountPerInstallment.toFixed(2), 'Pending', '', '', creator, nowIso, '-', null));
             currentDate.setDate(currentDate.getDate() + daysBetween);
         }
 
+        setValue('feeInstTotalInstAmount', targetAmount.toFixed(2));
         recalculateFeeInstallmentTotal();
         setupFeeInstallmentsAuditLogic();
         showSuccess(`Generated ${noOfInstallments} installments`);
@@ -4610,28 +5258,39 @@
             return;
         }
 
-        //  Amount-match validation 
-        const feeInstTotal = parseFloat(document.getElementById('feeInstTotalAmount')?.value) || 0;
+        //  Amount-match validation (Target is Total Receivable MINUS Admission Fee Paid upfront)
+        const totalReceivable = parseFloat(document.getElementById('feeInstTotalAmount')?.value) || 0;
+        const admissionFeePaid = parseFloat(document.getElementById('feeInstStudentName')?.dataset?.admissionFeePaid) || 0;
+        const expectedTotalInst = parseFloat(document.getElementById('feeInstTotalInstAmount')?.value)
+            || Math.max(0, totalReceivable - admissionFeePaid)
+            || totalReceivable;
+
         const feeInstSum = installments.reduce((s, i) => s + i.amount, 0);
-        const feeInstDiff = Math.round((feeInstSum - feeInstTotal) * 100) / 100; // round to 2dp
+        const feeInstDiff = Math.round((feeInstSum - expectedTotalInst) * 100) / 100; // round to 2dp
 
         if (feeInstDiff > 0) {
             Swal.fire({
                 icon: 'error',
                 title: 'Amount Mismatch',
                 html: `
-                                  <div class="text-start">
-                                      <p class="mb-2">The total of all installment amounts <strong class="text-danger">cannot be greater than</strong> the Total Receivable Amount.</p>
-                                      <div class="row g-2" style="font-size:0.88rem;">
-                                          <div class="col-6 text-muted">Total Receivable:</div>
-                                          <div class="col-6 fw-bold text-primary">&#8377;${feeInstTotal.toFixed(2)}</div>
-                                          <div class="col-6 text-muted">Installments Sum:</div>
-                                          <div class="col-6 fw-bold text-danger">&#8377;${feeInstSum.toFixed(2)}</div>
-                                          <div class="col-6 text-muted">Excess:</div>
-                                          <div class="col-6 fw-bold text-danger">+ &#8377;${feeInstDiff.toFixed(2)}</div>
-                                      </div>
-                                      <p class="mt-2 mb-0 text-muted" style="font-size:0.82rem;">Please reduce the installment amounts by &#8377;${feeInstDiff.toFixed(2)} before saving.</p>
-                                  </div>`,
+                    <div class="text-start">
+                        <p class="mb-2">The total of all installment amounts <strong class="text-danger">cannot be greater than</strong> the Target Installment Amount.</p>
+                        <div class="row g-2" style="font-size:0.88rem;">
+                            <div class="col-6 text-muted">Total Receivable:</div>
+                            <div class="col-6 fw-bold text-dark">&#8377;${totalReceivable.toFixed(2)}</div>
+                            ${admissionFeePaid > 0 ? `
+                            <div class="col-6 text-muted">Admission Fee (Deducted):</div>
+                            <div class="col-6 fw-bold text-success">- &#8377;${admissionFeePaid.toFixed(2)}</div>
+                            <div class="col-6 text-muted">Installments Target:</div>
+                            <div class="col-6 fw-bold text-primary">&#8377;${expectedTotalInst.toFixed(2)}</div>
+                            ` : ''}
+                            <div class="col-6 text-muted">Installments Sum:</div>
+                            <div class="col-6 fw-bold text-danger">&#8377;${feeInstSum.toFixed(2)}</div>
+                            <div class="col-6 text-muted">Excess:</div>
+                            <div class="col-6 fw-bold text-danger">+ &#8377;${feeInstDiff.toFixed(2)}</div>
+                        </div>
+                        <p class="mt-2 mb-0 text-muted" style="font-size:0.82rem;">Please reduce the installment amounts by &#8377;${feeInstDiff.toFixed(2)} before saving.</p>
+                    </div>`,
                 confirmButtonColor: '#dc2626',
                 confirmButtonText: 'Fix Amounts'
             });
@@ -4644,18 +5303,24 @@
                 icon: 'warning',
                 title: 'Amount Mismatch',
                 html: `
-                                  <div class="text-start">
-                                      <p class="mb-2">The total of all installment amounts <strong class="text-warning">cannot be less than</strong> the Total Receivable Amount.</p>
-                                      <div class="row g-2" style="font-size:0.88rem;">
-                                          <div class="col-6 text-muted">Total Receivable:</div>
-                                          <div class="col-6 fw-bold text-primary">&#8377;${feeInstTotal.toFixed(2)}</div>
-                                          <div class="col-6 text-muted">Installments Sum:</div>
-                                          <div class="col-6 fw-bold text-warning">&#8377;${feeInstSum.toFixed(2)}</div>
-                                          <div class="col-6 text-muted">Shortfall:</div>
-                                          <div class="col-6 fw-bold text-warning">- &#8377;${short.toFixed(2)}</div>
-                                      </div>
-                                      <p class="mt-2 mb-0 text-muted" style="font-size:0.82rem;">Please add &#8377;${short.toFixed(2)} more across the installment rows before saving.</p>
-                                  </div>`,
+                    <div class="text-start">
+                        <p class="mb-2">The total of all installment amounts <strong class="text-warning">cannot be less than</strong> the Target Installment Amount.</p>
+                        <div class="row g-2" style="font-size:0.88rem;">
+                            <div class="col-6 text-muted">Total Receivable:</div>
+                            <div class="col-6 fw-bold text-dark">&#8377;${totalReceivable.toFixed(2)}</div>
+                            ${admissionFeePaid > 0 ? `
+                            <div class="col-6 text-muted">Admission Fee (Deducted):</div>
+                            <div class="col-6 fw-bold text-success">- &#8377;${admissionFeePaid.toFixed(2)}</div>
+                            <div class="col-6 text-muted">Installments Target:</div>
+                            <div class="col-6 fw-bold text-primary">&#8377;${expectedTotalInst.toFixed(2)}</div>
+                            ` : ''}
+                            <div class="col-6 text-muted">Installments Sum:</div>
+                            <div class="col-6 fw-bold text-warning">&#8377;${feeInstSum.toFixed(2)}</div>
+                            <div class="col-6 text-muted">Shortfall:</div>
+                            <div class="col-6 fw-bold text-warning">- &#8377;${short.toFixed(2)}</div>
+                        </div>
+                        <p class="mt-2 mb-0 text-muted" style="font-size:0.82rem;">Please add &#8377;${short.toFixed(2)} more across the installment rows before saving.</p>
+                    </div>`,
                 confirmButtonColor: '#d97706',
                 confirmButtonText: 'Fix Amounts'
             });
@@ -5064,6 +5729,8 @@
         if (instBody) {
             instBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No installments generated</td></tr>';
         }
+
+        clearAdmissionFeeReceipt();
     }
 
     function previousTab() {
@@ -5339,6 +6006,241 @@
         return true;
     }
 
+    function numberToWords(num) {
+        if (!num || num === 0) return 'Zero Rupees Only';
+
+        const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+        const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+        const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+
+        function convertLessThanThousand(n) {
+            if (n === 0) return '';
+            if (n < 10) return ones[n];
+            if (n < 20) return teens[n - 10];
+            if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
+            return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertLessThanThousand(n % 100) : '');
+        }
+
+        num = Math.floor(num);
+
+        if (num < 1000) return convertLessThanThousand(num) + ' Rupees Only';
+        if (num < 100000) {
+            const thousands = Math.floor(num / 1000);
+            const remainder = num % 1000;
+            return convertLessThanThousand(thousands) + ' Thousand' +
+                (remainder !== 0 ? ' ' + convertLessThanThousand(remainder) : '') + ' Rupees Only';
+        }
+
+        const lakhs = Math.floor(num / 100000);
+        const remainder = num % 100000;
+        const thousands = Math.floor(remainder / 1000);
+        const hundreds = remainder % 1000;
+
+        let result = convertLessThanThousand(lakhs) + ' Lakh';
+        if (thousands > 0) result += ' ' + convertLessThanThousand(thousands) + ' Thousand';
+        if (hundreds > 0) result += ' ' + convertLessThanThousand(hundreds);
+
+        return result + ' Rupees Only';
+    }
+
+    function printAdmissionReceipt(htmlContent) {
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        if (!printWindow) {
+            showError('Please allow popups to print receipt');
+            return;
+        }
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Print Receipt</title>
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+                <style>
+                    @media print {
+                        body { margin: 0; padding: 20px; }
+                        .receipt-container { max-width: 800px; margin: 0 auto; }
+                        @page { size: A4; margin: 10mm; }
+                    }
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+                    .receipt-container { padding: 30px; max-width: 800px; margin: 0 auto; }
+                </style>
+            </head>
+            <body>
+                ${htmlContent}
+                <script>
+                    window.onload = function() {
+                        setTimeout(function() {
+                            window.print();
+                            window.onafterprint = function() { window.close(); };
+                        }, 250);
+                    };
+                <\/script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+
+    async function previewAdmissionReceipt(receiptNo, regNo) {
+        try {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Loading Receipt...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+            }
+
+            const response = await fetch(`/api/fees-manager/receipts/${regNo}`);
+            if (!response.ok) throw new Error('Failed to load receipts for student');
+            const receipts = await response.json();
+            const receipt = receipts.find(r => r.receiptNumber === receiptNo);
+            if (!receipt) throw new Error(`Receipt ${receiptNo} not found`);
+
+            if (typeof Swal !== 'undefined') Swal.close();
+
+            const isAdmFee = (receipt.receiptType && receipt.receiptType.toLowerCase().includes('admission')) || 
+                             (receipt.installmentId == null && receipt.notes && receipt.notes.toLowerCase().includes('admission fee'));
+            const amountInWords = numberToWords(receipt.amountReceived || 0);
+            const formatDate = (dateStr) => {
+                if (!dateStr) return 'N/A';
+                const d = new Date(dateStr);
+                return d.toLocaleDateString('en-GB');
+            };
+
+            const pendingVal = receipt.currentPendingFees != null ? receipt.currentPendingFees : (receipt.pendingFees || 0);
+
+            const receiptHTML = `
+                <div class="receipt-container text-start" id="receiptContent" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                    <div class="receipt-header text-center mb-4">
+                        <img src="/assets/images/technokraft-logo.png" alt="Logo" style="height: 60px; margin-bottom: 10px;" onerror="this.style.display='none'">
+                        <h3 class="mb-1" style="color: #667eea; font-weight: 700;">TechnoKraft Training Solutions</h3>
+                        <p class="mb-0 text-muted">Excellence in Technical Education</p>
+                        <p class="mb-0 small text-muted">Kanchwala Avenue, College Road, Nashik, Maharashtra - 422005</p>
+                        <p class="mb-0 small text-muted">Phone: +91 86456 28278 | Email: info@tts.net.in</p>
+                        <div style="border-top: 3px solid #667eea; border-bottom: 3px solid #667eea; padding: 10px 0; margin: 20px 0;">
+                            <h4 class="text-center mb-0" style="color: #1e293b; font-weight: 600;">${isAdmFee ? 'ADMISSION FEE RECEIPT' : 'FEE RECEIPT'}</h4>
+                        </div>
+                    </div>
+                    <div class="receipt-body">
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <p class="mb-1"><strong>Receipt No:</strong> ${receipt.receiptNumber || 'N/A'}</p>
+                                <p class="mb-1"><strong>Invoice No:</strong> ${receipt.invoiceNumber || 'N/A'}</p>
+                            </div>
+                            <div class="col-6 text-end">
+                                <p class="mb-1"><strong>Date:</strong> ${formatDate(receipt.receiptDate)}</p>
+                            </div>
+                        </div>
+                        <div class="student-details" style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <h6 style="color: #667eea; margin-bottom: 10px; font-weight: 600;">Student Details</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <p class="mb-1"><strong>Name:</strong> ${receipt.studentName || 'N/A'}</p>
+                                    <p class="mb-1"><strong>Reg. No:</strong> ${receipt.registrationNumber || regNo || 'N/A'}</p>
+                                </div>
+                                <div class="col-6">
+                                    <p class="mb-1"><strong>Mobile:</strong> ${receipt.mobile || 'N/A'}</p>
+                                    <p class="mb-1"><strong>Course:</strong> ${receipt.course || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="payment-details" style="border: 2px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                            <h6 style="color: #667eea; margin-bottom: 15px; font-weight: 600;">Payment Details</h6>
+                            <table class="table table-sm mb-0">
+                                <tbody>
+                                    ${isAdmFee ? `
+                                    <tr>
+                                        <td><strong>Receipt Type:</strong></td>
+                                        <td class="text-end"><span class="badge border" style="background-color: #f3e8ff; color: #7e22ce; border-color: #d8b4fe !important; font-size: 0.85rem;"><i class="bi bi-star-fill me-1" style="font-size: 0.75rem;"></i>Admission Fee</span></td>
+                                    </tr>
+                                    ` : ''}
+                                    <tr>
+                                        <td><strong>Amount Paid:</strong></td>
+                                        <td class="text-end"><strong style="font-size: 1.1rem; color: #10b981;">₹${(receipt.amountReceived || 0).toLocaleString()}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Amount in Words:</strong></td>
+                                        <td class="text-end"><em>${amountInWords}</em></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Payment Mode:</strong></td>
+                                        <td class="text-end">${receipt.paymentMode || 'Cash'}</td>
+                                    </tr>
+                                    ${receipt.transactionNumber ? `<tr><td><strong>Transaction ID:</strong></td><td class="text-end">${receipt.transactionNumber}</td></tr>` : ''}
+                                    ${receipt.chequeNumber ? `<tr><td><strong>Cheque No:</strong></td><td class="text-end">${receipt.chequeNumber}</td></tr>` : ''}
+                                    ${receipt.bankName ? `<tr><td><strong>Bank Name:</strong></td><td class="text-end">${receipt.bankName}</td></tr>` : ''}
+                                    <tr>
+                                        <td><strong>Total Fees:</strong></td>
+                                        <td class="text-end">₹${(receipt.totalFees || 0).toLocaleString()}</td>
+                                    </tr>
+                                    ${pendingVal > 0.01 ? `
+                                    <tr>
+                                        <td><strong style="color: #dc2626;">Current Pending Fees:</strong></td>
+                                        <td class="text-end"><strong style="color: #dc2626; font-weight: bold;">₹${pendingVal.toLocaleString()}</strong></td>
+                                    </tr>
+                                    ` : `
+                                    <tr style="background-color: #f0fdf4;">
+                                        <td><strong>Payment Status:</strong></td>
+                                        <td class="text-end"><strong style="color: #16a34a;">✓ PAID IN FULL</strong></td>
+                                    </tr>
+                                    `}
+                                    ${pendingVal > 0.01 && receipt.nextDueDate ? `
+                                    <tr>
+                                        <td><strong style="color: #dc2626;">Next Due Date:</strong></td>
+                                        <td class="text-end"><strong style="color: #dc2626; font-weight: bold;">${formatDate(receipt.nextDueDate)}</strong></td>
+                                    </tr>
+                                    ` : ''}
+                                </tbody>
+                            </table>
+                        </div>
+                        ${receipt.notes ? `
+                        <div class="note-section" style="background: #fef3c7; padding: 10px; border-radius: 6px; border-left: 4px solid #f59e0b; margin-bottom: 20px;">
+                            <p class="mb-0 small"><strong>Note:</strong> ${receipt.notes}</p>
+                        </div>
+                        ` : ''}
+                        <div class="receipt-footer mt-4">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div style="border-top: 2px solid #334155; padding-top: 5px; margin-top: 40px;">
+                                        <p class="mb-0 text-center small"><strong>Student Signature</strong></p>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div style="border-top: 2px solid #334155; padding-top: 5px; margin-top: 40px;">
+                                        <p class="mb-0 text-center small"><strong>Authorized Signature</strong></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3 pt-2" style="border-top: 1px dashed #cbd5e1;">
+                            <p class="mb-0 small text-muted" style="font-size: 0.75rem;">This is a computer-generated receipt and does not require a physical signature.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            Swal.fire({
+                title: isAdmFee ? 'Admission Fee Receipt' : 'Fee Receipt Preview',
+                html: receiptHTML,
+                width: '800px',
+                showCloseButton: true,
+                showConfirmButton: true,
+                confirmButtonText: '<i class="bi bi-printer me-2"></i>Print Receipt',
+                confirmButtonColor: '#667eea'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    printAdmissionReceipt(receiptHTML);
+                }
+            });
+        } catch (err) {
+            console.error('Error previewing receipt:', err);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'error', title: 'Receipt Preview Error', text: err.message });
+            }
+        }
+    }
 
     // Make functions globally available
     window.navigateNext = navigateNext;
@@ -5352,6 +6254,10 @@
     window.removeCourse = removeCourse;
     window.removeInstallment = removeInstallment;
     window.printToPDF = printToPDF;
+    window.openAdmissionFeeReceiptModal = openAdmissionFeeReceiptModal;
+    window.clearAdmissionFeeReceipt = clearAdmissionFeeReceipt;
+    window.applyAdmissionFeeReceipt = applyAdmissionFeeReceipt;
+    window.previewAdmissionReceipt = previewAdmissionReceipt;
 
     // Global fetch error handler
     window.addEventListener('unhandledrejection', function (event) {

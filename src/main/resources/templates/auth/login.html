@@ -424,7 +424,7 @@
                 <p class="credits-text">
                     <span class="dev-name">&copy; 2026 TechnoKraft Training & Solution</span>
                     <span class="divider">|</span>
-                    <span class="credits-label">v8.3</span>
+                    <span class="credits-label">v9.1</span>
                 </p>
             </div>
 
@@ -475,7 +475,7 @@
                 <div class="footer-copy">
                     &copy; 2026
                     <a href="https://tts.net.in/" target="_blank" style="text-decoration: none; color: inherit; font-weight: 600;">TechnoKraft Training & Solution</a>
-                    <span class="ms-1" style="font-weight: 500;">v8.3</span>
+                    <span class="ms-1" style="font-weight: 500;">v9.1</span>
                 </div>
             </div>
         </div>
@@ -531,6 +531,27 @@
                 text: logoutMsg,
                 timer: 3000,
                 showConfirmButton: false
+            });
+        }
+
+        // Prevent double form submission on cold start / latency
+        const loginForm = document.getElementById('loginForm');
+        let isSubmitting = false;
+        if (loginForm) {
+            loginForm.addEventListener('submit', function(e) {
+                if (isSubmitting) {
+                    e.preventDefault();
+                    return false;
+                }
+                isSubmitting = true;
+                const btn = loginForm.querySelector('.btn-login');
+                if (btn) {
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Signing In...';
+                    setTimeout(function() {
+                        btn.style.pointerEvents = 'none';
+                        btn.style.opacity = '0.75';
+                    }, 10);
+                }
             });
         }
     });

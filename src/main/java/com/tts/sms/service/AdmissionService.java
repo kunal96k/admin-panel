@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Year;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -49,6 +50,7 @@ public class AdmissionService {
     private final BatchService batchService;
     private final CertificateRepository certificateRepository;
     private final FeeReceiptRepository feeReceiptRepository;
+    private final FeesManagerService feesManagerService;
 
     private static final AtomicInteger registrationCounter = new AtomicInteger(8000);
     private static final String REGISTRATION_PREFIX = "REG";
@@ -258,7 +260,7 @@ public class AdmissionService {
             throw new ResourceNotFoundException("Admission not found: " + regNo);
         }
 
-        return admissionMapper.toResponseDTO(admission);
+        return toResponseDTOWithInstallments(admission);
     }
 
     @Transactional(readOnly = true)
@@ -460,6 +462,21 @@ public class AdmissionService {
         Admission admission = admissionMapper.toEntity(requestDTO);
         admission.setEnquiryId(enquiryId);
 
+        // Handle Admission Fee upfront payment note and state
+        FeeReceiptRequestDTO receiptDTO = requestDTO.getAdmissionReceipt();
+        Double admissionFeePaid = requestDTO.getAdmissionFeePaid();
+        if (receiptDTO != null && receiptDTO.getAmountReceived() != null && receiptDTO.getAmountReceived() > 0) {
+            admissionFeePaid = receiptDTO.getAmountReceived();
+        }
+        admission.setAdmissionFeePaid(admissionFeePaid != null ? admissionFeePaid : 0.0);
+
+        if (admissionFeePaid != null && admissionFeePaid > 0) {
+            String paymentMode = (receiptDTO != null && receiptDTO.getPaymentMode() != null) ? receiptDTO.getPaymentMode() : "Cash";
+            String formattedNow = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss").format(LocalDateTime.now());
+            String noteAddition = String.format("\n[Admission fees paid: ₹%,.2f via %s on %s]", admissionFeePaid, paymentMode, formattedNow);
+            admission.setNotes((admission.getNotes() != null ? admission.getNotes() : "") + noteAddition);
+        }
+
         boolean isNewAdmission = false;
         String importSource = "NEW_ENTRY";
 
@@ -519,23 +536,61 @@ public class AdmissionService {
             log.info(" NEW ADMISSION: Creating fees record for regNo: {}",
                     savedAdmission.getRegistrationNumber());
             createFeesRecord(savedAdmission);
+
+            // Create Fee Receipt for upfront Admission Fee payment if provided
+            if (admissionFeePaid != null && admissionFeePaid > 0 && receiptDTO != null) {
+                receiptDTO.setRegNo(savedAdmission.getRegistrationNumber());
+                receiptDTO.setReceiptType("Admission Fee");
+                receiptDTO.setInstallmentId(null);
+                if (receiptDTO.getReceiptDate() == null) {
+                    receiptDTO.setReceiptDate(LocalDate.now());
+                }
+                if (receiptDTO.getTotalFees() == null || receiptDTO.getTotalFees() <= 0) {
+                    receiptDTO.setTotalFees(savedAdmission.getTotalReceivableFees());
+                }
+                receiptDTO.setAmountReceived(admissionFeePaid);
+                try {
+                    feesManagerService.createFeeReceipt(receiptDTO);
+                    log.info(" Created Admission Fee Receipt for regNo: {}, amount: ₹{}",
+                            savedAdmission.getRegistrationNumber(), admissionFeePaid);
+                } catch (Exception e) {
+                    log.error(" Failed to create Admission Fee Receipt for regNo: {}",
+                            savedAdmission.getRegistrationNumber(), e);
+                }
+            }
         } else {
             log.info(" OLD CSV IMPORT: Skipping fees record creation for regNo: {}",
                     savedAdmission.getRegistrationNumber());
         }
 
         // Generate fee installments if config/custom installments provided (only for new admissions)
+        // CRITICAL: Admission fee paid is SKIPPED from installments (remaining balance goes to installments)
         if (isNewAdmission) {
+            Double totalReceivable = savedAdmission.getTotalReceivableFees() != null ? savedAdmission.getTotalReceivableFees() : 0.0;
+            Double remainingForInstallments = totalReceivable;
+            if (admissionFeePaid != null && admissionFeePaid > 0) {
+                remainingForInstallments = Math.max(0.0, totalReceivable - admissionFeePaid);
+            }
+            log.info(" Installments base amount for regNo {}: Total={}, AdmissionFeePaid={}, Remaining={}",
+                    savedAdmission.getRegistrationNumber(), totalReceivable, admissionFeePaid, remainingForInstallments);
+
             if (requestDTO.getCustomInstallments() != null && !requestDTO.getCustomInstallments().isEmpty()) {
                 saveCustomInstallments(
                         savedAdmission.getRegistrationNumber(),
                         requestDTO.getCustomInstallments(),
-                        requestDTO.getTotalReceivableFees());
+                        remainingForInstallments);
             } else if (requestDTO.getInstallmentConfig() != null) {
                 generateInstallments(
                         savedAdmission.getRegistrationNumber(),
                         requestDTO.getInstallmentConfig(),
-                        requestDTO.getTotalReceivableFees());
+                        remainingForInstallments);
+            }
+
+            // Sync and recalculate fees
+            try {
+                feesManagerService.recalculateFeesFromTransactions(savedAdmission.getRegistrationNumber());
+            } catch (Exception e) {
+                log.warn(" Recalculate fees failed for {}: {}", savedAdmission.getRegistrationNumber(), e.getMessage());
             }
         }
 
@@ -630,21 +685,68 @@ public class AdmissionService {
         Admission updated = admissionRepository.save(existingAdmission);
         log.info("Updated admission with id: {}", id);
 
+        // Handle admission fee payment if provided during update
+        FeeReceiptRequestDTO receiptDTO = requestDTO.getAdmissionReceipt();
+        Double admissionFeePaid = requestDTO.getAdmissionFeePaid();
+        if (receiptDTO != null && receiptDTO.getAmountReceived() != null && receiptDTO.getAmountReceived() > 0) {
+            admissionFeePaid = receiptDTO.getAmountReceived();
+        }
+
+        if (admissionFeePaid != null && admissionFeePaid > 0 && 
+            (existingAdmission.getAdmissionFeePaid() == null || existingAdmission.getAdmissionFeePaid() <= 0) &&
+            receiptDTO != null) {
+            existingAdmission.setAdmissionFeePaid(admissionFeePaid);
+            receiptDTO.setRegNo(updated.getRegistrationNumber());
+            receiptDTO.setReceiptType("Admission Fee");
+            receiptDTO.setInstallmentId(null);
+            if (receiptDTO.getReceiptDate() == null) {
+                receiptDTO.setReceiptDate(LocalDate.now());
+            }
+            if (receiptDTO.getTotalFees() == null || receiptDTO.getTotalFees() <= 0) {
+                receiptDTO.setTotalFees(updated.getTotalReceivableFees());
+            }
+            receiptDTO.setAmountReceived(admissionFeePaid);
+            try {
+                feesManagerService.createFeeReceipt(receiptDTO);
+                log.info(" Created Admission Fee Receipt on update for regNo: {}, amount: ₹{}",
+                        updated.getRegistrationNumber(), admissionFeePaid);
+            } catch (Exception e) {
+                log.error(" Failed to create Admission Fee Receipt on update for regNo: {}",
+                        updated.getRegistrationNumber(), e);
+            }
+
+            String paymentMode = receiptDTO.getPaymentMode() != null ? receiptDTO.getPaymentMode() : "Cash";
+            String formattedNow = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss").format(LocalDateTime.now());
+            String noteAddition = String.format("\n[Admission fees paid: ₹%,.2f via %s on %s]", admissionFeePaid, paymentMode, formattedNow);
+            existingAdmission.setNotes((existingAdmission.getNotes() != null ? existingAdmission.getNotes() : "") + noteAddition);
+            admissionRepository.save(existingAdmission);
+        }
+
         // Update fee installments if config/custom installments provided
+        Double currentAdmFee = existingAdmission.getAdmissionFeePaid() != null ? existingAdmission.getAdmissionFeePaid() : 0.0;
+        Double totalReceivable = updated.getTotalReceivableFees() != null ? updated.getTotalReceivableFees() : 0.0;
+        Double remainingForInstallments = Math.max(0.0, totalReceivable - currentAdmFee);
+
         if (requestDTO.getCustomInstallments() != null && !requestDTO.getCustomInstallments().isEmpty()) {
             saveCustomInstallments(
                     updated.getRegistrationNumber(),
                     requestDTO.getCustomInstallments(),
-                    updated.getTotalReceivableFees());
+                    remainingForInstallments);
         } else if (requestDTO.getInstallmentConfig() != null) {
             generateInstallments(
                     updated.getRegistrationNumber(),
                     requestDTO.getInstallmentConfig(),
-                    updated.getTotalReceivableFees());
+                    remainingForInstallments);
         }
 
         // SYNC WITH FEES MANAGER
         updateFeesRecord(updated);
+
+        try {
+            feesManagerService.recalculateFeesFromTransactions(updated.getRegistrationNumber());
+        } catch (Exception e) {
+            log.warn(" Recalculate fees failed on update for {}: {}", updated.getRegistrationNumber(), e.getMessage());
+        }
 
         // SYNC WITH CERTIFICATES
         syncCertificatesWithAdmission(updated);
@@ -909,7 +1011,7 @@ public class AdmissionService {
         } catch (Exception e) {
             log.warn("Failed to get current logged in user: {}", e.getMessage());
         }
-        return "SYSTEM";
+        return "Admin";
     }
 
     /**
@@ -1090,7 +1192,7 @@ public class AdmissionService {
         dto.setTotalPaidAmount(totalPaid != null ? totalPaid : 0.0);
         dto.setTotalDueAmount(totalDue != null ? totalDue : 0.0);
 
-        // Fetch fees status
+        // Fetch fees status and sync true totals from Fees table
         feesRepository.findByRegistrationNumberAndIsDeletedFalse(admission.getRegistrationNumber())
                 .ifPresent(fees -> {
                     String feesStatus = fees.getStatus() != null ? fees.getStatus() : "Pending";
@@ -1098,17 +1200,44 @@ public class AdmissionService {
                     if ("CANCELLED".equalsIgnoreCase(admission.getStudentCategory())) {
                         feesStatus = "Cancelled";
                     }
-                    // NOTE: Overdue is NOT dynamically re-checked here.
-                    // The stored status is computed accurately by recalculateFeesForStudent()
-                    // which uses actual installment due dates. Using fees.getDueDate() here
-                    // risks setting Overdue from a stale date field.
-                    
                     dto.setFeesStatus(feesStatus);
+
+                    if (fees.getTotalPaid() != null) {
+                        dto.setTotalPaidAmount(fees.getTotalPaid());
+                    }
+                    if (fees.getFeesDue() != null) {
+                        dto.setTotalDueAmount(fees.getFeesDue());
+                    }
                     
                     // Also sync total config if not already set
                     if (dto.getInstallmentStartDate() == null) dto.setInstallmentStartDate(fees.getInstallmentStartDate());
                     if (dto.getNumberOfInstallments() == null) dto.setNumberOfInstallments(fees.getNumberOfInstallments());
                 });
+
+        // Populate Admission Fee details and receipt metadata
+        if (admission.getRegistrationNumber() != null) {
+            try {
+                List<FeeReceipt> receipts = feeReceiptRepository
+                        .findByRegistrationNumberAndIsDeletedFalseOrderByReceiptDateDesc(admission.getRegistrationNumber());
+                FeeReceipt admReceipt = receipts.stream()
+                        .filter(r -> "Admission Fee".equalsIgnoreCase(r.getReceiptType()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (admReceipt != null) {
+                    dto.setAdmissionFeePaid(admReceipt.getAmountReceived());
+                    dto.setAdmissionReceiptNumber(admReceipt.getReceiptNumber());
+                    dto.setAdmissionReceiptDate(admReceipt.getReceiptDate());
+                    dto.setAdmissionReceiptCreatedAt(admReceipt.getCreatedAt());
+                    dto.setAdmissionPaymentMode(admReceipt.getPaymentMode());
+                    dto.setAdmissionReceiptNotes(admReceipt.getNotes());
+                } else if (admission.getAdmissionFeePaid() != null && admission.getAdmissionFeePaid() > 0) {
+                    dto.setAdmissionFeePaid(admission.getAdmissionFeePaid());
+                }
+            } catch (Exception e) {
+                log.warn("Error fetching admission receipt details for regNo {}: {}", admission.getRegistrationNumber(), e.getMessage());
+            }
+        }
 
         if (dto.getFeesStatus() == null) {
             dto.setFeesStatus("Pending");

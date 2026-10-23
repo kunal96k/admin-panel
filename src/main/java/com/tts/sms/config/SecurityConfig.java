@@ -17,11 +17,15 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -150,6 +154,19 @@ public class SecurityConfig {
                 /* ACCESS DENIED HANDLER */
                 .exceptionHandling(exception -> exception
                         .accessDeniedHandler((request, response, ex) -> {
+                            // Gracefully handle CSRF expiration or duplicate submissions on /login
+                            if ("/login".equals(request.getRequestURI()) || ex instanceof CsrfException) {
+                                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                                if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+                                    log.info("Already authenticated user on {}, redirecting to /dashboard", request.getRequestURI());
+                                    response.sendRedirect("/dashboard");
+                                    return;
+                                }
+                                log.warn("Session or CSRF token expired on {}, redirecting to login", request.getRequestURI());
+                                response.sendRedirect("/login?error");
+                                return;
+                            }
+
                             HttpSession session = request.getSession();
                             session.setAttribute("accessDeniedMessage",
                                     "You attempted to access: " + request.getRequestURI());

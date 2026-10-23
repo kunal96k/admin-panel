@@ -56,6 +56,8 @@ public class AdmissionRequestDTO {
     private Double totalReceivableFees;
     private Double discountPercent;
     private Double discountAmount;
+    private Double admissionFeePaid;
+    private FeeReceiptRequestDTO admissionReceipt;
 
     // Batch Details
     private List<String> batches;

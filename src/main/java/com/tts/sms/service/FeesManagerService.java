@@ -716,16 +716,7 @@ public class FeesManagerService {
         log.debug("Generated receipt number: {}", receiptNumber);
 
         // Get current user for audit trail
-        String currentUser = "SYSTEM";
-        try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof User) {
-                User user = (User) auth.getPrincipal();
-                currentUser = user.getEmployee().getEmployeeName();
-            }
-        } catch (Exception e) {
-            log.warn("Could not get current user: {}", e.getMessage());
-        }
+        String currentUser = getCurrentUserName();
 
         // Create receipt entity
         FeeReceipt receipt = feesManagerMapper.toReceiptEntity(requestDTO);
@@ -1828,6 +1819,7 @@ public class FeesManagerService {
                     .dueDate(dto.getDueDate())
                     .amount(dto.getAmount())
                     .status(dto.getStatus())
+                    .notes(dto.getNotes())
                     .createdBy(getCurrentUserName())
                     .build();
 
@@ -2048,12 +2040,19 @@ public class FeesManagerService {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof User) {
                 User user = (User) auth.getPrincipal();
-                return user.getEmployee().getEmployeeName();
+                if (user.getEmployee() != null && user.getEmployee().getEmployeeName() != null && !user.getEmployee().getEmployeeName().isBlank()) {
+                    return user.getEmployee().getEmployeeName();
+                }
+                if (user.getUsername() != null && !user.getUsername().isBlank()) {
+                    return user.getUsername();
+                }
+            } else if (auth != null && auth.getName() != null && !auth.getName().isBlank()) {
+                return auth.getName();
             }
         } catch (Exception e) {
             log.warn("Could not get current user: {}", e.getMessage());
         }
-        return "SYSTEM";
+        return "Admin";
     }
 
     @Transactional
